@@ -6,6 +6,7 @@ import Clinic from '../../../models/Clinic';
 import User from '../../../models/Users';
 import Treatment from '../../../models/Treatment';
 
+
 // Disable default body parsing
 export const config = {
   api: {
@@ -13,14 +14,14 @@ export const config = {
   },
 };
 
-// Create directory if it doesn't exist
+// Ensure directory exists
 const ensureDirectoryExists = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 };
 
-// Multer Setup to store in public/uploads/clinic/
+// Multer setup
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(process.cwd(), 'public/uploads/clinic');
@@ -35,41 +36,28 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
-// Create multer middleware
 const uploadMiddleware = upload.fields([
   { name: 'clinicPhoto', maxCount: 1 },
   { name: 'licenseDocument', maxCount: 1 },
 ]);
 
-// Promisify multer middleware
 const runMiddleware = (req, res, fn) => {
   return new Promise((resolve, reject) => {
     fn(req, res, (result) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
+      if (result instanceof Error) return reject(result);
       return resolve(result);
     });
   });
 };
 
-// Main API handler function
 export default async function handler(req, res) {
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    // Connect to database
     await dbConnect();
 
-    // Ensure upload directory exists before processing
-    const uploadDir = path.join(process.cwd(), 'public/uploads/clinic');
-    ensureDirectoryExists(uploadDir);
-
-    // Run multer middleware
     await runMiddleware(req, res, uploadMiddleware);
 
     const {
@@ -78,51 +66,46 @@ export default async function handler(req, res) {
       address,
       pricing,
       timings,
-      treatments,
+      treatments, // Expecting JSON stringified array of treatment refs
       latitude,
       longitude,
-      newTreatment,
     } = req.body;
 
-    // 🔥 FIX: Find user with specific role 'clinic'
-    // This ensures we only match clinic users, not doctor users with same email
     const user = await User.findOne({ email, role: 'clinic' });
     if (!user) {
-      return res.status(404).json({ message: 'Clinic user not found with this email' });
+      return res.status(404).json({ message: 'Clinic user not found' });
     }
 
-    // Additional validation: ensure the user is actually a clinic role
-    if (user.role !== 'clinic') {
-      return res.status(400).json({ message: 'User is not registered as a clinic' });
-    }
-
-    // Ensure treatments is an array
-    let finalTreatments = Array.isArray(treatments) ? treatments : [treatments];
-
-    // Add new treatment if provided
-    if (newTreatment) {
-      const exists = await Treatment.findOne({ treatment_name: newTreatment });
-      if (!exists) {
-        await Treatment.create({ treatment_name: newTreatment });
-      }
-      finalTreatments.push(newTreatment);
-    }
-
-    // Get uploaded file paths (normalize path separators)
     const clinicPhotoPath = req.files?.['clinicPhoto']?.[0]?.path
       ? req.files['clinicPhoto'][0].path.replace('public', '').replace(/\\/g, '/')
       : '';
-    
+
     const licensePath = req.files?.['licenseDocument']?.[0]?.path
       ? req.files['licenseDocument'][0].path.replace('public', '').replace(/\\/g, '/')
       : '';
+
+    // 🧠 Parse the treatment references (array of { mainTreatment, mainTreatmentSlug, subTreatment, subTreatmentSlug })
+    let parsedTreatments = [];
+    try {
+      parsedTreatments = JSON.parse(treatments); // from JSON.stringify on frontend
+    } catch (e) {
+      return res.status(400).json({ message: 'Invalid treatment format' });
+    }
+
+    // ✅ Optional validation: check if mainTreatment exists in DB
+    for (let t of parsedTreatments) {
+      const found = await Treatment.findOne({ name: t.mainTreatment });
+      if (!found) {
+        return res.status(400).json({ message: `Main treatment '${t.mainTreatment}' not found` });
+      }
+    }
 
     // Create clinic
     const clinic = await Clinic.create({
       owner: user._id,
       name,
       address,
-      treatments: finalTreatments,
+      treatments: parsedTreatments,
       pricing,
       timings,
       photos: clinicPhotoPath ? [clinicPhotoPath] : [],
@@ -134,12 +117,11 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json({ message: 'Clinic saved', clinic });
-
   } catch (err) {
     console.error('❌ Clinic Save Error:', err);
-    return res.status(500).json({ 
-      message: 'Error saving clinic', 
-      error: err.message || 'Internal server error' 
+    return res.status(500).json({
+      message: 'Error saving clinic',
+      error: err.message || 'Internal server error',
     });
   }
 }

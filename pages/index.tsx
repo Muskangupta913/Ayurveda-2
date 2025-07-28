@@ -467,30 +467,35 @@ export default function Home(): React.ReactElement {
   };
 
   const fetchSuggestions = async (q: string): Promise<void> => {
-    if (!q.trim()) return setSuggestions([]);
-    try {
-      const [treatRes, clinicRes] = await Promise.all([
-        axios.get("/api/clinics/search?q=" + q),
-        axios.get("/api/clinics/searchByClinic?q=" + q),
-      ]);
-      const treatmentSuggestions = treatRes.data.treatments.map(
-        (t: string) => ({
-          type: "treatment",
-          value: t,
-        })
-      );
-      const clinicSuggestions = clinicRes.data.clinics.map(
-        (c: { name: string }) => ({
-          type: "clinic",
-          value: c.name,
-        })
-      );
-      setSuggestions([...treatmentSuggestions, ...clinicSuggestions]);
-    } catch {
-      // console.error("Error fetching suggestions:", err);
-      setSuggestions([]);
-    }
-  };
+  if (!q.trim()) return setSuggestions([]);
+
+  try {
+    const [treatRes, clinicRes] = await Promise.all([
+      axios.get("/api/clinics/search?q=" + encodeURIComponent(q)),
+      axios.get("/api/clinics/searchByClinic?q=" + encodeURIComponent(q)),
+    ]);
+
+    const treatmentSuggestions = (treatRes.data.treatments || []).map(
+      (t: { type: string; value: string }) => ({
+        type: t.type,
+        value: t.value,
+      })
+    );
+
+    const clinicSuggestions = (clinicRes.data.clinics || []).map(
+      (c: { name: string }) => ({
+        type: "clinic",
+        value: c.name,
+      })
+    );
+
+    setSuggestions([...treatmentSuggestions, ...clinicSuggestions]);
+  } catch (err) {
+    console.error("Error fetching suggestions:", err);
+    setSuggestions([]);
+  }
+};
+
 
   // Add clear search function
   const clearSearch = () => {
@@ -882,38 +887,50 @@ export default function Home(): React.ReactElement {
                         ref={suggestionsDropdownRef}
                       >
                         <div className="p-2">
-                          {suggestions.map((s, i) => (
-                            <div
-                              key={i}
-                              className="flex items-center px-4 py-4 hover:bg-green-50 cursor-pointer transition-all duration-200 border-b border-gray-100 last:border-b-0 rounded-xl mx-1 group"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSelectedService(s.value);
-                                setQuery(s.value);
-                                setSuggestions([]);
-                                searchInputRef.current?.blur();
-                              }}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
-                            >
-                              <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center mr-4">
-                                <span className="text-lg">
-                                  {s.type === "treatment" ? "🌿" : "🕉️"}
-                                </span>
-                              </div>
-                              <div className="flex-1">
-                                <p className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors text-sm md:text-base">
-                                  {s.value}
-                                </p>
-                                <p className="text-xs md:text-sm text-green-600 capitalize font-medium">
-                                  {s.type}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
+                        {suggestions.map((s, i) => (
+  <div
+    key={i}
+    className="flex items-center px-4 py-4 hover:bg-green-50 cursor-pointer transition-all duration-200 border-b border-gray-100 last:border-b-0 rounded-xl mx-1 group"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedService(s.value);
+      setQuery(s.value);
+      setSuggestions([]);
+      searchInputRef.current?.blur();
+    }}
+    onMouseDown={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }}
+  >
+    {/* Icon Box */}
+    <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center mr-4">
+      <span className="text-lg">
+        {s.type === "treatment"
+          ? "🌿"
+          : s.type === "subcategory"
+          ? "🌱"
+          : "🪔"}
+      </span>
+    </div>
+
+    {/* Text Content */}
+    <div className="flex-1">
+      <p className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors text-sm md:text-base">
+        {s.value}
+      </p>
+      <p className="text-xs md:text-sm text-green-600 capitalize font-medium">
+        {s.type === "treatment"
+          ? "Main Treatment"
+          : s.type === "subcategory"
+          ? "Subcategory"
+          : "Other"}
+      </p>
+    </div>
+  </div>
+))}
+
                         </div>
                       </div>
                     )}
