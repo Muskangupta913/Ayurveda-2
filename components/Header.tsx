@@ -63,22 +63,22 @@ const Header = () => {
 
   return (
     <>
-      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-green-100 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-blue-100 sticky top-0 z-50">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 group">
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-                  <span className="text-xl text-white">🌿</span>
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+                  <span className="text-xl text-white"><img src="/assets/health_treatments_logo.png" alt="Treatment Icon" /></span>
                 </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-80 animate-pulse"></div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full opacity-80 animate-pulse"></div>
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">
-                  AyurVeda
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent">
+                  MediCare
                 </h1>
-                <p className="text-xs text-green-600 font-medium -mt-1">NEAR ME</p>
+                <p className="text-xs text-blue-600 font-medium -mt-1">NEAR ME</p>
               </div>
             </Link>
 
@@ -89,7 +89,7 @@ const Header = () => {
                   <button
                     key={item.name}
                     onClick={item.action}
-                    className="group relative px-4 py-2 rounded-full text-gray-700 hover:text-green-700 font-medium transition-all duration-300 hover:bg-green-50"
+                    className="group relative px-4 py-2 rounded-full text-gray-700 hover:text-blue-700 font-medium transition-all duration-300 hover:bg-blue-50"
                   >
                     <span className="flex items-center space-x-2">
                       <span className="text-sm group-hover:scale-110 transition-transform duration-300">
@@ -97,13 +97,13 @@ const Header = () => {
                       </span>
                       <span>{item.name}</span>
                     </span>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-green-600 to-emerald-600 group-hover:w-full transition-all duration-300"></div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></div>
                   </button>
                 ) : (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="group relative px-4 py-2 rounded-full text-gray-700 hover:text-green-700 font-medium transition-all duration-300 hover:bg-green-50"
+                    className="group relative px-4 py-2 rounded-full text-gray-700 hover:text-blue-700 font-medium transition-all duration-300 hover:bg-blue-50"
                   >
                     <span className="flex items-center space-x-2">
                       <span className="text-sm group-hover:scale-110 transition-transform duration-300">
@@ -111,7 +111,7 @@ const Header = () => {
                       </span>
                       <span>{item.name}</span>
                     </span>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-green-600 to-emerald-600 group-hover:w-full transition-all duration-300"></div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></div>
                   </Link>
                 )
               ))}
@@ -119,7 +119,7 @@ const Header = () => {
               {/* User Menu for Authenticated Users */}
               {isAuthenticated && (
                 <div className="relative group">
-                  <button className="flex items-center space-x-2 px-4 py-2 rounded-full text-gray-700 hover:text-green-700 font-medium transition-all duration-300 hover:bg-green-50">
+                  <button className="flex items-center space-x-2 px-4 py-2 rounded-full text-gray-700 hover:text-blue-700 font-medium transition-all duration-300 hover:bg-blue-50">
                     <span className="text-sm">👤</span>
                     <span>{user?.name}</span>
                     <span className="text-xs">▼</span>
@@ -130,7 +130,7 @@ const Header = () => {
                     <div className="py-2">
                       <Link
                         href="/Profile"
-                        className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                        className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                       >
                         <span>👤</span>
                         <span>My Profile</span>
@@ -153,7 +153,7 @@ const Header = () => {
               {/* Register Clinic Button */}
               <Link
                 href="/clinic/register-clinic"
-                className="hidden sm:flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 group"
+                className="hidden sm:flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 group"
               >
                 <span>🏥</span>
                 <span>Register your clinic</span>
@@ -163,12 +163,12 @@ const Header = () => {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="lg:hidden relative w-10 h-10 rounded-full bg-green-50 flex items-center justify-center hover:bg-green-100 transition-colors duration-300"
+                className="lg:hidden relative w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center hover:bg-blue-100 transition-colors duration-300"
               >
                 <div className="w-6 h-5 relative flex flex-col justify-between">
-                  <span className={`block h-0.5 w-full bg-green-700 transform transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
-                  <span className={`block h-0.5 w-full bg-green-700 transition-all duration-300 ${isMenuOpen ? 'opacity-0' : ''}`}></span>
-                  <span className={`block h-0.5 w-full bg-green-700 transform transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+                  <span className={`block h-0.5 w-full bg-blue-700 transform transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+                  <span className={`block h-0.5 w-full bg-blue-700 transition-all duration-300 ${isMenuOpen ? 'opacity-0' : ''}`}></span>
+                  <span className={`block h-0.5 w-full bg-blue-700 transform transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
                 </div>
               </button>
             </div>
@@ -182,7 +182,7 @@ const Header = () => {
                   <button
                     key={item.name}
                     onClick={item.action}
-                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-green-700 hover:bg-green-50 font-medium transition-all duration-300 group text-left"
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-300 group text-left"
                   >
                     <span className="text-lg group-hover:scale-110 transition-transform duration-300">
                       {item.icon}
@@ -194,7 +194,7 @@ const Header = () => {
                     key={item.name}
                     href={item.href}
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-green-700 hover:bg-green-50 font-medium transition-all duration-300 group"
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-300 group"
                   >
                     <span className="text-lg group-hover:scale-110 transition-transform duration-300">
                       {item.icon}
@@ -215,7 +215,7 @@ const Header = () => {
                   <Link
                     href="/profile"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-green-700 hover:bg-green-50 font-medium transition-all duration-300"
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-300"
                   >
                     <span className="text-lg">👤</span>
                     <span>My Profile</span>
@@ -234,7 +234,7 @@ const Header = () => {
         </nav>
 
         {/* Top Bar */}
-        <div className="hidden md:block bg-gradient-to-r from-green-700 to-emerald-700 text-white text-sm">
+        <div className="hidden md:block bg-gradient-to-r from-blue-700 to-indigo-700 text-white text-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-6">
@@ -244,7 +244,7 @@ const Header = () => {
                 </span>
                 <span className="flex items-center space-x-2">
                   <span>✉️</span>
-                  <span>info@ayurvedanearme.ae</span>
+                  <span>info@medicarenearme.com</span>
                 </span>
               </div>
               {isAuthenticated && (
