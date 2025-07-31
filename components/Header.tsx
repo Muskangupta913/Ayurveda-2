@@ -1,4 +1,4 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
@@ -16,30 +16,72 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  
+  const [isRegisterDropdownOpen, setIsRegisterDropdownOpen] = useState(false);
+  const [isDashboardDropdownOpen, setIsDashboardDropdownOpen] = useState(false);
+
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+
+  // Refs for dropdown elements
+  const dashboardDropdownRef = useRef<HTMLDivElement>(null);
+  const registerDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Close dashboard dropdown if click is outside
+      if (dashboardDropdownRef.current && !dashboardDropdownRef.current.contains(event.target as Node)) {
+        setIsDashboardDropdownOpen(false);
+      }
+      
+      // Close register dropdown if click is outside
+      if (registerDropdownRef.current && !registerDropdownRef.current.contains(event.target as Node)) {
+        setIsRegisterDropdownOpen(false);
+      }
+    };
+
+    // Add event listener when any dropdown is open
+    if (isDashboardDropdownOpen || isRegisterDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    // Cleanup event listener
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDashboardDropdownOpen, isRegisterDropdownOpen]);
+
+  // Function to handle dashboard dropdown toggle
+  const handleDashboardDropdownToggle = () => {
+    if (isRegisterDropdownOpen) {
+      setIsRegisterDropdownOpen(false);
+    }
+    setIsDashboardDropdownOpen(prev => !prev);
+  };
+
+  // Function to handle register dropdown toggle
+  const handleRegisterDropdownToggle = () => {
+    if (isDashboardDropdownOpen) {
+      setIsDashboardDropdownOpen(false);
+    }
+    setIsRegisterDropdownOpen(prev => !prev);
+  };
+
   // Navigation items - dynamically change based on auth status
   const getNavItems = (): NavItem[] => {
     const baseItems: NavItem[] = [
       { name: 'Home', href: '/', icon: '🏠' },
-      // { name: 'About', href: '/about', icon: '🌿' },
-      // { name: 'Blog', href: '/blogs1', icon: '📖' },
-      // { name: 'Contact', href: '/contact', icon: '📞' },
+      // Add other links here if needed
     ];
 
     if (isAuthenticated) {
       return [
         ...baseItems,
-        // { name: 'Profile', href: '/profile', icon: '👤' },
-        // { name: 'Clinic Login', href: '/clinic/login-clinic', icon: '🔐' },
       ];
     } else {
       return [
         ...baseItems,
-        { name: 'Doctor Login', href: '/doctor/login', icon: '🩺' },
         { name: 'User Login', href: '#', icon: '🔑', action: () => openAuthModal('login') },
-        { name: 'Clinic Login', href: '/clinic/login-clinic', icon: '🏥' },
       ];
     }
   };
@@ -52,44 +94,46 @@ const Header = () => {
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
-    // Optional: Show success message or redirect
   };
 
- const handleLogout = () => {
-  logout();
-  router.push('/');
-};
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
+
   const navItems = getNavItems();
 
   return (
     <>
-      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-blue-100 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-opacity-20" style={{ borderColor: '#2D9AA5' }}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-                  <span className="text-xl text-white"><img src="/assets/health_treatments_logo.png" alt="Treatment Icon" /></span>
-                </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full opacity-80 animate-pulse"></div>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent">
+            {/* Left: MediCare name & subtitle only */}
+            <div className="flex items-center space-x-3 group">
+              <div>
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, #2D9AA5, #1f7a82)` }}>
                   MediCare
                 </h1>
-                <p className="text-xs text-blue-600 font-medium -mt-1">NEAR ME</p>
+                <p className="text-xs font-medium -mt-1" style={{ color: '#2D9AA5' }}>NEAR ME</p>
               </div>
-            </Link>
+            </div>
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-1">
-              {navItems.map((item) => (
+              {navItems.map((item) =>
                 item.action ? (
                   <button
                     key={item.name}
                     onClick={item.action}
-                    className="group relative px-4 py-2 rounded-full text-gray-700 hover:text-blue-700 font-medium transition-all duration-300 hover:bg-blue-50"
+                    className="group relative px-4 py-2 rounded-full text-gray-700 font-medium transition-all duration-300"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#2D9AA5';
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#374151';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <span className="flex items-center space-x-2">
                       <span className="text-sm group-hover:scale-110 transition-transform duration-300">
@@ -97,13 +141,21 @@ const Header = () => {
                       </span>
                       <span>{item.name}</span>
                     </span>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#2D9AA5' }}></div>
                   </button>
                 ) : (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="group relative px-4 py-2 rounded-full text-gray-700 hover:text-blue-700 font-medium transition-all duration-300 hover:bg-blue-50"
+                    className="group relative px-4 py-2 rounded-full text-gray-700 font-medium transition-all duration-300"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#2D9AA5';
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#374151';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <span className="flex items-center space-x-2">
                       <span className="text-sm group-hover:scale-110 transition-transform duration-300">
@@ -111,26 +163,42 @@ const Header = () => {
                       </span>
                       <span>{item.name}</span>
                     </span>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#2D9AA5' }}></div>
                   </Link>
                 )
-              ))}
-              
+              )}
+
               {/* User Menu for Authenticated Users */}
               {isAuthenticated && (
                 <div className="relative group">
-                  <button className="flex items-center space-x-2 px-4 py-2 rounded-full text-gray-700 hover:text-blue-700 font-medium transition-all duration-300 hover:bg-blue-50">
+                  <button 
+                    className="flex items-center space-x-2 px-4 py-2 rounded-full text-gray-700 font-medium transition-all duration-300"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#2D9AA5';
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#374151';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
                     <span className="text-sm">👤</span>
                     <span>{user?.name}</span>
                     <span className="text-xs">▼</span>
                   </button>
-                  
-                  {/* Dropdown Menu */}
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
                     <div className="py-2">
                       <Link
-                        href="/Profile"
-                        className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        href="/profile"
+                        className="flex items-center space-x-3 px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#2D9AA5';
+                          e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#374151';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
                       >
                         <span>👤</span>
                         <span>My Profile</span>
@@ -148,41 +216,213 @@ const Header = () => {
               )}
             </div>
 
-            {/* CTA & Menu Button */}
+            {/* Dashboard Login & Register Dropdowns (desktop) */}
             <div className="flex items-center space-x-4">
-              {/* Register Clinic Button */}
-              <Link
-                href="/clinic/register-clinic"
-                className="hidden sm:flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 group"
-              >
-                <span>🏥</span>
-                <span>Register your clinic</span>
-                <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
-              </Link>
+              {/* Dashboard Login Dropdown */}
+              <div className="relative" ref={dashboardDropdownRef}>
+                <button
+                  onClick={handleDashboardDropdownToggle}
+                  className="hidden sm:flex items-center space-x-2 text-white px-4 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  style={{ 
+                    backgroundImage: `linear-gradient(to right, #2D9AA5, #1f7a82)`,
+                  }}
+                  aria-haspopup="true"
+                  aria-expanded={isDashboardDropdownOpen}
+                >
+                  <span>Dashboard Login</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-300 ${isDashboardDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+                {isDashboardDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                    <Link
+                      href="#"
+                      onClick={() => {
+                        setIsDashboardDropdownOpen(false);
+                        openAuthModal('login');
+                      }}
+                      className="block px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#2D9AA5';
+                        e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#374151';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      User
+                    </Link>
+                    <Link
+                      href="/clinic/login-clinic"
+                      onClick={() => setIsDashboardDropdownOpen(false)}
+                      className="block px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#2D9AA5';
+                        e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#374151';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      Clinic
+                    </Link>
+                    <Link
+                      href="/doctor/login"
+                      onClick={() => setIsDashboardDropdownOpen(false)}
+                      className="block px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#2D9AA5';
+                        e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#374151';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      Doctor
+                    </Link>
+                    <div className="px-4 py-3 text-gray-500 hover:bg-gray-50 transition-colors cursor-not-allowed relative">
+                      Wellness Center
+                      <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    </div>
+                    <div className="px-4 py-3 text-gray-500 hover:bg-gray-50 transition-colors cursor-not-allowed relative">
+                      Spa
+                      <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Register Dropdown */}
+              <div className="relative" ref={registerDropdownRef}>
+                <button
+                  onClick={handleRegisterDropdownToggle}
+                  className="hidden sm:flex items-center space-x-2 text-white px-4 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  style={{ 
+                    backgroundImage: `linear-gradient(to right, #2D9AA5, #237a84)`,
+                  }}
+                  aria-haspopup="true"
+                  aria-expanded={isRegisterDropdownOpen}
+                >
+                  <span>Register</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-300 ${isRegisterDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+                {isRegisterDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                    <Link
+                      href="/clinic/register-clinic"
+                      onClick={() => setIsRegisterDropdownOpen(false)}
+                      className="block px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#2D9AA5';
+                        e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#374151';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      Register your Clinic
+                    </Link>
+                    <Link
+                      href="/doctor/register"
+                      onClick={() => setIsRegisterDropdownOpen(false)}
+                      className="block px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#2D9AA5';
+                        e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#374151';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      Register as Doctor
+                    </Link>
+                    <div className="px-4 py-3 text-gray-500 hover:bg-gray-50 transition-colors cursor-not-allowed relative">
+                      Register as Wellness Center
+                      <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    </div>
+                    <div className="px-4 py-3 text-gray-500 hover:bg-gray-50 transition-colors cursor-not-allowed relative">
+                      Register as Spa
+                      <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="lg:hidden relative w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center hover:bg-blue-100 transition-colors duration-300"
+                className="lg:hidden relative w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-300 hover:bg-opacity-20"
+                style={{ 
+                  backgroundColor: 'rgba(45, 154, 165, 0.1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                }}
+                aria-label="Toggle menu"
+                aria-expanded={isMenuOpen}
               >
                 <div className="w-6 h-5 relative flex flex-col justify-between">
-                  <span className={`block h-0.5 w-full bg-blue-700 transform transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
-                  <span className={`block h-0.5 w-full bg-blue-700 transition-all duration-300 ${isMenuOpen ? 'opacity-0' : ''}`}></span>
-                  <span className={`block h-0.5 w-full bg-blue-700 transform transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+                  <span className={`block h-0.5 w-full transform transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`} style={{ backgroundColor: '#2D9AA5' }}></span>
+                  <span className={`block h-0.5 w-full transition-all duration-300 ${isMenuOpen ? 'opacity-0' : ''}`} style={{ backgroundColor: '#2D9AA5' }}></span>
+                  <span className={`block h-0.5 w-full transform transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} style={{ backgroundColor: '#2D9AA5' }}></span>
                 </div>
               </button>
             </div>
           </div>
 
           {/* Mobile Menu */}
-          <div className={`lg:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-96 pb-6' : 'max-h-0'}`}>
+          <div className={`lg:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-screen pb-6' : 'max-h-0'}`}>
             <div className="pt-4 space-y-2">
-              {navItems.map((item) => (
+              {navItems.map((item) =>
                 item.action ? (
                   <button
                     key={item.name}
-                    onClick={item.action}
-                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-300 group text-left"
+                    onClick={() => {
+                      item.action && item.action();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 font-medium transition-all duration-300 group text-left"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#2D9AA5';
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#374151';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <span className="text-lg group-hover:scale-110 transition-transform duration-300">
                       {item.icon}
@@ -194,7 +434,15 @@ const Header = () => {
                     key={item.name}
                     href={item.href}
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-300 group"
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 font-medium transition-all duration-300 group"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#2D9AA5';
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#374151';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <span className="text-lg group-hover:scale-110 transition-transform duration-300">
                       {item.icon}
@@ -202,8 +450,109 @@ const Header = () => {
                     <span>{item.name}</span>
                   </Link>
                 )
-              ))}
-              
+              )}
+
+              {/* Mobile Dashboard Login Dropdown */}
+              <details className="px-4 py-2 rounded-xl border border-opacity-30" style={{ backgroundColor: 'rgba(45, 154, 165, 0.1)', borderColor: '#2D9AA5' }}>
+                <summary className="cursor-pointer font-semibold mb-2 list-none" style={{ color: '#2D9AA5' }}>
+                  Dashboard Login
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <button
+                    onClick={() => {
+                      openAuthModal('login');
+                      setIsMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    User
+                  </button>
+                  <Link 
+                    href="/clinic/login-clinic" 
+                    onClick={() => setIsMenuOpen(false)} 
+                    className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    Clinic
+                  </Link>
+                  <Link 
+                    href="/doctor/login" 
+                    onClick={() => setIsMenuOpen(false)} 
+                    className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    Doctor
+                  </Link>
+                  <div className="px-4 py-2 text-gray-500 cursor-not-allowed flex justify-between items-center">
+                    Wellness Center
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
+                  </div>
+                  <div className="px-4 py-2 text-gray-500 cursor-not-allowed flex justify-between items-center">
+                    Spa
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
+                  </div>
+                </div>
+              </details>
+
+              {/* Mobile Register Dropdown */}
+              <details className="px-4 py-2 rounded-xl border border-opacity-30" style={{ backgroundColor: 'rgba(45, 154, 165, 0.05)', borderColor: '#2D9AA5' }}>
+                <summary className="cursor-pointer font-semibold mb-2 list-none" style={{ color: '#2D9AA5' }}>
+                  Register
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <Link 
+                    href="/clinic/register-clinic" 
+                    onClick={() => setIsMenuOpen(false)} 
+                    className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    Register your Clinic
+                  </Link>
+                  <Link 
+                    href="/doctor/register" 
+                    onClick={() => setIsMenuOpen(false)} 
+                    className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    Register as Doctor
+                  </Link>
+                  <div className="px-4 py-2 text-gray-500 cursor-not-allowed flex justify-between items-center">
+                    Register as Wellness Center
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
+                  </div>
+                  <div className="px-4 py-2 text-gray-500 cursor-not-allowed flex justify-between items-center">
+                    Register as Spa
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
+                  </div>
+                </div>
+              </details>
+
               {/* Mobile User Menu */}
               {isAuthenticated && (
                 <>
@@ -215,13 +564,24 @@ const Header = () => {
                   <Link
                     href="/profile"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-300"
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 font-medium transition-all duration-300"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#2D9AA5';
+                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#374151';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <span className="text-lg">👤</span>
                     <span>My Profile</span>
                   </Link>
                   <button
-                    onClick={handleLogout}
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
                     className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:text-red-700 hover:bg-red-50 font-medium transition-all duration-300 text-left"
                   >
                     <span className="text-lg">🚪</span>
@@ -234,14 +594,10 @@ const Header = () => {
         </nav>
 
         {/* Top Bar */}
-        <div className="hidden md:block bg-gradient-to-r from-blue-700 to-indigo-700 text-white text-sm">
+        <div className="hidden md:block text-white text-sm" style={{ backgroundImage: `linear-gradient(to right, #2D9AA5, #1f7a82)` }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-6">
-                <span className="flex items-center space-x-2">
-                  {/* <span>📞</span> */}
-                  {/* <span>+91 98765 43210</span> */}
-                </span>
                 <span className="flex items-center space-x-2">
                   <span>✉️</span>
                   <span>info@medicarenearme.com</span>

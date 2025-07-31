@@ -1,0 +1,236 @@
+import React, { useState, useRef } from 'react';
+import { Scale, Activity, Wind, Apple, Calculator, ArrowRight, Home, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface Calculator {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  hoverColor: string;
+  image: string;
+}
+
+const HealthCalculatorApp: React.FC = () => {
+  const [activeCalculator, setActiveCalculator] = useState<string>('home');
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const calculators: Calculator[] = [
+    {
+      id: 'bmi',
+      title: 'BMI Calculator',
+      description: 'Calculate your Body Mass Index and understand your weight category',
+      icon: Scale,
+      color: 'from-[#2D9AA5] to-[#238a94]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      hoverColor: 'hover:shadow-lg',
+      image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=200&fit=crop'
+    },
+    {
+      id: 'bmr',
+      title: 'BMR-TDEE Calculator',
+      description: 'Calculate Basal Metabolic Rate & Total Daily Energy Expenditure',
+      icon: Activity,
+      color: 'from-[#2D9AA5] to-[#238a94]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      hoverColor: 'hover:shadow-lg',
+      image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=200&fit=crop'
+    },
+    {
+      id: 'breath',
+      title: 'Breath Hold Calculator',
+      description: 'Track your breath holding capacity and improve lung health',
+      icon: Wind,
+      color: 'from-[#2D9AA5] to-[#238a94]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      hoverColor: 'hover:shadow-lg',
+      image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=200&fit=crop'
+    },
+    {
+      id: 'calorie',
+      title: 'Calorie Count Calculator',
+      description: 'Track your daily calorie intake and maintain healthy diet',
+      icon: Apple,
+      color: 'from-[#2D9AA5] to-[#238a94]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      hoverColor: 'hover:shadow-lg',
+      image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=200&fit=crop'
+    },
+    {
+      id: 'heart',
+      title: 'Heart Rate Monitor',
+      description: 'Monitor your heart rate and cardiovascular health',
+      icon: Activity,
+      color: 'from-[#2D9AA5] to-[#238a94]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      hoverColor: 'hover:shadow-lg',
+      image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop'
+    },
+    {
+      id: 'water',
+      title: 'Water Intake Tracker',
+      description: 'Track your daily water consumption for optimal hydration',
+      icon: Apple,
+      color: 'from-[#2D9AA5] to-[#238a94]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      hoverColor: 'hover:shadow-lg',
+      image: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400&h=200&fit=crop'
+    }
+  ];
+
+  const scrollLeft = (): void => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: -340, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = (): void => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: 340, behavior: 'smooth' });
+    }
+  };
+
+  const NavigationBar: React.FC = () => (
+    <div className="rounded-2xl p-6 mb-6">
+      <div className="text-center mb-8">
+        {/* <Calculator className="mx-auto mb-4 text-[#2D9AA5]" size={48} /> */}
+        <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Track Your Health Status</h1>
+        {/* <p className="text-gray-600 text-lg">Choose a calculator to monitor your health</p> */}
+      </div>
+      
+      {/* Slider Container */}
+      <div className="relative">
+        {/* Left Arrow */}
+        <button
+          onClick={scrollLeft}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft size={15} />
+        </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={scrollRight}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          aria-label="Scroll right"
+        >
+          <ChevronRight size={15} />
+        </button>
+
+        {/* Scrollable Cards Container */}
+        <div 
+          ref={sliderRef}
+          className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 px-12 scroll-smooth"
+          style={{ 
+            scrollbarWidth: 'none', 
+            msOverflowStyle: 'none'
+          }}
+        >
+          {calculators.map((calc: Calculator) => {
+            const IconComponent = calc.icon;
+            return (
+              <div
+                key={calc.id}
+                className={`${calc.bgColor} ${calc.borderColor} ${calc.hoverColor} min-w-[320px] max-w-[320px] border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group flex-shrink-0 overflow-hidden`}
+              >
+                {/* Image Section */}
+                <div className="relative h-32 overflow-hidden">
+                  <img 
+                    src={calc.image} 
+                    alt={calc.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <div className="absolute top-3 left-3">
+                    <div className={`bg-gradient-to-r ${calc.color} p-2 rounded-lg shadow-lg`}>
+                      <IconComponent className="text-white" size={20} />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Content Section */}
+                <div className="p-5">
+                  <h3 className="font-bold text-gray-800 mb-2 text-lg">{calc.title}</h3>
+                  <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
+                  <a 
+                    href={`/calculator/${calc.id}`}
+                    className="inline-flex items-center bg-[#2D9AA5] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#238a94] transition-colors"
+                  >
+                    Calculate Now
+                    <ArrowRight size={16} className="ml-2" />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* View All Button */}
+        <div className="text-center mt-8">
+          <a 
+            href="/all-calculators"
+            className="inline-flex items-center bg-orange-400 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-orange-600 transition-colors"
+          >
+            View All Calculators
+            <ArrowRight size={20} className="ml-2" />
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+
+  const SimpleCalculatorView: React.FC<{ title: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = ({ title, icon: IconComponent }) => (
+    <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="text-center">
+        <IconComponent className="mx-auto mb-4 text-[#2D9AA5]" size={48} />
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">{title}</h2>
+        <div className="bg-[#2D9AA5]/10 p-8 rounded-lg border border-[#2D9AA5]/30">
+          <p className="text-gray-600 text-lg mb-4">
+            This calculator will help you monitor your health metrics effectively.
+          </p>
+          <div className="text-4xl font-bold text-[#2D9AA5] mb-2">Ready</div>
+          <div className="text-gray-700 font-medium">Calculator Interface</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCalculator = () => {
+    const currentCalc = calculators.find(calc => calc.id === activeCalculator);
+    
+    switch (activeCalculator) {
+      case 'bmi':
+        return <SimpleCalculatorView title="BMI Calculator" icon={Scale} />;
+      case 'bmr':
+        return <SimpleCalculatorView title="BMR-TDEE Calculator" icon={Activity} />;
+      case 'breath':
+        return <SimpleCalculatorView title="Breath Hold Calculator" icon={Wind} />;
+      case 'calorie':
+        return <SimpleCalculatorView title="Calorie Count Calculator" icon={Apple} />;
+      case 'heart':
+        return <SimpleCalculatorView title="Heart Rate Monitor" icon={Activity} />;
+      case 'water':
+        return <SimpleCalculatorView title="Water Intake Tracker" icon={Apple} />;
+      default:
+        return <NavigationBar />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#2D9AA5]/10 p-6">
+      <div className="max-w-7xl mx-auto">
+        {renderCalculator()}
+      </div>
+    </div>
+  );
+};
+
+export default HealthCalculatorApp;
