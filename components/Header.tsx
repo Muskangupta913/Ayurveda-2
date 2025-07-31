@@ -71,6 +71,7 @@ const Header = () => {
   const getNavItems = (): NavItem[] => {
     const baseItems: NavItem[] = [
       { name: 'Home', href: '/', icon: '🏠' },
+      { name: 'Career', href: '/job-listings', icon: '🏠' },
       // Add other links here if needed
     ];
 
