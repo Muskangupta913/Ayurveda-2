@@ -39,7 +39,7 @@ const Footer = () => {
   // ];
 
   return (
-    <footer className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-white relative overflow-hidden">
+    <footer className="text-white relative overflow-hidden" style={{ backgroundImage: `linear-gradient(135deg, #1f2937 0%, #2D9AA5 35%, #1f7a82 100%)` }}>
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-10 left-10 text-6xl"><img src="/assets/health_treatments_logo.png" alt="Treatment Icon" style={{ width: "24px", height: "24px" }} /></div>
         <div className="absolute top-20 right-20 text-4xl">⚕️</div>
@@ -54,17 +54,17 @@ const Footer = () => {
             {/* Brand Section */}
             <div className="lg:col-span-1">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundImage: `linear-gradient(135deg, #2D9AA5, #237a84)` }}>
                   <span className="text-xl text-white"><img src="/assets/health_treatments_logo.png" alt="Treatment Icon" style={{ width: "24px", height: "24px" }} /></span>
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">
+                  <h3 className="text-2xl font-bold text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, rgba(45, 154, 165, 0.9), rgba(255, 255, 255, 0.9))` }}>
                     MediCare
                   </h3>
-                  <p className="text-blue-300 text-sm">Medical Care Network</p>
+                  <p className="text-sm text-gray-300">Medical Care Network</p>
                 </div>
               </div>
-              <p className="text-blue-100 mb-6 leading-relaxed">
+              <p className="mb-6 leading-relaxed text-gray-200">
                 Connecting you with quality healthcare providers and medical treatments. 
                 Your health and wellness journey starts here with trusted professionals.
               </p>
@@ -79,7 +79,7 @@ const Footer = () => {
                   <span className="text-lg">📞</span>
                   <span className="text-sm">+91 98765 43210</span>
                 </div> */}
-                <div className="flex items-center space-x-3 text-blue-200">
+                <div className="flex items-center space-x-3 text-gray-200">
                   <span className="text-lg">✉️</span>
                   <span className="text-sm">info@medicarenearme.com</span>
                 </div>
@@ -96,7 +96,15 @@ const Footer = () => {
                 {quickLinks.map((link) => (
                   <li key={link.name}>
                     <Link href={link.href} legacyBehavior>
-                      <a className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group">
+                      <a 
+                        className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#d1d5db';
+                        }}
+                      >
                         <span className="mr-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                         {link.name}
                       </a>
@@ -116,7 +124,15 @@ const Footer = () => {
                 {treatments.map((treatment) => (
                   <li key={treatment.name}>
                     {/* <Link href={treatment.href} legacyBehavior> */}
-                      <a className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group">
+                      <a 
+                        className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group cursor-pointer"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#d1d5db';
+                        }}
+                      >
                         <span className="mr-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                         {treatment.name}
                       </a>
@@ -134,31 +150,71 @@ const Footer = () => {
               </h4>
               <ul className="space-y-3">
                 <li>
-                  <a className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group">
+                  <a 
+                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group cursor-pointer"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#d1d5db';
+                    }}
+                  >
                     <span className="mr-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                     Doctor Consultation
                   </a>
                 </li>
                 <li>
-                  <a className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group">
+                  <a 
+                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group cursor-pointer"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#d1d5db';
+                    }}
+                  >
                     <span className="mr-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                     Online Booking
                   </a>
                 </li>
                 <li>
-                  <a className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group">
+                  <a 
+                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group cursor-pointer"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#d1d5db';
+                    }}
+                  >
                     <span className="mr-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                     Emergency Care
                   </a>
                 </li>
                 <li>
-                  <a className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group">
+                  <a 
+                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group cursor-pointer"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#d1d5db';
+                    }}
+                  >
                     <span className="mr-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                     Health Checkups
                   </a>
                 </li>
                 <li>
-                  <a className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group">
+                  <a 
+                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group cursor-pointer"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#d1d5db';
+                    }}
+                  >
                     <span className="mr-2 group-hover:translate-x-1 transition-transform duration-300">→</span>
                     Lab Tests
                   </a>
@@ -170,10 +226,10 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/10">
+        <div className="border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-              <div className="text-blue-300 text-sm">
+              <div className="text-sm text-gray-300">
                 © {currentYear} MediCare Network. All rights reserved.
               </div>
 
@@ -195,7 +251,7 @@ const Footer = () => {
                 </Link>
               </div> */}
 
-              <div className="flex items-center space-x-2 text-blue-300 text-sm">
+              <div className="flex items-center space-x-2 text-sm text-gray-300">
                 <span>Made with</span>
                 <span className="text-red-400 animate-pulse">❤️</span>
                 <span>for your health</span>

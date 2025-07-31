@@ -6,9 +6,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const treatments = await Treatment.find({});
-      return res.status(200).json({ treatments });
+        const treatments = await Treatment.find({}).lean();
+      return res.status(200).json({ treatments }); 
     } catch {
+      console.error("Error fetching treatments:", error);
       return res.status(500).json({ message: 'Error fetching treatments' });
     }
   }
