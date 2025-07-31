@@ -16,14 +16,21 @@ import {
   Building2,
   Camera,
 } from "lucide-react";
-import Image from 'next/image';
+import Image from "next/image";
 import { Toaster, toast } from "react-hot-toast";
 
 interface Clinic {
   _id: string;
   name: string;
   address: string;
-  treatments: string[];
+  treatments: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
   servicesName: string[];
   pricing: string;
   timings: string;
@@ -34,7 +41,12 @@ interface Clinic {
 
 interface Treatment {
   _id: string;
-  treatment_name: string;
+  name: string;
+  slug: string;
+  subcategories: Array<{
+    name: string;
+    slug: string;
+  }>;
 }
 
 const LoadingSpinner = () => (
@@ -80,7 +92,6 @@ const Header = ({
       </div>
     </div>
   </header>
-
 );
 
 interface FormInputProps {
@@ -189,7 +200,14 @@ const TagManager = ({
 interface TreatmentManagerProps {
   label: string;
   icon: React.ReactNode;
-  items: string[];
+  items: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
   newItem: string;
   setNewItem: (value: string) => void;
   onAdd: () => void;
@@ -198,6 +216,7 @@ interface TreatmentManagerProps {
   showCustomInput: boolean;
   setShowCustomInput: (value: boolean) => void;
   onAddFromDropdown: (treatmentName: string) => void;
+  onUpdateTreatment: (index: number, treatment: any) => void;
 }
 const TreatmentManager = ({
   label,
@@ -211,7 +230,102 @@ const TreatmentManager = ({
   showCustomInput,
   setShowCustomInput,
   onAddFromDropdown,
-}: TreatmentManagerProps) => (
+  onUpdateTreatment,
+}: TreatmentManagerProps) => {
+  const [selectedMainTreatment, setSelectedMainTreatment] =
+    useState<string>("");
+  const [customSubTreatment, setCustomSubTreatment] = useState<string>("");
+  const [showSubTreatmentInput, setShowSubTreatmentInput] = useState<
+    number | null
+  >(null);
+  const [showCustomSubTreatmentInput, setShowCustomSubTreatmentInput] =
+    useState<number | null>(null);
+
+  const handleAddSubTreatment = async (mainTreatmentIndex: number) => {
+    if (customSubTreatment.trim()) {
+      const currentTreatment = items[mainTreatmentIndex];
+      const newSubTreatment = {
+        name: customSubTreatment.trim(),
+        slug: customSubTreatment.trim().toLowerCase().replace(/\s+/g, "-"),
+      };
+
+      // Try to save to database
+      try {
+        const token = localStorage.getItem("clinicToken");
+        await axios.post(
+          "/api/clinics/add-custom-treatment",
+          {
+            mainTreatment: currentTreatment.mainTreatment,
+            subTreatments: [newSubTreatment],
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        // Refresh available treatments
+        const treatmentsResponse = await axios.get("/api/doctor/getTreatment");
+        setAvailableTreatments(treatmentsResponse.data.treatments || []);
+      } catch (error) {
+        console.error("Error adding custom sub-treatment to database:", error);
+        // Continue with local addition even if database call fails
+      }
+
+      const updatedTreatment = {
+        ...currentTreatment,
+        subTreatments: [
+          ...(currentTreatment.subTreatments || []),
+          newSubTreatment,
+        ],
+      };
+
+      onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+      setCustomSubTreatment("");
+      setShowSubTreatmentInput(null);
+      setShowCustomSubTreatmentInput(null);
+    }
+  };
+
+  const handleRemoveSubTreatment = (
+    mainTreatmentIndex: number,
+    subTreatmentIndex: number
+  ) => {
+    const currentTreatment = items[mainTreatmentIndex];
+    const updatedSubTreatments = currentTreatment.subTreatments.filter(
+      (_, index) => index !== subTreatmentIndex
+    );
+
+    const updatedTreatment = {
+      ...currentTreatment,
+
+      subTreatments: updatedSubTreatments,
+    };
+
+    onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+  };
+
+  const handleAddFromAvailableSubTreatments = (
+    mainTreatmentIndex: number,
+    subTreatmentName: string
+  ) => {
+    const currentTreatment = items[mainTreatmentIndex];
+    const newSubTreatment = {
+      name: subTreatmentName,
+      slug: subTreatmentName.toLowerCase().replace(/\s+/g, "-"),
+    };
+
+    const updatedTreatment = {
+      ...currentTreatment,
+      subTreatments: [
+        ...(currentTreatment.subTreatments || []),
+        newSubTreatment,
+      ],
+    };
+
+    onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+  };
+
+  return (
   <div className="space-y-2">
     <label className="flex items-center gap-2 text-sm font-medium text-black">
       {icon}
@@ -231,7 +345,7 @@ const TreatmentManager = ({
                   (t: Treatment) => t._id === e.target.value
                 );
                 if (selectedTreatment) {
-                  onAddFromDropdown(selectedTreatment.treatment_name);
+                  onAddFromDropdown(selectedTreatment.name);
                 }
               }
             }}
@@ -241,12 +355,11 @@ const TreatmentManager = ({
             <option value="">Select a treatment</option>
             {availableTreatments?.map((treatment: Treatment) => (
               <option key={treatment._id} value={treatment._id}>
-                {treatment.treatment_name}
+                {treatment.name}
               </option>
             ))}
             <option value="custom">+ Add Custom Treatment</option>
           </select>
-          {/* <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" /> */}
         </div>
       ) : (
         <div className="flex gap-2">
@@ -283,24 +396,148 @@ const TreatmentManager = ({
     </div>
 
     {/* Selected Treatments */}
-    <div className="flex flex-wrap gap-2">
-      {items?.map((item: string, index: number) => (
-        <span
-          key={index}
-          className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 text-black rounded-full text-sm"
-        >
-          {item}
-          <button
-            onClick={() => onRemove(index)}
-            className="text-gray-400 hover:text-black transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </span>
-      ))}
+    <div className="space-y-2">
+      {items?.map(
+        (
+          item: {
+            mainTreatment: string;
+            subTreatments?: Array<{ name: string; slug: string }>;
+          },
+          index: number
+          ) => {
+            const selectedTreatment = availableTreatments.find(
+              (t) => t.name === item.mainTreatment
+            );
+
+            return (
+              <div
+                key={index}
+                className="border border-gray-200 rounded-lg p-3"
+              >
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-black">
+                {item.mainTreatment}
+              </span>
+              <button
+                onClick={() => onRemove(index)}
+                className="text-red-500 hover:text-red-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+                {/* Sub-treatment Selection */}
+                <div className="ml-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      Sub-treatments:
+                    </span>
+                    <button
+                      onClick={() => setShowSubTreatmentInput(index)}
+                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                    >
+                      + Add Sub-treatment
+                    </button>
+                  </div>
+
+                  {/* Sub-treatment Input */}
+                  {showSubTreatmentInput === index && (
+                    <div className="flex gap-2 items-center">
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value === "custom") {
+                            setShowCustomSubTreatmentInput(index);
+                            setCustomSubTreatment("");
+                          } else if (e.target.value) {
+                            handleAddFromAvailableSubTreatments(
+                              index,
+                              e.target.value
+                            );
+                          }
+                        }}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                        value=""
+                      >
+                        <option value="">Select sub-treatment</option>
+                        {selectedTreatment?.subcategories?.map((sub) => (
+                          <option key={sub.slug} value={sub.name}>
+                            {sub.name}
+                          </option>
+                        ))}
+                        <option value="custom">
+                          + Add Custom Sub-treatment
+                        </option>
+                      </select>
+
+                      {showCustomSubTreatmentInput === index && (
+                        <>
+                          <input
+                            type="text"
+                            value={customSubTreatment}
+                            onChange={(e) =>
+                              setCustomSubTreatment(e.target.value)
+                            }
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                            placeholder="Custom sub-treatment name"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddSubTreatment(index);
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => handleAddSubTreatment(index)}
+                            className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                          >
+                            Add
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setShowSubTreatmentInput(null);
+                          setShowCustomSubTreatmentInput(null);
+                          setCustomSubTreatment("");
+                        }}
+                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Existing Sub-treatments */}
+            {item.subTreatments && item.subTreatments.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                  {item.subTreatments.map((subTreatment, subIndex) => (
+                    <span
+                      key={subIndex}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                    >
+                      {subTreatment.name}
+                          <button
+                            onClick={() =>
+                              handleRemoveSubTreatment(index, subIndex)
+                            }
+                            className="text-red-400 hover:text-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                    </span>
+                  ))}
+              </div>
+            )}
+          </div>
+              </div>
+            );
+          }
+      )}
     </div>
   </div>
 );
+};
 
 interface ClinicCardProps {
   clinic: Clinic;
@@ -309,7 +546,6 @@ interface ClinicCardProps {
 }
 const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
   <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-w-4xl mx-auto">
-
     {/* Image & Edit Section */}
     <div className="relative w-full">
       {clinic.photos?.[0] ? (
@@ -325,8 +561,13 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent rounded-t-xl pointer-events-none"></div>
         </div>
       ) : (
-        <div className="w-full flex items-center justify-center bg-gradient-to-tr from-slate-200 to-indigo-100 rounded-t-xl" style={{ height: '16rem' }}>
-          <span className="text-gray-400 text-lg font-semibold">Please Upload Clinic Photo</span>
+        <div
+          className="w-full flex items-center justify-center bg-gradient-to-tr from-slate-200 to-indigo-100 rounded-t-xl"
+          style={{ height: "16rem" }}
+        >
+          <span className="text-gray-400 text-lg font-semibold">
+            Please Upload Clinic Photo
+          </span>
         </div>
       )}
 
@@ -342,7 +583,9 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
     <div className="p-8 bg-white rounded-b-xl">
       {/* Header */}
       <div className="mb-5">
-        <h2 className="text-2xl font-bold text-indigo-700 mb-1 tracking-tight">{clinic.name}</h2>
+        <h2 className="text-2xl font-bold text-indigo-700 mb-1 tracking-tight">
+          {clinic.name}
+        </h2>
         <div className="flex items-center gap-2 text-gray-500">
           <MapPin className="w-5 h-5 text-indigo-400" />
           <span className="text-base">{clinic.address}</span>
@@ -371,15 +614,27 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
           </span>
 
           <div>
-            <div className="text-sm font-semibold text-gray-700">Consultation Fee</div>
-            <div className="text-black">{clinic.pricing || <span className="text-gray-400">Contact for pricing</span>}</div>
+            <div className="text-sm font-semibold text-gray-700">
+              Consultation Fee
+            </div>
+            <div className="text-black">
+              {clinic.pricing || (
+                <span className="text-gray-400">Contact for pricing</span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3 p-4 rounded-lg bg-indigo-50 shadow">
-          <span className="bg-indigo-200 rounded-full p-2"><Clock className="w-5 h-5 text-indigo-600" /></span>
+          <span className="bg-indigo-200 rounded-full p-2">
+            <Clock className="w-5 h-5 text-indigo-600" />
+          </span>
           <div>
             <div className="text-sm font-semibold text-gray-800">Timings</div>
-            <div className="text-black">{clinic.timings || <span className="text-gray-400">Contact for timings</span>}</div>
+            <div className="text-black">
+              {clinic.timings || (
+                <span className="text-gray-400">Contact for timings</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -393,7 +648,12 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
           </div>
           <div className="flex flex-wrap gap-2">
             {clinic.servicesName.map((service, idx) => (
-              <span key={idx} className="px-3 py-1 bg-green-50 text-green-800 rounded-full shadow-sm text-sm">{service}</span>
+              <span
+                key={idx}
+                className="px-3 py-1 bg-green-50 text-green-800 rounded-full shadow-sm text-sm"
+              >
+                {service}
+              </span>
             ))}
           </div>
         </div>
@@ -406,9 +666,30 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
             <Heart className="w-5 h-5 text-rose-400" />
             Treatments
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {clinic.treatments.map((treatment, idx) => (
-              <span key={idx} className="px-3 py-1 bg-rose-50 text-rose-800 rounded-full shadow-sm text-sm">{treatment}</span>
+              <div key={idx} className="border border-rose-100 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-3 py-1 bg-rose-50 text-rose-800 rounded-full shadow-sm text-sm font-medium">
+                    {treatment.mainTreatment}
+                  </span>
+                </div>
+                {treatment.subTreatments &&
+                  treatment.subTreatments.length > 0 && (
+                    <div className="ml-4">
+                      <div className="flex flex-wrap gap-1">
+                        {treatment.subTreatments.map((subTreatment, subIdx) => (
+                          <span
+                            key={subIdx}
+                            className="px-2 py-1 bg-rose-25 text-rose-700 rounded-full shadow-sm text-xs"
+                          >
+                            {subTreatment.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+              </div>
             ))}
           </div>
         </div>
@@ -423,15 +704,14 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
           <span>
             <span className="italic">Established</span>{" "}
             {new Date(clinic.createdAt).toLocaleDateString("en-US", {
-              year: "numeric", month: "long"
+              year: "numeric",
+              month: "long",
             })}
           </span>
         </div>
       </div>
     </div>
   </div>
-
-
 );
 
 function ClinicManagementDashboard() {
@@ -540,13 +820,49 @@ function ClinicManagementDashboard() {
     }));
   };
 
-  const addTreatment = () => {
+  const addTreatment = async () => {
     const trimmed = newTreatment.trim();
     console.log("Adding custom treatment:", trimmed);
     console.log("Current treatments:", editForm.treatments);
-    if (trimmed && !editForm.treatments?.includes(trimmed)) {
+    if (
+      trimmed &&
+      !editForm.treatments?.some((t) => t.mainTreatment === trimmed)
+    ) {
+      try {
+        // Add to database if it's a custom treatment
+        const token = localStorage.getItem("clinicToken");
+        const response = await axios.post(
+          "/api/clinics/add-custom-treatment",
+          {
+            mainTreatment: trimmed,
+            subTreatments: [],
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (response.data.success) {
+          // Refresh available treatments
+          const treatmentsResponse = await axios.get(
+            "/api/doctor/getTreatment"
+          );
+          setAvailableTreatments(treatmentsResponse.data.treatments || []);
+        }
+      } catch (error) {
+        console.error("Error adding custom treatment to database:", error);
+        // Continue with local addition even if database call fails
+      }
+
       setEditForm((prev) => {
-        const newTreatments = [...(prev.treatments || []), trimmed];
+        const newTreatments = [
+          ...(prev.treatments || []),
+          {
+            mainTreatment: trimmed,
+            mainTreatmentSlug: trimmed.toLowerCase().replace(/\s+/g, "-"),
+            subTreatments: [],
+          },
+        ];
         console.log("New treatments array after adding custom:", newTreatments);
         return {
           ...prev,
@@ -563,9 +879,19 @@ function ClinicManagementDashboard() {
   const addTreatmentFromDropdown = (treatmentName: string) => {
     console.log("Adding treatment from dropdown:", treatmentName);
     console.log("Current treatments:", editForm.treatments);
-    if (treatmentName && !editForm.treatments?.includes(treatmentName)) {
+    if (
+      treatmentName &&
+      !editForm.treatments?.some((t) => t.mainTreatment === treatmentName)
+    ) {
       setEditForm((prev) => {
-        const newTreatments = [...(prev.treatments || []), treatmentName];
+        const newTreatments = [
+          ...(prev.treatments || []),
+          {
+            mainTreatment: treatmentName,
+            mainTreatmentSlug: treatmentName.toLowerCase().replace(/\s+/g, "-"),
+            subTreatments: [],
+          },
+        ];
         console.log("New treatments array:", newTreatments);
         return {
           ...prev,
@@ -579,6 +905,16 @@ function ClinicManagementDashboard() {
     setEditForm((prev) => ({
       ...prev,
       treatments: prev.treatments?.filter((_, i) => i !== index) || [],
+    }));
+  };
+
+  const handleUpdateTreatment = (index: number, updatedTreatment: any) => {
+    setEditForm((prev) => ({
+      ...prev,
+      treatments:
+        prev.treatments?.map((treatment, i) =>
+          i === index ? updatedTreatment : treatment
+        ) || [],
     }));
   };
 
@@ -776,7 +1112,6 @@ function ClinicManagementDashboard() {
                           </text>
                         </svg>
                       }
-
                       value={editForm.pricing || ""}
                       onChange={(value: string) =>
                         handleInputChange("pricing", value)
@@ -820,6 +1155,7 @@ function ClinicManagementDashboard() {
                     showCustomInput={showCustomTreatmentInput}
                     setShowCustomInput={setShowCustomTreatmentInput}
                     onAddFromDropdown={addTreatmentFromDropdown}
+                    onUpdateTreatment={handleUpdateTreatment}
                   />
 
                   {/* Photo Upload */}
@@ -844,7 +1180,9 @@ function ClinicManagementDashboard() {
                               setPhotoError("Please upload a PNG or JPG file");
                               setSelectedFile(null);
                             } else if (file.size > 1024 * 1024) {
-                              setPhotoError("File is too large and you have to upload file less than 1MB");
+                              setPhotoError(
+                                "File is too large and you have to upload file less than 1MB"
+                              );
                               setSelectedFile(null);
                             } else {
                               setSelectedFile(file);
@@ -867,7 +1205,9 @@ function ClinicManagementDashboard() {
                         </p>
                       )}
                       {photoError && (
-                        <p className="text-red-600 text-sm mt-2 font-medium">{photoError}</p>
+                        <p className="text-red-600 text-sm mt-2 font-medium">
+                          {photoError}
+                        </p>
                       )}
                     </div>
                   </div>

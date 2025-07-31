@@ -4,9 +4,16 @@ import axios from 'axios';
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth'; 
 
+type SubTreatment = {
+  name: string;
+  slug: string;
+};
+
 type Treatment = {
   _id: string;
-  treatment_name: string;
+  name: string;
+  slug: string;
+  subcategories: SubTreatment[];
 };
 
 type NextPageWithLayout = React.FC & {
@@ -14,7 +21,9 @@ type NextPageWithLayout = React.FC & {
 };
 
 const AddTreatment: NextPageWithLayout = () => {
-  const [newTreatment, setNewTreatment] = useState<string>('');
+  const [newMainTreatment, setNewMainTreatment] = useState<string>('');
+  const [newSubTreatment, setNewSubTreatment] = useState<string>('');
+  const [selectedMainTreatment, setSelectedMainTreatment] = useState<string>('');
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +74,9 @@ const AddTreatment: NextPageWithLayout = () => {
     };
   }, [showDeleteModal]);
 
-  const handleAddTreatment = async () => {
-    if (!newTreatment.trim()) {
-      showToast('Treatment name cannot be empty', 'error');
+  const handleAddMainTreatment = async () => {
+    if (!newMainTreatment.trim()) {
+      showToast('Main treatment name cannot be empty', 'error');
       return;
     }
 
@@ -77,16 +86,61 @@ const AddTreatment: NextPageWithLayout = () => {
 
     try {
       const res = await axios.post('/api/admin/addTreatment', {
-        treatment_name: newTreatment,
+        name: newMainTreatment,
+        slug: newMainTreatment.toLowerCase().replace(/\s+/g, '-'),
       });
 
       if (res.status === 201) {
-        showToast('Treatment added successfully', 'success');
-        setNewTreatment('');
+        showToast('Main treatment added successfully', 'success');
+        setNewMainTreatment('');
         fetchTreatments();
       }
     } catch (err: unknown) {
-      let message = 'Error adding treatment';
+      let message = 'Error adding main treatment';
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message
+      ) {
+        message = (err as { response: { data: { message: string } } }).response.data.message;
+      }
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddSubTreatment = async () => {
+    if (!selectedMainTreatment) {
+      showToast('Please select a main treatment first', 'error');
+      return;
+    }
+
+    if (!newSubTreatment.trim()) {
+      showToast('Sub-treatment name cannot be empty', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await axios.post('/api/admin/addSubTreatment', {
+        mainTreatmentId: selectedMainTreatment,
+        subTreatmentName: newSubTreatment,
+        subTreatmentSlug: newSubTreatment.toLowerCase().replace(/\s+/g, '-'),
+      });
+
+      if (res.status === 201) {
+        showToast('Sub-treatment added successfully', 'success');
+        setNewSubTreatment('');
+        setSelectedMainTreatment('');
+        fetchTreatments();
+      }
+    } catch (err: unknown) {
+      let message = 'Error adding sub-treatment';
       if (
         typeof err === 'object' &&
         err !== null &&
@@ -129,9 +183,13 @@ const AddTreatment: NextPageWithLayout = () => {
     setTreatmentToDelete(null);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent, type: 'main' | 'sub') => {
     if (e.key === 'Enter') {
-      handleAddTreatment();
+      if (type === 'main') {
+        handleAddMainTreatment();
+      } else {
+        handleAddSubTreatment();
+      }
     }
   };
 
@@ -149,7 +207,7 @@ const AddTreatment: NextPageWithLayout = () => {
             Treatment Management
           </h1>
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-            Streamline your medical practice with efficient treatment management
+            Manage main treatments and their sub-treatments efficiently
           </p>
         </div>
 
@@ -167,22 +225,23 @@ const AddTreatment: NextPageWithLayout = () => {
                 </div>
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Add New Treatment</h2>
-                  <p className="text-blue-100 text-sm sm:text-base">Create a new treatment entry</p>
+                  <p className="text-blue-100 text-sm sm:text-base">Create main treatments and sub-treatments</p>
                 </div>
               </div>
             </div>
 
             <div className="p-6 sm:p-8">
               <div className="space-y-6">
+                {/* Add Main Treatment */}
                 <div className="relative">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Treatment Name</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Main Treatment Name</label>
                   <div className="relative">
                     <input
                       type="text"
-                      value={newTreatment}
-                      onChange={(e) => setNewTreatment(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Enter treatment name (e.g., Physical Therapy, Medication)"
+                      value={newMainTreatment}
+                      onChange={(e) => setNewMainTreatment(e.target.value)}
+                      onKeyPress={(e) => handleKeyPress(e, 'main')}
+                      placeholder="Enter main treatment name (e.g., Physical Therapy, Medication)"
                       className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 sm:py-4 pl-12 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 text-gray-700 placeholder-gray-400 text-sm sm:text-base"
                     />
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4">
@@ -194,7 +253,7 @@ const AddTreatment: NextPageWithLayout = () => {
                 </div>
 
                 <button
-                  onClick={handleAddTreatment}
+                  onClick={handleAddMainTreatment}
                   disabled={loading}
                   className={`w-full py-3 sm:py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 text-base sm:text-lg ${
                     loading
@@ -208,17 +267,85 @@ const AddTreatment: NextPageWithLayout = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Adding Treatment...
+                      Adding Main Treatment...
                     </div>
                   ) : (
                     <div className="flex items-center justify-center">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-                      Add Treatment
+                      Add Main Treatment
                     </div>
                   )}
                 </button>
+
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Sub-Treatment</h3>
+                  
+                  {/* Select Main Treatment */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Select Main Treatment</label>
+                    <select
+                      value={selectedMainTreatment}
+                      onChange={(e) => setSelectedMainTreatment(e.target.value)}
+                      className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 sm:py-4 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 text-gray-700 text-sm sm:text-base"
+                    >
+                      <option value="">Choose a main treatment...</option>
+                      {treatments.map((treatment) => (
+                        <option key={treatment._id} value={treatment._id}>
+                          {treatment.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Add Sub-Treatment Input */}
+                  <div className="relative">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Sub-Treatment Name</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newSubTreatment}
+                        onChange={(e) => setNewSubTreatment(e.target.value)}
+                        onKeyPress={(e) => handleKeyPress(e, 'sub')}
+                        placeholder="Enter sub-treatment name"
+                        className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 sm:py-4 pl-12 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 text-gray-700 placeholder-gray-400 text-sm sm:text-base"
+                      />
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-4">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleAddSubTreatment}
+                    disabled={loading || !selectedMainTreatment}
+                    className={`w-full py-3 sm:py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 text-base sm:text-lg mt-4 ${
+                      loading || !selectedMainTreatment
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]'
+                    }`}
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Adding Sub-Treatment...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Sub-Treatment
+                      </div>
+                    )}
+                  </button>
+                </div>
 
                 {/* Status Messages */}
                 {error && (
@@ -282,25 +409,25 @@ const AddTreatment: NextPageWithLayout = () => {
                     <p className="text-gray-500 text-sm sm:text-base">Add your first treatment to get started</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-4">
                     {treatments.map((treatment, index) => (
                       <div
                         key={treatment._id}
                         className="group bg-gray-50 hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-xl p-4 sm:p-5 transition-all duration-300"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center min-w-0 flex-1">
                             <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs sm:text-sm font-bold w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
                               {index + 1}
                             </div>
                             <div className="min-w-0 flex-1">
                               <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate pr-2">
-                                {treatment.treatment_name}
+                                {treatment.name}
                               </h4>
                             </div>
                           </div>
                           <button
-                            onClick={() => handleDeleteClick(treatment._id, treatment.treatment_name)}
+                            onClick={() => handleDeleteClick(treatment._id, treatment.name)}
                             className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white p-2 sm:p-2.5 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 ml-3 flex-shrink-0"
                           >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,6 +435,23 @@ const AddTreatment: NextPageWithLayout = () => {
                             </svg>
                           </button>
                         </div>
+                        
+                        {/* Sub-treatments */}
+                        {treatment.subcategories && treatment.subcategories.length > 0 && (
+                          <div className="ml-11 sm:ml-14">
+                            <h5 className="text-xs font-medium text-gray-600 mb-2">Sub-treatments:</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {treatment.subcategories.map((sub, subIndex) => (
+                                <span
+                                  key={subIndex}
+                                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
+                                >
+                                  {sub.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -327,7 +471,7 @@ const AddTreatment: NextPageWithLayout = () => {
                 </svg>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{treatments.length}</h3>
-              <p className="text-sm sm:text-base text-gray-600">Total Treatments</p>
+              <p className="text-sm sm:text-base text-gray-600">Main Treatments</p>
             </div>
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-xl mb-3 sm:mb-4">
@@ -335,8 +479,10 @@ const AddTreatment: NextPageWithLayout = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Active</h3>
-              <p className="text-sm sm:text-base text-gray-600">System Status</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+                {treatments.reduce((total, treatment) => total + (treatment.subcategories?.length || 0), 0)}
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600">Sub-Treatments</p>
             </div>
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-xl mb-3 sm:mb-4">
@@ -376,7 +522,7 @@ const AddTreatment: NextPageWithLayout = () => {
                   Delete Treatment
                 </h3>
                 <p className="text-gray-600 text-sm sm:text-base mb-2">
-                  Are you sure you want to delete this treatment?
+                  Are you sure you want to delete this treatment and all its sub-treatments?
                 </p>
                 <div className="bg-gray-50 rounded-lg p-3 mx-2">
                   <p className="font-semibold text-gray-900 text-sm sm:text-base">

@@ -5,28 +5,23 @@ export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === 'POST') {
-    const { name, slug } = req.body;
+    const { treatment_name } = req.body;
 
-    if (!name) {
+    if (!treatment_name) {
       return res.status(400).json({ message: 'Treatment name is required' });
     }
 
     try {
-      const exists = await Treatment.findOne({ name });
+      const exists = await Treatment.findOne({ treatment_name });
       if (exists) {
         return res.status(409).json({ message: 'Treatment already exists' });
       }
 
-      const treatment = new Treatment({ 
-        name,
-        slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
-        subcategories: []
-      });
+      const treatment = new Treatment({ treatment_name });
       await treatment.save();
 
       return res.status(201).json({ message: 'Treatment added successfully', treatment });
-    } catch (error) {
-      console.error('Error adding treatment:', error);
+    } catch {
       return res.status(500).json({ success: false, message: 'Failed to add treatment' });
     }
   }

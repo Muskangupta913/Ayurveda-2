@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       degree,
       experience,
       address,
-      treatment,
+      treatments,
       consultationFee,
       clinicContact,
       phone, // <-- add phone
@@ -86,16 +86,40 @@ export default async function handler(req, res) {
     profile.address = address;
     profile.consultationFee = Number(consultationFee);
     profile.clinicContact = clinicContact;
-    // Ensure treatment is always stored as an array
-    // Ensure treatment is always stored as an array
-    if (Array.isArray(treatment)) {
-      profile.treatment = treatment;
-    } else if (typeof treatment === "string") {
-      profile.treatment = [treatment];
-    } else if (req.body["treatment[]"]) {
-      profile.treatment = Array.isArray(req.body["treatment[]"])
-        ? req.body["treatment[]"]
-        : [req.body["treatment[]"]];
+    // Handle treatments with proper structure
+    if (treatments) {
+      try {
+        const parsedTreatments =
+          typeof treatments === "string" ? JSON.parse(treatments) : treatments;
+
+        if (Array.isArray(parsedTreatments)) {
+          profile.treatments = parsedTreatments.map((treatment) => {
+            if (typeof treatment === "string") {
+              return {
+                mainTreatment: treatment,
+                mainTreatmentSlug: treatment.toLowerCase().replace(/\s+/g, "-"),
+                subTreatments: [],
+              };
+            } else if (treatment.mainTreatment && treatment.mainTreatmentSlug) {
+              return {
+                ...treatment,
+                subTreatments: treatment.subTreatments || [],
+              };
+            }
+            return treatment;
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing treatments:", error);
+        // Fallback: convert to simple array format
+        if (Array.isArray(treatments)) {
+          profile.treatments = treatments.map((treatment) => ({
+            mainTreatment: treatment,
+            mainTreatmentSlug: treatment.toLowerCase().replace(/\s+/g, "-"),
+            subTreatments: [],
+          }));
+        }
+      }
     }
 
     // Parse and update timeSlots
@@ -149,12 +173,10 @@ export default async function handler(req, res) {
         : `${getBaseUrl()}${responseProfile.resumeUrl}`;
     }
 
-    return res
-      .status(200)
-      .json({
-        message: "Doctor profile updated successfully",
-        profile: responseProfile,
-      });
+    return res.status(200).json({
+      message: "Doctor profile updated successfully",
+      profile: responseProfile,
+    });
   } catch (error) {
     console.error("Edit profile error:", error);
     return res

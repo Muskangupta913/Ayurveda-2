@@ -166,10 +166,10 @@ const RegisterClinic: React.FC & {
     latitude: 0,
     longitude: 0,
   });
-  const [treatments, setTreatments] = useState<string[]>([]);
-  const [selectedTreatments, setSelectedTreatments] = useState<TreatmentType[]>(
-    []
-  );
+  const [treatments, setTreatments] = useState<TreatmentType[]>([]);
+  const [selectedTreatments, setSelectedTreatments] = useState<
+    (TreatmentType | string)[]
+  >([]);
 
   const [newTreatment, setNewTreatment] = useState<string>("");
   const [clinicPhoto, setClinicPhoto] = useState<File | null>(null);
@@ -424,21 +424,33 @@ const RegisterClinic: React.FC & {
     }
   };
 
-  const handleTreatmentSelect = (treatment: TreatmentType) => {
-    const alreadySelected = selectedTreatments.some(
-      (t) => t.slug === treatment.slug
-    );
+  const handleTreatmentSelect = (treatment: TreatmentType | string) => {
+    const alreadySelected = selectedTreatments.some((t) => {
+      if (typeof t === "string" && typeof treatment === "string") {
+        return t === treatment;
+      } else if (typeof t === "object" && typeof treatment === "object") {
+        return t.slug === treatment.slug;
+      }
+      return false;
+    });
 
     if (alreadySelected) {
       setSelectedTreatments((prev) =>
-        prev.filter((t) => t.slug !== treatment.slug)
+        prev.filter((t) => {
+          if (typeof t === "string" && typeof treatment === "string") {
+            return t !== treatment;
+          } else if (typeof t === "object" && typeof treatment === "object") {
+            return t.slug !== treatment.slug;
+          }
+          return true;
+        })
       );
     } else {
       setSelectedTreatments((prev) => [...prev, treatment]);
     }
 
     // Close dropdown if "other" is selected
-    if (treatment.slug === "other") {
+    if (typeof treatment === "string" && treatment === "other") {
       setIsDropdownOpen(false);
     }
   };
@@ -700,7 +712,9 @@ const RegisterClinic: React.FC & {
                                   key={index}
                                   className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-green-100 text-green-800"
                                 >
-                                  {treatment}
+                                  {typeof treatment === "string"
+                                    ? treatment
+                                    : treatment.name}
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -737,19 +751,23 @@ const RegisterClinic: React.FC & {
                           {treatments.map((treatment, index) => (
                             <div
                               key={index}
-                              onClick={() =>
-                                handleTreatmentSelect(treatment.name)
-                              } // use name
+                              onClick={() => handleTreatmentSelect(treatment)}
                               className={`text-black px-4 py-3 cursor-pointer hover:bg-green-50 flex items-center justify-between ${
-                                selectedTreatments.includes(treatment.name)
+                                selectedTreatments.some(
+                                  (t) =>
+                                    typeof t === "object" &&
+                                    t.slug === treatment.slug
+                                )
                                   ? "bg-green-50 text-green-700"
                                   : ""
                               }`}
                             >
                               <span>{treatment.name}</span>
-                              {selectedTreatments.includes(treatment.name) && (
-                                <span className="text-green-600">✓</span>
-                              )}
+                              {selectedTreatments.some(
+                                (t) =>
+                                  typeof t === "object" &&
+                                  t.slug === treatment.slug
+                              ) && <span className="text-green-600">✓</span>}
                             </div>
                           ))}
 

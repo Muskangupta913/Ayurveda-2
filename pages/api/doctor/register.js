@@ -53,17 +53,22 @@ export default async function handler(req, res) {
   await runMiddleware(req, res, uploadMiddleware);
 
   try {
-    const { name, phone, email, specialization, degree, experience, address } = req.body;
+    const { name, phone, email, specialization, degree, experience, address } =
+      req.body;
 
     // Validate experience
     const parsedExperience = parseInt(experience);
     if (isNaN(parsedExperience)) {
-      return res.status(400).json({ message: "Experience must be a valid number" });
+      return res
+        .status(400)
+        .json({ message: "Experience must be a valid number" });
     }
 
     const existingUser = await User.findOne({ email, role: "doctor" });
     if (existingUser) {
-      return res.status(400).json({ message: "A doctor with this email already exists" });
+      return res
+        .status(400)
+        .json({ message: "A doctor with this email already exists" });
     }
 
     const resumePath = req.files?.["resume"]?.[0]?.path
@@ -71,12 +76,15 @@ export default async function handler(req, res) {
       : "";
 
     // Use Google Maps API to get coordinates
-    const geoRes = await axios.get("https://maps.googleapis.com/maps/api/geocode/json", {
-      params: {
-        address,
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
-      },
-    });
+    const geoRes = await axios.get(
+      "https://maps.googleapis.com/maps/api/geocode/json",
+      {
+        params: {
+          address,
+          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+        },
+      }
+    );
 
     const location = geoRes.data.results[0]?.geometry.location;
     if (!location) {
@@ -94,13 +102,28 @@ export default async function handler(req, res) {
     });
 
     try {
+      // Handle treatments - convert specialization to treatments structure
+      let treatments = [];
+      if (specialization && specialization.trim()) {
+        treatments = [
+          {
+            mainTreatment: specialization.trim(),
+            mainTreatmentSlug: specialization
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, "-"),
+            subTreatments: [],
+          },
+        ];
+      }
+
       // Create doctor profile
       const doctor = await DoctorProfile.create({
         user: user._id,
-        specialization,
         degree,
         experience: parsedExperience,
         address,
+        treatments,
         location: {
           type: "Point",
           coordinates: [location.lng, location.lat],
@@ -124,6 +147,8 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error("Unhandled error:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 }

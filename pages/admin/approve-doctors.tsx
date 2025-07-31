@@ -21,10 +21,18 @@ import {
 
 interface Doctor {
   _id: string;
-  specialization: string;
-  experience: string;
+  degree: string;
+  experience: number;
   address: string;
-  resumeUrl?: string;
+  resumeUrl: string;
+  treatments: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
   user: {
     _id: string;
     name: string;
@@ -54,6 +62,7 @@ function AdminDoctors() {
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
     lng: number;
+    address?: string;
   } | null>(null);
   const [mapVisible, setMapVisible] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
@@ -132,13 +141,30 @@ function AdminDoctors() {
     // Filter by search term
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      return (
+
+      // Check basic fields
+      const basicMatch =
         user.name.toLowerCase().includes(searchLower) ||
         user.email.toLowerCase().includes(searchLower) ||
         user.phone.toLowerCase().includes(searchLower) ||
-        doc.specialization.toLowerCase().includes(searchLower) ||
-        doc.address.toLowerCase().includes(searchLower)
-      );
+        doc.degree.toLowerCase().includes(searchLower) ||
+        doc.address.toLowerCase().includes(searchLower);
+
+      if (basicMatch) return true;
+
+      // Check treatments
+      if (doc.treatments && doc.treatments.length > 0) {
+        const treatmentMatch = doc.treatments.some(
+          (treatment) =>
+            treatment.mainTreatment.toLowerCase().includes(searchLower) ||
+            treatment.subTreatments.some((sub) =>
+              sub.name.toLowerCase().includes(searchLower)
+            )
+        );
+        if (treatmentMatch) return true;
+      }
+
+      return false;
     }
 
     return true;
@@ -157,13 +183,13 @@ function AdminDoctors() {
         aValue = a.user?.email || "";
         bValue = b.user?.email || "";
         break;
-      case "specialization":
-        aValue = a.specialization || "";
-        bValue = b.specialization || "";
+      case "degree":
+        aValue = a.degree || "";
+        bValue = b.degree || "";
         break;
       case "experience":
-        aValue = a.experience || "";
-        bValue = b.experience || "";
+        aValue = a.experience.toString() || "";
+        bValue = b.experience.toString() || "";
         break;
       default:
         aValue = a.user?.name || "";
@@ -222,19 +248,37 @@ function AdminDoctors() {
 
   const handleAddressClick = async (address: string) => {
     try {
+      console.log("Fetching location for address:", address);
+
+      // First try with Google Maps Geocoding API
       const response = await axios.get(
         `https://maps.googleapis.com/maps/api/geocode/json`,
         {
-          params: { address, key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY },
+          params: {
+            address,
+            key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+          },
         }
       );
+
+      console.log("Geocoding response:", response.data);
+
       const location = response.data.results[0]?.geometry?.location;
       if (location) {
-        setSelectedLocation(location);
+        console.log("Location found:", location);
+        setSelectedLocation({ ...location, address });
+        setMapVisible(true);
+      } else {
+        console.log("No location found, trying alternative approach");
+        // Fallback: try to show map with just the address
+        setSelectedLocation({ lat: 0, lng: 0, address });
         setMapVisible(true);
       }
     } catch (err) {
       console.error("Map fetch failed:", err);
+      // Fallback: show map with address search
+      setSelectedLocation({ lat: 0, lng: 0, address });
+      setMapVisible(true);
     }
   };
 
@@ -291,7 +335,7 @@ function AdminDoctors() {
                   {doctor.user.name}
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-700 truncate">
-                  {doctor.specialization}
+                  {doctor.degree}
                 </p>
                 <p className="text-xs text-gray-600 break-all">
                   {doctor.user.email}
@@ -300,7 +344,10 @@ function AdminDoctors() {
                   <MapPin size={12} className="mr-2 flex-shrink-0" />
                   <span
                     className="text-blue-600 cursor-pointer break-all underline"
-                    onClick={() => handleAddressClick(doctor.address)}
+                    onClick={() => {
+                      console.log("Address clicked:", doctor.address);
+                      handleAddressClick(doctor.address);
+                    }}
                   >
                     {doctor.address}
                   </span>
@@ -342,6 +389,74 @@ function AdminDoctors() {
               <Mail size={12} className="mr-2 flex-shrink-0" />
               <span>{doctor.user.email}</span>
             </div>
+
+            {/* Treatments Display */}
+            {doctor.treatments && doctor.treatments.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center text-xs sm:text-sm text-black">
+                  <Briefcase size={12} className="mr-2 flex-shrink-0" />
+                  <span className="font-medium">Treatments:</span>
+                </div>
+                <div className="ml-4 space-y-1">
+                  {doctor.treatments.map((treatment, index) => (
+                    <div key={index} className="text-xs text-gray-700">
+                      <div className="font-medium">
+                        {treatment.mainTreatment}
+                      </div>
+                      {treatment.subTreatments &&
+                        treatment.subTreatments.length > 0 && (
+                          <div className="ml-2 text-gray-600">
+                            {treatment.subTreatments.map((sub, subIndex) => (
+                              <span key={subIndex} className="text-xs">
+                                • {sub.name}
+                                {subIndex < treatment.subTreatments.length - 1
+                                  ? ", "
+                                  : ""}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resume URL */}
+            {doctor.resumeUrl && (
+              <div className="flex items-center text-xs sm:text-sm text-black">
+                <Briefcase size={12} className="mr-2 flex-shrink-0" />
+                <a
+                  href={doctor.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline truncate"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log("Resume URL from API:", doctor.resumeUrl);
+
+                    // Additional safety check for corrupted URLs
+                    let safeUrl = doctor.resumeUrl;
+                    if (safeUrl.includes("uploads/clinic/")) {
+                      const filenameMatch = safeUrl.match(
+                        /uploads\/clinic\/[^\/]+$/
+                      );
+                      if (filenameMatch) {
+                        const baseUrl =
+                          process.env.NEXT_PUBLIC_BASE_URL ||
+                          "http://localhost:3000";
+                        safeUrl = `${baseUrl}/${filenameMatch[0]}`;
+                        console.log("Cleaned resume URL:", safeUrl);
+                      }
+                    }
+
+                    window.open(safeUrl, "_blank");
+                  }}
+                >
+                  View Resume
+                </a>
+              </div>
+            )}
 
             {/* Password Management for Approved Doctors */}
             {activeTab === "approved" && (
@@ -432,12 +547,13 @@ function AdminDoctors() {
                       doctorId: doctor.user._id,
                     })
                   }
-                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${action === "approve"
+                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${
+                    action === "approve"
                       ? "bg-green-500 hover:bg-green-600 text-white"
                       : action === "decline"
-                        ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
+                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                      : "bg-red-500 hover:bg-red-600 text-white"
+                  }`}
                 >
                   {action.charAt(0).toUpperCase() + action.slice(1)}
                 </button>
@@ -537,7 +653,7 @@ function AdminDoctors() {
               />
               <input
                 type="text"
-                placeholder="Search doctors, specialization..."
+                placeholder="Search doctors, degree..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="text-black w-full pl-9 pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -721,18 +837,19 @@ function AdminDoctors() {
                     }
                     setConfirmAction({ show: false, type: "", doctorId: null });
                   }}
-                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${confirmAction.type === "approve"
+                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${
+                    confirmAction.type === "approve"
                       ? "bg-green-500 hover:bg-green-600"
                       : confirmAction.type === "decline"
-                        ? "bg-yellow-500 hover:bg-yellow-600"
-                        : "bg-red-500 hover:bg-red-600"
-                    }`}
+                      ? "bg-yellow-500 hover:bg-yellow-600"
+                      : "bg-red-500 hover:bg-red-600"
+                  }`}
                 >
                   {confirmAction.type === "approve"
                     ? "Approve"
                     : confirmAction.type === "decline"
-                      ? "Decline"
-                      : "Delete"}
+                    ? "Decline"
+                    : "Delete"}
                 </button>
               </div>
             </div>
@@ -762,7 +879,13 @@ function AdminDoctors() {
                   height="100%"
                   frameBorder="0"
                   style={{ border: 0, borderRadius: "8px" }}
-                  src={`https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}&z=16&output=embed`}
+                  src={
+                    selectedLocation.lat !== 0 && selectedLocation.lng !== 0
+                      ? `https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}&z=16&output=embed`
+                      : `https://www.google.com/maps?q=${encodeURIComponent(
+                          selectedLocation.address || ""
+                        )}&z=16&output=embed`
+                  }
                   allowFullScreen
                   aria-hidden="false"
                   tabIndex={0}

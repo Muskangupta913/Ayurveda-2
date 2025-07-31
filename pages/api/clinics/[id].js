@@ -167,11 +167,53 @@ export default async function handler(req, res) {
       if (typeof updateData.treatments === "string") {
         try {
           updateData.treatments = JSON.parse(updateData.treatments);
-        } catch {
+          // Ensure each treatment has the correct structure
+          if (Array.isArray(updateData.treatments)) {
+            updateData.treatments = updateData.treatments.map((treatment) => {
+              if (typeof treatment === "string") {
+                // Convert string to object format
+                return {
+                  mainTreatment: treatment,
+                  mainTreatmentSlug: treatment
+                    .toLowerCase()
+                    .replace(/\s+/g, "-"),
+                  subTreatments: [],
+                };
+              } else if (
+                treatment.mainTreatment &&
+                treatment.mainTreatmentSlug
+              ) {
+                // Ensure subTreatments array exists and has correct structure
+                return {
+                  ...treatment,
+                  subTreatments: (treatment.subTreatments || []).map(
+                    (subTreatment) => {
+                      if (typeof subTreatment === "string") {
+                        return {
+                          name: subTreatment,
+                          slug: subTreatment.toLowerCase().replace(/\s+/g, "-"),
+                        };
+                      }
+                      return subTreatment;
+                    }
+                  ),
+                };
+              }
+              return treatment;
+            });
+          }
+        } catch (error) {
+          console.error("Error parsing treatments:", error);
+          // Fallback: convert comma-separated strings to treatment objects
           updateData.treatments = updateData.treatments
             .split(",")
             .map((s) => s.trim())
-            .filter((s) => s);
+            .filter((s) => s)
+            .map((treatment) => ({
+              mainTreatment: treatment,
+              mainTreatmentSlug: treatment.toLowerCase().replace(/\s+/g, "-"),
+              subTreatments: [],
+            }));
         }
       }
 

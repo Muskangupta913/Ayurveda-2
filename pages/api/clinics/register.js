@@ -84,10 +84,31 @@ export default async function handler(req, res) {
       ? req.files['licenseDocument'][0].path.replace('public', '').replace(/\\/g, '/')
       : '';
 
-    // 🧠 Parse the treatment references (array of { mainTreatment, mainTreatmentSlug, subTreatment, subTreatmentSlug })
+    // 🧠 Parse the treatment references (array of { mainTreatment, mainTreatmentSlug, subTreatments })
     let parsedTreatments = [];
     try {
       parsedTreatments = JSON.parse(treatments); // from JSON.stringify on frontend
+      
+      // Ensure each treatment has the correct structure
+      if (Array.isArray(parsedTreatments)) {
+        parsedTreatments = parsedTreatments.map(treatment => {
+          if (typeof treatment === 'string') {
+            // Convert string to object format
+            return {
+              mainTreatment: treatment,
+              mainTreatmentSlug: treatment.toLowerCase().replace(/\s+/g, '-'),
+              subTreatments: []
+            };
+          } else if (treatment.mainTreatment && treatment.mainTreatmentSlug) {
+            // Ensure subTreatments array exists
+            return {
+              ...treatment,
+              subTreatments: treatment.subTreatments || []
+            };
+          }
+          return treatment;
+        });
+      }
     } catch (e) {
       return res.status(400).json({ message: 'Invalid treatment format' });
     }

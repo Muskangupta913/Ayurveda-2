@@ -46,6 +46,15 @@ export default async function handler(req, res) {
         : `${getBaseUrl()}${clinic.licenseDocumentUrl}`;
     }
 
+    // Transform treatments to include main treatments with their sub-treatments
+    if (clinic.treatments && Array.isArray(clinic.treatments)) {
+      clinic.treatments = clinic.treatments.map((treatment) => ({
+        mainTreatment: treatment.mainTreatment,
+        mainTreatmentSlug: treatment.mainTreatmentSlug,
+        subTreatments: treatment.subTreatments || [],
+      }));
+    }
+
     return res.status(200).json({ success: true, clinic });
   } catch (err) {
     console.error("❌ Token decode or DB error:", err);

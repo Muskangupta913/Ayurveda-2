@@ -2,6 +2,7 @@
 
 import dbConnect from "../../../lib/database";
 import DoctorProfile from "../../../models/DoctorProfile";
+import Treatment from "../../../models/Treatment";
 import "../../../models/Users"; // Register the User model
 import axios from "axios";
 
@@ -34,17 +35,113 @@ export default async function handler(req, res) {
     };
 
     if (service) {
-      query.$or = [
-        { treatment: { $regex: new RegExp(service, "i") } },
-        { "user.name": { $regex: new RegExp(service, "i") } },
-        { specialization: { $regex: new RegExp(service, "i") } },
-      ];
+      // Parse the service string to extract sub-treatment and main treatment
+      let subTreatmentName = service;
+      let mainTreatmentName = null;
+
+      // Check if service is in format "Sub Treatment (Main Treatment)"
+      const match = service.match(/^(.+?)\s*\((.+?)\)$/);
+      if (match) {
+        subTreatmentName = match[1].trim();
+        mainTreatmentName = match[2].trim();
+      }
+
+      console.log("Parsed service:", {
+        subTreatmentName,
+        mainTreatmentName,
+        originalService: service,
+      });
+
+      // First, try to find the exact treatment in the global Treatment model
+      let foundTreatment = null;
+      let foundSubTreatment = null;
+
+      try {
+        // Search for main treatment first
+        if (mainTreatmentName) {
+          foundTreatment = await Treatment.findOne({
+            name: { $regex: new RegExp(mainTreatmentName, "i") },
+          }).lean();
+        }
+
+        // If main treatment not found or not provided, search by sub-treatment
+        if (!foundTreatment) {
+          foundTreatment = await Treatment.findOne({
+            "subcategories.name": { $regex: new RegExp(subTreatmentName, "i") },
+          }).lean();
+        }
+
+        if (foundTreatment) {
+          // Find the specific sub-treatment
+          foundSubTreatment = foundTreatment.subcategories?.find((sub) =>
+            sub.name.toLowerCase().includes(subTreatmentName.toLowerCase())
+          );
+
+          if (foundSubTreatment) {
+            console.log(
+              "Found sub-treatment:",
+              foundSubTreatment.name,
+              "in main treatment:",
+              foundTreatment.name
+            );
+
+            // Search for doctors that have this specific sub-treatment
+            query.$or = [
+              { "treatments.subTreatments.name": foundSubTreatment.name },
+              { "treatments.mainTreatment": foundTreatment.name },
+              { "user.name": { $regex: new RegExp(service, "i") } },
+              { degree: { $regex: new RegExp(service, "i") } },
+            ];
+          } else {
+            // If sub-treatment not found, search by main treatment
+            console.log(
+              "Sub-treatment not found, searching by main treatment:",
+              foundTreatment.name
+            );
+            query.$or = [
+              { "treatments.mainTreatment": foundTreatment.name },
+              { "user.name": { $regex: new RegExp(service, "i") } },
+              { degree: { $regex: new RegExp(service, "i") } },
+            ];
+          }
+        } else {
+          // Fallback to regex search if treatment not found in global model
+          console.log(
+            "Treatment not found in global model, using fallback search"
+          );
+          query.$or = [
+            {
+              "treatments.mainTreatment": { $regex: new RegExp(service, "i") },
+            },
+            {
+              "treatments.subTreatments.name": {
+                $regex: new RegExp(service, "i"),
+              },
+            },
+            { "user.name": { $regex: new RegExp(service, "i") } },
+            { degree: { $regex: new RegExp(service, "i") } },
+          ];
+        }
+      } catch (error) {
+        console.error("Error searching for treatment:", error);
+        // Fallback to regex search with proper regex patterns
+        query.$or = [
+          { "treatments.mainTreatment": { $regex: new RegExp(service, "i") } },
+          {
+            "treatments.subTreatments.name": {
+              $regex: new RegExp(service, "i"),
+            },
+          },
+          { "user.name": { $regex: new RegExp(service, "i") } },
+          { degree: { $regex: new RegExp(service, "i") } },
+        ];
+      }
     }
 
     let doctors = await DoctorProfile.find(query)
       .populate("user", "name email phone profileImage isApproved")
       .select(
-        "specialization degree experience address location user rating reviews verified consultationFee clinicContact timeSlots treatment photos"
+        "degree experience address location user rating reviews verified consultationFee clinicContact timeSlots treatments photos resumeUrl"
       )
       // ✅ Use location info for result limits
       .limit(locationInfo.isInternational ? 100 : 50)
@@ -74,36 +171,38 @@ export default async function handler(req, res) {
         profileImage = `${getBaseUrl()}${profileImage}`;
       } else if (profileImage) {
         // Handle filename or partial path
-        const filename = profileImage.includes('uploads/clinic/') 
-          ? profileImage.split('uploads/clinic/').pop()
+        const filename = profileImage.includes("uploads/clinic/")
+          ? profileImage.split("uploads/clinic/").pop()
           : profileImage;
         profileImage = `${getBaseUrl()}/uploads/clinic/${filename}`;
       }
 
       // ✅ Process photos array - FIXED LOGIC
-      const photos = (doc.photos || []).map((photo) => {
-        if (!photo) return null;
+      const photos = (doc.photos || [])
+        .map((photo) => {
+          if (!photo) return null;
 
-        // Case 1: Already full URL
-        if (photo.startsWith("http")) return photo;
+          // Case 1: Already full URL
+          if (photo.startsWith("http")) return photo;
 
-        // Case 2: Relative path (starts with /)
-        if (photo.startsWith("/uploads/")) {
-          return `${getBaseUrl()}${photo}`;
-        }
+          // Case 2: Relative path (starts with /)
+          if (photo.startsWith("/uploads/")) {
+            return `${getBaseUrl()}${photo}`;
+          }
 
-        // Case 3: Handle filename or partial path
-        // Since doctors save to /uploads/clinic/, we need to handle this correctly
-        let filename = photo;
-        if (photo.includes('uploads/clinic/')) {
-          filename = photo.split('uploads/clinic/').pop();
-        } else if (photo.includes('uploads/doctor/')) {
-          // Legacy path handling if any exist
-          filename = photo.split('uploads/doctor/').pop();
-        }
-        
-        return `${getBaseUrl()}/uploads/clinic/${filename}`;
-      }).filter(Boolean); // Remove null values
+          // Case 3: Handle filename or partial path
+          // Since doctors save to /uploads/clinic/, we need to handle this correctly
+          let filename = photo;
+          if (photo.includes("uploads/clinic/")) {
+            filename = photo.split("uploads/clinic/").pop();
+          } else if (photo.includes("uploads/doctor/")) {
+            // Legacy path handling if any exist
+            filename = photo.split("uploads/doctor/").pop();
+          }
+
+          return `${getBaseUrl()}/uploads/clinic/${filename}`;
+        })
+        .filter(Boolean); // Remove null values
 
       // ✅ Process resumeUrl if present
       let resumeUrl = doc.resumeUrl;
@@ -111,8 +210,8 @@ export default async function handler(req, res) {
         if (resumeUrl.startsWith("/uploads/")) {
           resumeUrl = `${getBaseUrl()}${resumeUrl}`;
         } else {
-          const filename = resumeUrl.includes('uploads/clinic/') 
-            ? resumeUrl.split('uploads/clinic/').pop()
+          const filename = resumeUrl.includes("uploads/clinic/")
+            ? resumeUrl.split("uploads/clinic/").pop()
             : resumeUrl;
           resumeUrl = `${getBaseUrl()}/uploads/clinic/${filename}`;
         }
@@ -131,23 +230,25 @@ export default async function handler(req, res) {
 
     // ✅ Dubai-specific prioritization logic
     if (locationInfo.isDubai) {
-      let prioritizedDoctors = doctors.filter(doc => doc.verified === true);
-      let otherDoctors = doctors.filter(doc => doc.verified !== true);
-      
+      let prioritizedDoctors = doctors.filter((doc) => doc.verified === true);
+      let otherDoctors = doctors.filter((doc) => doc.verified !== true);
+
       doctors = [...prioritizedDoctors, ...otherDoctors];
     }
 
     // ✅ Apply final result count based on location
     doctors = doctors.slice(0, locationInfo.isInternational ? 30 : 20);
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       doctors,
-      locationInfo // Optional: include location info in response
+      locationInfo, // Optional: include location info in response
     });
   } catch (error) {
     console.error("Error fetching doctors:", error);
-    res.status(500).json({ message: "Error fetching doctors", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching doctors", error: error.message });
   }
 }
 
@@ -185,7 +286,9 @@ async function checkLocationInfo(lat, lng) {
         const countryComponent = addressComponents.find((component) =>
           component.types.includes("country")
         );
-        const country = countryComponent ? countryComponent.long_name : "Unknown";
+        const country = countryComponent
+          ? countryComponent.long_name
+          : "Unknown";
 
         const isDubai =
           addressComponents.some(

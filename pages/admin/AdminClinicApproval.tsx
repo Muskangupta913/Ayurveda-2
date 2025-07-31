@@ -24,7 +24,14 @@ interface Clinic {
   address: string;
   pricing: string;
   timings: string;
-  treatments: string[];
+  treatments: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
   photos: string[];
   owner: {
     name: string;
@@ -98,10 +105,26 @@ function AdminClinicApproval() {
 
   const getImagePath = (photoPath: string) => {
     if (!photoPath) return "/placeholder.jpg";
-    if (photoPath.startsWith("/")) return photoPath;
-    if (photoPath.includes("uploads/clinic/")) {
-      return `/uploads/clinic/${photoPath.split("uploads/clinic/").pop()}`;
+
+    // If it's already a full URL, return as is
+    if (photoPath.startsWith("http")) {
+      return photoPath;
     }
+
+    // If it starts with /, it's already a relative path
+    if (photoPath.startsWith("/")) {
+      return photoPath;
+    }
+
+    // If it contains uploads/clinic/, extract the filename
+    if (photoPath.includes("uploads/clinic/")) {
+      const filenameMatch = photoPath.match(/uploads\/clinic\/[^\/]+$/);
+      if (filenameMatch) {
+        return `/${filenameMatch[0]}`;
+      }
+    }
+
+    // Default fallback
     return `/uploads/clinic/${photoPath}`;
   };
 
@@ -208,7 +231,10 @@ function AdminClinicApproval() {
   const ClinicCard = ({ clinic }: { clinic: Clinic }) => {
     // const isExpanded = expandedCards.has(clinic._id);
     const actions = getTabActions(activeTab);
-    const [imagePopup, setImagePopup] = useState<{ show: boolean; image: string | null }>({ show: false, image: null });
+    const [imagePopup, setImagePopup] = useState<{
+      show: boolean;
+      image: string | null;
+    }>({ show: false, image: null });
 
     return (
       <div className="bg-white rounded-lg shadow-md border border-gray-300 hover:shadow-lg transition-all duration-200">
@@ -290,7 +316,7 @@ function AdminClinicApproval() {
                     key={index}
                     className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
                   >
-                    {treatment}
+                    {treatment.mainTreatment}
                   </span>
                 ))}
               </div>
@@ -300,7 +326,14 @@ function AdminClinicApproval() {
             {clinic.photos?.[0] && (
               <div className="mt-3">
                 <button
-                  onClick={() => setImagePopup({ show: true, image: clinic.photos[0] })}
+                  onClick={() => {
+                    console.log("Original photo URL:", clinic.photos[0]);
+                    console.log(
+                      "Processed photo URL:",
+                      getImagePath(clinic.photos[0])
+                    );
+                    setImagePopup({ show: true, image: clinic.photos[0] });
+                  }}
                   className="text-blue-600 hover:text-blue-800 underline text-xs sm:text-sm font-medium transition-colors"
                 >
                   **Click to View Clinic Image**
@@ -322,12 +355,13 @@ function AdminClinicApproval() {
                       clinicId: clinic._id,
                     })
                   }
-                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${action === "approve"
+                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${
+                    action === "approve"
                       ? "bg-green-500 hover:bg-green-600 text-white"
                       : action === "decline"
-                        ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
+                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                      : "bg-red-500 hover:bg-red-600 text-white"
+                  }`}
                 >
                   {action.charAt(0).toUpperCase() + action.slice(1)}
                 </button>
@@ -338,22 +372,24 @@ function AdminClinicApproval() {
 
         {/* Image Popup Modal */}
         {imagePopup?.show && imagePopup.image && (
-          <div 
+          <div
             className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 overflow-hidden"
-            style={{ 
-              position: 'fixed',
+            style={{
+              position: "fixed",
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              overflowY: 'hidden'
+              overflowY: "hidden",
             }}
             onWheel={(e) => e.preventDefault()}
             onTouchMove={(e) => e.preventDefault()}
           >
             <div className="bg-white rounded-lg p-4 max-w-2xl max-h-[90vh] overflow-auto shadow-2xl">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-black">{clinic.name} - Clinic Image</h3>
+                <h3 className="text-lg font-semibold text-black">
+                  {clinic.name} - Clinic Image
+                </h3>
                 <button
                   onClick={() => setImagePopup({ show: false, image: null })}
                   className="text-gray-500 hover:text-gray-700 text-xl"
@@ -469,17 +505,19 @@ function AdminClinicApproval() {
                     );
                     setCurrentPage(1);
                   }}
-                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === tab.key
-                    ? `border-${tab.color}-500 text-${tab.color}-600`
-                    : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
-                    }`}
+                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
+                    activeTab === tab.key
+                      ? `border-${tab.color}-500 text-${tab.color}-600`
+                      : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
+                  }`}
                 >
                   {tab.label}
                   <span
-                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${activeTab === tab.key
-                      ? `bg-${tab.color}-100 text-${tab.color}-800`
-                      : "bg-gray-100 text-black"
-                      }`}
+                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${
+                      activeTab === tab.key
+                        ? `bg-${tab.color}-100 text-${tab.color}-800`
+                        : "bg-gray-100 text-black"
+                    }`}
                   >
                     {tab.count}
                   </span>
@@ -689,18 +727,19 @@ function AdminClinicApproval() {
                     }
                     setConfirmAction({ show: false, type: "", clinicId: null });
                   }}
-                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${confirmAction.type === "approve"
-                    ? "bg-green-500 hover:bg-green-600"
-                    : confirmAction.type === "decline"
+                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${
+                    confirmAction.type === "approve"
+                      ? "bg-green-500 hover:bg-green-600"
+                      : confirmAction.type === "decline"
                       ? "bg-yellow-500 hover:bg-yellow-600"
                       : "bg-red-500 hover:bg-red-600"
-                    }`}
+                  }`}
                 >
                   {confirmAction.type === "approve"
                     ? "Approve"
                     : confirmAction.type === "decline"
-                      ? "Decline"
-                      : "Delete"}
+                    ? "Decline"
+                    : "Delete"}
                 </button>
               </div>
             </div>

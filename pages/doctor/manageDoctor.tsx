@@ -5,8 +5,8 @@ import DoctorLayout from "../../components/DoctorLayout";
 import toast from "react-hot-toast";
 import withDoctorAuth from "../../components/withDoctorAuth";
 import type { NextPageWithLayout } from "../_app";
-import Image from 'next/image';
-
+import Image from "next/image";
+import { Plus, X, Heart } from "lucide-react";
 
 interface User {
   name: string;
@@ -28,7 +28,14 @@ interface DoctorProfile {
   degree: string;
   experience: number;
   address: string;
-  treatment: string[];
+  treatments: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
   consultationFee: string;
   clinicContact: string;
   timeSlots: TimeSlot[];
@@ -45,11 +52,17 @@ interface DoctorData {
 
 interface FormData {
   userId: string;
-
   degree: string;
   experience: string;
   address: string;
-  treatment: string[];
+  treatments: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
   consultationFee: string;
   clinicContact: string;
   phone: string;
@@ -58,6 +71,392 @@ interface FormData {
   longitude: string;
 }
 
+interface TreatmentManagerProps {
+  label: string;
+  icon: React.ReactNode;
+  items: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
+  newItem: string;
+  setNewItem: (value: string) => void;
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+  availableTreatments: any[];
+  showCustomInput: boolean;
+  setShowCustomInput: (value: boolean) => void;
+  onAddFromDropdown: (treatmentName: string) => void;
+  onUpdateTreatment: (index: number, treatment: any) => void;
+}
+
+const TreatmentManager = ({
+  label,
+  icon,
+  items,
+  newItem,
+  setNewItem,
+  onAdd,
+  onRemove,
+  availableTreatments,
+  showCustomInput,
+  setShowCustomInput,
+  onAddFromDropdown,
+  onUpdateTreatment,
+}: TreatmentManagerProps) => {
+  const [customSubTreatment, setCustomSubTreatment] = useState<string>("");
+  const [showSubTreatmentInput, setShowSubTreatmentInput] = useState<
+    number | null
+  >(null);
+  const [showCustomSubTreatmentInput, setShowCustomSubTreatmentInput] =
+    useState<number | null>(null);
+  const [selectedTreatmentId, setSelectedTreatmentId] = useState<string>("");
+  const [selectedSubTreatment, setSelectedSubTreatment] = useState<{
+    index: number;
+    value: string;
+  } | null>(null);
+
+  const handleAddSubTreatment = async (mainTreatmentIndex: number) => {
+    if (customSubTreatment.trim()) {
+      const currentTreatment = items[mainTreatmentIndex];
+      const newSubTreatment = {
+        name: customSubTreatment.trim(),
+        slug: customSubTreatment.trim().toLowerCase().replace(/\s+/g, "-"),
+      };
+
+      // Only update local state, don't save to database immediately
+      const updatedTreatment = {
+        ...currentTreatment,
+        subTreatments: [
+          ...(currentTreatment.subTreatments || []),
+          newSubTreatment,
+        ],
+      };
+
+      onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+      setCustomSubTreatment("");
+      setShowSubTreatmentInput(null);
+      setShowCustomSubTreatmentInput(null);
+    }
+  };
+
+  const handleRemoveSubTreatment = (
+    mainTreatmentIndex: number,
+    subTreatmentIndex: number
+  ) => {
+    const currentTreatment = items[mainTreatmentIndex];
+    const updatedSubTreatments = currentTreatment.subTreatments.filter(
+      (_, index) => index !== subTreatmentIndex
+    );
+
+    const updatedTreatment = {
+      ...currentTreatment,
+      subTreatments: updatedSubTreatments,
+    };
+
+    onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+  };
+
+  const handleAddFromAvailableSubTreatments = (
+    mainTreatmentIndex: number,
+    subTreatmentName: string
+  ) => {
+    const currentTreatment = items[mainTreatmentIndex];
+    const newSubTreatment = {
+      name: subTreatmentName,
+      slug: subTreatmentName.toLowerCase().replace(/\s+/g, "-"),
+    };
+
+    const updatedTreatment = {
+      ...currentTreatment,
+      subTreatments: [
+        ...(currentTreatment.subTreatments || []),
+        newSubTreatment,
+      ],
+    };
+
+    onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+  };
+
+  const handleTreatmentSelection = (treatmentId: string) => {
+    if (treatmentId === "custom") {
+      setShowCustomInput(true);
+      setSelectedTreatmentId("");
+    } else if (treatmentId) {
+      setSelectedTreatmentId(treatmentId);
+    }
+  };
+
+  const handleAddSelectedTreatment = () => {
+    if (selectedTreatmentId) {
+      const selectedTreatment = availableTreatments.find(
+        (t: any) => t._id === selectedTreatmentId
+      );
+      if (selectedTreatment) {
+        onAddFromDropdown(selectedTreatment.name);
+        setSelectedTreatmentId("");
+      }
+    }
+  };
+
+  const handleSubTreatmentSelection = (
+    mainTreatmentIndex: number,
+    subTreatmentValue: string
+  ) => {
+    if (subTreatmentValue === "custom") {
+      setShowCustomSubTreatmentInput(mainTreatmentIndex);
+      setCustomSubTreatment("");
+      setSelectedSubTreatment(null);
+    } else if (subTreatmentValue) {
+      setSelectedSubTreatment({
+        index: mainTreatmentIndex,
+        value: subTreatmentValue,
+      });
+    } else {
+      setSelectedSubTreatment(null);
+    }
+  };
+
+  const handleAddSelectedSubTreatment = () => {
+    if (selectedSubTreatment) {
+      handleAddFromAvailableSubTreatments(
+        selectedSubTreatment.index,
+        selectedSubTreatment.value
+      );
+      setSelectedSubTreatment(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 text-sm font-medium text-black">
+        {icon}
+        {label}
+      </label>
+
+      {/* Treatment Selection */}
+      <div className="space-y-2">
+        {!showCustomInput ? (
+          <div className="relative">
+            <select
+              onChange={(e) => handleTreatmentSelection(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-black"
+              value={selectedTreatmentId}
+            >
+              <option value="">Select a treatment</option>
+              {availableTreatments?.map((treatment: any) => (
+                <option key={treatment._id} value={treatment._id}>
+                  {treatment.name}
+                </option>
+              ))}
+              <option value="custom">+ Add Custom Treatment</option>
+            </select>
+            {selectedTreatmentId && (
+              <button
+                type="button"
+                onClick={handleAddSelectedTreatment}
+                className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              >
+                Add Selected Treatment
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder-black text-black"
+              placeholder="Enter custom treatment name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onAdd();
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={onAdd}
+              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-black-800 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCustomInput(false);
+                setNewItem("");
+              }}
+              className="px-4 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Selected Treatments */}
+      <div className="space-y-2">
+        {items?.map(
+          (
+            item: {
+              mainTreatment: string;
+              subTreatments?: Array<{ name: string; slug: string }>;
+            },
+            index: number
+          ) => {
+            const selectedTreatment = availableTreatments.find(
+              (t) => t.name === item.mainTreatment
+            );
+
+            return (
+              <div
+                key={index}
+                className="border border-gray-200 rounded-lg p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-black">
+                    {item.mainTreatment}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Sub-treatment Selection */}
+                <div className="ml-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      Sub-treatments:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowSubTreatmentInput(index)}
+                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                    >
+                      + Add Sub-treatment
+                    </button>
+                  </div>
+
+                  {/* Sub-treatment Input */}
+                  {showSubTreatmentInput === index && (
+                    <div className="flex gap-2 items-center">
+                      <select
+                        onChange={(e) =>
+                          handleSubTreatmentSelection(index, e.target.value)
+                        }
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                        value={
+                          selectedSubTreatment?.index === index
+                            ? selectedSubTreatment.value
+                            : ""
+                        }
+                      >
+                        <option value="">Select sub-treatment</option>
+                        {selectedTreatment?.subcategories?.map((sub: any) => (
+                          <option key={sub.slug} value={sub.name}>
+                            {sub.name}
+                          </option>
+                        ))}
+                        <option value="custom">
+                          + Add Custom Sub-treatment
+                        </option>
+                      </select>
+
+                      {selectedSubTreatment?.index === index &&
+                        selectedSubTreatment.value && (
+                          <button
+                            type="button"
+                            onClick={handleAddSelectedSubTreatment}
+                            className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                          >
+                            Add
+                          </button>
+                        )}
+
+                      {showCustomSubTreatmentInput === index && (
+                        <>
+                          <input
+                            type="text"
+                            value={customSubTreatment}
+                            onChange={(e) =>
+                              setCustomSubTreatment(e.target.value)
+                            }
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                            placeholder="Custom sub-treatment name"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddSubTreatment(index);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddSubTreatment(index)}
+                            className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                          >
+                            Add
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSubTreatmentInput(null);
+                          setShowCustomSubTreatmentInput(null);
+                          setCustomSubTreatment("");
+                          setSelectedSubTreatment(null);
+                        }}
+                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Existing Sub-treatments */}
+                  {item.subTreatments && item.subTreatments.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {item.subTreatments.map((subTreatment, subIndex) => (
+                        <span
+                          key={subIndex}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                        >
+                          {subTreatment.name}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRemoveSubTreatment(index, subIndex)
+                            }
+                            className="text-red-400 hover:text-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+        )}
+      </div>
+    </div>
+  );
+};
+
 function DoctorDashboard() {
   const [data, setData] = useState<DoctorData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -65,11 +464,10 @@ function DoctorDashboard() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [form, setForm] = useState<FormData>({
     userId: "",
-
     degree: "",
     experience: "",
     address: "",
-    treatment: [],
+    treatments: [],
     consultationFee: "",
     clinicContact: "",
     phone: "",
@@ -82,12 +480,15 @@ function DoctorDashboard() {
   const [photoError, setPhotoError] = useState("");
   const [resumeError, setResumeError] = useState("");
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [treatments, setTreatments] = useState<string[]>([]);
+  const [treatments, setTreatments] = useState<any[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [geocodingStatus, setGeocodingStatus] = useState<string>("");
   const addressDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const [showCustomTreatmentInput, setShowCustomTreatmentInput] =
+    useState(false);
+  const [newTreatment, setNewTreatment] = useState("");
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -110,7 +511,7 @@ function DoctorDashboard() {
     const fetchTreatments = async () => {
       try {
         const res = await axios.get("/api/doctor/getTreatment");
-        setTreatments(res.data.treatments.map((t: { treatment_name: string }) => t.treatment_name));
+        setTreatments(res.data.treatments || []);
       } catch {
         console.error("Error fetching treatments");
       }
@@ -131,14 +532,13 @@ function DoctorDashboard() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log("Doctor data fetched:", res.data); // Debug log
         setData(res.data);
 
         const parsedSlots = res.data.doctorProfile?.timeSlots || [];
         setTimeSlots(parsedSlots);
 
-        const treatmentArray = Array.isArray(res.data.doctorProfile?.treatment)
-          ? res.data.doctorProfile.treatment
+        const treatmentArray = Array.isArray(res.data.doctorProfile?.treatments)
+          ? res.data.doctorProfile.treatments.map((t: any) => t.mainTreatment)
           : [];
         setSelectedTreatments(treatmentArray);
 
@@ -147,7 +547,7 @@ function DoctorDashboard() {
           degree: res.data.doctorProfile?.degree || "",
           experience: res.data.doctorProfile?.experience?.toString() || "",
           address: res.data.doctorProfile?.address || "",
-          treatment: treatmentArray,
+          treatments: res.data.doctorProfile?.treatments || [],
           consultationFee: res.data.doctorProfile?.consultationFee || "",
           clinicContact: res.data.doctorProfile?.clinicContact || "",
           phone: res.data.user?.phone || "",
@@ -160,7 +560,12 @@ function DoctorDashboard() {
             "",
         });
       } catch (err: unknown) {
-        if (err && typeof err === 'object' && err !== null && 'response' in err) {
+        if (
+          err &&
+          typeof err === "object" &&
+          err !== null &&
+          "response" in err
+        ) {
           // @ts-expect-error: err.response may not be typed
           setError(err.response?.data?.message || "Failed to load data");
         } else {
@@ -190,11 +595,22 @@ function DoctorDashboard() {
     setForm({ ...form, timeSlots: JSON.stringify(updated) });
   };
 
-  const updateTimeSlot = (index: number, field: string, value: string | number | string[]) => {
+  const updateTimeSlot = (
+    index: number,
+    field: string,
+    value: string | number | string[]
+  ) => {
     const updated = [...timeSlots];
     if (field === "sessions.morning" || field === "sessions.evening") {
       const session = field.split(".")[1] as "morning" | "evening";
-      updated[index].sessions[session] = (typeof value === 'string' ? value.split(",").map((s) => s.trim()).filter(Boolean) : value) as string[];
+      updated[index].sessions[session] = (
+        typeof value === "string"
+          ? value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : value
+      ) as string[];
     } else {
       if (field === "date") {
         updated[index].date = value as string;
@@ -216,7 +632,9 @@ function DoctorDashboard() {
     if (e.target.files?.[0]) {
       const file = e.target.files[0];
       if (file.size > 1024 * 1024) {
-        setResumeError("File is too large and you have to upload file less than one mb only");
+        setResumeError(
+          "File is too large and you have to upload file less than one mb only"
+        );
         setResumeFile(null);
       } else {
         setResumeFile(file);
@@ -228,9 +646,13 @@ function DoctorDashboard() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       // Check all selected files for size
-      const tooLarge = Array.from(e.target.files).some(file => (file as File).size > 1024 * 1024);
+      const tooLarge = Array.from(e.target.files).some(
+        (file) => (file as File).size > 1024 * 1024
+      );
       if (tooLarge) {
-        setPhotoError("File is too large and you have to upload file less than one mb only");
+        setPhotoError(
+          "File is too large and you have to upload file less than one mb only"
+        );
         setPhotoFiles(null);
       } else {
         setPhotoFiles(e.target.files);
@@ -245,7 +667,14 @@ function DoctorDashboard() {
       : [...selectedTreatments, treatment];
 
     setSelectedTreatments(updatedTreatments);
-    setForm({ ...form, treatment: updatedTreatments });
+    setForm({
+      ...form,
+      treatments: updatedTreatments.map((t) => ({
+        mainTreatment: t,
+        mainTreatmentSlug: t.toLowerCase().replace(/\s+/g, "-"),
+        subTreatments: [],
+      })),
+    });
     setIsDropdownOpen(false); // Close dropdown after selection
   };
 
@@ -258,9 +687,71 @@ function DoctorDashboard() {
     if (customTreatments.length > 0) {
       const updatedTreatments = [...selectedTreatments, ...customTreatments];
       setSelectedTreatments(updatedTreatments);
-      setForm({ ...form, treatment: updatedTreatments });
+      setForm({
+        ...form,
+        treatments: updatedTreatments.map((t) => ({
+          mainTreatment: t,
+          mainTreatmentSlug: t.toLowerCase().replace(/\s+/g, "-"),
+          subTreatments: [],
+        })),
+      });
       e.target.value = "";
     }
+  };
+
+  const addTreatment = () => {
+    const trimmed = newTreatment.trim();
+    if (trimmed && !form.treatments?.some((t) => t.mainTreatment === trimmed)) {
+      setForm((prev) => ({
+        ...prev,
+        treatments: [
+          ...(prev.treatments || []),
+          {
+            mainTreatment: trimmed,
+            mainTreatmentSlug: trimmed.toLowerCase().replace(/\s+/g, "-"),
+            subTreatments: [],
+          },
+        ],
+      }));
+    }
+    setNewTreatment("");
+    setShowCustomTreatmentInput(false);
+  };
+
+  const addTreatmentFromDropdown = (treatmentName: string) => {
+    if (
+      treatmentName &&
+      !form.treatments?.some((t) => t.mainTreatment === treatmentName)
+    ) {
+      setForm((prev) => ({
+        ...prev,
+        treatments: [
+          ...(prev.treatments || []),
+          {
+            mainTreatment: treatmentName,
+            mainTreatmentSlug: treatmentName.toLowerCase().replace(/\s+/g, "-"),
+            subTreatments: [],
+          },
+        ],
+      }));
+    }
+  };
+
+  const removeTreatment = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      treatments: prev.treatments?.filter((_, i) => i !== index) || [],
+    }));
+  };
+
+  const handleUpdateTreatment = (index: number, updatedTreatment: any) => {
+    setForm((prev) => ({
+      ...prev,
+      treatments:
+        prev.treatments?.map((treatment, i) =>
+          i === index ? updatedTreatment : treatment
+        ) || [],
+    }));
   };
 
   // Geocode address and update coordinates in form
@@ -315,8 +806,38 @@ function DoctorDashboard() {
     const token = localStorage.getItem("doctorToken");
     const formData = new FormData();
 
+    // First, save any custom treatments to the database
+    if (form.treatments && form.treatments.length > 0) {
+      for (const treatment of form.treatments) {
+        // Check if this is a custom treatment (not in available treatments)
+        const isCustomTreatment = !treatments.some(
+          (t: any) => t.name === treatment.mainTreatment
+        );
+
+        if (isCustomTreatment) {
+          try {
+            await axios.post(
+              "/api/doctor/add-custom-treatment",
+              {
+                mainTreatment: treatment.mainTreatment,
+                subTreatments: treatment.subTreatments || [],
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+          } catch (error) {
+            console.error("Error saving custom treatment:", error);
+            // Continue with form submission even if custom treatment save fails
+          }
+        }
+      }
+    }
+
     Object.entries(form).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
+      if (key === "treatments") {
+        formData.append(key, JSON.stringify(value));
+      } else if (Array.isArray(value)) {
         value.forEach((v) => formData.append(`${key}[]`, String(v)));
       } else {
         formData.append(key, String(value));
@@ -571,7 +1092,6 @@ function DoctorDashboard() {
                             د.إ
                           </text>
                         </svg>
-
                       </div>
                       <div>
                         <p className="text-sm text-black font-medium">
@@ -609,20 +1129,44 @@ function DoctorDashboard() {
                 </div>
 
                 {/* Treatments */}
-                {doctorProfile.treatment &&
-                  doctorProfile.treatment.length > 0 && (
+                {doctorProfile.treatments &&
+                  doctorProfile.treatments.length > 0 && (
                     <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
                       <h3 className="text-lg sm:text-xl font-semibold text-black mb-4">
                         Treatments Offered
                       </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {doctorProfile.treatment.map((treatment, index) => (
-                          <span
+                      <div className="space-y-3">
+                        {doctorProfile.treatments.map((treatment, index) => (
+                          <div
                             key={index}
-                            className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium"
+                            className="border border-gray-200 rounded-lg p-3"
                           >
-                            {treatment}
-                          </span>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium text-blue-800">
+                                {treatment.mainTreatment}
+                              </span>
+                            </div>
+                            {treatment.subTreatments &&
+                              treatment.subTreatments.length > 0 && (
+                                <div className="ml-4">
+                                  <span className="text-sm text-gray-600">
+                                    Sub-treatments:
+                                  </span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {treatment.subTreatments.map(
+                                      (subTreatment, subIndex) => (
+                                        <span
+                                          key={subIndex}
+                                          className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                                        >
+                                          {subTreatment.name}
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -651,9 +1195,7 @@ function DoctorDashboard() {
                       ))}
                     </div>
                   </div>
-
                 )}
-
               </div>
 
               {/* Right Column - Sidebar */}
@@ -813,10 +1355,11 @@ function DoctorDashboard() {
                         value={form[field as keyof FormData] as string}
                         onChange={handleChange}
                         disabled={field === "phone"} // ✅ Still disabled if needed
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-black bg-white ${field === "phone"
-                          ? "cursor-not-allowed bg-gray-100"
-                          : ""
-                          }`}
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-black bg-white ${
+                          field === "phone"
+                            ? "cursor-not-allowed bg-gray-100"
+                            : ""
+                        }`}
                         placeholder={`Enter ${field
                           .replace(/([A-Z])/g, " $1")
                           .toLowerCase()}`}
@@ -881,93 +1424,20 @@ function DoctorDashboard() {
                 <h3 className="text-lg font-semibold text-black mb-4">
                   Treatments
                 </h3>
-                <div className="space-y-4">
-                  <div className="relative" ref={dropdownRef}>
-                    <label className="block text-sm font-medium text-black mb-2">
-                      Select Treatments
-                    </label>
-                    <div
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white cursor-pointer flex items-center justify-between text-black"
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    >
-                      <span className="truncate">
-                        {selectedTreatments.length > 0
-                          ? `${selectedTreatments.length} treatment(s) selected`
-                          : "Select treatments"}
-                      </span>
-                      <svg
-                        className={`w-5 h-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""
-                          }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-
-                    {isDropdownOpen && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {treatments.map((treatment, index) => (
-                          <div
-                            key={index}
-                            className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center text-black"
-                            onClick={() => handleTreatmentToggle(treatment)}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedTreatments.includes(treatment)}
-                              onChange={() => { }}
-                              className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                            />
-                            <span className="text-black">{treatment}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Selected Treatments Display */}
-                  {selectedTreatments.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTreatments.map((treatment, index) => (
-                        <span
-                          key={index}
-                          className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium flex items-center"
-                        >
-                          {treatment}
-                          <button
-                            type="button"
-                            onClick={() => handleTreatmentToggle(treatment)}
-                            className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Custom Treatment Input - Show after selecting any treatment */}
-                  {selectedTreatments.length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-black mb-2">
-                        Add Custom Treatments
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter custom treatments (comma-separated)"
-                        onBlur={handleCustomTreatmentAdd}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition duration-200 text-black placeholder-gray-500"
-                      />
-                    </div>
-                  )}
-                </div>
+                <TreatmentManager
+                  label="Treatments"
+                  icon={<Heart className="w-4 h-4" />}
+                  items={form.treatments || []}
+                  newItem={newTreatment}
+                  setNewItem={setNewTreatment}
+                  onAdd={addTreatment}
+                  onRemove={removeTreatment}
+                  availableTreatments={treatments}
+                  showCustomInput={showCustomTreatmentInput}
+                  setShowCustomInput={setShowCustomTreatmentInput}
+                  onAddFromDropdown={addTreatmentFromDropdown}
+                  onUpdateTreatment={handleUpdateTreatment}
+                />
               </div>
 
               {/* Time Slots */}
@@ -1098,7 +1568,9 @@ function DoctorDashboard() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition duration-200 text-black file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
                     {photoError && (
-                      <p className="text-red-600 text-sm mt-2 font-medium">{photoError}</p>
+                      <p className="text-red-600 text-sm mt-2 font-medium">
+                        {photoError}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1116,7 +1588,9 @@ function DoctorDashboard() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition duration-200 text-black file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
                     {resumeError && (
-                      <p className="text-red-600 text-sm mt-2 font-medium">{resumeError}</p>
+                      <p className="text-red-600 text-sm mt-2 font-medium">
+                        {resumeError}
+                      </p>
                     )}
                   </div>
                   <p className="text-xs text-black mt-1">

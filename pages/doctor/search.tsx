@@ -42,7 +42,15 @@ interface Doctor {
       evening: string[];
     };
   }>;
-  treatment: string | string[];
+  treatments?: Array<{
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+    }>;
+  }>;
+  treatment?: string | string[]; // Keep for backward compatibility
   experience: number;
   clinicContact: string;
   location: {
@@ -280,9 +288,9 @@ export default function FindDoctor() {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return Math.round(R * c * 10) / 10;
   };
@@ -298,7 +306,7 @@ export default function FindDoctor() {
     if (!q.trim()) return setSuggestions([]);
 
     try {
-      const response = await axios.get(`/api/clinics/search?q=${q}`);
+      const response = await axios.get(`/api/doctor/search?q=${q}`);
       const treatmentSuggestions = response.data.treatments.map(
         (t: string) => ({
           type: "treatment",
@@ -430,8 +438,6 @@ export default function FindDoctor() {
     }
   };
 
- 
-
   const filteredDoctors = doctors.filter((doctor) => {
     if (starFilter === 0) return true;
     const rating = doctorReviews[doctor._id]?.averageRating || 0;
@@ -489,7 +495,13 @@ export default function FindDoctor() {
   }
 
   // Helper function to sort time slots by date
-  const sortTimeSlotsByDate = (timeSlots: { date: string; availableSlots: number; sessions: { morning: string[]; evening: string[] } }[]) => {
+  const sortTimeSlotsByDate = (
+    timeSlots: {
+      date: string;
+      availableSlots: number;
+      sessions: { morning: string[]; evening: string[] };
+    }[]
+  ) => {
     if (!timeSlots || !Array.isArray(timeSlots)) return [];
 
     return [...timeSlots].sort((a, b) => {
@@ -544,10 +556,9 @@ export default function FindDoctor() {
           </div>
 
           {(() => {
-            const futureSlots =
-              sortTimeSlotsByDate(
-                doctor.timeSlots?.filter((ts) => isTodayOrFuture(ts.date)) || []
-              );
+            const futureSlots = sortTimeSlotsByDate(
+              doctor.timeSlots?.filter((ts) => isTodayOrFuture(ts.date)) || []
+            );
             const today = dayjs().startOf("day");
             const hasTodaySlot = futureSlots.some((ts) => {
               const slotDate = dayjs(
@@ -570,8 +581,8 @@ export default function FindDoctor() {
                           {(() => {
                             const slotDate = dayjs(
                               capitalizeMonth(timeSlot.date) +
-                              " " +
-                              dayjs().year(),
+                                " " +
+                                dayjs().year(),
                               "DD MMMM YYYY"
                             );
                             const today = dayjs().startOf("day");
@@ -795,8 +806,8 @@ export default function FindDoctor() {
                                   {s.type === "clinic"
                                     ? "🏥"
                                     : s.type === "treatment"
-                                      ? "💊"
-                                      : "👨‍⚕️"}
+                                    ? "💊"
+                                    : "👨‍⚕️"}
                                 </span>
                               </div>
                               <div className="flex-1">
@@ -1033,7 +1044,15 @@ export default function FindDoctor() {
                       doctorReviews[doctor._id] !== undefined;
                     const isLoadingReviews = reviewsLoading[doctor._id];
                     let treatments: string[] = [];
-                    if (Array.isArray(doctor.treatment)) {
+
+                    // Handle new treatments structure
+                    if (doctor.treatments && Array.isArray(doctor.treatments)) {
+                      treatments = doctor.treatments.map(
+                        (t) => t.mainTreatment
+                      );
+                    }
+                    // Fallback to old treatment structure for backward compatibility
+                    else if (Array.isArray(doctor.treatment)) {
                       treatments = (doctor.treatment as string[]).filter(
                         Boolean
                       );
@@ -1126,16 +1145,17 @@ export default function FindDoctor() {
 
                                 {/* Fee and contact - Better mobile layout */}
                                 <div className="flex flex-row sm:flex-col justify-between sm:items-end gap-2 sm:gap-1 flex-shrink-0">
-                                  {typeof doctor.consultationFee === 'number' && doctor.consultationFee > 0 && (
-                                    <div className="text-left sm:text-right">
-                                      <p className="text-xs text-gray-500">
-                                        Fee
-                                      </p>
-                                      <p className="text-sm font-bold text-green-600">
-                                        AED {doctor.consultationFee}
-                                      </p>
-                                    </div>
-                                  )}
+                                  {typeof doctor.consultationFee === "number" &&
+                                    doctor.consultationFee > 0 && (
+                                      <div className="text-left sm:text-right">
+                                        <p className="text-xs text-gray-500">
+                                          Fee
+                                        </p>
+                                        <p className="text-sm font-bold text-green-600">
+                                          AED {doctor.consultationFee}
+                                        </p>
+                                      </div>
+                                    )}
 
                                   {doctor.clinicContact && (
                                     <a
@@ -1172,10 +1192,7 @@ export default function FindDoctor() {
                                           doctor._id
                                         ].averageRating.toFixed(1)}
                                         (
-                                        {
-                                          doctorReviews[doctor._id]
-                                            .totalReviews
-                                        }
+                                        {doctorReviews[doctor._id].totalReviews}
                                         )
                                       </span>
                                       <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded">
@@ -1199,8 +1216,8 @@ export default function FindDoctor() {
                                       doctor.timeSlots.find((ts) => {
                                         const slotDate = dayjs(
                                           capitalizeMonth(ts.date) +
-                                          " " +
-                                          dayjs().year(),
+                                            " " +
+                                            dayjs().year(),
                                           "DD MMMM YYYY"
                                         );
                                         return slotDate.isSame(today, "day");
@@ -1255,9 +1272,9 @@ export default function FindDoctor() {
                                         >
                                           {treatment}
                                           {idx <
-                                            (isExpanded
-                                              ? treatments.length - 1
-                                              : Math.min(
+                                          (isExpanded
+                                            ? treatments.length - 1
+                                            : Math.min(
                                                 1,
                                                 treatments.length - 1
                                               ))
@@ -1277,8 +1294,7 @@ export default function FindDoctor() {
                                         >
                                           {isExpanded
                                             ? "Show less"
-                                            : `+${treatments.length - 2
-                                            } more`}
+                                            : `+${treatments.length - 2} more`}
                                         </button>
                                       )}
                                     </div>
@@ -1311,65 +1327,65 @@ export default function FindDoctor() {
                                   Review
                                 </button>
 
-                                {doctor.location?.coordinates?.length ===
-                                  2 && (
-                                    <div className="col-span-2 sm:col-span-1">
-                                      <a
-                                        href={`https://www.google.com/maps/dir/?api=1&destination=${doctor.location.coordinates[1]},${doctor.location.coordinates[0]}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-center w-full px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
-                                      >
-                                        <Navigation className="w-3 h-3 mr-1" />
-                                        Direction
-                                      </a>
-                                    </div>
-                                  )}
+                                {doctor.location?.coordinates?.length === 2 && (
+                                  <div className="col-span-2 sm:col-span-1">
+                                    <a
+                                      href={`https://www.google.com/maps/dir/?api=1&destination=${doctor.location.coordinates[1]},${doctor.location.coordinates[0]}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center justify-center w-full px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                                    >
+                                      <Navigation className="w-3 h-3 mr-1" />
+                                      Direction
+                                    </a>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Recent Reviews Toggle */}
                               {doctorReviews[doctor._id]?.reviews?.length >
                                 0 && (
-                                  <div className="border-t border-gray-100 pt-2 mt-3">
-                                    <button
-                                      className="font-semibold text-gray-800 text-xs flex items-center hover:text-blue-600 transition-colors"
-                                      onClick={() =>
-                                        setShowReviewsFor(
-                                          showReviewsFor === doctor._id
-                                            ? null
-                                            : doctor._id
-                                        )
-                                      }
-                                    >
-                                      Recent Reviews
-                                      <ChevronDown
-                                        className={`ml-1 w-3 h-3 transition-transform ${showReviewsFor === doctor._id
-                                            ? "rotate-180"
-                                            : ""
-                                          }`}
-                                      />
-                                    </button>
-                                    {showReviewsFor === doctor._id && (
-                                      <div className="space-y-1 mt-2">
-                                        {doctorReviews[doctor._id].reviews
-                                          .slice(0, 2)
-                                          .map((review, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="bg-gray-50 rounded-lg p-2"
-                                            >
-                                              <p className="text-xs text-gray-700 mb-1 line-clamp-3">
-                                                &quot;{review.comment}&quot;
-                                              </p>
-                                              <p className="text-xs text-gray-500">
-                                                - {review.userId.name}
-                                              </p>
-                                            </div>
-                                          ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                <div className="border-t border-gray-100 pt-2 mt-3">
+                                  <button
+                                    className="font-semibold text-gray-800 text-xs flex items-center hover:text-blue-600 transition-colors"
+                                    onClick={() =>
+                                      setShowReviewsFor(
+                                        showReviewsFor === doctor._id
+                                          ? null
+                                          : doctor._id
+                                      )
+                                    }
+                                  >
+                                    Recent Reviews
+                                    <ChevronDown
+                                      className={`ml-1 w-3 h-3 transition-transform ${
+                                        showReviewsFor === doctor._id
+                                          ? "rotate-180"
+                                          : ""
+                                      }`}
+                                    />
+                                  </button>
+                                  {showReviewsFor === doctor._id && (
+                                    <div className="space-y-1 mt-2">
+                                      {doctorReviews[doctor._id].reviews
+                                        .slice(0, 2)
+                                        .map((review, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="bg-gray-50 rounded-lg p-2"
+                                          >
+                                            <p className="text-xs text-gray-700 mb-1 line-clamp-3">
+                                              &quot;{review.comment}&quot;
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                              - {review.userId.name}
+                                            </p>
+                                          </div>
+                                        ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
