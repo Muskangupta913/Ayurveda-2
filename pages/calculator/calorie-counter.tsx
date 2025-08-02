@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import { Plus, Trash2, Calculator } from 'lucide-react';
 
 interface Food {

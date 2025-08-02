@@ -60,12 +60,12 @@ export default function AdminLogin() {
   };
 
 
-  return (
+ return (
     <>
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+          <div className="bg-teal-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3" style={{backgroundColor: '#2D9AA5'}}>
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
@@ -77,7 +77,7 @@ export default function AdminLogin() {
 
       <div className="min-h-screen flex">
         {/* Left Side - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 via-green-700 to-green-800 relative overflow-hidden">
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{background: `linear-gradient(to bottom right, #2D9AA5, #238B96, #1A7A82)`}}>
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-10 left-10 w-20 h-20 border-2 border-white rounded-full"></div>
@@ -105,7 +105,7 @@ export default function AdminLogin() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold">AyurVeda</h1>
-                  <p className="text-green-200 text-sm uppercase tracking-wider">
+                  <p className="text-teal-200 text-sm uppercase tracking-wider">
                     Admin Portal
                   </p>
                 </div>
@@ -114,10 +114,10 @@ export default function AdminLogin() {
               <h2 className="text-4xl font-bold leading-tight mb-4">
                 Welcome Back to
                 <br />
-                <span className="text-green-200">Admin Dashboard</span>
+                <span className="text-teal-200">Admin Dashboard</span>
               </h2>
 
-              <p className="text-green-100 text-lg leading-relaxed mb-8">
+              <p className="text-teal-100 text-lg leading-relaxed mb-8">
                 Manage your Ayurveda clinic network, monitor appointments, and
                 oversee patient care with our comprehensive admin platform.
               </p>
@@ -129,7 +129,7 @@ export default function AdminLogin() {
                   "Appointment Scheduling",
                 ].map((item, index) => (
                   <div className="flex items-center gap-3" key={index}>
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{backgroundColor: '#2D9AA5'}}>
                       <svg
                         className="w-4 h-4 text-white"
                         fill="currentColor"
@@ -142,7 +142,7 @@ export default function AdminLogin() {
                         />
                       </svg>
                     </div>
-                    <span className="text-green-100">{item}</span>
+                    <span className="text-teal-100">{item}</span>
                   </div>
                 ))}
               </div>
@@ -150,8 +150,8 @@ export default function AdminLogin() {
           </div>
 
           {/* Decorative Elements */}
-          <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-green-400 to-transparent rounded-tl-full opacity-20"></div>
-          <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-green-400 to-transparent rounded-br-full opacity-20"></div>
+          <div className="absolute bottom-0 right-0 w-32 h-32 rounded-tl-full opacity-20" style={{background: `linear-gradient(to top left, #2D9AA5, transparent)`}}></div>
+          <div className="absolute top-0 left-0 w-24 h-24 rounded-br-full opacity-20" style={{background: `linear-gradient(to bottom right, #2D9AA5, transparent)`}}></div>
         </div>
 
         {/* Right Side - Login Form */}
@@ -159,7 +159,7 @@ export default function AdminLogin() {
           <div className="w-full max-w-md">
             {/* Mobile Logo */}
             <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{background: `linear-gradient(to bottom right, #2D9AA5, #238B96)`}}>
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -174,7 +174,7 @@ export default function AdminLogin() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">AyurVeda</h1>
-                <p className="text-green-600 text-xs uppercase tracking-wider">
+                <p className="text-xs uppercase tracking-wider" style={{color: '#2D9AA5'}}>
                   Admin Portal
                 </p>
               </div>
@@ -296,7 +296,11 @@ export default function AdminLogin() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-4 rounded-xl font-semibold text-lg shadow-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full text-white py-3 px-4 rounded-xl font-semibold text-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] hover:opacity-90"
+                  style={{
+                    background: `linear-gradient(to right, #2D9AA5, #238B96)`,
+                    boxShadow: '0 10px 15px -3px rgba(45, 154, 165, 0.3), 0 4px 6px -2px rgba(45, 154, 165, 0.05)'
+                  }}
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">

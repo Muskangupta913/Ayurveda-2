@@ -66,86 +66,80 @@ const DoctorHeader: React.FC<DoctorHeaderProps> = ({
   };
 
   return (
-    <header className="w-full bg-gradient-to-r from-blue-900 via-teal-800 to-cyan-700 text-white shadow-2xl relative overflow-hidden">
-      {/* Background blur effects */}
-      <div className="absolute inset-0 opacity-10 hidden md:block">
-        <div className="absolute top-0 left-1/4 w-48 h-24 md:w-64 md:h-32 bg-cyan-300 rounded-full blur-3xl transform -translate-y-12"></div>
-        <div className="absolute top-0 right-1/3 w-36 h-20 md:w-48 md:h-24 bg-white rounded-full blur-2xl transform -translate-y-8"></div>
-      </div>
-
-      <div className="relative z-10 px-4 py-3 sm:px-6 sm:py-4">
-        <div className="flex flex-col gap-4 sm:gap-6 md:flex-row md:items-center md:justify-between">
-          {/* Left Section */}
-          <div className="flex items-center gap-3">
+    <header className="w-full bg-white border-b border-gray-200 shadow-sm">
+      <div className="px-4 py-4 sm:px-6">
+        <div className="flex items-center justify-between">
+          {/* Left: Toggle + Brand */}
+          <div className="flex items-center gap-4">
             <button
               onClick={handleResponsiveToggle}
-              className="p-3 rounded-xl"
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
               aria-label="Toggle sidebar"
             >
               <svg
-                className={`w-6 h-6 transition-transform duration-300 ${
-                  screenWidth && screenWidth < 1024 && (isDesktopHidden || isMobileOpen)
-                    ? 'rotate-90'
-                    : ''
-                }`}
+                className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${screenWidth && screenWidth < 1024 && (isDesktopHidden || isMobileOpen) ? 'rotate-90' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d={
-                    screenWidth && screenWidth < 1024 && (isDesktopHidden || isMobileOpen)
-                      ? 'M6 18L18 6M6 6l12 12' // X icon
-                      : 'M4 6h16M4 12h16M4 18h16' // Hamburger
-                  }
-                />
+                {screenWidth && screenWidth < 1024 ? (
+                  (isDesktopHidden || isMobileOpen) ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  )
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
               </svg>
             </button>
 
-            <h1 className="ml-4 text-xl sm:text-2xl md:text-3xl font-bold tracking-wide">
-              Welcome to {' '}
-              <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent font-black">
-                { 'AyurVeda'}
-                   {/* {doctorUser?.name || 'AyurVeda'} */}
-              </span>
-              <span className="text-cyan-200 text-base sm:text-lg ml-1 md:ml-2">Portal</span>
-            </h1>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#2D9AA5] to-[#1e7d87] rounded-xl flex items-center justify-center shadow-lg">
+                  <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  </div>
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#2D9AA5] rounded-full border-2 border-white"></div>
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  AyurVeda
+                </h1>
+                <p className="text-sm text-[#2D9AA5] font-medium -mt-1">Doctor Portal</p>
+              </div>
+            </div>
           </div>
 
-          {/* Right Section */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 border border-white/20">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-xs sm:text-sm">
+          {/* Right: User Profile */}
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {doctorUser?.name || 'Doctor'}
+              </div>
+              <div className="text-xs text-gray-500">
+                {doctorUser?.email || 'Loading...'}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-[#2D9AA5] rounded-full flex items-center justify-center">
+                <span className="text-white font-medium text-sm">
                   {doctorUser ? getInitials(doctorUser.name) : 'D'}
                 </span>
               </div>
-              <div className="hidden md:block">
-                <div className="text-cyan-200 text-[10px] sm:text-xs opacity-90">
-                  {doctorUser?.email || 'Loading...'}
-                </div>
-                <div className="text-white text-[10px] sm:text-xs font-medium">
-                  {doctorUser?.name || 'Doctor'}
-                </div>
-              </div>
+              
               <button
                 onClick={handleLogout}
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-white font-semibold text-[10px] sm:text-xs shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-200"
                 aria-label="Logout"
               >
-                <div className="flex items-center gap-1 sm:gap-2 hover:cursor-pointer">
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  <span>Logout</span>
+                  <span className="hidden sm:inline">Logout</span>
                 </div>
               </button>
             </div>

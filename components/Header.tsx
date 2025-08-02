@@ -33,7 +33,7 @@ const Header = () => {
       if (dashboardDropdownRef.current && !dashboardDropdownRef.current.contains(event.target as Node)) {
         setIsDashboardDropdownOpen(false);
       }
-      
+
       // Close register dropdown if click is outside
       if (registerDropdownRef.current && !registerDropdownRef.current.contains(event.target as Node)) {
         setIsRegisterDropdownOpen(false);
@@ -105,7 +105,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-opacity-20" style={{ borderColor: '#2D9AA5' }}>
+      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-opacity-20 relative z-30" style={{ borderColor: '#2D9AA5' }}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Left: MediCare name & subtitle only */}
@@ -171,7 +171,7 @@ const Header = () => {
               {/* User Menu for Authenticated Users */}
               {isAuthenticated && (
                 <div className="relative group">
-                  <button 
+                  <button
                     className="flex items-center space-x-2 px-4 py-2 rounded-full text-gray-700 font-medium transition-all duration-300"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = '#2D9AA5';
@@ -186,7 +186,7 @@ const Header = () => {
                     <span>{user?.name}</span>
                     <span className="text-xs">▼</span>
                   </button>
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40">
                     <div className="py-2">
                       <Link
                         href="/profile"
@@ -223,7 +223,7 @@ const Header = () => {
                 <button
                   onClick={handleDashboardDropdownToggle}
                   className="hidden sm:flex items-center space-x-2 text-white px-4 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                  style={{ 
+                  style={{
                     backgroundImage: `linear-gradient(to right, #2D9AA5, #1f7a82)`,
                   }}
                   aria-haspopup="true"
@@ -242,7 +242,7 @@ const Header = () => {
                   </svg>
                 </button>
                 {isDashboardDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-40">
                     <Link
                       href="#"
                       onClick={() => {
@@ -312,7 +312,7 @@ const Header = () => {
                 <button
                   onClick={handleRegisterDropdownToggle}
                   className="hidden sm:flex items-center space-x-2 text-white px-4 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                  style={{ 
+                  style={{
                     backgroundImage: `linear-gradient(to right, #2D9AA5, #237a84)`,
                   }}
                   aria-haspopup="true"
@@ -331,7 +331,7 @@ const Header = () => {
                   </svg>
                 </button>
                 {isRegisterDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-40">
                     <Link
                       href="/clinic/register-clinic"
                       onClick={() => setIsRegisterDropdownOpen(false)}
@@ -382,7 +382,7 @@ const Header = () => {
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="lg:hidden relative w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-300 hover:bg-opacity-20"
-                style={{ 
+                style={{
                   backgroundColor: 'rgba(45, 154, 165, 0.1)',
                 }}
                 onMouseEnter={(e) => {
@@ -473,9 +473,9 @@ const Header = () => {
                   >
                     User
                   </button>
-                  <Link 
-                    href="/clinic/login-clinic" 
-                    onClick={() => setIsMenuOpen(false)} 
+                  <Link
+                    href="/clinic/login-clinic"
+                    onClick={() => setIsMenuOpen(false)}
                     className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
@@ -486,9 +486,9 @@ const Header = () => {
                   >
                     Clinic
                   </Link>
-                  <Link 
-                    href="/doctor/login" 
-                    onClick={() => setIsMenuOpen(false)} 
+                  <Link
+                    href="/doctor/login"
+                    onClick={() => setIsMenuOpen(false)}
                     className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
@@ -516,9 +516,9 @@ const Header = () => {
                   Register
                 </summary>
                 <div className="mt-2 space-y-2">
-                  <Link 
-                    href="/clinic/register-clinic" 
-                    onClick={() => setIsMenuOpen(false)} 
+                  <Link
+                    href="/clinic/register-clinic"
+                    onClick={() => setIsMenuOpen(false)}
                     className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
@@ -529,9 +529,9 @@ const Header = () => {
                   >
                     Register your Clinic
                   </Link>
-                  <Link 
-                    href="/doctor/register" 
-                    onClick={() => setIsMenuOpen(false)} 
+                  <Link
+                    href="/doctor/register"
+                    onClick={() => setIsMenuOpen(false)}
                     className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';

@@ -106,6 +106,7 @@ function BMICalculator() {
   return (
     <div className="h-screen w-screen bg-gradient-to-br from-gray-50 to-blue-100 flex items-center justify-center overflow-hidden">
       <div className="bg-white rounded-3xl shadow-2xl w-full h-full max-w-7xl max-h-[95vh] mx-4 my-4 grid lg:grid-cols-2 animate-fadeIn overflow-hidden">
+
         
         {/* Form Section */}
         <div className="bg-[#2D9AA5] p-4 sm:p-6 lg:p-8 flex flex-col justify-center text-white overflow-y-auto">

@@ -113,7 +113,9 @@ const BMRCalculator = () => {
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-2 overflow-hidden">
-      <div className="max-w-6xl mx-auto h-full flex flex-col">
+      <div className="max-w-6xl mx-auto h-full flex flex-col relative">
+
+        
         {/* Header */}
         <div className="text-center mb-4">
           <div className="flex items-center justify-center mb-2">
