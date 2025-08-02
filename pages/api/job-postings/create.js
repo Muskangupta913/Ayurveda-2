@@ -1,0 +1,37 @@
+// pages/api/jobs/post.ts
+import dbConnect from '../../../lib/database';
+import JobPosting from '../../../models/JobPosting';
+import jwt from 'jsonwebtoken';
+import User from '../../../models/Users'; // Assuming this exists
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+
+  await dbConnect();
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { role, userId } = decoded;
+    console.log('Decoded token:', decoded);
+    console.log('User ID:', userId);
+
+    if (!userId || !role) {
+      return res.status(403).json({ message: 'Invalid token payload' });
+    }
+
+    const newJob = await JobPosting.create({
+      ...req.body,
+      postedBy: userId,
+      role,
+    });
+
+    res.status(201).json({ success: true, job: newJob });
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token', error: error.message });
+  }
+}

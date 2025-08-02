@@ -37,25 +37,25 @@ const navItems: NavItem[] = [
     icon: '👨‍⚕️',
     description: 'All Pateint Enquiries',
   },
-  // { 
-  //   label: 'Treatments', 
-  //   path: '/clinic/treatments', 
-  //   icon: '💊',
-  //   description: 'Treatment plans'
-  // },
-  // { 
-  //   label: 'Medical Records', 
-  //   path: '/clinic/records', 
-  //   icon: '📋',
-  //   description: 'Patient medical history'
-  // },
-  // { 
-  //   label: 'Billing', 
-  //   path: '/clinic/billing', 
-  //   icon: '💰',
-  //   description: 'Invoice & payments'
-  //   // badge: 3
-  // },
+  { 
+    label: 'Job Posting', 
+    path: '/clinic/job-posting', 
+    icon: '💊',
+    description: 'Post Jobs'
+  },
+  { 
+    label: 'See All Jobs', 
+    path: '/clinic/my-jobs', 
+    icon: '📋',
+    description: 'see all job postings'
+  },
+  { 
+    label: 'See Job Applicants', 
+    path: '/clinic/job-applicants', 
+    icon: '💰',
+    description: 'See Job Applicants'
+    // badge: 3
+  },
   // { 
   //   label: 'Reports', 
   //   path: '/clinic/reports', 
