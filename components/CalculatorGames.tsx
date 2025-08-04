@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Scale, Activity, Wind, Apple, Calculator, ArrowRight, Home, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Dumbbell,Scale, Activity, Wind, Apple, Calculator, ArrowRight, Home, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer } from 'lucide-react';
 
-interface Calculator {
+export interface Calculator {
   id: string;
   title: string;
   description: string;
@@ -13,78 +13,160 @@ interface Calculator {
   image: string;
 }
 
+export interface Game {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  hoverColor: string;
+  image: string;
+}
+
+export const calculators: Calculator[] = [
+  {
+    id: 'bmi',
+    title: 'BMI Calculator',
+    description: 'Calculate your Body Mass Index and understand your weight category',
+    icon: Scale,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'bmr-tdee',
+    title: 'BMR-TDEE Calculator',
+    description: 'Calculate Basal Metabolic Rate & Total Daily Energy Expenditure',
+    icon: Activity,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'breathhold',
+    title: 'Breath Hold Calculator',
+    description: 'Track your breath holding capacity and improve lung health',
+    icon: Wind,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'calorie-counter',
+    title: 'Calorie Count Calculator',
+    description: 'Track your daily calorie intake and maintain healthy diet',
+    icon: Apple,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'heartrate',
+    title: 'Heart Rate Monitor',
+    description: 'Monitor your heart rate and cardiovascular health',
+    icon: Activity,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'water',
+    title: 'Water Intake Tracker',
+    description: 'Track your daily water consumption for optimal hydration',
+    icon: Apple,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400&h=200&fit=crop'
+  }
+];
+
+export const games: Game[] = [
+  {
+    id: 'flipcards',
+    title: 'FitFlip Cards',
+    description: 'Discover exercises, match pairs, burn calories fast.',
+    icon: Dumbbell, // More fitting for fitness than Brain
+    color: 'from-[#FF6B6B] to-[#4ECDC4]', // Energetic red to refreshing teal gradient
+    bgColor: 'bg-white',
+    borderColor: 'border-grey-200', // Complementary border
+    hoverColor: 'hover:shadow-xl hover:scale-105 hover:border-orange-300', // More dynamic hover effect
+    image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=400&h=200&fit=crop' // Fitness/workout equipment image
+  },
+  {
+    id: 'HealthyFood',
+    title: 'Healthy Food Picker Game',
+    description: 'Smash junk, grab greens, beat the clock!',
+    icon: Target,
+    color: 'from-[#4ECDC4] to-[#44b3ac]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'heart-rhythm',
+    title: 'Heart Rhythm Game',
+    description: 'Follow the beat and learn about cardiovascular health',
+    icon: Heart,
+    color: 'from-[#FF8A65] to-[#f4795b]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'hydration-hero',
+    title: 'Hydration Hero',
+    description: 'Catch water drops and learn about the importance of staying hydrated',
+    icon: Zap,
+    color: 'from-[#64B5F6] to-[#5aa3e8]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1559839914-17aae19cec71?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'workout-timer',
+    title: 'Workout Timer Challenge',
+    description: 'Complete timed exercises and build healthy workout habits',
+    icon: Timer,
+    color: 'from-[#9C27B0] to-[#8e24aa]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'sleep-puzzle',
+    title: 'Sleep Cycle Puzzle',
+    description: 'Solve puzzles while learning about healthy sleep patterns',
+    icon: Brain,
+    color: 'from-[#7986CB] to-[#6a7bc2]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=200&fit=crop'
+  }
+];
+
 const HealthCalculatorApp: React.FC = () => {
   const [activeCalculator, setActiveCalculator] = useState<string>('home');
   const sliderRef = useRef<HTMLDivElement>(null);
-
-  const calculators: Calculator[] = [
-    {
-      id: 'bmi',
-      title: 'BMI Calculator',
-      description: 'Calculate your Body Mass Index and understand your weight category',
-      icon: Scale,
-      color: 'from-[#2D9AA5] to-[#238a94]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'bmr',
-      title: 'BMR-TDEE Calculator',
-      description: 'Calculate Basal Metabolic Rate & Total Daily Energy Expenditure',
-      icon: Activity,
-      color: 'from-[#2D9AA5] to-[#238a94]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'breath',
-      title: 'Breath Hold Calculator',
-      description: 'Track your breath holding capacity and improve lung health',
-      icon: Wind,
-      color: 'from-[#2D9AA5] to-[#238a94]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'calorie',
-      title: 'Calorie Count Calculator',
-      description: 'Track your daily calorie intake and maintain healthy diet',
-      icon: Apple,
-      color: 'from-[#2D9AA5] to-[#238a94]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'heart',
-      title: 'Heart Rate Monitor',
-      description: 'Monitor your heart rate and cardiovascular health',
-      icon: Activity,
-      color: 'from-[#2D9AA5] to-[#238a94]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'water',
-      title: 'Water Intake Tracker',
-      description: 'Track your daily water consumption for optimal hydration',
-      icon: Apple,
-      color: 'from-[#2D9AA5] to-[#238a94]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400&h=200&fit=crop'
-    }
-  ];
+  const gamesSliderRef = useRef<HTMLDivElement>(null);
 
   const scrollLeft = (): void => {
     if (sliderRef.current) {
@@ -98,16 +180,26 @@ const HealthCalculatorApp: React.FC = () => {
     }
   };
 
+  const scrollGamesLeft = (): void => {
+    if (gamesSliderRef.current) {
+      gamesSliderRef.current.scrollBy({ left: -340, behavior: 'smooth' });
+    }
+  };
+
+  const scrollGamesRight = (): void => {
+    if (gamesSliderRef.current) {
+      gamesSliderRef.current.scrollBy({ left: 340, behavior: 'smooth' });
+    }
+  };
+
   const NavigationBar: React.FC = () => (
     <div className="rounded-2xl p-6 mb-6">
       <div className="text-center mb-8">
-        {/* <Calculator className="mx-auto mb-4 text-[#2D9AA5]" size={48} /> */}
         <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Track Your Health Status</h1>
-        {/* <p className="text-gray-600 text-lg">Choose a calculator to monitor your health</p> */}
       </div>
-      
-      {/* Slider Container */}
-      <div className="relative">
+
+      {/* Calculators Slider Container */}
+      <div className="relative mb-12">
         {/* Left Arrow */}
         <button
           onClick={scrollLeft}
@@ -127,11 +219,11 @@ const HealthCalculatorApp: React.FC = () => {
         </button>
 
         {/* Scrollable Cards Container */}
-        <div 
+        <div
           ref={sliderRef}
           className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 px-12 scroll-smooth"
-          style={{ 
-            scrollbarWidth: 'none', 
+          style={{
+            scrollbarWidth: 'none',
             msOverflowStyle: 'none'
           }}
         >
@@ -144,8 +236,8 @@ const HealthCalculatorApp: React.FC = () => {
               >
                 {/* Image Section */}
                 <div className="relative h-32 overflow-hidden">
-                  <img 
-                    src={calc.image} 
+                  <img
+                    src={calc.image}
                     alt={calc.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
@@ -155,12 +247,12 @@ const HealthCalculatorApp: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Content Section */}
                 <div className="p-5">
                   <h3 className="font-bold text-gray-800 mb-2 text-lg">{calc.title}</h3>
                   <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
-                  <a 
+                  <a
                     href={`/calculator/${calc.id}`}
                     className="inline-flex items-center bg-[#2D9AA5] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#238a94] transition-colors"
                   >
@@ -172,15 +264,99 @@ const HealthCalculatorApp: React.FC = () => {
             );
           })}
         </div>
-        
+
         {/* View All Button */}
         <div className="text-center mt-8">
-          <a 
-            href="/all-calculators"
+          <a
+            href="/calculator/allcalc"
             className="inline-flex items-center bg-orange-400 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-orange-600 transition-colors"
           >
             View All Calculators
             <ArrowRight size={20} className="ml-2" />
+          </a>
+        </div>
+      </div>
+
+      {/* Health Games Section */}
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Health & Wellness Games</h1>
+      </div>
+
+      {/* Games Slider Container */}
+      <div className="relative">
+        {/* Left Arrow */}
+        <button
+          onClick={scrollGamesLeft}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          aria-label="Scroll games left"
+        >
+          <ChevronLeft size={15} />
+        </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={scrollGamesRight}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          aria-label="Scroll games right"
+        >
+          <ChevronRight size={15} />
+        </button>
+
+        {/* Scrollable Games Cards Container */}
+        <div
+          ref={gamesSliderRef}
+          className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 px-12 scroll-smooth"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          {games.map((game: Game) => {
+            const IconComponent = game.icon;
+            return (
+              <div
+                key={game.id}
+                className={`${game.bgColor} ${game.borderColor} ${game.hoverColor} min-w-[320px] max-w-[320px] border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group flex-shrink-0 overflow-hidden`}
+              >
+                {/* Image Section */}
+                <div className="relative h-32 overflow-hidden">
+                  <img
+                    src={game.image}
+                    alt={game.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <div className="absolute top-3 left-3">
+                    <div className={`bg-gradient-to-r ${game.color} p-2 rounded-lg shadow-lg`}>
+                      <IconComponent className="text-white" size={20} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Section */}
+                <div className="p-5">
+                  <h3 className="font-bold text-gray-800 mb-2 text-lg">{game.title}</h3>
+                  <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{game.description}</p>
+                  <a
+                    href={`/game/${game.id}`}
+                    className="inline-flex items-center bg-[#FF6B6B] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#ee5a52] transition-colors"
+                  >
+                    Play Now
+                    <Gamepad2 size={16} className="ml-2" />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* View All Games Button */}
+        <div className="text-center mt-8">
+          <a
+            href="/games/allgames"
+            className="inline-flex items-center bg-purple-500 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-purple-600 transition-colors"
+          >
+            View All Games
+            <Gamepad2 size={20} className="ml-2" />
           </a>
         </div>
       </div>
@@ -205,7 +381,7 @@ const HealthCalculatorApp: React.FC = () => {
 
   const renderCalculator = () => {
     const currentCalc = calculators.find(calc => calc.id === activeCalculator);
-    
+
     switch (activeCalculator) {
       case 'bmi':
         return <SimpleCalculatorView title="BMI Calculator" icon={Scale} />;

@@ -30,6 +30,7 @@ import {
   BookOpen,
   Target,
   CheckCircle,
+  X,
 } from "lucide-react";
 import { ChangeEvent, FormEvent } from "react";
 import React from "react";
@@ -37,6 +38,7 @@ import type { KeyboardEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import AuthModal from "../components/AuthModal";
 import Image from "next/image";
+import SearchCard from "../components/SearchCard";
 
 // Types
 interface Clinic {
@@ -133,6 +135,66 @@ export default function Home(): React.ReactElement {
   }>({});
 
   const [isVisible, setIsVisible] = useState(false);
+
+  // Add missing state variables for filters
+  const [priceRange, setPriceRange] = useState([0, 5000]);
+  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('relevance');
+
+  // Add the clearFilters function
+  const clearFilters = () => {
+    setPriceRange([0, 5000]);
+    setSelectedTimes([]);
+    setRatingFilter(0);
+    setSortBy('relevance');
+    // Don't clear search results, only reset filters
+  };
+
+  // Add the getSortedClinics function
+  const getSortedClinics = (clinics: Clinic[]) => {
+    const sorted = [...clinics];
+
+    switch (sortBy) {
+      case 'price-low-high':
+        return sorted.sort((a, b) => {
+          const priceA = parseInt(a.pricing || '0');
+          const priceB = parseInt(b.pricing || '0');
+          return priceA - priceB;
+        });
+      case 'price-high-low':
+        return sorted.sort((a, b) => {
+          const priceA = parseInt(a.pricing || '0');
+          const priceB = parseInt(b.pricing || '0');
+          return priceB - priceA;
+        });
+      case 'rating-high-low':
+        return sorted.sort((a, b) => {
+          const ratingA = clinicReviews[a._id]?.averageRating || 0;
+          const ratingB = clinicReviews[b._id]?.averageRating || 0;
+          return ratingB - ratingA;
+        });
+      case 'experience-high-low':
+        // Since clinics don't have experience field, we'll sort by name
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      default:
+        return sorted;
+    }
+  };
+
+  // Add available times array
+  const availableTimes = [
+    'Early Morning (4 AM - 6 AM)',
+    'Morning (6 AM - 12 PM)',
+    'Late Morning (10 AM - 12 PM)',
+    'Afternoon (12 PM - 6 PM)',
+    'Late Afternoon (3 PM - 6 PM)',
+    'Evening (6 PM - 10 PM)',
+    'Late Night (10 PM - 12 AM)',
+    'Night (12 AM - 4 AM)',
+    'Available Today',
+    'Available Tomorrow',
+    'Weekend Available'
+  ];
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const suggestionsDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -266,10 +328,21 @@ export default function Home(): React.ReactElement {
   }, []);
 
   const getFilteredClinics = (): Clinic[] => {
-    return clinics.filter((clinic) => {
+    const filtered = clinics.filter((clinic) => {
       const rating = clinicReviews[clinic._id]?.averageRating ?? 0;
-      return rating >= ratingFilter;
+      const matchesRating = rating >= ratingFilter;
+
+      // Price filter
+      const clinicPrice = parseInt(clinic.pricing || '0');
+      const matchesPrice = clinicPrice >= priceRange[0] && clinicPrice <= priceRange[1];
+
+      // Timing filter (simplified since clinics don't have detailed time slots)
+      const matchesTiming = selectedTimes.length === 0 || true; // Always true for clinics since they don't have detailed time slots
+
+      return matchesRating && matchesPrice && matchesTiming;
     });
+
+    return getSortedClinics(filtered);
   };
 
   // Doctor details
@@ -452,9 +525,9 @@ export default function Home(): React.ReactElement {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
     return Math.round(distance * 10) / 10;
@@ -739,26 +812,21 @@ export default function Home(): React.ReactElement {
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Find the Best <span className="text-green-600">Ayurvedic</span>{" "}
-              Healing Near You
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">
+              Discover Trusted <span className="text-[#2D9AA5]">Clinics</span> Near You
             </h1>
-            {isAuthenticated && user && (
-              <div className="mt-4 inline-flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-200">
-                <Shield className="w-4 h-4 mr-2" />
-                Welcome back, {user.name}!
-              </div>
-            )}
+
+
           </div>
 
           {/* Simple Search Bar */}
           <div className="w-full max-w-6xl mx-auto mb-8 px-2 sm:px-4 md:px-6 lg:px-8">
-            <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border border-gray-100">
+            <div className="">
               {/* Desktop Layout */}
               <div className="hidden md:flex gap-4 items-center justify-center">
                 <div className="relative flex-1 max-w-lg">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <Search className="h-5 w-5 text-green-500" />
+                    <Search className="h-5 w-5 text-[#2D9AA5]" />
                   </div>
                   <input
                     type="text"
@@ -825,7 +893,7 @@ export default function Home(): React.ReactElement {
 
                 <div className="flex-1 relative group">
                   <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none z-10">
-                    <MapPin className="h-5 w-5 text-green-500 transition-colors" />
+                    <MapPin className="h-5 w-5 text-[#2D9AA5] transition-colors" />
                   </div>
                   <input
                     placeholder="City, area, or postal code"
@@ -841,7 +909,7 @@ export default function Home(): React.ReactElement {
                 <button
                   onClick={locateMe}
                   disabled={loading}
-                  className="flex items-center px-6 py-3.5 bg-blue-600 text-white rounded-xl cursor-pointer hover:bg-blue-700 transition-all font-medium disabled:opacity-50 whitespace-nowrap shadow-md hover:shadow-lg"
+                  className="flex items-center px-4 xl:px-6 py-4 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-xl cursor-pointer hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5]/80 transition-all font-medium disabled:opacity-50 whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105 disabled:hover:scale-100"
                 >
                   <Navigation className="w-5 h-5 mr-2" />
                   <span className="hidden md:inline">Near Me</span>
@@ -849,7 +917,7 @@ export default function Home(): React.ReactElement {
 
                 <button
                   onClick={searchByPlace}
-                  className="px-6 py-3.5 bg-green-600 text-white rounded-xl font-medium cursor-pointer hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
+                  className="px-4 xl:px-6 py-4 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-xl font-medium cursor-pointer hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5]/80 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   Find Healers
                 </button>
@@ -910,8 +978,8 @@ export default function Home(): React.ReactElement {
                                   {s.type === "treatment"
                                     ? "🌿"
                                     : s.type === "subcategory"
-                                    ? "🌱"
-                                    : "🪔"}
+                                      ? "🌱"
+                                      : "🪔"}
                                 </span>
                               </div>
 
@@ -924,8 +992,8 @@ export default function Home(): React.ReactElement {
                                   {s.type === "treatment"
                                     ? "Main Treatment"
                                     : s.type === "subcategory"
-                                    ? "Subcategory"
-                                    : "Other"}
+                                      ? "Subcategory"
+                                      : "Other"}
                                 </p>
                               </div>
                             </div>
@@ -973,597 +1041,437 @@ export default function Home(): React.ReactElement {
               </div>
             </div>
           </div>
-          {/* Sticky Register Doctor Button on the left */}
-          {clinics.length > 0 && (
-            <div className="md:w-1/5 flex-shrink-0 flex md:block justify-center md:justify-start">
-              <div className="md:sticky md:top-8">
-                <button
-                  className="cursor-pointer sm:flex items-center space-x-4 bg-gradient-to-r from-green-800 to-emerald-600 text-white px-6 py-2.5 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 group"
-                  style={{ minWidth: 180 }}
-                  onClick={() => {
-                    if (registrationRef.current) {
-                      registrationRef.current.scrollIntoView({
-                        behavior: "smooth",
-                      });
-                    }
-                  }}
-                >
-                  <span>⚕️</span>
-                  <span>Register Doctor</span>
-                  <span className="group-hover:translate-x-1 transition-transform duration-300">
-                    →
-                  </span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
+        <SearchCard
+          hideCards={["clinic"]}
+        />
       </div>
-      {/* Results Section */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="space-y-6">
-          {/* Results with Filter */}
-          <div className="">
-            <div className="flex flex-col lg:flex-row gap-6">
-              {/* Results Section - Left Side */}
-              <div className="flex-1 lg:w-2/3">
-                {/* Results Header with Filter */}
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-green-700">
-                      {clinics.length > 0
-                        ? `🌿 Found ${clinics.length} Ayurvedic Clinics`
-                        : ""}
-                    </h2>
-                    {selectedService && (
-                      <p className="text-green-600 mt-1">
-                        Showing results for &quot;{selectedService}&quot;
-                      </p>
-                    )}
-                  </div>
 
-                  {/* Filter Options */}
-                  {clinics.length > 0 && (
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <button
-                        onClick={clearSearch}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium text-sm flex items-center clear-search-btn"
-                      >
-                        <span className="mr-1">✕</span>
-                        Clear Search
-                      </button>
-                      <div className="relative">
-                        <select
-                          value={ratingFilter}
-                          onChange={(e) =>
-                            setRatingFilter(Number(e.target.value))
-                          }
-                          className="bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-green-700 font-medium focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                        >
-                          <option value={0}>All Ratings</option>
-                          <option value={1}>1+ Stars</option>
-                          <option value={2}>2+ Stars</option>
-                          <option value={3}>3+ Stars</option>
-                          <option value={4}>4+ Stars</option>
-                          <option value={5}>5 Stars</option>
-                        </select>
+
+      
+      {/* Results Section */}
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+        {clinics.length > 0 && (
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
+            {/* Filters Sidebar */}
+            <div className="lg:w-1/4">
+              <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 sticky top-4">
+                {/* Price Range Filter */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Price Range</h3>
+                  <div className="px-2">
+                    {/* Price Display */}
+                    <div className="flex justify-between items-center mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 mb-1">Min Price</p>
+                        <p className="text-lg font-bold text-[#2D9AA5]">₹ {priceRange[0].toLocaleString()}</p>
                       </div>
-                      <div className="flex items-center gap-2 bg-green-50 rounded-lg px-3 py-2">
-                        <Filter className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-700">
-                          Filter
-                        </span>
+                      <div className="w-px h-8 bg-gray-300"></div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 mb-1">Max Price</p>
+                        <p className="text-lg font-bold text-[#2D9AA5]">₹ {priceRange[1].toLocaleString()}</p>
                       </div>
                     </div>
+
+                    {/* Separate Range Sliders */}
+                    <div className="space-y-4">
+                      {/* Min Price Slider */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Minimum Price: ₹{priceRange[0].toLocaleString()}
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="10000"
+                          value={priceRange[0]}
+                          onChange={(e) => {
+                            const newMin = parseInt(e.target.value);
+                            if (newMin < priceRange[1]) {
+                              setPriceRange([newMin, priceRange[1]]);
+                            }
+                          }}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb"
+                          style={{
+                            background: `linear-gradient(to right, #2D9AA5 0%, #2D9AA5 ${(priceRange[0] / 10000) * 100}%, #e5e7eb ${(priceRange[0] / 10000) * 100}%, #e5e7eb 100%)`
+                          }}
+                        />
+                      </div>
+
+                      {/* Max Price Slider */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Maximum Price: ₹{priceRange[1].toLocaleString()}
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="10000"
+                          value={priceRange[1]}
+                          onChange={(e) => {
+                            const newMax = parseInt(e.target.value);
+                            if (newMax > priceRange[0]) {
+                              setPriceRange([priceRange[0], newMax]);
+                            }
+                          }}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb"
+                          style={{
+                            background: `linear-gradient(to right, #2D9AA5 0%, #2D9AA5 ${(priceRange[1] / 10000) * 100}%, #e5e7eb ${(priceRange[1] / 10000) * 100}%, #e5e7eb 100%)`
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Price Labels */}
+                    <div className="flex justify-between text-xs text-gray-500 mt-3">
+                      <span>₹0</span>
+                      <span>₹10,000</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sort By Filter */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Sort By</h3>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'relevance', label: 'Relevance' },
+                      { value: 'price-low-high', label: 'Price: Low to High' },
+                      { value: 'price-high-low', label: 'Price: High to Low' },
+                      { value: 'rating-high-low', label: 'Rating: High to Low' },
+                      { value: 'experience-high-low', label: 'Experience: High to Low' }
+                    ].map((option) => (
+                      <label key={option.value} className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="sortBy"
+                          value={option.value}
+                          checked={sortBy === option.value}
+                          onChange={(e) => setSortBy(e.target.value)}
+                          className="w-4 h-4 text-[#2D9AA5] bg-gray-100 border-gray-300 focus:ring-[#2D9AA5] focus:ring-2"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timing Filter */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Availability</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {availableTimes.map((time, index) => (
+                      <label key={index} className="flex items-start">
+                        <input
+                          type="checkbox"
+                          checked={selectedTimes.includes(time)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTimes([...selectedTimes, time]);
+                            } else {
+                              setSelectedTimes(selectedTimes.filter(t => t !== time));
+                            }
+                          }}
+                          className="w-4 h-4 text-[#2D9AA5] bg-gray-100 border-gray-300 rounded focus:ring-[#2D9AA5] focus:ring-2 mt-0.5"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 leading-relaxed">{time}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Star Rating Filter */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Rating</h3>
+                  <div className="space-y-2">
+                    {[5, 4, 3, 2, 1].map((rating) => (
+                      <label key={rating} className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="rating"
+                          value={rating}
+                          checked={ratingFilter === rating}
+                          onChange={(e) => setRatingFilter(parseInt(e.target.value))}
+                          className="w-4 h-4 text-[#2D9AA5] bg-gray-100 border-gray-300 focus:ring-[#2D9AA5] focus:ring-2"
+                        />
+                        <div className="ml-2 flex items-center">
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-4 h-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="ml-1 text-sm text-gray-700">& above</span>
+                        </div>
+                      </label>
+                    ))}
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="rating"
+                        value={0}
+                        checked={ratingFilter === 0}
+                        onChange={(e) => setRatingFilter(parseInt(e.target.value))}
+                        className="w-4 h-4 text-[#2D9AA5] bg-gray-100 border-gray-300 focus:ring-[#2D9AA5] focus:ring-2"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">All Ratings</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Clear Filters Button */}
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={clearFilters}
+                    className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all font-medium text-sm flex items-center justify-center shadow-md hover:shadow-lg"
+                  >
+                    <span className="mr-1">✕</span>
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Clinics List */}
+            <div className="lg:w-3/4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4 sm:gap-0">
+                <div>
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                    Found {getFilteredClinics().length} Clinics
+                  </h2>
+                  {selectedService && (
+                    <p className="text-sm sm:text-base text-gray-600 flex items-center">
+                      <span className="w-2 h-2 bg-[#2D9AA5] rounded-full mr-2"></span>
+                      Showing results for &quot;
+                      <span className="font-medium text-[#2D9AA5]">
+                        {selectedService}
+                      </span>
+                      &quot;
+                    </p>
                   )}
                 </div>
 
-                {/* Loading State */}
-                {loading && (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="relative">
-                      <div className="animate-spin rounded-full h-12 w-12 border-3 border-green-200 border-t-green-600"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xl">🌿</span>
-                      </div>
-                    </div>
-                    <span className="ml-4 text-lg font-medium text-green-700">
-                      Finding the best Ayurvedic healers for you...
-                    </span>
-                  </div>
-                )}
-
-                {/* No Results */}
-                {!loading && clinics.length === 0 && coords && (
-                  <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="max-w-md mx-auto">
-                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-2xl">🔍</span>
-                      </div>
-                      <h3 className="text-xl font-bold text-green-800 mb-2">
-                        No Ayurvedic clinics found
-                      </h3>
-                      <p className="text-green-600">
-                        Try adjusting your search criteria or explore nearby
-                        areas
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Results List */}
-                {!loading && clinics.length > 0 && (
-                  <>
-                    <div className="space-y-4">
-                      {getPaginatedClinics().map((clinic, index) => (
-                        <div
-                          key={index}
-                          className="bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-stretch md:gap-0 gap-4"
-                        >
-                          {/* Clinic Image */}
-                          <div className="w-full h-48 sm:h-56 md:w-64 md:h-56 self-start flex-shrink-0 relative overflow-hidden rounded-t-lg md:rounded-t-none md:rounded-l-lg">
-                            <Image
-                              src={
-                                clinic.photos?.[0] || "/placeholder-clinic.svg"
-                              }
-                              alt={`${clinic.name} clinic`}
-                              className="w-full h-full object-contain"
-                              width={256}
-                              height={256}
-                              unoptimized={true}
-                            />
-
-                            {clinic.distance !== null &&
-                              clinic.distance !== undefined && (
-                                <div className="absolute bottom-3 left-3 bg-green-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
-                                  <Navigation className="w-3 h-3 mr-1" />
-                                  {formatDistance(clinic.distance)}
-                                </div>
-                              )}
-                          </div>
-
-                          {/* Clinic Info */}
-                          <div className="flex-1 flex flex-col justify-between p-4 sm:p-6">
-                            <div>
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 gap-2">
-                                <div>
-                                  <h3 className="text-lg sm:text-xl font-bold text-green-800 mb-1 break-words">
-                                    {clinic.name}
-                                  </h3>
-                                  <p className="text-gray-600 flex items-center text-sm break-words">
-                                    <MapPin className="w-4 h-4 mr-1 text-green-500" />
-                                    {clinic.address}
-                                  </p>
-                                </div>
-                                {/* Rating */}
-                                {clinicReviews[clinic._id]?.totalReviews >
-                                  0 && (
-                                  <div className="flex items-center bg-green-50 rounded-lg p-2 mt-2 sm:mt-0">
-                                    <div className="flex items-center mr-2">
-                                      {renderStars(
-                                        clinicReviews[clinic._id]
-                                          ?.averageRating ?? 0
-                                      )}
-                                    </div>
-                                    <span className="text-sm font-bold text-green-800">
-                                      {clinicReviews[
-                                        clinic._id
-                                      ]?.averageRating?.toFixed(1) ?? "0.0"}
-                                    </span>
-                                    <span className="text-xs text-green-600 ml-1">
-                                      (
-                                      {clinicReviews[clinic._id]
-                                        ?.totalReviews ?? 0}
-                                      )
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                {/* Treatments */}
-                                <div>
-                                  <h4 className="text-sm font-bold text-green-700 mb-2 flex items-center">
-                                    <span className="mr-2">🌿</span>
-                                    Treatments:
-                                  </h4>
-                                  <div className="flex flex-wrap gap-1">
-                                    {expandedTreatments[clinic._id]
-                                      ? clinic.treatments?.map(
-                                          (treatment, idx: number) => (
-                                            <span
-                                              key={idx}
-                                              className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium"
-                                            >
-                                              {treatment.mainTreatment}
-                                            </span>
-                                          )
-                                        )
-                                      : clinic.treatments
-                                          ?.slice(0, 3)
-                                          .map((treatment, idx: number) => (
-                                            <span
-                                              key={idx}
-                                              className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium"
-                                            >
-                                              {treatment.mainTreatment}
-                                            </span>
-                                          ))}
-                                    {(clinic.treatments?.length ?? 0) > 3 && (
-                                      <span
-                                        className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium cursor-pointer hover:bg-gray-200"
-                                        onClick={() =>
-                                          toggleTreatments(clinic._id)
-                                        }
-                                      >
-                                        {expandedTreatments[clinic._id]
-                                          ? "Show less"
-                                          : `+${
-                                              (clinic.treatments?.length ?? 0) -
-                                              3
-                                            } more`}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                {/* Services */}
-                                {clinic.servicesName &&
-                                  clinic.servicesName.length > 0 && (
-                                    <div>
-                                      <h4 className="text-sm font-bold text-green-700 mb-2 flex items-center">
-                                        <span className="mr-2">🕉️</span>
-                                        Categories:
-                                      </h4>
-                                      <div className="flex flex-wrap gap-1">
-                                        {clinic.servicesName
-                                          .slice(0, 3)
-                                          .map((service, idx) => (
-                                            <span
-                                              key={idx}
-                                              className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium"
-                                            >
-                                              {service}
-                                            </span>
-                                          ))}
-                                        {clinic.servicesName.length > 3 && (
-                                          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
-                                            +{clinic.servicesName.length - 3}{" "}
-                                            more
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-                              </div>
-                              {/* Details */}
-                              <div className="flex flex-wrap gap-3 mb-4">
-                                {clinic.pricing && (
-                                  <div className="flex items-center text-sm text-gray-700 bg-green-50 rounded-lg px-3 py-1">
-                                    <Award className="w-4 h-4 mr-1 text-green-500" />
-                                    <span className="font-medium">Fee:</span>
-                                    <span className="ml-1 font-bold text-green-700">
-                                      AED {clinic.pricing}
-                                    </span>
-                                  </div>
-                                )}
-                                {clinic.timings && (
-                                  <div className="flex items-center text-sm text-gray-700 bg-green-50 rounded-lg px-3 py-1">
-                                    <Clock className="w-4 h-4 mr-1 text-green-500" />
-                                    <span className="font-medium">Timing:</span>
-                                    <span className="ml-1 font-bold text-green-700">
-                                      {clinic.timings}
-                                    </span>
-                                  </div>
-                                )}
-                                {clinic.phone && (
-                                  <div className="flex items-center text-sm text-gray-700 bg-green-50 rounded-lg px-3 py-1">
-                                    <Phone className="w-4 h-4 mr-1 text-green-500" />
-                                    <span className="font-medium">Phone:</span>
-                                    <span className="ml-1 font-bold text-green-700">
-                                      {clinic.phone}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-3 mt-auto">
-                              <button
-                                onClick={() => handleEnquiryClick(clinic)}
-                                className="cursor-pointer flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all font-medium text-sm flex items-center justify-center"
-                              >
-                                Enquiry
-                                <MessageCircle className="w-4 h-4 ml-2" />
-                              </button>
-                              <button
-                                onClick={() => handleReviewClick(clinic)}
-                                className="cursor-pointer flex-1 bg-[#fdc700] text-white py-2 px-4 rounded-lg hover:bg-[#e6b400] transition-all font-medium text-sm flex items-center justify-center"
-                              >
-                                <Star className="w-4 h-4 mr-2" />
-                                Review
-                              </button>
-                              {clinic.location &&
-                                clinic.location.coordinates &&
-                                clinic.location.coordinates.length === 2 && (
-                                  <a
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${clinic.location.coordinates[1]},${clinic.location.coordinates[0]}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-all font-medium text-sm flex items-center justify-center"
-                                  >
-                                    Directions
-                                    <Navigation className="w-4 h-4 ml-2" />
-                                  </a>
-                                )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    {clinics.length > clinicsPerPage && (
-                      <div className="flex justify-center items-center mt-8 space-x-2">
-                        <button
-                          onClick={() =>
-                            setCurrentPage((prev) => Math.max(prev - 1, 1))
-                          }
-                          disabled={currentPage === 1}
-                          className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-
-                        {Array.from(
-                          { length: Math.min(5, totalPages) },
-                          (_, i) => {
-                            const pageNumber =
-                              Math.max(
-                                1,
-                                Math.min(currentPage - 2, totalPages - 4)
-                              ) + i;
-                            return (
-                              <button
-                                key={pageNumber}
-                                onClick={() => setCurrentPage(pageNumber)}
-                                className={`px-3 py-2 rounded-lg transition-all ${
-                                  currentPage === pageNumber
-                                    ? "bg-green-600 text-white"
-                                    : "bg-white text-green-600 border border-green-600 hover:bg-green-50"
-                                }`}
-                              >
-                                {pageNumber}
-                              </button>
-                            );
-                          }
-                        )}
-
-                        <button
-                          onClick={() =>
-                            setCurrentPage((prev) =>
-                              Math.min(prev + 1, totalPages)
-                            )
-                          }
-                          disabled={currentPage === totalPages}
-                          className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                  {/* Clear Search Button */}
+                  {clinics.length > 0 && (
+                    <button
+                      onClick={clearSearch}
+                      className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all font-medium text-sm flex items-center justify-center shadow-sm hover:shadow-md"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Clear Search
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Why Choose Us Section - Right Side (Hidden on mobile) */}
-              {clinics.length > 0 && (
-                <div className="hidden lg:block lg:w-1/3">
-                  <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sticky top-4">
-                    <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center">
-                      <span className="mr-2">🌿</span>
-                      Why Choose Our Ayurvedic Clinics?
-                    </h3>
-
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Shield className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-green-700 mb-1">
-                            Verified Practitioners
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            All our clinics have certified Ayurvedic doctors
-                            with proven expertise
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Award className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-green-700 mb-1">
-                            Authentic Treatments
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Traditional Panchakarma and modern Ayurvedic
-                            therapies
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Star className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-green-700 mb-1">
-                            Highly Rated
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Top-rated clinics based on real patient reviews and
-                            experiences
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Clock className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-green-700 mb-1">
-                            Convenient Booking
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Easy online booking system with flexible appointment
-                            slots
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <MapPin className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-green-700 mb-1">
-                            Location Based
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Find the nearest quality Ayurvedic clinics in your
-                            area
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+              {loading ? (
+                <div className="flex flex-col sm:flex-row items-center justify-center py-12 sm:py-16">
+                  <div className="relative mb-4 sm:mb-0">
+                    <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-4 border-green-100 border-t-[#2D9AA5]"></div>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#2D9AA5] to-green-400 opacity-20 animate-pulse"></div>
                   </div>
+                  <span className="ml-0 sm:ml-4 text-gray-600 font-medium text-sm sm:text-base text-center">
+                    Finding the best clinics for you...
+                  </span>
+                </div>
+              ) : getFilteredClinics().length === 0 ? (
+                <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-gray-50 to-green-50 rounded-2xl sm:rounded-3xl border border-gray-100 mx-2 sm:mx-0">
+                  <div className="bg-white rounded-2xl p-4 sm:p-6 w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 shadow-lg">
+                    <Search className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 mx-auto mt-1 sm:mt-2" />
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3 px-4">
+                    No clinics found
+                  </h3>
+                  <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base px-4">
+                    Try adjusting your search criteria or explore different
+                    specializations
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6">
+                  {getFilteredClinics().map((clinic, index) => {
+                    const hasRating = clinicReviews[clinic._id]?.totalReviews > 0;
+                    const reviewsLoaded = clinicReviews[clinic._id] !== undefined;
+
+                    return (
+                      <div
+                        key={index}
+                        className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
+                      >
+                        {/* Clinic Image */}
+                        <div className="relative h-36 w-full bg-gradient-to-br from-green-100 to-emerald-100 overflow-hidden">
+                          {clinic.photos?.[0] ? (
+                            <Image
+                              src={clinic.photos[0]}
+                              alt={clinic.name || "Clinic Image"}
+                              fill
+                              className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                                  <svg
+                                    className="w-8 h-8 text-green-600"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                  </svg>
+                                </div>
+                                <span className="text-sm text-green-600 font-medium">
+                                  {clinic.name?.split(" ")[0]}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Overlay badges */}
+                          <div className="absolute top-3 right-3 flex flex-col gap-2">
+                            {clinic.verified && (
+                              <div className="bg-green-500 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center">
+                                <Shield className="w-2 h-2 mr-1" />
+                                Verified
+                              </div>
+                            )}
+                          </div>
+
+                          {clinic.distance && (
+                            <div className="absolute bottom-3 left-3 bg-[#2D9AA5] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+                              <Navigation className="w-2 h-2 mr-1" />
+                              {formatDistance(clinic.distance)}
+                            </div>
+                          )}
+
+                          {/* Heart icon */}
+                          <button className="absolute top-3 left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
+                            <Heart className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
+                          </button>
+                        </div>
+
+                        {/* Clinic Info */}
+                        <div className="p-3">
+                          {/* Clinic basic info */}
+                          <div className="mb-2">
+                            <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">
+                              {clinic.name}
+                            </h3>
+                            <p className="text-[#2D9AA5] font-medium text-sm mb-1">
+                              Ayurvedic Clinic
+                            </p>
+                            <p className="text-gray-600 text-xs line-clamp-2">
+                              {clinic.address}
+                            </p>
+                          </div>
+
+                          {/* Services and Fee */}
+                          <div className="flex justify-between items-center mb-2">
+                            <div>
+                              <p className="text-xs text-gray-500">Services</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {clinic.servicesName?.length || 0} available
+                              </p>
+                            </div>
+                            {clinic.pricing && (
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">Fee</p>
+                                <p className="text-lg font-bold text-[#2D9AA5]">
+                                  AED {clinic.pricing}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Rating */}
+                          <div className="flex items-center gap-2 mb-2">
+                            {hasRating ? (
+                              <>
+                                <div className="flex">
+                                  {renderStars(clinicReviews[clinic._id].averageRating)}
+                                </div>
+                                <span className="text-sm font-medium text-gray-700">
+                                  {clinicReviews[clinic._id].averageRating.toFixed(1)}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  ({clinicReviews[clinic._id].totalReviews})
+                                </span>
+                              </>
+                            ) : reviewsLoaded ? (
+                              <span className="text-xs text-gray-500">No reviews yet</span>
+                            ) : null}
+                          </div>
+
+                          {/* Availability */}
+                          {/* <div className="mb-3">
+                            {clinic.timings ? (
+                              <span className="inline-flex items-center px-2 py-1 bg-green-50 border border-green-200 text-green-700 rounded-md font-medium text-xs">
+                                ✓ Available
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-1 bg-red-50 border border-red-200 text-red-700 rounded-md font-medium text-xs">
+                                ✗ No timing info
+                              </span>
+                            )}
+                          </div> */}
+
+                          {/* Action buttons */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEnquiryClick(clinic)}
+                              className="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-lg hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5] transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                            >
+                              <MessageCircle className="w-3 h-3 mr-1" />
+                              Enquiry
+                            </button>
+
+                            <button
+                              onClick={() => handleReviewClick(clinic)}
+                              className="flex items-center justify-center px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                            >
+                              <Star className="w-3 h-3" />
+                            </button>
+
+                            {clinic.location?.coordinates?.length === 2 && (
+                              <a
+                                href={`https://www.google.com/maps/dir/?api=1&destination=${clinic.location.coordinates[1]},${clinic.location.coordinates[0]}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                              >
+                                <Navigation className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Contact */}
+                          {clinic.phone && (
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                              <a
+                                href={`tel:${clinic.phone}`}
+                                className="flex items-center justify-center text-xs text-gray-600 hover:text-green-600 transition-colors font-medium"
+                              >
+                                <Phone className="w-3 h-3 mr-1 text-green-500" />
+                                {clinic.phone}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
-        </div>
-      </div>{" "}
-      {/* <-- Add this missing closing div for the previous container */}
+        )}
+      </div>
+
+      
       {/* Doctor Search & Registration Section */}
       <div className="flex flex-col xl:grid xl:grid-cols-2 gap-8 max-w-7xl mx-auto">
-        {/* Doctor Search Card */}
-        <div className="mb-6 xl:mb-0">
-          <div
-            className="doctor-card-parent cursor-pointer"
-            onClick={handleDoctorSearch}
-          >
-            <div className="doctor-card">
-              <div className="doctor-image-container">
-                <div className="doctor-image w-32 h-32 rounded-full overflow-hidden mx-auto mb-4">
-                  <Image
-                    src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-                    alt="Doctor"
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-
-              <div className="doctor-content">
-                <h3 className="doctor-title">Find Expert Doctors</h3>
-                <p className="doctor-subtitle">
-                  Connect with certified Ayurvedic practitioners
-                </p>
-
-                <div className="doctor-rating">
-                  <div className="rating-stars">
-                    <span className="star">★</span>
-                    <span className="star">★</span>
-                    <span className="star">★</span>
-                    <span className="star">★</span>
-                    <span className="star">★</span>
-                  </div>
-                  <span className="rating-text">
-                    4.9/5 from 2,500+ patients
-                  </span>
-                </div>
-              </div>
-
-              <div className="doctor-cta">
-                <span className="cta-text">Click to find doctors →</span>
-              </div>
-
-              {/* Hover Overlay */}
-              {/* <div className="hover-overlay">
-                      <span className="hover-message">
-                        Click here to search for doctors
-                      </span>
-                    </div> */}
-            </div>
-          </div>
-          <div className="hidden xl:block mt-8">
-            <div className="benefits-container">
-              <div className="benefits-card">
-                <div className="benefits-header">
-                  <div className="benefits-badge">
-                    <span className="benefits-badge-text">🩺</span>
-                  </div>
-                  <h4 className="benefits-title">
-                    Why Doctors Should Register on Our Platform
-                  </h4>
-                </div>
-                <div className="benefits-grid">
-                  <div className="benefit-item">
-                    <div className="benefit-icon">
-                      <Users className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div className="benefit-content">
-                      <h5 className="benefit-title">Expand Patient Base</h5>
-                      <p className="benefit-text">
-                        Reach thousands of patients seeking Ayurvedic care
-                      </p>
-                    </div>
-                  </div>
-                  <div className="benefit-item">
-                    <div className="benefit-icon">
-                      <TrendingUp className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div className="benefit-content">
-                      <h5 className="benefit-title">Grow Your Practice</h5>
-                      <p className="benefit-text">
-                        Increase consultations and build your reputation
-                      </p>
-                    </div>
-                  </div>
-                  <div className="benefit-item">
-                    <div className="benefit-icon">
-                      <Award className="w-5 h-5 text-yellow-500" />
-                    </div>
-                    <div className="benefit-content">
-                      <h5 className="benefit-title">
-                        Professional Recognition
-                      </h5>
-                      <p className="benefit-text">
-                        Showcase credentials and expertise to patients
-                      </p>
-                    </div>
-                  </div>
-                  <div className="benefit-item">
-                    <div className="benefit-icon">
-                      <Clock className="w-5 h-5 text-purple-500" />
-                    </div>
-                    <div className="benefit-content">
-                      <h5 className="benefit-title">Flexible Schedule</h5>
-                      <p className="benefit-text">
-                        Manage appointments and consultations easily
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Registration Form */}
         <div className="w-full xl:w-auto mt-2 xl:mt-0">
           <div className="registration-container" ref={registrationRef}>
@@ -1808,9 +1716,8 @@ export default function Home(): React.ReactElement {
 
                     {/* File size message */}
                     <div
-                      className={`text-xs mt-1 ${
-                        fileError ? "text-red-500" : "text-gray-500"
-                      }`}
+                      className={`text-xs mt-1 ${fileError ? "text-red-500" : "text-gray-500"
+                        }`}
                     >
                       {fileError || "Please upload a file less than 1MB"}
                     </div>
@@ -1836,117 +1743,8 @@ export default function Home(): React.ReactElement {
           </div>
         </div>
       </div>
-      {/* Why Choose Us Section */}
-      <div className="why-choose-section">
-        <div className="container mx-auto px-4 py-16">
-          <div className="max-w-6xl mx-auto">
-            {/* Section Header */}
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
-                <Heart className="w-8 h-8 text-green-600" />
-              </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Why Choose Our Ayurveda Platform?
-              </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Connect with authentic Ayurvedic practitioners and clinics for
-                holistic healing and wellness solutions
-              </p>
-            </div>
 
-            {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-              <div className="feature-card">
-                <div className="feature-icon">
-                  <Shield className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="feature-title">Verified Practitioners</h3>
-                <p className="feature-description">
-                  All doctors and clinics are thoroughly verified and certified
-                  by Ayurvedic boards
-                </p>
-              </div>
 
-              <div className="feature-card">
-                <div className="feature-icon">
-                  <MapPin className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="feature-title">Location-Based Search</h3>
-                <p className="feature-description">
-                  Find nearby Ayurvedic practitioners and clinics in your area
-                  instantly
-                </p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon">
-                  <Calendar className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="feature-title">Easy Appointment Booking</h3>
-                <p className="feature-description">
-                  Book appointments online with your preferred doctors and
-                  clinics
-                </p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon">
-                  <Video className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="feature-title">Online Consultations</h3>
-                <p className="feature-description">
-                  Get expert advice through secure video consultations from
-                  anywhere
-                </p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon">
-                  <BookOpen className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="feature-title">Digital Health Records</h3>
-                <p className="feature-description">
-                  Maintain your health records digitally with secure cloud
-                  storage
-                </p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon">
-                  <Target className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="feature-title">Personalized Treatment</h3>
-                <p className="feature-description">
-                  Get customized Ayurvedic treatment plans based on your
-                  constitution
-                </p>
-              </div>
-            </div>
-
-            {/* Stats Section */}
-            <div className="stats-section">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                <div className="stat-card">
-                  <div className="stat-number">500+</div>
-                  <div className="stat-label">Verified Doctors</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">200+</div>
-                  <div className="stat-label">Partner Clinics</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">10K+</div>
-                  <div className="stat-label">Happy Patients</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">50+</div>
-                  <div className="stat-label">Cities Covered</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       {/* Registration Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -2075,1021 +1873,28 @@ export default function Home(): React.ReactElement {
           </svg>
         </button>
       )}
+
+      {/* CSS Styles for Slider Thumb */}
       <style jsx>{`
-        /* Doctor Search Card */
-        .doctor-card-parent {
-          width: 100%;
-          max-width: 400px;
-          margin: 0 auto;
-        }
-
-        /* Only apply hover effects on devices with hover capability */
-        @media (hover: hover) {
-          .doctor-card-parent {
-            transition: transform 0.2s ease;
-          }
-
-          .doctor-card-parent:hover {
-            transform: translateY(-4px);
-          }
-        }
-
-        .doctor-card {
-          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-          border-radius: 16px;
-          padding: 32px 24px 24px 24px;
-          box-shadow: 0 4px 20px rgba(5, 150, 105, 0.15);
-          border: 1px solid #bbf7d0;
-          position: relative;
-          min-height: 350px;
-          overflow: hidden;
-          transition: all 0.3s ease;
-        }
-
-        /* Hover effects only for devices with hover capability */
-        @media (hover: hover) {
-          .doctor-card:hover {
-            box-shadow: 0 8px 32px rgba(5, 150, 105, 0.25);
-            border-color: #059669;
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-          }
-        }
-
-        .doctor-image-container {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 24px;
-        }
-
-        .doctor-image {
-          width: 140px;
-          height: 140px;
+        .slider-thumb::-webkit-slider-thumb {
+          appearance: none;
+          height: 16px;
+          width: 16px;
           border-radius: 50%;
-          overflow: hidden;
-          border: 4px solid #ffffff;
-          box-shadow: 0 8px 24px rgba(5, 150, 105, 0.3);
-          position: relative;
-          transition: transform 0.3s ease;
+          background: #2D9AA5;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 0 0 1px rgba(45, 154, 165, 0.3);
         }
 
-        @media (hover: hover) {
-          .doctor-card:hover .doctor-image {
-            transform: scale(1.05);
-            box-shadow: 0 12px 32px rgba(5, 150, 105, 0.4);
-          }
-        }
-
-        .doctor-image img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-          transition: transform 0.3s ease;
-        }
-
-        @media (hover: hover) {
-          .doctor-card:hover .doctor-image img {
-            transform: scale(1.1);
-          }
-        }
-
-        .doctor-content {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-
-        .doctor-title {
-          color: #064e3b;
-          font-size: clamp(18px, 4vw, 24px);
-          font-weight: 700;
-          margin-bottom: 8px;
-          line-height: 1.2;
-        }
-
-        .doctor-subtitle {
-          color: #047857;
-          font-size: clamp(14px, 3vw, 16px);
-          margin-bottom: 20px;
-          line-height: 1.4;
-          font-weight: 500;
-        }
-
-        .doctor-rating {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .rating-stars {
-          display: flex;
-          gap: 2px;
-        }
-
-        .star {
-          color: #fbbf24;
-          font-size: clamp(14px, 3vw, 18px);
-        }
-
-        .rating-text {
-          color: #047857;
-          font-size: clamp(12px, 2.5vw, 14px);
-          font-weight: 500;
-        }
-
-        .doctor-cta {
-          text-align: center;
-          padding-top: 16px;
-          border-top: 1px solid #bbf7d0;
-        }
-
-        .cta-text {
-          color: #059669;
-          font-size: clamp(12px, 2.5vw, 14px);
-          font-weight: 600;
-          opacity: 0.8;
-          transition: opacity 0.2s ease;
-        }
-
-        @media (hover: hover) {
-          .doctor-card:hover .cta-text {
-            opacity: 1;
-          }
-        }
-
-        /* Hover Overlay - only for hover-capable devices */
-        .hover-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(5, 150, 105, 0.95);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0;
-          border-radius: 16px;
-          backdrop-filter: blur(2px);
-          transition: opacity 0.3s ease;
-        }
-
-        .hover-message {
-          color: white;
-          font-size: clamp(14px, 3vw, 18px);
-          font-weight: 600;
-          text-align: center;
-          padding: 0 20px;
-          transform: translateY(10px);
-          transition: transform 0.3s ease;
-        }
-
-        @media (hover: hover) {
-          .doctor-card:hover .hover-overlay {
-            opacity: 1;
-          }
-
-          .doctor-card:hover .hover-message {
-            transform: translateY(0);
-          }
-        }
-
-        /* Responsive Breakpoints */
-
-        /* Small tablets and large phones */
-        @media (max-width: 768px) {
-          .doctor-card {
-            padding: 24px 20px 20px 20px;
-            min-height: 300px;
-            max-width: 350px;
-            margin: 0 auto;
-          }
-
-          .doctor-image {
-            width: 100px;
-            height: 100px;
-            border-width: 3px;
-          }
-
-          .doctor-content {
-            margin-bottom: 16px;
-          }
-
-          .doctor-subtitle {
-            margin-bottom: 16px;
-          }
-
-          .doctor-cta {
-            padding-top: 12px;
-          }
-        }
-
-        /* Mobile phones */
-        @media (max-width: 480px) {
-          .doctor-card-parent {
-            max-width: 100%;
-            padding: 0 10px;
-          }
-
-          .doctor-card {
-            max-width: 100%;
-            min-height: 280px;
-            padding: 20px 16px 16px 16px;
-            margin: 0;
-          }
-
-          .doctor-image {
-            width: 80px;
-            height: 80px;
-            border-width: 2px;
-          }
-
-          .doctor-image-container {
-            margin-bottom: 16px;
-          }
-
-          .doctor-content {
-            margin-bottom: 12px;
-          }
-
-          .doctor-subtitle {
-            margin-bottom: 12px;
-          }
-
-          .rating-stars {
-            gap: 1px;
-          }
-
-          .doctor-rating {
-            gap: 6px;
-          }
-
-          .doctor-cta {
-            padding-top: 8px;
-          }
-        }
-
-        /* Extra small phones */
-        @media (max-width: 360px) {
-          .doctor-card {
-            min-height: 260px;
-            padding: 16px 12px 12px 12px;
-          }
-
-          .doctor-image {
-            width: 70px;
-            height: 70px;
-          }
-
-          .doctor-image-container {
-            margin-bottom: 12px;
-          }
-
-          .doctor-title {
-            margin-bottom: 6px;
-          }
-
-          .doctor-subtitle {
-            margin-bottom: 10px;
-          }
-        }
-
-        /* Large tablets */
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .doctor-card {
-            max-width: 380px;
-            min-height: 340px;
-          }
-
-          .doctor-image {
-            width: 120px;
-            height: 120px;
-          }
-        }
-
-        /* Desktop and larger screens */
-        @media (min-width: 1025px) {
-          .doctor-card {
-            max-width: 400px;
-            min-height: 370px;
-            padding: 36px 28px 28px 28px;
-          }
-
-          .doctor-image {
-            width: 150px;
-            height: 150px;
-          }
-
-          .doctor-image-container {
-            margin-bottom: 28px;
-          }
-
-          .doctor-content {
-            margin-bottom: 24px;
-          }
-        }
-
-        /* Enhanced Registration Form */
-        .registration-container {
-          width: 100%;
-          max-width: 520px;
-          margin: 0 auto;
-          padding: 0 16px; /* Add padding for mobile */
-        }
-
-        .registration-card {
-          background: white;
-          border-radius: 32px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-          overflow: hidden;
-          border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .registration-header {
-          position: relative;
-          padding: 40px 32px;
-          background: linear-gradient(135deg, #059669 0%, #047857 100%);
-          color: white;
-          min-height: 250px; /* Changed from fixed height to min-height */
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-
-        .header-bg {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-            repeat;
-          opacity: 0.1;
-        }
-
-        .header-content {
-          position: relative;
-          z-index: 2;
-          text-align: center;
-        }
-
-        .header-icon {
-          width: 60px;
-          height: 60px;
-          background: rgba(255, 255, 255, 0.2);
+        .slider-thumb::-moz-range-thumb {
+          height: 16px;
+          width: 16px;
           border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 20px;
-          backdrop-filter: blur(10px);
-          border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .header-title {
-          font-size: 28px;
-          font-weight: 800;
-          margin-bottom: 8px;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .header-subtitle {
-          font-size: 15px;
-          color: rgba(255, 255, 255, 0.9);
-          margin-bottom: 20px;
-          line-height: 1.5;
-        }
-
-        .header-stats {
-          display: flex;
-          justify-content: center;
-          gap: 20px;
-          flex-wrap: wrap; /* Allow wrapping on small screens */
-        }
-
-        .header-stat {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.9);
-          font-weight: 500;
-        }
-
-        .registration-form {
-          padding: 40px 32px;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .input-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-
-        .input-icon {
-          position: absolute;
-          left: 16px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 18px;
-          height: 18px;
-          color: #6b7280;
-          z-index: 2;
-        }
-
-        .textarea-icon {
-          top: 20px;
-          transform: none;
-        }
-
-        .form-input {
-          width: 100%;
-          padding: 16px 16px 16px 48px;
-          border: 2px solid #e5e7eb;
-          border-radius: 16px;
-          font-size: 15px;
-          font-weight: 500;
-          background: white;
-          color: #1f2937;
-          transition: all 0.3s ease;
-        }
-
-        .form-input:focus {
-          outline: none;
-          border-color: #059669;
-          box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1);
-          transform: translateY(-1px);
-        }
-
-        .form-textarea {
-          resize: none;
-          padding-top: 16px;
-        }
-
-        .form-file {
-          padding: 12px 16px 12px 48px;
-        }
-
-        .form-file::file-selector-button {
-          margin-right: 16px;
-          padding: 8px 16px;
-          border: none;
-          border-radius: 12px;
-          background: #f3f4f6;
-          color: #374151;
-          font-size: 14px;
-          font-weight: 600;
+          background: #2D9AA5;
           cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .submit-button {
-          width: 100%;
-          padding: 18px 24px;
-          background: linear-gradient(135deg, #059669 0%, #047857 100%);
-          color: white;
-          border: none;
-          border-radius: 18px;
-          font-size: 16px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-          box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
-          margin-top: 8px;
-        }
-
-        .button-content {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          z-index: 2;
-        }
-
-        .button-shine {
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.3),
-            transparent
-          );
-          transition: left 0.5s ease;
-        }
-
-        /* Mobile-first responsive design */
-        @media screen and (max-width: 768px) {
-          .registration-container {
-            padding: 0 12px;
-          }
-
-          .registration-card {
-            border-radius: 24px;
-          }
-
-          .registration-header {
-            padding: 32px 24px;
-            min-height: 220px;
-          }
-
-          .header-icon {
-            width: 50px;
-            height: 50px;
-            margin-bottom: 16px;
-          }
-
-          .header-title {
-            font-size: 24px;
-            margin-bottom: 6px;
-          }
-
-          .header-subtitle {
-            font-size: 14px;
-            margin-bottom: 16px;
-          }
-
-          .header-stats {
-            gap: 16px;
-          }
-
-          .header-stat {
-            font-size: 12px;
-          }
-
-          .registration-form {
-            padding: 32px 24px;
-          }
-
-          .form-row {
-            grid-template-columns: 1fr; /* Stack form fields on mobile */
-            gap: 16px;
-          }
-
-          .form-group {
-            margin-bottom: 16px;
-          }
-
-          .form-input {
-            padding: 14px 14px 14px 44px;
-            font-size: 14px;
-            border-radius: 14px;
-          }
-
-          .input-icon {
-            left: 14px;
-            width: 16px;
-            height: 16px;
-          }
-
-          .submit-button {
-            padding: 16px 20px;
-            font-size: 15px;
-            border-radius: 16px;
-          }
-        }
-
-        @media screen and (max-width: 480px) {
-          .registration-container {
-            padding: 0 8px;
-          }
-
-          .registration-card {
-            border-radius: 20px;
-          }
-
-          .registration-header {
-            padding: 24px 20px;
-            min-height: 200px;
-          }
-
-          .header-icon {
-            width: 45px;
-            height: 45px;
-            margin-bottom: 12px;
-          }
-
-          .header-title {
-            font-size: 22px;
-          }
-
-          .header-subtitle {
-            font-size: 13px;
-            margin-bottom: 12px;
-          }
-
-          .header-stats {
-            gap: 12px;
-            flex-direction: column; /* Stack stats vertically on very small screens */
-            align-items: center;
-          }
-
-          .registration-form {
-            padding: 24px 20px;
-          }
-
-          .form-input {
-            padding: 12px 12px 12px 40px;
-            border-radius: 12px;
-          }
-
-          .input-icon {
-            left: 12px;
-            width: 14px;
-            height: 14px;
-          }
-
-          .submit-button {
-            padding: 14px 18px;
-            border-radius: 14px;
-          }
-        }
-
-        @media screen and (max-width: 320px) {
-          .registration-header {
-            padding: 20px 16px;
-            min-height: 180px;
-          }
-
-          .header-title {
-            font-size: 20px;
-          }
-
-          .registration-form {
-            padding: 20px 16px;
-          }
-        }
-
-        /* Why Choose Us Section */
-        .why-choose-section {
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-          margin-top: 80px;
-          border-radius: 40px;
-          border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .feature-card {
-          background: white;
-          padding: 32px 24px;
-          border-radius: 24px;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .feature-icon {
-          width: 56px;
-          height: 56px;
-          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 20px;
-        }
-
-        .feature-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: #1f2937;
-          margin-bottom: 12px;
-          line-height: 1.3;
-        }
-
-        .feature-description {
-          color: #6b7280;
-          font-size: 15px;
-          line-height: 1.6;
-          font-weight: 500;
-        }
-
-        .stats-section {
-          background: linear-gradient(135deg, #059669 0%, #047857 100%);
-          border-radius: 32px;
-          padding: 48px 32px;
-          margin-top: 32px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .stats-section::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-            repeat;
-          opacity: 0.1;
-        }
-
-        .stat-card {
-          text-align: center;
-          position: relative;
-          z-index: 2;
-        }
-
-        .stat-number {
-          font-size: 48px;
-          font-weight: 900;
-          color: white;
-          margin-bottom: 8px;
-          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-          line-height: 1;
-        }
-
-        .stat-label {
-          font-size: 16px;
-          color: rgba(255, 255, 255, 0.9);
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        /* Form States */
-        .form-input:focus + .input-icon {
-          color: #059669;
-        }
-
-        .form-input:valid {
-          border-color: #10b981;
-        }
-
-        .form-input:valid + .input-icon {
-          color: #10b981;
-        }
-
-        .form-input:invalid:not(:focus):not(:placeholder-shown) {
-          border-color: #ef4444;
-        }
-
-        .form-input:invalid:not(:focus):not(:placeholder-shown) + .input-icon {
-          color: #ef4444;
-        }
-
-        /* Fix for specialization select - ensure gray border initially */
-        select.form-input:invalid:not(:focus) {
-          border-color: #e5e7eb;
-        }
-
-        select.form-input:invalid:not(:focus) + .input-icon {
-          color: #000;
-        }
-
-        /* Benefits Section Styles */
-        .benefits-container {
-          padding: 0;
-        }
-
-        .benefits-card {
-          background: linear-gradient(135deg, #f8fffe 0%, #e6f7f5 100%);
-          border: 1px solid #e0f2f1;
-          border-radius: 24px;
-          padding: 28px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .benefits-card::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, #10b981, #047857);
-        }
-
-        .benefits-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-        }
-
-        .benefits-header {
-          display: flex;
-          align-items: center;
-          margin-bottom: 24px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid #e0f2f1;
-        }
-
-        .benefits-icon {
-          width: 48px;
-          height: 48px;
-          background: linear-gradient(135deg, #10b981, #047857);
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-right: 16px;
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-
-        .benefits-icon .w-6 {
-          color: white;
-        }
-
-        .benefits-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: #064e3b;
-          margin: 0;
-          letter-spacing: -0.02em;
-        }
-
-        .benefits-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 20px;
-        }
-
-        .benefit-item {
-          display: flex;
-          align-items: flex-start;
-          padding: 16px;
-          background: white;
-          border-radius: 16px;
-          border: 1px solid #f0fdf4;
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .benefit-item::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 4px;
-          height: 100%;
-          background: linear-gradient(180deg, #10b981, #047857);
-          transform: scaleY(0);
-          transition: transform 0.3s ease;
-        }
-
-        .benefit-item:hover::before {
-          transform: scaleY(1);
-        }
-
-        .benefit-item:hover {
-          transform: translateX(4px);
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-          background: #f8fffe;
-        }
-
-        .benefit-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-right: 16px;
-          flex-shrink: 0;
-          background: rgba(255, 255, 255, 0.8);
-          border: 1px solid #f0f9ff;
-          transition: all 0.3s ease;
-        }
-
-        .benefit-item:hover .benefit-icon {
-          transform: scale(1.1);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .benefit-content {
-          flex: 1;
-        }
-
-        .benefit-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #065f46;
-          margin: 0 0 4px 0;
-          line-height: 1.3;
-        }
-
-        .benefit-text {
-          font-size: 14px;
-          color: #047857;
-          margin: 0;
-          line-height: 1.4;
-          opacity: 0.8;
-        }
-
-        /* Responsive adjustments */
-        @media (min-width: 1536px) {
-          .benefits-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-          }
-
-          .benefit-item {
-            padding: 14px;
-          }
-
-          .benefit-title {
-            font-size: 15px;
-          }
-
-          .benefit-text {
-            font-size: 13px;
-          }
-        }
-
-        /* Enhance dropdown menu (option list) for Doctor Details specialization */
-        .specialization-dropdown option {
-          color: #065f46;
-          background: #fff;
-          font-weight: 600;
-          font-size: 1.08rem;
-          padding: 0.75rem 1.25rem;
-          border-radius: 10px;
-          margin-bottom: 4px;
-        }
-        @media (min-width: 1024px) {
-          .specialization-dropdown option {
-            font-size: 1.18rem;
-            padding: 1rem 2rem;
-          }
-        }
-        /* Note: For a fully custom dropdown menu (with custom scroll, shadow, hover, etc.), use a custom dropdown component (e.g., Headless UI, Radix UI, or your own implementation) */
-
-        /* Make Clear Search button always visible and accessible on mobile */
-        .clear-search-btn {
-          display: flex;
-        }
-        @media (max-width: 600px) {
-          .clear-search-btn {
-            width: 100%;
-            justify-content: center;
-            margin-bottom: 8px;
-            font-size: 1.1rem;
-            padding: 14px 0;
-          }
-        }
-        /* Specialization icon outside select */
-        .doctor-form-specialization-row {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-        }
-        .doctor-form-specialization-icon-outer {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 32px;
-        }
-        .doctor-form-specialization-row .specialization-dropdown {
-          margin: 0;
-          flex: 1 1 0;
-          width: 100%;
-        }
-        /* Make specialization select match input fields */
-        .specialization-dropdown {
-          border: 2px solid #e5e7eb;
-          border-radius: 16px;
-          background: #f9fafb;
-          color: #1f2937;
-          font-size: 1rem;
-          font-weight: 500;
-          transition: all 0.3s ease;
-          height: 52px;
-          min-height: 52px;
-          box-shadow: none;
-        }
-        .specialization-dropdown:focus {
-          outline: none;
-          border-color: #059669;
-          box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1);
-          background: #fff;
-        }
-        @media (max-width: 600px) {
-          .specialization-dropdown {
-            height: 44px;
-            min-height: 44px;
-            font-size: 0.98rem;
-          }
+          border: 2px solid #ffffff;
+          box-shadow: 0 0 0 1px rgba(45, 154, 165, 0.3);
         }
       `}</style>
     </div>

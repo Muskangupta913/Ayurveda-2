@@ -125,71 +125,56 @@ const ClinicDashboard: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Waveform Header */}
-      <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 relative overflow-hidden mx-2 sm:mx-4 lg:mx-6 mt-4 sm:mt-6">
-        {/* Wave Background Effect */}
-        <div className="absolute inset-0 pointer-events-none">
-          <svg className="absolute bottom-0 left-0 w-full h-full opacity-15" viewBox="0 0 1000 200" preserveAspectRatio="none">
-            <path d="M0,100 C150,200 350,0 500,100 C650,200 850,0 1000,100 L1000,200 L0,200 Z" fill="url(#wave-gradient)" />
-            <defs>
-              <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#1E40AF" />
-                <stop offset="50%" stopColor="#7C3AED" />
-                <stop offset="100%" stopColor="#0891B2" />
-              </linearGradient>
-            </defs>
-          </svg>
+    <div className="min-h-screen bg-gray-100">
+      {/* Enhanced Header */}
+      <div className="bg-gradient-to-r from-[#2D9AA5] to-[#1F7A7A] rounded-xl p-8 shadow-lg border border-gray-200 mx-4 mt-4 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-4 right-4 w-32 h-32 bg-white rounded-full"></div>
+          <div className="absolute top-12 right-12 w-20 h-20 bg-white rounded-full"></div>
+          <div className="absolute bottom-8 left-8 w-24 h-24 bg-white rounded-full"></div>
+          <div className="absolute bottom-4 left-16 w-16 h-16 bg-white rounded-full"></div>
         </div>
-
-        {/* Floating Circle Decorations */}
-        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 w-12 h-12 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-sm"></div>
-        <div className="absolute top-6 right-6 sm:top-12 sm:right-12 w-16 h-16 sm:w-32 sm:h-32 bg-gradient-to-br from-indigo-400/8 to-cyan-400/8 rounded-full blur-md"></div>
-        <div className="absolute bottom-4 left-4 sm:bottom-8 sm:left-8 w-12 h-12 sm:w-24 sm:h-24 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-sm"></div>
-
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center relative z-10 space-y-6 xl:space-y-0">
-          <div className="w-full xl:w-auto">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-gray-900 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent">
+        
+        <div className="flex flex-col items-start space-y-6 relative z-10">
+          <div className="w-full">
+            <h1 className="text-4xl font-bold mb-3 text-white drop-shadow-sm">
               {getGreeting()}, {clinicUser?.name || 'Clinic'}!
             </h1>
-            <p className="text-gray-600 text-base sm:text-lg mb-3">
+            <p className="text-white/90 text-xl mb-4 font-medium">
               Welcome back to your professional dashboard
             </p>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
-              <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                <Calendar className="w-4 h-4 text-blue-500" />
-                <span className="font-medium text-gray-700 text-xs sm:text-sm">{formatDate(currentTime)}</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
+              <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
+                <Calendar className="w-5 h-5 text-white" />
+                <span className="font-semibold text-white text-sm">{formatDate(currentTime)}</span>
               </div>
-              <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                <Clock className="w-4 h-4 text-purple-500" />
-                <span className="font-medium text-gray-700 text-xs sm:text-sm">{formatTime(currentTime)}</span>
+              <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
+                <Clock className="w-5 h-5 text-white" />
+                <span className="font-semibold text-white text-sm">{formatTime(currentTime)}</span>
               </div>
             </div>
-          </div>
-
-          {/* Enhanced Analytics Cards */}
-          <div className="w-full xl:w-auto flex justify-center xl:justify-end">
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+      <div className="p-4 space-y-6">
         {/* Quick Actions Section */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <h2 className="text-2xl font-semibold mb-6 text-gray-900">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {quickActions.map((action, index) => (
               <Link
                 key={index}
                 href={action.href}
-                className="group bg-gradient-to-br from-gray-50 to-gray-100 hover:from-white hover:to-gray-50 rounded-xl p-4 sm:p-6 border-2 border-gray-200 hover:border-gray-300 transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+                className="group bg-white hover:bg-gray-50 rounded-lg p-6 border border-gray-200 hover:border-[#2D9AA5] transition-all duration-200 hover:shadow-md"
               >
-                <div className="flex flex-col items-center space-y-2 sm:space-y-3">
-                  <div className={`p-2 sm:p-3 bg-gradient-to-br ${action.color} rounded-full shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-                    <action.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="p-3 bg-[#2D9AA5] rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-200">
+                    <action.icon className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-gray-800 font-semibold text-sm sm:text-lg text-center">
+                  <span className="text-gray-800 font-medium text-lg text-center">
                     {action.title}
                   </span>
                 </div>
@@ -199,16 +184,16 @@ const ClinicDashboard: NextPageWithLayout = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {stats.totalClinics !== undefined && (
-            <div className="bg-white shadow-lg rounded-2xl p-4 sm:p-6 border border-gray-200 hover:shadow-xl transition-shadow duration-300 sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center space-x-3 sm:space-x-4">
-                <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full shadow-lg flex-shrink-0">
-                  <Settings className="text-white w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="bg-white shadow-sm rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-[#2D9AA5] rounded-lg shadow-sm flex-shrink-0">
+                  <Settings className="text-white w-6 h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">Total Clinics</h3>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.totalClinics}</p>
+                  <h3 className="text-lg font-medium text-gray-800">Total Clinics</h3>
+                  <p className="text-3xl font-semibold text-gray-900">{stats.totalClinics}</p>
                 </div>
               </div>
             </div>
@@ -216,25 +201,25 @@ const ClinicDashboard: NextPageWithLayout = () => {
         </div>
 
         {/* Dashboard Graph */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900">Analytics Overview</h2>
-          <div className="h-64 sm:h-80 lg:h-96">
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <h2 className="text-2xl font-semibold mb-6 text-gray-900">Analytics Overview</h2>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
                 margin={{
                   top: 20,
-                  right: 10,
-                  left: 10,
-                  bottom: 20
+                  right: 20,
+                  left: 20,
+                  bottom: 60
                 }}
                 barCategoryGap="20%"
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
-                  axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                  tick={{ fill: '#374151', fontSize: 12 }}
+                  axisLine={{ stroke: '#d1d5db' }}
                   tickLine={{ stroke: '#d1d5db' }}
                   interval={0}
                   angle={-45}
@@ -243,63 +228,51 @@ const ClinicDashboard: NextPageWithLayout = () => {
                 />
                 <YAxis
                   tick={{ fill: '#374151', fontSize: 12 }}
-                  axisLine={{ stroke: '#d1d5db', strokeWidth: 2 }}
+                  axisLine={{ stroke: '#d1d5db' }}
                   tickLine={{ stroke: '#d1d5db' }}
                   width={50}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#ffffff',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#000000'
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    fontSize: '14px'
                   }}
-                  labelStyle={{ color: '#000000' }}
-                  cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                  cursor={{ fill: 'rgba(45, 154, 165, 0.1)' }}
                 />
                 <Bar
                   dataKey="value"
-                  radius={[8, 8, 0, 0]}
-                  fill="url(#multiBarGradient)"
-                  stroke="#1e40af"
-                  strokeWidth={2}
+                  radius={[4, 4, 0, 0]}
+                  fill="#2D9AA5"
                 />
-                <defs>
-                  <linearGradient id="multiBarGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3B82F6" />
-                    <stop offset="50%" stopColor="#1D4ED8" />
-                    <stop offset="100%" stopColor="#1E40AF" />
-                  </linearGradient>
-                </defs>
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Chart Summary */}
-          <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border-l-4 border-blue-500">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-[#2D9AA5]">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-blue-600 truncate">Total Enquiries</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-900">{stats.totalEnquiries}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Enquiries</p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.totalEnquiries}</p>
                 </div>
-                <div className="p-2 bg-blue-100 rounded-full flex-shrink-0 ml-2">
-                  <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                <div className="p-2 bg-white rounded-lg flex-shrink-0 ml-2 shadow-sm">
+                  <Mail className="w-5 h-5 text-[#2D9AA5]" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3 sm:p-4 border-l-4 border-yellow-500">
+            <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-[#2D9AA5]">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-yellow-600 truncate">Total Reviews</p>
-                  <p className="text-xl sm:text-2xl font-bold text-yellow-900">{stats.totalReviews}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Reviews</p>
+                  <p className="text-2xl font-semibold text-gray-900">{stats.totalReviews}</p>
                 </div>
-                <div className="p-2 bg-yellow-100 rounded-full flex-shrink-0 ml-2">
-                  <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
+                <div className="p-2 bg-white rounded-lg flex-shrink-0 ml-2 shadow-sm">
+                  <Star className="w-5 h-5 text-[#2D9AA5]" />
                 </div>
               </div>
             </div>
