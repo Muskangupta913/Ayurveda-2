@@ -179,8 +179,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
         <div className="flex flex-col h-full">
           {/* Desktop Header Section */}
           <div className="p-6 border-b border-gray-100 flex-shrink-0 relative">
-            <Link href="/clinic/dashboard">
-              <div className="group cursor-pointer">
+              <div className="group">
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 group-hover:bg-[#2D9AA5]/5 transition-all duration-300 border border-gray-100">
                   <div className="w-10 h-10 bg-gradient-to-br from-[#2D9AA5] to-[#1e7d87] rounded-xl flex items-center justify-center shadow-sm">
                     <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
@@ -195,7 +194,6 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                   </div>
                 </div>
               </div>
-            </Link>
 
             {/* Desktop Close Button */}
             <button

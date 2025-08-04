@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, ReactNode } from "react";
 import axios from "axios";
-import withAdminAuth from "../../components/withClinicAuth";
+import withClinicAuth from "../../components/withClinicAuth";
 import type { NextPageWithLayout } from "../_app";
 import ClinicLayout from "../../components/ClinicLayout";
 import {
@@ -67,31 +67,37 @@ const Header = ({
   hasClinic: boolean;
   isEditing: boolean;
 }) => (
-  <header className="bg-white shadow-sm border-b border-gray-200">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div className="text-center relative">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-black rounded-xl mb-2">
-          <Building2 className="w-6 h-6 text-white" />
+  <header className="bg-white border-b border-gray-100">
+  <div className="max-w-6xl mx-auto px-6 py-6">
+    <div className="flex items-center justify-between">
+      {/* Left side - Brand */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center">
+          <Building2 className="w-5 h-5 text-white" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-black mb-1">
-          Clinic Management
-        </h1>
-        <p className="text-base text-black max-w-2xl mx-auto">
-          Manage your clinic information and services with ease
-        </p>
-        {/* Edit Button - positioned in top right */}
-        {hasClinic && !isEditing && (
-          <button
-            onClick={onEditClick}
-            className="absolute top-0 right-0 inline-flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Edit Clinic</span>
-          </button>
-        )}
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">
+            Clinic Management
+          </h1>
+          <p className="text-sm text-gray-500">
+            Manage your clinic with ease
+          </p>
+        </div>
       </div>
+
+      {/* Right side - Edit Button */}
+      {hasClinic && !isEditing && (
+        <button
+          onClick={onEditClick}
+          className="flex items-center gap-2 px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#247a83] transition-colors font-medium"
+        >
+          <Edit3 className="w-4 h-4" />
+          <span>Edit</span>
+        </button>
+      )}
     </div>
-  </header>
+  </div>
+</header>
 );
 
 interface FormInputProps {
@@ -326,84 +332,88 @@ const TreatmentManager = ({
   };
 
   return (
-  <div className="space-y-2">
-    <label className="flex items-center gap-2 text-sm font-medium text-black">
-      {icon}
-      {label}
-    </label>
+    <div className="space-y-4">
+      <label className="flex items-center gap-3 text-sm font-semibold text-gray-800 sm:text-base">
+        {icon}
+        {label}
+      </label>
 
-    {/* Treatment Selection */}
-    <div className="space-y-2">
-      {!showCustomInput ? (
-        <div className="relative">
-          <select
-            onChange={(e) => {
-              if (e.target.value === "custom") {
-                setShowCustomInput(true);
-              } else if (e.target.value) {
-                const selectedTreatment = availableTreatments.find(
-                  (t: Treatment) => t._id === e.target.value
-                );
-                if (selectedTreatment) {
-                  onAddFromDropdown(selectedTreatment.name);
+      {/* Treatment Selection */}
+      <div className="space-y-3">
+        {!showCustomInput ? (
+          <div className="relative">
+            <select
+              onChange={(e) => {
+                if (e.target.value === "custom") {
+                  setShowCustomInput(true);
+                } else if (e.target.value) {
+                  const selectedTreatment = availableTreatments.find(
+                    (t: Treatment) => t._id === e.target.value
+                  );
+                  if (selectedTreatment) {
+                    onAddFromDropdown(selectedTreatment.name);
+                  }
                 }
-              }
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-black"
-            value=""
-          >
-            <option value="">Select a treatment</option>
-            {availableTreatments?.map((treatment: Treatment) => (
-              <option key={treatment._id} value={treatment._id}>
-                {treatment.name}
-              </option>
-            ))}
-            <option value="custom">+ Add Custom Treatment</option>
-          </select>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder-black text-black"
-            placeholder="Enter custom treatment name"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onAdd();
-              }
-            }}
-          />
-          <button
-            onClick={onAdd}
-            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => {
-              setShowCustomInput(false);
-              setNewItem("");
-            }}
-            className="px-4 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </div>
+              }}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] text-gray-800 transition-all duration-200 text-sm sm:text-base"
+              value=""
+            >
+              <option value="">Select a treatment</option>
+              {availableTreatments?.map((treatment: Treatment) => (
+                <option key={treatment._id} value={treatment._id}>
+                  {treatment.name}
+                </option>
+              ))}
+              <option value="custom">+ Add Custom Treatment</option>
+            </select>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] placeholder-gray-400 text-gray-800 transition-all duration-200 text-sm sm:text-base"
+              placeholder="Enter custom treatment name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onAdd();
+                }
+              }}
+            />
+            <div className="flex gap-2 sm:gap-3">
+              <button
+                onClick={onAdd}
+                className="flex-1 sm:flex-initial px-4 py-3 bg-[#2D9AA5] text-white rounded-xl hover:bg-[#238891] active:bg-[#1f7177] transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="sm:hidden">Add</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowCustomInput(false);
+                  setNewItem("");
+                }}
+                className="flex-1 sm:flex-initial px-4 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all duration-200 shadow-sm flex items-center justify-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                <span className="sm:hidden">Cancel</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
-    {/* Selected Treatments */}
-    <div className="space-y-2">
-      {items?.map(
-        (
-          item: {
-            mainTreatment: string;
-            subTreatments?: Array<{ name: string; slug: string }>;
-          },
-          index: number
+      {/* Selected Treatments */}
+      <div className="space-y-4">
+        {items?.map(
+          (
+            item: {
+              mainTreatment: string;
+              subTreatments?: Array<{ name: string; slug: string }>;
+            },
+            index: number
           ) => {
             const selectedTreatment = availableTreatments.find(
               (t) => t.name === item.mainTreatment
@@ -412,29 +422,29 @@ const TreatmentManager = ({
             return (
               <div
                 key={index}
-                className="border border-gray-200 rounded-lg p-3"
+                className="bg-white border border-gray-100 rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-200"
               >
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-black">
-                {item.mainTreatment}
-              </span>
-              <button
-                onClick={() => onRemove(index)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+                <div className="flex items-start justify-between mb-4 gap-3">
+                  <h3 className="font-semibold text-gray-800 text-sm sm:text-base leading-tight">
+                    {item.mainTreatment}
+                  </h3>
+                  <button
+                    onClick={() => onRemove(index)}
+                    className="text-red-400 hover:text-red-600 active:text-red-700 transition-colors duration-200 p-1 rounded-lg hover:bg-red-50"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
 
-                {/* Sub-treatment Selection */}
-                <div className="ml-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Sub-treatments:
+                {/* Sub-treatment Section */}
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="text-sm font-medium text-gray-600">
+                      Sub-treatments
                     </span>
                     <button
                       onClick={() => setShowSubTreatmentInput(index)}
-                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                      className="self-start sm:self-auto px-3 py-2 bg-[#2D9AA5]/10 text-[#2D9AA5] rounded-lg text-xs font-medium hover:bg-[#2D9AA5]/20 active:bg-[#2D9AA5]/30 transition-all duration-200"
                     >
                       + Add Sub-treatment
                     </button>
@@ -442,42 +452,44 @@ const TreatmentManager = ({
 
                   {/* Sub-treatment Input */}
                   {showSubTreatmentInput === index && (
-                    <div className="flex gap-2 items-center">
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value === "custom") {
-                            setShowCustomSubTreatmentInput(index);
-                            setCustomSubTreatment("");
-                          } else if (e.target.value) {
-                            handleAddFromAvailableSubTreatments(
-                              index,
-                              e.target.value
-                            );
-                          }
-                        }}
-                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                        value=""
-                      >
-                        <option value="">Select sub-treatment</option>
-                        {selectedTreatment?.subcategories?.map((sub) => (
-                          <option key={sub.slug} value={sub.name}>
-                            {sub.name}
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value === "custom") {
+                              setShowCustomSubTreatmentInput(index);
+                              setCustomSubTreatment("");
+                            } else if (e.target.value) {
+                              handleAddFromAvailableSubTreatments(
+                                index,
+                                e.target.value
+                              );
+                            }
+                          }}
+                          className="text-black flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] text-sm transition-all duration-200"
+                          value=""
+                        >
+                          <option value="">Select sub-treatment</option>
+                          {selectedTreatment?.subcategories?.map((sub) => (
+                            <option key={sub.slug} value={sub.name}>
+                              {sub.name}
+                            </option>
+                          ))}
+                          <option value="custom">
+                            + Add Custom Sub-treatment
                           </option>
-                        ))}
-                        <option value="custom">
-                          + Add Custom Sub-treatment
-                        </option>
-                      </select>
+                        </select>
+                      </div>
 
                       {showCustomSubTreatmentInput === index && (
-                        <>
+                        <div className="flex flex-col gap-3 sm:flex-row">
                           <input
                             type="text"
                             value={customSubTreatment}
                             onChange={(e) =>
                               setCustomSubTreatment(e.target.value)
                             }
-                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] text-sm placeholder-gray-400 transition-all duration-200"
                             placeholder="Custom sub-treatment name"
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -488,55 +500,57 @@ const TreatmentManager = ({
                           />
                           <button
                             onClick={() => handleAddSubTreatment(index)}
-                            className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                            className="px-4 py-2 bg-[#2D9AA5] text-white rounded-lg text-sm font-medium hover:bg-[#238891] active:bg-[#1f7177] transition-all duration-200 shadow-sm"
                           >
                             Add
                           </button>
-                        </>
+                        </div>
                       )}
 
-                      <button
-                        onClick={() => {
-                          setShowSubTreatmentInput(null);
-                          setShowCustomSubTreatmentInput(null);
-                          setCustomSubTreatment("");
-                        }}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
-                      >
-                        Cancel
-                      </button>
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => {
+                            setShowSubTreatmentInput(null);
+                            setShowCustomSubTreatmentInput(null);
+                            setCustomSubTreatment("");
+                          }}
+                          className="px-4 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-300 active:bg-gray-400 transition-all duration-200"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   )}
 
                   {/* Existing Sub-treatments */}
-            {item.subTreatments && item.subTreatments.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                  {item.subTreatments.map((subTreatment, subIndex) => (
-                    <span
-                      key={subIndex}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                    >
-                      {subTreatment.name}
+                  {item.subTreatments && item.subTreatments.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {item.subTreatments.map((subTreatment, subIndex) => (
+                        <span
+                          key={subIndex}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-[#2D9AA5]/10 text-[#2D9AA5] text-sm rounded-full border border-[#2D9AA5]/20 hover:bg-[#2D9AA5]/20 transition-all duration-200"
+                        >
+                          <span className="font-medium">{subTreatment.name}</span>
                           <button
                             onClick={() =>
                               handleRemoveSubTreatment(index, subIndex)
                             }
-                            className="text-red-400 hover:text-red-600"
+                            className="text-[#2D9AA5]/60 hover:text-red-500 active:text-red-600 transition-colors duration-200 p-0.5 rounded-full hover:bg-white/50"
                           >
                             <X className="w-3 h-3" />
                           </button>
-                    </span>
-                  ))}
-              </div>
-            )}
-          </div>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           }
-      )}
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 interface ClinicCardProps {
@@ -545,95 +559,67 @@ interface ClinicCardProps {
   getImagePath: (photoPath: string) => string;
 }
 const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
-  <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-w-4xl mx-auto">
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden max-w-4xl mx-auto">
     {/* Image & Edit Section */}
-    <div className="relative w-full">
+    <div className="relative">
       {clinic.photos?.[0] ? (
-        <div className="relative w-full group">
-          <Image
-            src={getImagePath(clinic.photos[0])}
-            className="w-full h-auto max-h-96 object-contain rounded-t-xl transition-transform duration-300"
-            alt={clinic.name}
-            width={400}
-            height={200}
-            unoptimized={true}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent rounded-t-xl pointer-events-none"></div>
-        </div>
+        <Image
+          src={getImagePath(clinic.photos[0])}
+          className="w-full h-auto max-h-64 sm:max-h-80 object-contain bg-gray-50"
+          alt={clinic.name}
+          width={400}
+          height={200}
+          unoptimized={true}
+        />
       ) : (
-        <div
-          className="w-full flex items-center justify-center bg-gradient-to-tr from-slate-200 to-indigo-100 rounded-t-xl"
-          style={{ height: "16rem" }}
-        >
-          <span className="text-gray-400 text-lg font-semibold">
-            Please Upload Clinic Photo
-          </span>
+        <div className="w-full h-auto min-h-48 sm:min-h-56 flex items-center justify-center bg-gray-50">
+          <span className="text-gray-400 text-sm">Upload Clinic Photo</span>
         </div>
       )}
 
       <button
         onClick={() => onEdit(clinic)}
-        className="absolute top-4 right-4 bg-indigo-600 text-white p-2 rounded-full shadow-lg hover:bg-indigo-700 transition-colors"
+        className="absolute top-3 right-3 bg-[#2D9AA5] text-white p-2 rounded-lg hover:bg-[#238891]"
       >
-        <Edit3 className="w-5 h-5" />
+        <Edit3 className="w-4 h-4" />
       </button>
     </div>
 
-    {/* Content Section */}
-    <div className="p-8 bg-white rounded-b-xl">
+    {/* Content */}
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-5">
-        <h2 className="text-2xl font-bold text-indigo-700 mb-1 tracking-tight">
+      <div className="mb-4">
+        <h2 className="text-lg sm:text-xl font-semibold text-[#2D9AA5] mb-1">
           {clinic.name}
         </h2>
-        <div className="flex items-center gap-2 text-gray-500">
-          <MapPin className="w-5 h-5 text-indigo-400" />
-          <span className="text-base">{clinic.address}</span>
+        <div className="flex items-center gap-2 text-gray-600 text-sm">
+          <MapPin className="w-4 h-4" />
+          <span>{clinic.address}</span>
         </div>
       </div>
 
-      {/* Info Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-indigo-50 shadow">
-          <span className="bg-indigo-200 rounded-full p-2">
-            <svg
-              className="w-5 h-5 text-indigo-600"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <text
-                x="2"
-                y="16"
-                fontSize="23"
-                fontWeight="bold"
-                fill="currentColor"
-              >
-                د.إ
-              </text>
-            </svg>
-          </span>
-
+      {/* Info Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+          <div className="w-8 h-8 bg-[#2D9AA5] rounded-lg flex items-center justify-center text-white text-xs font-bold">
+            د.إ
+          </div>
           <div>
-            <div className="text-sm font-semibold text-gray-700">
-              Consultation Fee
-            </div>
-            <div className="text-black">
-              {clinic.pricing || (
-                <span className="text-gray-400">Contact for pricing</span>
-              )}
+            <div className="text-xs text-gray-500">Consultation Fee</div>
+            <div className="text-sm font-medium text-gray-800">
+              {clinic.pricing || "Contact for pricing"}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-indigo-50 shadow">
-          <span className="bg-indigo-200 rounded-full p-2">
-            <Clock className="w-5 h-5 text-indigo-600" />
-          </span>
+
+        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+          <div className="w-8 h-8 bg-[#2D9AA5] rounded-lg flex items-center justify-center">
+            <Clock className="w-4 h-4 text-white" />
+          </div>
           <div>
-            <div className="text-sm font-semibold text-gray-800">Timings</div>
-            <div className="text-black">
-              {clinic.timings || (
-                <span className="text-gray-400">Contact for timings</span>
-              )}
+            <div className="text-xs text-gray-500">Timings</div>
+            <div className="text-sm font-medium text-gray-800">
+              {clinic.timings || "Contact for timings"}
             </div>
           </div>
         </div>
@@ -641,16 +627,16 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
 
       {/* Services */}
       {clinic.servicesName?.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-indigo-700 mb-3">
-            <Leaf className="w-5 h-5 text-green-400" />
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <Leaf className="w-4 h-4 text-green-500" />
             Services
-          </div>
+          </h3>
           <div className="flex flex-wrap gap-2">
             {clinic.servicesName.map((service, idx) => (
               <span
                 key={idx}
-                className="px-3 py-1 bg-green-50 text-green-800 rounded-full shadow-sm text-sm"
+                className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs"
               >
                 {service}
               </span>
@@ -661,34 +647,29 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
 
       {/* Treatments */}
       {clinic.treatments?.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-rose-700 mb-3">
-            <Heart className="w-5 h-5 text-rose-400" />
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <Heart className="w-4 h-4 text-rose-500" />
             Treatments
-          </div>
+          </h3>
           <div className="space-y-2">
             {clinic.treatments.map((treatment, idx) => (
-              <div key={idx} className="border border-rose-100 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-3 py-1 bg-rose-50 text-rose-800 rounded-full shadow-sm text-sm font-medium">
-                    {treatment.mainTreatment}
-                  </span>
-                </div>
-                {treatment.subTreatments &&
-                  treatment.subTreatments.length > 0 && (
-                    <div className="ml-4">
-                      <div className="flex flex-wrap gap-1">
-                        {treatment.subTreatments.map((subTreatment, subIdx) => (
-                          <span
-                            key={subIdx}
-                            className="px-2 py-1 bg-rose-25 text-rose-700 rounded-full shadow-sm text-xs"
-                          >
-                            {subTreatment.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              <div key={idx} className="border border-gray-200 rounded-lg p-3">
+                <span className="px-2 py-1 bg-[#2D9AA5] text-white rounded text-xs font-medium">
+                  {treatment.mainTreatment}
+                </span>
+                {treatment.subTreatments && treatment.subTreatments.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {treatment.subTreatments.map((subTreatment, subIdx) => (
+                      <span
+                        key={subIdx}
+                        className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                      >
+                        {subTreatment.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -696,14 +677,11 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
       )}
 
       {/* Footer */}
-      <div className="pt-6 mt-2 border-t border-gray-100">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span className="bg-indigo-50 rounded-full p-1 mr-1">
-            <Calendar className="w-4 h-4 text-indigo-400" />
-          </span>
+      <div className="pt-3 border-t border-gray-200">
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <Calendar className="w-4 h-4" />
           <span>
-            <span className="italic">Established</span>{" "}
-            {new Date(clinic.createdAt).toLocaleDateString("en-US", {
+            Established {new Date(clinic.createdAt).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
             })}
@@ -1035,35 +1013,36 @@ function ClinicManagementDashboard() {
         isEditing={isEditing}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {isEditing ? (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0">
                     <Edit3 className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-black">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                       Edit Clinic
                     </h2>
-                    <p className="text-black text-sm">
+                    <p className="text-gray-600 text-sm">
                       Update clinic information
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleCancel}
-                  className="p-2 text-gray-400 hover:text-black transition-colors"
+                  className="self-end sm:self-auto p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                 {/* Left Column */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   <FormInput
                     label="Clinic Name"
                     icon={<Building2 className="w-4 h-4" />}
@@ -1076,10 +1055,10 @@ function ClinicManagementDashboard() {
 
                   <FormInput
                     label={
-                      <span>
-                        Address{" "}
+                      <span className="flex items-center gap-2">
+                        Address
                         {geocodingStatus && (
-                          <span className="text-green-600 text-xs ml-2">
+                          <span className="text-[#2D9AA5] text-xs font-medium px-2 py-1 bg-[#2D9AA5]/10 rounded">
                             {geocodingStatus}
                           </span>
                         )}
@@ -1089,7 +1068,7 @@ function ClinicManagementDashboard() {
                     value={editForm.address || ""}
                     onChange={handleAddressChangeWithGeocode}
                     type="textarea"
-                    placeholder="Enter complete address with state,city and place"
+                    placeholder="Enter complete address with state, city and place"
                   />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1104,7 +1083,7 @@ function ClinicManagementDashboard() {
                           <text
                             x="2"
                             y="16"
-                            fontSize="23"
+                            fontSize="20"
                             fontWeight="bold"
                             fill="currentColor"
                           >
@@ -1131,7 +1110,7 @@ function ClinicManagementDashboard() {
                 </div>
 
                 {/* Right Column */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   <TagManager
                     label="Services"
                     icon={<Leaf className="w-4 h-4" />}
@@ -1159,19 +1138,18 @@ function ClinicManagementDashboard() {
                   />
 
                   {/* Photo Upload */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-black">
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                       <Camera className="w-4 h-4" />
                       Clinic Photo
                     </label>
-                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-6 sm:p-8 text-center hover:border-[#2D9AA5]/50 hover:bg-[#2D9AA5]/5 transition-all">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={(e) => {
                           if (e.target.files && e.target.files[0]) {
                             const file = e.target.files[0];
-                            // Check file type
                             if (
                               file.type !== "image/png" &&
                               file.type !== "image/jpeg" &&
@@ -1192,22 +1170,28 @@ function ClinicManagementDashboard() {
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
-                      <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-black font-medium">
+                      <div className="w-12 h-12 bg-[#2D9AA5]/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <Camera className="w-6 h-6 text-[#2D9AA5]" />
+                      </div>
+                      <p className="text-gray-700 font-medium mb-1">
                         Click to upload photo
                       </p>
                       <p className="text-gray-500 text-sm">
                         PNG, JPG up to 1MB
                       </p>
                       {selectedFile && (
-                        <p className="text-black text-sm mt-2 font-medium">
-                          {selectedFile.name}
-                        </p>
+                        <div className="mt-3 p-2 bg-[#2D9AA5]/10 rounded-lg">
+                          <p className="text-[#2D9AA5] text-sm font-medium">
+                            {selectedFile.name}
+                          </p>
+                        </div>
                       )}
                       {photoError && (
-                        <p className="text-red-600 text-sm mt-2 font-medium">
-                          {photoError}
-                        </p>
+                        <div className="mt-3 p-2 bg-red-50 rounded-lg">
+                          <p className="text-red-600 text-sm font-medium">
+                            {photoError}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1219,12 +1203,12 @@ function ClinicManagementDashboard() {
                 <button
                   onClick={handleUpdate}
                   disabled={updating}
-                  className="flex-1 sm:flex-none px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="order-2 sm:order-1 px-6 py-3 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#238891] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium transition-colors"
                 >
                   {updating ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Updating...
+                      <span>Updating...</span>
                     </>
                   ) : (
                     "Update Clinic"
@@ -1232,7 +1216,7 @@ function ClinicManagementDashboard() {
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="flex-1 sm:flex-none px-6 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
+                  className="order-1 sm:order-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -1242,21 +1226,21 @@ function ClinicManagementDashboard() {
         ) : (
           <div className="flex justify-center">
             {clinics.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 max-w-md mx-auto">
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Building2 className="w-8 h-8 text-gray-400" />
+              <div className="text-center py-12 sm:py-16">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-[#2D9AA5]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Building2 className="w-8 h-8 text-[#2D9AA5]" />
                   </div>
-                  <h3 className="text-xl font-bold text-black mb-2">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
                     No Clinics Found
                   </h3>
-                  <p className="text-black">
+                  <p className="text-gray-600">
                     Start by adding your first clinic
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="w-full">
+              <div className="w-full space-y-6">
                 {clinics.map((clinic) => (
                   <ClinicCard
                     key={clinic._id}
@@ -1281,7 +1265,7 @@ ClinicManagementDashboard.getLayout = function PageLayout(
 };
 
 // ✅ Apply HOC and assign correct type
-const ProtectedDashboard: NextPageWithLayout = withAdminAuth(
+const ProtectedDashboard: NextPageWithLayout = withClinicAuth(
   ClinicManagementDashboard
 );
 

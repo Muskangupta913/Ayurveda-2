@@ -1405,7 +1405,7 @@ export default function Home(): React.ReactElement {
                           </div>
 
                           {/* Availability */}
-                          <div className="mb-3">
+                          {/* <div className="mb-3">
                             {clinic.timings ? (
                               <span className="inline-flex items-center px-2 py-1 bg-green-50 border border-green-200 text-green-700 rounded-md font-medium text-xs">
                                 ✓ Available
@@ -1415,7 +1415,7 @@ export default function Home(): React.ReactElement {
                                 ✗ No timing info
                               </span>
                             )}
-                          </div>
+                          </div> */}
 
                           {/* Action buttons */}
                           <div className="flex gap-2">

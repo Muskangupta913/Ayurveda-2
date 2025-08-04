@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Scale, Activity, Wind, Apple, Calculator, ArrowRight, Home, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer } from 'lucide-react';
+import { Dumbbell,Scale, Activity, Wind, Apple, Calculator, ArrowRight, Home, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer } from 'lucide-react';
 
 export interface Calculator {
   id: string;
@@ -13,7 +13,7 @@ export interface Calculator {
   image: string;
 }
 
-interface Game {
+export interface Game {
   id: string;
   title: string;
   description: string;
@@ -94,81 +94,79 @@ export const calculators: Calculator[] = [
   }
 ];
 
+export const games: Game[] = [
+  {
+    id: 'flipcards',
+    title: 'FitFlip Cards',
+    description: 'Discover exercises, match pairs, burn calories fast.',
+    icon: Dumbbell, // More fitting for fitness than Brain
+    color: 'from-[#FF6B6B] to-[#4ECDC4]', // Energetic red to refreshing teal gradient
+    bgColor: 'bg-white',
+    borderColor: 'border-grey-200', // Complementary border
+    hoverColor: 'hover:shadow-xl hover:scale-105 hover:border-orange-300', // More dynamic hover effect
+    image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=400&h=200&fit=crop' // Fitness/workout equipment image
+  },
+  {
+    id: 'HealthyFood',
+    title: 'Healthy Food Picker Game',
+    description: 'Smash junk, grab greens, beat the clock!',
+    icon: Target,
+    color: 'from-[#4ECDC4] to-[#44b3ac]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'heart-rhythm',
+    title: 'Heart Rhythm Game',
+    description: 'Follow the beat and learn about cardiovascular health',
+    icon: Heart,
+    color: 'from-[#FF8A65] to-[#f4795b]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'hydration-hero',
+    title: 'Hydration Hero',
+    description: 'Catch water drops and learn about the importance of staying hydrated',
+    icon: Zap,
+    color: 'from-[#64B5F6] to-[#5aa3e8]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1559839914-17aae19cec71?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'workout-timer',
+    title: 'Workout Timer Challenge',
+    description: 'Complete timed exercises and build healthy workout habits',
+    icon: Timer,
+    color: 'from-[#9C27B0] to-[#8e24aa]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop'
+  },
+  {
+    id: 'sleep-puzzle',
+    title: 'Sleep Cycle Puzzle',
+    description: 'Solve puzzles while learning about healthy sleep patterns',
+    icon: Brain,
+    color: 'from-[#7986CB] to-[#6a7bc2]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=200&fit=crop'
+  }
+];
+
 const HealthCalculatorApp: React.FC = () => {
   const [activeCalculator, setActiveCalculator] = useState<string>('home');
   const sliderRef = useRef<HTMLDivElement>(null);
   const gamesSliderRef = useRef<HTMLDivElement>(null);
-
-
-
-  const games: Game[] = [
-    {
-      id: 'nutrition-quiz',
-      title: 'Nutrition Quiz Challenge',
-      description: 'Test your knowledge about healthy foods and nutrition facts',
-      icon: Brain,
-      color: 'from-[#FF6B6B] to-[#ee5a52]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'fitness-memory',
-      title: 'Fitness Memory Game',
-      description: 'Match exercise cards and learn about different workout routines',
-      icon: Target,
-      color: 'from-[#4ECDC4] to-[#44b3ac]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'heart-rhythm',
-      title: 'Heart Rhythm Game',
-      description: 'Follow the beat and learn about cardiovascular health',
-      icon: Heart,
-      color: 'from-[#FF8A65] to-[#f4795b]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'hydration-hero',
-      title: 'Hydration Hero',
-      description: 'Catch water drops and learn about the importance of staying hydrated',
-      icon: Zap,
-      color: 'from-[#64B5F6] to-[#5aa3e8]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1559839914-17aae19cec71?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'workout-timer',
-      title: 'Workout Timer Challenge',
-      description: 'Complete timed exercises and build healthy workout habits',
-      icon: Timer,
-      color: 'from-[#9C27B0] to-[#8e24aa]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop'
-    },
-    {
-      id: 'sleep-puzzle',
-      title: 'Sleep Cycle Puzzle',
-      description: 'Solve puzzles while learning about healthy sleep patterns',
-      icon: Brain,
-      color: 'from-[#7986CB] to-[#6a7bc2]',
-      bgColor: 'bg-white',
-      borderColor: 'border-gray-200',
-      hoverColor: 'hover:shadow-lg',
-      image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=200&fit=crop'
-    }
-  ];
 
   const scrollLeft = (): void => {
     if (sliderRef.current) {
@@ -354,7 +352,7 @@ const HealthCalculatorApp: React.FC = () => {
         {/* View All Games Button */}
         <div className="text-center mt-8">
           <a
-            href="/all-games"
+            href="/games/allgames"
             className="inline-flex items-center bg-purple-500 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-purple-600 transition-colors"
           >
             View All Games

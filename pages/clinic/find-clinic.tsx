@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
-import withAdminAuth from '../../components/withClinicAuth';  
+import withClinicAuth from '../../components/withClinicAuth';  
 import type { NextPageWithLayout } from '../_app'
 import ClinicLayout from '../../components/ClinicLayout';
 
@@ -143,7 +143,7 @@ FindClinic.getLayout = function PageLayout(page: React.ReactNode) {
 };
 
 // ✅ Apply HOC and assign correct type
-const ProtectedDashboard: NextPageWithLayout = withAdminAuth(FindClinic);
+const ProtectedDashboard: NextPageWithLayout = withClinicAuth(FindClinic);
 
 // ✅ Reassign layout (TS-safe now)
 ProtectedDashboard.getLayout = FindClinic.getLayout;
