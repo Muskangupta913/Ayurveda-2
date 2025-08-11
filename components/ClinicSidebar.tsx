@@ -56,12 +56,12 @@ const navItems: NavItem[] = [
     description: 'See Job Applicants'
     // badge: 3
   },
-  // { 
-  //   label: 'Reports', 
-  //   path: '/clinic/reports', 
-  //   icon: '📊',
-  //   description: 'Analytics & reports'
-  // },
+  { 
+    label: 'Blog', 
+    path: '/clinic/BlogForm', 
+    icon: '📊',
+    description: 'Analytics & reports'
+  },
   // { 
   //   label: 'Settings', 
   //   path: '/clinic/settings', 
