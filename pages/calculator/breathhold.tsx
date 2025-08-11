@@ -514,7 +514,7 @@ function  BreathHold(){
 
       <div className="container">
         <div className="header">
-          <h1>🫁 Dubai Lung Checker</h1>
+          <h1>🫁 Lung Checker</h1>
           <div className="best-score">
             Best: {formatTime(gameState.bestScore)}
           </div>

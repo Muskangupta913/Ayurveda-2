@@ -127,7 +127,7 @@ export default function ClinicLogin() {
                 <div>
                   <h1 className="text-3xl font-bold">AyurVeda</h1>
                   <p className="text-teal-200 text-sm uppercase tracking-wider">
-                    Clinic Portal
+                    Health Center Portal
                   </p>
                 </div>
               </div>
@@ -135,11 +135,11 @@ export default function ClinicLogin() {
               <h2 className="text-4xl font-bold leading-tight mb-4">
                 Welcome to Your
                 <br />
-                <span className="text-teal-200">Clinic Dashboard</span>
+                <span className="text-teal-200">Health Center Dashboard</span>
               </h2>
 
               <p className="text-teal-100 text-lg leading-relaxed mb-8">
-                Access your clinic management system to handle appointments,
+                Access your Health Center management system to handle appointments,
                 patient records, and provide exceptional Ayurvedic care.
               </p>
 
@@ -196,7 +196,7 @@ export default function ClinicLogin() {
               <div>
                 <h1 className="text-xl font-bold text-gray-800">AyurVeda</h1>
                 <p className="text-xs uppercase tracking-wider" style={{color: '#2D9AA5'}}>
-                  Clinic Portal
+                  Health Center Portal
                 </p>
               </div>
             </div>
@@ -205,10 +205,10 @@ export default function ClinicLogin() {
             <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 backdrop-blur-sm">
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  Clinic Login
+                  Health Center Login
                 </h2>
                 <p className="text-gray-600">
-                  Sign in to access your clinic dashboard
+                  Sign in to access your Health Center dashboard
                 </p>
               </div>
 
@@ -233,7 +233,7 @@ export default function ClinicLogin() {
                 {/* Email Field */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Clinic Email
+                    Health Center Email
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -251,7 +251,7 @@ export default function ClinicLogin() {
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       className="text-black w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl"
-                      placeholder="clinic@ayurveda.com"
+                      placeholder="Healthcenter@ayurveda.com"
                       required
                     />
                   </div>

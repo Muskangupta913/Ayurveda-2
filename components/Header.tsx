@@ -71,7 +71,7 @@ const Header = () => {
   const getNavItems = (): NavItem[] => {
     const baseItems: NavItem[] = [
       { name: 'Home', href: '/', icon: '🏠' },
-      { name: 'Career', href: '/job-listings', icon: '🏠' },
+      { name: 'Career', href: '/job-listings', icon: '💼' },
       // Add other links here if needed
     ];
 
@@ -109,13 +109,13 @@ const Header = () => {
       <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-opacity-20 relative z-30" style={{ borderColor: '#2D9AA5' }}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            {/* Left: MediCare name & subtitle only */}
+            {/* Left:ZEVA name & subtitle only */}
             <div className="flex items-center space-x-3 group">
               <div>
                 <h1 className="text-2xl font-bold text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, #2D9AA5, #1f7a82)` }}>
-                  MediCare
+                  ZEVA
                 </h1>
-                <p className="text-xs font-medium -mt-1" style={{ color: '#2D9AA5' }}>NEAR ME</p>
+                {/* <p className="text-xs font-medium -mt-1" style={{ color: '#2D9AA5' }}>NEAR ME</p> */}
               </div>
             </div>
 
@@ -244,7 +244,7 @@ const Header = () => {
                 </button>
                 {isDashboardDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-40">
-                    <Link
+                    {/* <Link
                       href="#"
                       onClick={() => {
                         setIsDashboardDropdownOpen(false);
@@ -261,7 +261,7 @@ const Header = () => {
                       }}
                     >
                       User
-                    </Link>
+                    </Link> */}
                     <Link
                       href="/clinic/login-clinic"
                       onClick={() => setIsDashboardDropdownOpen(false)}
@@ -275,7 +275,7 @@ const Header = () => {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                     >
-                      Clinic
+                      Health Center
                     </Link>
                     <Link
                       href="/doctor/login"
@@ -346,10 +346,10 @@ const Header = () => {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                     >
-                      Register your Clinic
+                      Register your Health Center
                     </Link>
                     <Link
-                      href="/doctor/register"
+                      href="/doctor/doctor-register"
                       onClick={() => setIsRegisterDropdownOpen(false)}
                       className="block px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
                       onMouseEnter={(e) => {
@@ -459,7 +459,7 @@ const Header = () => {
                   Dashboard Login
                 </summary>
                 <div className="mt-2 space-y-2">
-                  <button
+                  {/* <button
                     onClick={() => {
                       openAuthModal('login');
                       setIsMenuOpen(false);
@@ -473,7 +473,7 @@ const Header = () => {
                     }}
                   >
                     User
-                  </button>
+                  </button> */}
                   <Link
                     href="/clinic/login-clinic"
                     onClick={() => setIsMenuOpen(false)}
@@ -485,7 +485,7 @@ const Header = () => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    Clinic
+                    Health Center
                   </Link>
                   <Link
                     href="/doctor/login"
@@ -528,10 +528,10 @@ const Header = () => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    Register your Clinic
+                    Register your Health Center
                   </Link>
                   <Link
-                    href="/doctor/register"
+                    href="/doctor/doctor-register"
                     onClick={() => setIsMenuOpen(false)}
                     className="block px-4 py-2 text-gray-700 rounded transition-colors hover:bg-opacity-10"
                     onMouseEnter={(e) => {
@@ -601,7 +601,7 @@ const Header = () => {
               <div className="flex items-center space-x-6">
                 <span className="flex items-center space-x-2">
                   <span>✉️</span>
-                  <span>info@medicarenearme.com</span>
+                  <span>info@zeva.com</span>
                 </span>
               </div>
               {isAuthenticated && (

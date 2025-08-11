@@ -200,7 +200,7 @@ function ClinicReviews() {
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
-              Clinic Reviews
+              Health Center Reviews
             </h1>
             <p className="text-sm sm:text-base text-gray-600 mt-1">
               Monitor and manage your patient feedback
@@ -345,7 +345,7 @@ function ClinicReviews() {
               </h3>
               <p className="text-sm sm:text-base text-gray-600 max-w-sm sm:max-w-md mx-auto leading-relaxed">
                 {reviews.length === 0
-                  ? "Your clinic hasn't received any reviews yet. Encourage your patients to share their feedback!"
+                  ? "Your Health Center hasn't received any reviews yet. Encourage your patients to share their feedback!"
                   : "Try adjusting your search terms or filter criteria to find specific reviews."}
               </p>
             </div>

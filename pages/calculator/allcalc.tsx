@@ -23,7 +23,7 @@ function AllCalculators(){
                 Health Calculators
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-white/90 leading-relaxed">
-                Comprehensive tools to monitor and optimize your health journey
+                Zeva — empowering you with intelligent tools for a healthier, stronger, and more fulfilling life.
               </p>
               <div className="mt-6 flex justify-center lg:justify-start">
                 <div className="w-20 h-1 bg-white/60 rounded-full"></div>

@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Dumbbell,Scale, Activity, Wind, Apple, Calculator, ArrowRight, Home, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { AlertCircle,Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, Home, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
 
 export interface Calculator {
   id: string;
@@ -35,7 +35,7 @@ export const calculators: Calculator[] = [
     bgColor: 'bg-white',
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=200&fit=crop'
+    image: 'https://images.unsplash.com/photo-1434596922112-19c563067271?w=400&h=200&fit=crop'
   },
   {
     id: 'bmr-tdee',
@@ -57,7 +57,7 @@ export const calculators: Calculator[] = [
     bgColor: 'bg-white',
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=200&fit=crop'
+    image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=200&fit=crop'
   },
   {
     id: 'calorie-counter',
@@ -79,9 +79,20 @@ export const calculators: Calculator[] = [
     bgColor: 'bg-white',
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop'
+    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=cro'
   },
   {
+  id: 'depression-test',
+  title: 'Depression Test Calculator',
+  description: 'Begin a gentle test to understand depression signs',
+  icon: Brain,
+  color: 'from-[#2D9AA5] to-[#238a94]',
+  bgColor: 'bg-white',
+  borderColor: 'border-gray-200',
+  hoverColor: 'hover:shadow-lg',
+  image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
+},  
+{
     id: 'water',
     title: 'Water Intake Tracker',
     description: 'Track your daily water consumption for optimal hydration',
@@ -96,9 +107,20 @@ export const calculators: Calculator[] = [
 
 export const games: Game[] = [
   {
+    id: 'quiz',
+    title: 'Health Quiz Challenge',
+    description: 'Test your health knowledge with quizzes',
+    icon: BookOpen,
+    color: 'from-[#64B5F6] to-[#5aa3e8]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&h=200&fit=crop'
+  },
+  {
     id: 'flipcards',
     title: 'FitFlip Cards',
-    description: 'Discover exercises, match pairs, burn calories fast.',
+    description: 'Match exercises, burn calories fast.',
     icon: Dumbbell, // More fitting for fitness than Brain
     color: 'from-[#FF6B6B] to-[#4ECDC4]', // Energetic red to refreshing teal gradient
     bgColor: 'bg-white',
@@ -117,56 +139,95 @@ export const games: Game[] = [
     hoverColor: 'hover:shadow-lg',
     image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=200&fit=crop'
   },
+    {
+    id: 'symptom',
+    title: 'Symptom Checker',
+    description: 'Interactive symptom decoding made fun.',
+    icon: AlertCircle, // assuming you have this imported
+    color: 'from-[#4ECDC4] to-[#44b3ac]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1628348070889-cb656235b4eb?w=400&h=200&fit=crop'
+  },
   {
-    id: 'heart-rhythm',
-    title: 'Heart Rhythm Game',
-    description: 'Follow the beat and learn about cardiovascular health',
+    id: 'immune',
+    title: 'Immunity Builder Game',
+    description: 'Build immunity through interactive gameplay',
     icon: Heart,
     color: 'from-[#FF8A65] to-[#f4795b]',
     bgColor: 'bg-white',
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=200&fit=crop'
+    image:'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=200&fit=crop'
   },
-  {
-    id: 'hydration-hero',
-    title: 'Hydration Hero',
-    description: 'Catch water drops and learn about the importance of staying hydrated',
-    icon: Zap,
-    color: 'from-[#64B5F6] to-[#5aa3e8]',
-    bgColor: 'bg-white',
-    borderColor: 'border-gray-200',
-    hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1559839914-17aae19cec71?w=400&h=200&fit=crop'
-  },
-  {
-    id: 'workout-timer',
-    title: 'Workout Timer Challenge',
-    description: 'Complete timed exercises and build healthy workout habits',
-    icon: Timer,
-    color: 'from-[#9C27B0] to-[#8e24aa]',
-    bgColor: 'bg-white',
-    borderColor: 'border-gray-200',
-    hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop'
-  },
-  {
-    id: 'sleep-puzzle',
-    title: 'Sleep Cycle Puzzle',
-    description: 'Solve puzzles while learning about healthy sleep patterns',
-    icon: Brain,
-    color: 'from-[#7986CB] to-[#6a7bc2]',
-    bgColor: 'bg-white',
-    borderColor: 'border-gray-200',
-    hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=200&fit=crop'
-  }
+  // {
+  //   id: 'workout-timer',
+  //   title: 'Workout Timer Challenge',
+  //   description: 'Complete timed exercises and build healthy workout habits',
+  //   icon: Timer,
+  //   color: 'from-[#9C27B0] to-[#8e24aa]',
+  //   bgColor: 'bg-white',
+  //   borderColor: 'border-gray-200',
+  //   hoverColor: 'hover:shadow-lg',
+  //   image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop'
+  // },
+  // {
+  //   id: 'sleep-puzzle',
+  //   title: 'Sleep Cycle Puzzle',
+  //   description: 'Solve puzzles while learning about healthy sleep patterns',
+  //   icon: Brain,
+  //   color: 'from-[#7986CB] to-[#6a7bc2]',
+  //   bgColor: 'bg-white',
+  //   borderColor: 'border-gray-200',
+  //   hoverColor: 'hover:shadow-lg',
+  //   image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=200&fit=crop'
+  // }
 ];
 
 const HealthCalculatorApp: React.FC = () => {
   const [activeCalculator, setActiveCalculator] = useState<string>('home');
   const sliderRef = useRef<HTMLDivElement>(null);
   const gamesSliderRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Restore calculator slider scroll
+    const calcScroll = localStorage.getItem('calcSliderScroll');
+    if (sliderRef.current && calcScroll) {
+      sliderRef.current.scrollLeft = parseInt(calcScroll, 10);
+      localStorage.removeItem('calcSliderScroll');
+    }
+    // Restore games slider scroll
+    const gamesScroll = localStorage.getItem('gamesSliderScroll');
+    if (gamesSliderRef.current && gamesScroll) {
+      gamesSliderRef.current.scrollLeft = parseInt(gamesScroll, 10);
+      localStorage.removeItem('gamesSliderScroll');
+    }
+    // Manual scroll restoration using localStorage flag
+    if (localStorage.getItem('shouldScrollToGames') === 'true' && sectionRef.current) {
+      sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      localStorage.removeItem('shouldScrollToGames');
+    }
+    // Robust scroll to section if hash is present
+    function scrollToSectionIfHash() {
+      if (window.location.hash === '#games-section' && sectionRef.current) {
+        sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+    // Scroll on mount
+    scrollToSectionIfHash();
+    // Scroll on hash change
+    window.addEventListener('hashchange', scrollToSectionIfHash);
+    // Scroll on popstate (browser back/forward)
+    window.addEventListener('popstate', scrollToSectionIfHash);
+    // Try again after a short delay
+    setTimeout(scrollToSectionIfHash, 100);
+    return () => {
+      window.removeEventListener('hashchange', scrollToSectionIfHash);
+      window.removeEventListener('popstate', scrollToSectionIfHash);
+    };
+  }, []);
 
   const scrollLeft = (): void => {
     if (sliderRef.current) {
@@ -193,7 +254,7 @@ const HealthCalculatorApp: React.FC = () => {
   };
 
   const NavigationBar: React.FC = () => (
-    <div className="rounded-2xl p-6 mb-6">
+    <div ref={sectionRef} id="games-section" className="rounded-2xl p-6 mb-6">
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Track Your Health Status</h1>
       </div>
@@ -253,7 +314,13 @@ const HealthCalculatorApp: React.FC = () => {
                   <h3 className="font-bold text-gray-800 mb-2 text-lg">{calc.title}</h3>
                   <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
                   <a
-                    href={`/calculator/${calc.id}`}
+                    href={`/calculator/${calc.id}#games-section`}
+                    onClick={() => {
+                      if (sliderRef.current) {
+                        localStorage.setItem('calcSliderScroll', sliderRef.current.scrollLeft.toString());
+                      }
+                      localStorage.setItem('shouldScrollToGames', 'true');
+                    }}
                     className="inline-flex items-center bg-[#2D9AA5] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#238a94] transition-colors"
                   >
                     Calculate Now
@@ -268,7 +335,13 @@ const HealthCalculatorApp: React.FC = () => {
         {/* View All Button */}
         <div className="text-center mt-8">
           <a
-            href="/calculator/allcalc"
+            href="/calculator/allcalc#games-section"
+            onClick={() => {
+              if (sliderRef.current) {
+                localStorage.setItem('calcSliderScroll', sliderRef.current.scrollLeft.toString());
+              }
+              localStorage.setItem('shouldScrollToGames', 'true');
+            }}
             className="inline-flex items-center bg-orange-400 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-orange-600 transition-colors"
           >
             View All Calculators
@@ -337,7 +410,13 @@ const HealthCalculatorApp: React.FC = () => {
                   <h3 className="font-bold text-gray-800 mb-2 text-lg">{game.title}</h3>
                   <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{game.description}</p>
                   <a
-                    href={`/game/${game.id}`}
+                    href={`/games/${game.id}#games-section`}
+                    onClick={() => {
+                      if (gamesSliderRef.current) {
+                        localStorage.setItem('gamesSliderScroll', gamesSliderRef.current.scrollLeft.toString());
+                      }
+                      localStorage.setItem('shouldScrollToGames', 'true');
+                    }}
                     className="inline-flex items-center bg-[#FF6B6B] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#ee5a52] transition-colors"
                   >
                     Play Now
@@ -352,7 +431,13 @@ const HealthCalculatorApp: React.FC = () => {
         {/* View All Games Button */}
         <div className="text-center mt-8">
           <a
-            href="/games/allgames"
+            href="/games/allgames#games-section"
+            onClick={() => {
+              if (gamesSliderRef.current) {
+                localStorage.setItem('gamesSliderScroll', gamesSliderRef.current.scrollLeft.toString());
+              }
+              localStorage.setItem('shouldScrollToGames', 'true');
+            }}
             className="inline-flex items-center bg-purple-500 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-purple-600 transition-colors"
           >
             View All Games
