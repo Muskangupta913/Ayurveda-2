@@ -53,7 +53,7 @@ const LoadingSpinner = () => (
   <div className="min-h-screen bg-gray-50 flex items-center justify-center">
     <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
       <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-black mx-auto mb-4"></div>
-      <p className="text-black text-center">Loading clinics...</p>
+      <p className="text-black text-center">Loading Health Centers...</p>
     </div>
   </div>
 );
@@ -77,10 +77,10 @@ const Header = ({
         </div>
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Clinic Management
+            Health Center Management
           </h1>
           <p className="text-sm text-gray-500">
-            Manage your clinic with ease
+            Manage your Health Center with ease
           </p>
         </div>
       </div>
@@ -573,7 +573,7 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
         />
       ) : (
         <div className="w-full h-auto min-h-48 sm:min-h-56 flex items-center justify-center bg-gray-50">
-          <span className="text-gray-400 text-sm">Upload Clinic Photo</span>
+          <span className="text-gray-400 text-sm">Upload Health Center Photo</span>
         </div>
       )}
 
@@ -1025,10 +1025,10 @@ function ClinicManagementDashboard() {
                   </div>
                   <div>
                     <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                      Edit Clinic
+                      Edit Health Center
                     </h2>
                     <p className="text-gray-600 text-sm">
-                      Update clinic information
+                      Update Health Center information
                     </p>
                   </div>
                 </div>
@@ -1141,7 +1141,7 @@ function ClinicManagementDashboard() {
                   <div className="space-y-3">
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                       <Camera className="w-4 h-4" />
-                      Clinic Photo
+                      Health Center Photo
                     </label>
                     <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-6 sm:p-8 text-center hover:border-[#2D9AA5]/50 hover:bg-[#2D9AA5]/5 transition-all">
                       <input
@@ -1211,7 +1211,7 @@ function ClinicManagementDashboard() {
                       <span>Updating...</span>
                     </>
                   ) : (
-                    "Update Clinic"
+                    "Update Health Center"
                   )}
                 </button>
                 <button

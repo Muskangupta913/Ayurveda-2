@@ -24,7 +24,7 @@ function AllGames(){
                 Health Games
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-white/90 leading-relaxed">
-                Fun and interactive games to learn about health and wellness
+                Zeva — bringing you fun, interactive games to learn, play, and boost your well-being
               </p>
               <div className="mt-6 flex justify-center lg:justify-start">
                 <div className="w-20 h-1 bg-white/60 rounded-full"></div>

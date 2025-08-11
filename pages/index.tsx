@@ -39,6 +39,7 @@ import { useAuth } from "../context/AuthContext";
 import AuthModal from "../components/AuthModal";
 import Image from "next/image";
 import SearchCard from "../components/SearchCard";
+import Index1 from "../components/Index1";
 
 // Types
 interface Clinic {
@@ -310,22 +311,7 @@ export default function Home(): React.ReactElement {
     localStorage.removeItem("ayurvedaSearchState");
   };
 
-  // Fetch treatments for specialization dropdown
-  useEffect(() => {
-    const fetchTreatments = async () => {
-      try {
-        const res = await axios.get("/api/doctor/getTreatment");
-        if (res.data && Array.isArray(res.data.treatments)) {
-          setTreatments(
-            res.data.treatments.map((t: { name: string }) => t.name)
-          );
-        }
-      } catch {
-        setTreatments([]);
-      }
-    };
-    fetchTreatments();
-  }, []);
+
 
   const getFilteredClinics = (): Clinic[] => {
     const filtered = clinics.filter((clinic) => {
@@ -345,105 +331,11 @@ export default function Home(): React.ReactElement {
     return getSortedClinics(filtered);
   };
 
-  // Doctor details
-  const [form, setForm] = useState<{
-    name: string;
-    phone: string;
-    email: string;
-    specialization: string;
-    degree: string;
-    experience: string;
-    address: string;
-    resume: File | null;
-  }>({
-    name: "",
-    phone: "",
-    email: "",
-    specialization: "",
-    degree: "",
-    experience: "",
-    address: "",
-    resume: null,
-  });
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(event.target as Node)
-      ) {
-        setSuggestions([]);
-      }
-    };
+ 
+  
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, files } = e.target as HTMLInputElement;
-    if (files && files.length > 0) {
-      setForm((prev) => ({ ...prev, [name]: files[0] }));
-      if (name === "resume") {
-        setResumeFileName(files[0].name);
-      }
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const data = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
-      // Only append if value is not null or undefined
-      if (value !== null && value !== undefined) {
-        data.append(key, value as string | Blob);
-      }
-    });
-    try {
-      await axios.post("/api/doctor/register", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      setShowSuccessModal(true);
-      // Reset the form fields
-      setForm({
-        name: "",
-        phone: "",
-        email: "",
-        specialization: "",
-        degree: "",
-        experience: "",
-        address: "",
-        resume: null,
-      });
-      setResumeFileName("");
-    } catch (err: unknown) {
-      // console.error("Registration error:", err);
-      let message = "Registration failed";
-
-      interface AxiosErrorWithMessage {
-        response?: {
-          data?: {
-            message?: string;
-          };
-        };
-      }
-
-      const axiosError = err as AxiosErrorWithMessage;
-
-      if (typeof axiosError.response?.data?.message === "string") {
-        message = axiosError.response.data.message;
-      }
-
-      setErrorModal({ show: true, message });
-    }
-  };
+ 
 
   // Distance Badge
 
@@ -751,16 +643,7 @@ export default function Home(): React.ReactElement {
     fetchReviews();
   }, [clinics]);
 
-  const handleDoctorSearch = (
-    e: FormEvent<HTMLFormElement> | React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    e.preventDefault();
-    if (query.trim()) {
-      router.push(`/doctor/search?query=${encodeURIComponent(query)}`);
-    } else {
-      router.push("/doctor/search");
-    }
-  };
+ 
 
   // Helper functions to add
   const totalPages = Math.ceil(getFilteredClinics().length / clinicsPerPage);
@@ -779,25 +662,11 @@ export default function Home(): React.ReactElement {
     }));
   };
 
-  const handlePhoneKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (!/[0-9]/.test(e.key)) {
-      e.preventDefault();
-    }
-  };
+ 
 
-  const handlePhoneInput = (e: ChangeEvent<HTMLInputElement>) => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, "");
-  };
 
-  const handleExperienceKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (!/[0-9]/.test(e.key)) {
-      e.preventDefault();
-    }
-  };
 
-  const handleExperienceInput = (e: ChangeEvent<HTMLInputElement>) => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, "");
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -813,10 +682,8 @@ export default function Home(): React.ReactElement {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">
-              Discover Trusted <span className="text-[#2D9AA5]">Clinics</span> Near You
+              Discover Trusted <span className="text-[#2D9AA5]">Clinics</span> & <span className="text-[#2D9AA5]">Hospitals</span> Near You
             </h1>
-
-
           </div>
 
           {/* Simple Search Bar */}
@@ -929,7 +796,7 @@ export default function Home(): React.ReactElement {
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                      <Search className="h-5 w-5 text-green-500" />
+                      <Search className="h-5 w-5 text-[#2D9AA5]" />
                     </div>
                     <input
                       type="text"
@@ -1008,7 +875,7 @@ export default function Home(): React.ReactElement {
                     type="button"
                     onClick={locateMe}
                     disabled={loading}
-                    className="flex items-center justify-center px-4 py-3.5 bg-green-600 text-white rounded-xl cursor-pointer hover:bg-green-700 transition-all font-medium disabled:opacity-50 flex-shrink-0 shadow-md hover:shadow-lg"
+                    className="flex items-center justify-center px-4 py-3.5 bg-[#2D9AA5] text-white rounded-xl cursor-pointer hover:bg-[#247d8d] transition-all font-medium disabled:opacity-50 flex-shrink-0 shadow-md hover:shadow-lg"
                     title="Near Me"
                   >
                     <Navigation className="w-4 h-4" />
@@ -1018,7 +885,7 @@ export default function Home(): React.ReactElement {
                 {/* Location Input */}
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <MapPin className="h-5 w-5 text-gray-400" />
+                    <MapPin className="h-5 w-5 text-[#2D9AA5]" />
                   </div>
                   <input
                     placeholder="City, area, or postal code"
@@ -1033,7 +900,7 @@ export default function Home(): React.ReactElement {
                 <div className="flex gap-3">
                   <button
                     onClick={searchByPlace}
-                    className="flex-1 px-4 py-3.5 bg-green-600 text-white rounded-xl font-medium cursor-pointer hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
+                    className="flex-1 px-4 py-3.5 bg-[#2D9AA5] text-white rounded-xl font-medium cursor-pointer hover:bg-[#247f8c] transition-all shadow-md hover:shadow-lg"
                   >
                     Find Healers
                   </button>
@@ -1042,13 +909,15 @@ export default function Home(): React.ReactElement {
             </div>
           </div>
         </div>
+
+        {/* Searchcard */}
         <SearchCard
           hideCards={["clinic"]}
         />
       </div>
 
 
-      
+
       {/* Results Section */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {clinics.length > 0 && (
@@ -1239,7 +1108,7 @@ export default function Home(): React.ReactElement {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4 sm:gap-0">
                 <div>
                   <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                    Found {getFilteredClinics().length} Clinics
+                    Found {getFilteredClinics().length} results
                   </h2>
                   {selectedService && (
                     <p className="text-sm sm:text-base text-gray-600 flex items-center">
@@ -1283,7 +1152,7 @@ export default function Home(): React.ReactElement {
                     <Search className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 mx-auto mt-1 sm:mt-2" />
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3 px-4">
-                    No clinics found
+                    No results found
                   </h3>
                   <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base px-4">
                     Try adjusting your search criteria or explore different
@@ -1295,14 +1164,15 @@ export default function Home(): React.ReactElement {
                   {getFilteredClinics().map((clinic, index) => {
                     const hasRating = clinicReviews[clinic._id]?.totalReviews > 0;
                     const reviewsLoaded = clinicReviews[clinic._id] !== undefined;
+// i need form here  
 
                     return (
                       <div
                         key={index}
                         className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
                       >
-                        {/* Clinic Image */}
-                        <div className="relative h-36 w-full bg-gradient-to-br from-green-100 to-emerald-100 overflow-hidden">
+                        {/* Clinic Image - Reduced height */}
+                        <div className="relative h-28 w-full bg-gradient-to-br from-green-100 to-emerald-100 overflow-hidden">
                           {clinic.photos?.[0] ? (
                             <Image
                               src={clinic.photos[0]}
@@ -1313,16 +1183,16 @@ export default function Home(): React.ReactElement {
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
                               <div className="text-center">
-                                <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-1">
                                   <svg
-                                    className="w-8 h-8 text-green-600"
+                                    className="w-6 h-6 text-green-600"
                                     fill="currentColor"
                                     viewBox="0 0 24 24"
                                   >
                                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                                   </svg>
                                 </div>
-                                <span className="text-sm text-green-600 font-medium">
+                                <span className="text-xs text-green-600 font-medium">
                                   {clinic.name?.split(" ")[0]}
                                 </span>
                               </div>
@@ -1330,63 +1200,32 @@ export default function Home(): React.ReactElement {
                           )}
 
                           {/* Overlay badges */}
-                          <div className="absolute top-3 right-3 flex flex-col gap-2">
+                          <div className="absolute top-2 right-2 flex flex-col gap-1">
                             {clinic.verified && (
-                              <div className="bg-green-500 text-white px-2 py-0.5 rounded-full text-xs font-medium flex items-center">
-                                <Shield className="w-2 h-2 mr-1" />
+                              <div className="bg-green-500 text-white px-1.5 py-0.5 rounded-full text-xs font-medium flex items-center">
+                                <Shield className="w-2 h-2 mr-0.5" />
                                 Verified
                               </div>
                             )}
                           </div>
 
                           {clinic.distance && (
-                            <div className="absolute bottom-3 left-3 bg-[#2D9AA5] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
-                              <Navigation className="w-2 h-2 mr-1" />
+                            <div className="absolute bottom-2 left-2 bg-[#2D9AA5] text-white px-1.5 py-0.5 rounded-full text-xs font-medium flex items-center">
+                              <Navigation className="w-2 h-2 mr-0.5" />
                               {formatDistance(clinic.distance)}
                             </div>
                           )}
 
                           {/* Heart icon */}
-                          <button className="absolute top-3 left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
-                            <Heart className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
+                          <button className="absolute top-2 left-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
+                            <Heart className="w-3 h-3 text-gray-400 hover:text-red-500 transition-colors" />
                           </button>
                         </div>
 
-                        {/* Clinic Info */}
-                        <div className="p-3">
-                          {/* Clinic basic info */}
-                          <div className="mb-2">
-                            <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">
-                              {clinic.name}
-                            </h3>
-                            <p className="text-[#2D9AA5] font-medium text-sm mb-1">
-                              Ayurvedic Clinic
-                            </p>
-                            <p className="text-gray-600 text-xs line-clamp-2">
-                              {clinic.address}
-                            </p>
-                          </div>
-
-                          {/* Services and Fee */}
-                          <div className="flex justify-between items-center mb-2">
-                            <div>
-                              <p className="text-xs text-gray-500">Services</p>
-                              <p className="text-sm font-semibold text-gray-900">
-                                {clinic.servicesName?.length || 0} available
-                              </p>
-                            </div>
-                            {clinic.pricing && (
-                              <div className="text-right">
-                                <p className="text-xs text-gray-500">Fee</p>
-                                <p className="text-lg font-bold text-[#2D9AA5]">
-                                  AED {clinic.pricing}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Rating */}
-                          <div className="flex items-center gap-2 mb-2">
+                        {/* Clinic Info - Reduced padding */}
+                        <div className="p-2.5">
+                          {/* Rating section - Moved to top */}
+                          <div className="flex items-center gap-2 mb-1.5">
                             {hasRating ? (
                               <>
                                 <div className="flex">
@@ -1404,24 +1243,49 @@ export default function Home(): React.ReactElement {
                             ) : null}
                           </div>
 
-                          {/* Availability */}
-                          {/* <div className="mb-3">
-                            {clinic.timings ? (
-                              <span className="inline-flex items-center px-2 py-1 bg-green-50 border border-green-200 text-green-700 rounded-md font-medium text-xs">
-                                ✓ Available
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 bg-red-50 border border-red-200 text-red-700 rounded-md font-medium text-xs">
-                                ✗ No timing info
-                              </span>
-                            )}
-                          </div> */}
+                          {/* Clinic basic info - Name and address on left, timings on right */}
+                          <div className="flex justify-between items-start mb-1.5">
+                            <div className="flex-1 pr-2">
+                              <h3 className="text-base font-bold text-gray-900 leading-tight mb-0.5">
+                                {clinic.name}
+                              </h3>
+                              <p className="text-gray-600 text-xs line-clamp-2">
+                                {clinic.address}
+                              </p>
+                            </div>
 
-                          {/* Action buttons */}
-                          <div className="flex gap-2">
+                            {clinic.timings && (
+                              <div className="flex items-center text-right">
+                                <Clock className="w-3 h-3 text-blue-500 mr-1" />
+                                <span className="text-xs font-medium text-gray-700">
+                                  {clinic.timings}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Clinic Type and Fee - Balanced layout */}
+                          <div className="flex justify-between items-center mb-1.5">
+                            <div>
+                              <p className="text-[#2D9AA5] font-medium text-sm">
+                                Health Center
+                              </p>
+                            </div>
+                            {clinic.pricing && (
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">Fee</p>
+                                <p className="text-base font-bold text-[#2D9AA5]">
+                                  AED {clinic.pricing}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                         
+                          {/* Action buttons - Slightly smaller padding */}
+                          <div className="flex gap-1.5">
                             <button
                               onClick={() => handleEnquiryClick(clinic)}
-                              className="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-lg hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5] transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                              className="flex-1 flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-lg hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5] transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                             >
                               <MessageCircle className="w-3 h-3 mr-1" />
                               Enquiry
@@ -1429,7 +1293,7 @@ export default function Home(): React.ReactElement {
 
                             <button
                               onClick={() => handleReviewClick(clinic)}
-                              className="flex items-center justify-center px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                              className="flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                             >
                               <Star className="w-3 h-3" />
                             </button>
@@ -1439,25 +1303,12 @@ export default function Home(): React.ReactElement {
                                 href={`https://www.google.com/maps/dir/?api=1&destination=${clinic.location.coordinates[1]},${clinic.location.coordinates[0]}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                                className="flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                               >
                                 <Navigation className="w-3 h-3" />
                               </a>
                             )}
                           </div>
-
-                          {/* Contact */}
-                          {clinic.phone && (
-                            <div className="mt-2 pt-2 border-t border-gray-100">
-                              <a
-                                href={`tel:${clinic.phone}`}
-                                className="flex items-center justify-center text-xs text-gray-600 hover:text-green-600 transition-colors font-medium"
-                              >
-                                <Phone className="w-3 h-3 mr-1 text-green-500" />
-                                {clinic.phone}
-                              </a>
-                            </div>
-                          )}
                         </div>
                       </div>
                     );
@@ -1468,397 +1319,14 @@ export default function Home(): React.ReactElement {
           </div>
         )}
       </div>
-
-      
-      {/* Doctor Search & Registration Section */}
-      <div className="flex flex-col xl:grid xl:grid-cols-2 gap-8 max-w-7xl mx-auto">
-        {/* Registration Form */}
-        <div className="w-full xl:w-auto mt-2 xl:mt-0">
-          <div className="registration-container" ref={registrationRef}>
-            <div className="registration-card">
-              {/* Header Section */}
-              <div className="registration-header">
-                <div className="header-bg"></div>
-                <div className="header-content">
-                  <div className="header-icon">
-                    <Leaf className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                  </div>
-                  <h2 className="header-title text-xl sm:text-2xl">
-                    Doctor Details
-                  </h2>
-                  <p className="header-subtitle text-sm sm:text-base">
-                    Share your details and we will reach out to you with the
-                    next steps
-                  </p>
-                  <div className="header-stats flex-col sm:flex-row gap-2 sm:gap-4">
-                    <div className="header-stat">
-                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="text-xs sm:text-sm">
-                        Growing Network
-                      </span>
-                    </div>
-                    <div className="header-stat">
-                      <Globe className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="text-xs sm:text-sm">
-                        Pan-Dubai Reach
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Section */}
-              <div className="registration-form">
-                <form
-                  onSubmit={handleSubmit}
-                  className="space-y-4 sm:space-y-5"
-                >
-                  <div className="form-row flex-col sm:flex-row gap-4 sm:gap-6">
-                    <div className="form-group flex-1 relative">
-                      {/* Icon stays absolutely positioned */}
-                      <Award className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-
-                      {/* Input with proper left padding to avoid overlapping the icon */}
-                      <input
-                        name="name"
-                        type="text"
-                        placeholder="Full Name"
-                        className="form-input w-full pl-10 placeholder-black z-0"
-                        onChange={handleChange}
-                        value={form.name || ""}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group flex-1 relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-                      <input
-                        name="phone"
-                        type="tel"
-                        placeholder="Phone Number"
-                        className="form-input w-full pl-10 placeholder-black z-0"
-                        onChange={handleChange}
-                        onKeyPress={handlePhoneKeyPress}
-                        onInput={handlePhoneInput}
-                        value={form.phone || ""}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-                    <input
-                      name="email"
-                      type="email"
-                      placeholder="Email Address"
-                      className="form-input w-full pl-10 placeholder-black z-0"
-                      onChange={handleChange}
-                      value={form.email || ""}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-col flex flex-col gap-4 items-stretch">
-                    {/* Specialization */}
-                    <div className="form-group relative">
-                      {/* Dropdown with icon */}
-                      <Stethoscope className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-                      <select
-                        id="specialization"
-                        name="specialization"
-                        className="form-input w-full pl-10 pr-12 text-black appearance-none bg-white border border-green-500 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-sm sm:text-base"
-                        style={{
-                          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23000000' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                          backgroundPosition: "right 1rem center",
-                          backgroundRepeat: "no-repeat",
-                          backgroundSize: "1em 1em",
-                          minHeight: "48px",
-                        }}
-                        value={
-                          specializationType === "dropdown"
-                            ? form.specialization
-                            : "other"
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "") {
-                            setSpecializationType("dropdown");
-                            setForm((prev) => ({
-                              ...prev,
-                              specialization: "",
-                            }));
-                            setCustomSpecialization("");
-                          } else if (value === "other") {
-                            setSpecializationType("other");
-                            setForm((prev) => ({
-                              ...prev,
-                              specialization: "",
-                            }));
-                          } else {
-                            setSpecializationType("dropdown");
-                            setForm((prev) => ({
-                              ...prev,
-                              specialization: value,
-                            }));
-                          }
-                        }}
-                        required
-                      >
-                        <option value="" disabled hidden>
-                          Select Specialization
-                        </option>
-                        {treatments.map((t) => (
-                          <option key={t} value={t} className="text-black">
-                            {t}
-                          </option>
-                        ))}
-                        <option value="other" className="text-black">
-                          Other
-                        </option>
-                      </select>
-                    </div>
-
-                    {/* Custom input when 'Other' is selected */}
-                    {specializationType === "other" && (
-                      <div className="form-group relative">
-                        <Stethoscope className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-                        <input
-                          type="text"
-                          className="form-input w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-sm sm:text-base"
-                          placeholder="Enter your specialization"
-                          value={customSpecialization}
-                          onChange={(e) => {
-                            setCustomSpecialization(e.target.value);
-                            setForm((prev) => ({
-                              ...prev,
-                              specialization: e.target.value,
-                            }));
-                          }}
-                          style={{ minHeight: "48px" }}
-                          required
-                        />
-                      </div>
-                    )}
-
-                    {/* Experience Input */}
-                    <div className="form-group relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-                      <input
-                        name="experience"
-                        type="text"
-                        placeholder="Experience (Years)"
-                        className="form-input w-full pl-10 placeholder-black z-0 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm sm:text-base"
-                        onChange={handleChange}
-                        onKeyPress={handleExperienceKeyPress}
-                        onInput={handleExperienceInput}
-                        value={form.experience || ""}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group relative">
-                    <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-                    <input
-                      name="degree"
-                      type="text"
-                      placeholder="Degree & Qualifications"
-                      className="form-input w-full pl-10 placeholder-black z-0"
-                      onChange={handleChange}
-                      value={form.degree || ""}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group relative">
-                    <MapPin className="absolute left-3 top-4 text-black pointer-events-none z-10" />
-                    <textarea
-                      name="address"
-                      placeholder="Clinic Address"
-                      rows={3}
-                      className="form-input form-textarea w-full pl-10 placeholder-black resize-none z-0"
-                      onChange={handleChange}
-                      value={form.address || ""}
-                      required
-                    ></textarea>
-                  </div>
-
-                  <div className="form-group relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-black pointer-events-none z-10" />
-
-                    <div className="relative w-full">
-                      <input
-                        type="file"
-                        name="resume"
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const maxSize = 1024 * 1024; // 1MB in bytes
-                            if (file.size > maxSize) {
-                              setFileError("File is too large");
-                              e.target.value = "";
-                              return;
-                            }
-                            setFileError("");
-                            handleChange(e);
-                          }
-                        }}
-                        className="form-input form-file absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                        required
-                      />
-
-                      <div className="form-input border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 cursor-pointer hover:bg-gray-100 transition-colors py-3 pl-10 pr-4 text-sm sm:text-base z-0">
-                        {resumeFileName ? "Change Resume" : "Upload Resume"}
-                      </div>
-                    </div>
-
-                    {/* File size message */}
-                    <div
-                      className={`text-xs mt-1 ${fileError ? "text-red-500" : "text-gray-500"
-                        }`}
-                    >
-                      {fileError || "Please upload a file less than 1MB"}
-                    </div>
-                  </div>
-
-                  {resumeFileName && (
-                    <div className="text-green-700 text-sm mt-2 font-medium break-all">
-                      {resumeFileName}
-                    </div>
-                  )}
-                  <button type="submit" className="submit-button w-full">
-                    <div className="button-content">
-                      <Leaf className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      <span className="text-sm sm:text-base">
-                        Register as Ayurvedic Doctor
-                      </span>
-                    </div>
-                    <div className="button-shine"></div>
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div>
+        <Index1 />
       </div>
 
-
-      {/* Registration Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative animate-fade-in">
-            {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-green-400/20 to-emerald-400/20 rounded-full -translate-y-10 translate-x-10"></div>
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-lime-400/20 to-green-400/20 rounded-full translate-y-8 -translate-x-8"></div>
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setShowSuccessModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-all duration-200 z-50 cursor-pointer"
-              aria-label="Close"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <div className="flex flex-col items-center text-center">
-              <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
-              <h2 className="text-2xl font-bold text-green-700 mb-2">
-                Registration Successful!
-              </h2>
-              <p className="text-gray-700 text-lg mb-4">
-                We will reach out to you soon.
-              </p>
-              <button
-                className="mt-2 px-6 py-2 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-xl font-semibold shadow hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 transition-all cursor-pointer"
-                onClick={() => setShowSuccessModal(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Registration Error Modal */}
-      {errorModal.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative animate-fade-in">
-            {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-400/20 to-rose-400/20 rounded-full -translate-y-10 translate-x-10"></div>
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-rose-400/20 to-red-400/20 rounded-full translate-y-8 -translate-x-8"></div>
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setErrorModal({ show: false, message: "" })}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-all duration-200 z-50 cursor-pointer"
-              aria-label="Close"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <div className="flex flex-col items-center text-center">
-              <svg
-                className="w-16 h-16 text-red-500 mb-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 9l-6 6m0-6l6 6"
-                />
-              </svg>
-              <h2 className="text-2xl font-bold text-red-700 mb-2">
-                Registration Failed
-              </h2>
-              <p className="text-gray-700 text-lg mb-4">{errorModal.message}</p>
-              <button
-                className="mt-2 px-6 py-2 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white rounded-xl font-semibold shadow hover:from-red-700 hover:via-rose-700 hover:to-pink-700 transition-all"
-                onClick={() => setErrorModal({ show: false, message: "" })}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {isVisible && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="cursor-pointer fixed bottom-6 right-6 bg-green-600 hover:bg-green-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
+          className="cursor-pointer fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
           style={{ zIndex: 9999 }}
         >
           <svg

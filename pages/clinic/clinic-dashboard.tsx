@@ -111,7 +111,7 @@ const ClinicDashboard: NextPageWithLayout = () => {
   ];
 
   const quickActions = [
-    { title: 'Manage Clinic', icon: Settings, color: 'from-blue-500 to-indigo-500', href: '/clinic/myallClinic' },
+    { title: 'Manage Health Center', icon: Settings, color: 'from-blue-500 to-indigo-500', href: '/clinic/myallClinic' },
     { title: 'Review', icon: Star, color: 'from-yellow-500 to-orange-500', href: '/clinic/getAllReview' },
     { title: 'Enquiry', icon: MessageCircle, color: 'from-green-500 to-emerald-500', href: '/clinic/get-Enquiry' }
   ];
@@ -192,7 +192,7 @@ const ClinicDashboard: NextPageWithLayout = () => {
                   <Settings className="text-white w-6 h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-medium text-gray-800">Total Clinics</h3>
+                  <h3 className="text-lg font-medium text-gray-800">Total Health Centers</h3>
                   <p className="text-3xl font-semibold text-gray-900">{stats.totalClinics}</p>
                 </div>
               </div>

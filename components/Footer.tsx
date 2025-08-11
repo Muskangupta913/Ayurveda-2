@@ -365,7 +365,7 @@ const Footer = () => {
                       </div>
                       <div>
                         <h3 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
-                          MediCare
+                          ZEVA
                         </h3>
                         <p className="text-sm text-gray-300 font-medium">Medical Care Network</p>
                       </div>
@@ -380,7 +380,7 @@ const Footer = () => {
                         <div className="w-8 h-8 bg-[#2D9AA5]/20 rounded-full flex items-center justify-center">
                           <span className="text-sm">✉️</span>
                         </div>
-                        <span className="text-sm font-medium">info@medicarenearme.com</span>
+                        <span className="text-sm font-medium">info@zeva.com</span>
                       </div>
                     </div>
                   </div>
@@ -575,7 +575,7 @@ const Footer = () => {
               <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
                 <div className="text-gray-300 text-center sm:text-left">
                   <p className="text-base font-medium">
-                    © {currentYear} <span className="text-white font-bold">MediCare Network</span>. All rights reserved.
+                    © {currentYear} <span className="text-white font-bold">Zeva Network</span>. All rights reserved.
                   </p>
                 </div>
 

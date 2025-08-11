@@ -22,7 +22,7 @@ interface Level {
 
 type GameState = 'menu' | 'playing' | 'paused' | 'won' | 'lost';
 
-const FitnessMemoryGame: React.FC = () => {
+function FitnessMemoryGame() {
   const exercises: Exercise[] = [
     { name: 'Push-ups', icon: '💪', calories: 8 },
     { name: 'Jumping Jacks', icon: '🤸', calories: 10 },
@@ -220,7 +220,7 @@ const FitnessMemoryGame: React.FC = () => {
           {/* Header with Animation */}
           <div className="text-center mb-6 sm:mb-8 animate-fade-in">
             <div className="inline-block animate-bounce mb-4">
-              <div className="text-6xl sm:text-8xl">🏃</div>
+              {/* <div className="text-6xl sm:text-8xl">🏃</div> */}
             </div>
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
               Fitness Memory Game
@@ -527,16 +527,16 @@ const FitnessMemoryGame: React.FC = () => {
         )}
 
         {/* Game Board */}
-        <div className={`grid ${gridConfig.cols} ${gridConfig.gap} max-w-4xl mx-auto px-2`}>
+        <div className={`grid ${gridConfig.cols} ${gridConfig.gap} max-w-3xl mx-auto px-2 justify-items-center`}>
           {cards.map((card, index) => (
             <div
               key={card.id}
-              className="aspect-square cursor-pointer transition-all duration-300 transform hover:scale-105 animate-card-appear"
+              className="w-16 h-20 sm:w-20 sm:h-24 md:w-24 md:h-28 cursor-pointer transition-all duration-300 transform hover:scale-105 animate-card-appear"
               style={{ animationDelay: `${index * 50}ms` }}
               onClick={() => handleCardClick(card)}
             >
               <div
-                className={`w-full h-full rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center p-1 sm:p-2 border-2 transition-all duration-500 transform-gpu ${
+                className={`w-full h-full rounded-lg sm:rounded-xl flex flex-col items-center justify-center text-center p-1 sm:p-2 border-2 transition-all duration-500 transform-gpu ${
                   card.isFlipped || card.isMatched
                     ? 'animate-flip-front shadow-lg'
                     : 'animate-flip-back hover:shadow-md'
@@ -553,16 +553,16 @@ const FitnessMemoryGame: React.FC = () => {
                 }}
               >
                 {card.isFlipped || card.isMatched ? (
-                  <div className="animate-scale-in">
-                    <div className="text-xl sm:text-3xl mb-1">{card.icon}</div>
-                    <div className="text-xs sm:text-sm font-semibold text-gray-700 leading-tight">{card.name}</div>
+                  <div className="animate-scale-in flex flex-col items-center justify-center h-full">
+                    <div className="text-lg sm:text-xl md:text-2xl mb-1">{card.icon}</div>
+                    <div className="text-xs sm:text-sm font-semibold text-gray-700 leading-tight text-center px-1">{card.name}</div>
                     <div className="text-xs text-gray-500 flex items-center justify-center gap-1 mt-1">
                       <Zap size={8} className="sm:w-2 sm:h-2" />
                       <span className="text-xs">{card.calories}</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-2xl sm:text-4xl text-white animate-pulse">🏃</div>
+                  <div className="text-xl sm:text-2xl md:text-3xl text-white animate-pulse">🏃</div>
                 )}
               </div>
             </div>
@@ -810,3 +810,7 @@ const FitnessMemoryGame: React.FC = () => {
 };
 
 export default FitnessMemoryGame;
+
+FitnessMemoryGame.getLayout = function PageLayout(page: React.ReactNode) {
+  return page; // No layout
+};
