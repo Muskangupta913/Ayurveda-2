@@ -248,212 +248,212 @@ const HealthRiskComponent: React.FC = () => {
 
 
                 {/* ==================== WHY CHOOSE US ==================== */}
-               <div className="mt-16 mb-16">
-    <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#2D9AA5' }}>
-            Why to Choose ZEVA
-        </h2>
-    </div>
+                <div className="mt-16 mb-16">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#2D9AA5' }}>
+                            Why to Choose ZEVA
+                        </h2>
+                    </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
 
-        {/* Feature 1 - Search Healthcare Services */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    01
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Find Healthcare Providers Online
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Discover qualified doctors and trusted clinics near you. Comprehensive wellness centers and luxury spa services launching soon.
-            </p>
-        </div>
+                        {/* Feature 1 - Search Healthcare Services */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    01
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Find Healthcare Providers Online
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Discover qualified doctors and trusted clinics near you. Comprehensive wellness centers and luxury spa services launching soon.
+                            </p>
+                        </div>
 
-        {/* Feature 2 - Register Healthcare Services */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M15,4A4,4 0 0,0 11,8A4,4 0 0,0 15,12A4,4 0 0,0 19,8A4,4 0 0,0 15,4M15,5.9A2.1,2.1 0 0,1 17.1,8A2.1,2.1 0 0,1 15,10.1A2.1,2.1 0 0,1 12.9,8A2.1,2.1 0 0,1 15,5.9M4,7V10H1V12H4V15H6V12H9V10H6V7H4M15,13C12.33,13 7,14.33 7,17V20H23V17C23,14.33 17.67,13 15,13Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    02
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Healthcare Provider Registration
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Join our platform as a medical professional or healthcare facility. Wellness center and spa partner registration coming soon.
-            </p>
-        </div>
+                        {/* Feature 2 - Register Healthcare Services */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M15,4A4,4 0 0,0 11,8A4,4 0 0,0 15,12A4,4 0 0,0 19,8A4,4 0 0,0 15,4M15,5.9A2.1,2.1 0 0,1 17.1,8A2.1,2.1 0 0,1 15,10.1A2.1,2.1 0 0,1 12.9,8A2.1,2.1 0 0,1 15,5.9M4,7V10H1V12H4V15H6V12H9V10H6V7H4M15,13C12.33,13 7,14.33 7,17V20H23V17C23,14.33 17.67,13 15,13Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    02
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Healthcare Provider Registration
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Join our platform as a medical professional or healthcare facility. Wellness center and spa partner registration coming soon.
+                            </p>
+                        </div>
 
-        {/* Feature 3 - Health Games & Calculator */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M16.5,7.5L15.09,8.91L12,5.83L8.91,8.91L7.5,7.5L12,3L16.5,7.5M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    03
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Interactive Health & Wellness Tools
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Access engaging health games and advanced calculators to track BMI, calories, and vital health metrics for better wellness management.
-            </p>
-        </div>
+                        {/* Feature 3 - Health Games & Calculator */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M16.5,7.5L15.09,8.91L12,5.83L8.91,8.91L7.5,7.5L12,3L16.5,7.5M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    03
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Interactive Health & Wellness Tools
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Access engaging health games and advanced calculators to track BMI, calories, and vital health metrics for better wellness management.
+                            </p>
+                        </div>
 
-        {/* Feature 4 - Nearby Search Feature */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22S19,14.25 19,9A7,7 0 0,0 12,2Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    04
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Location-Based Healthcare Search
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Locate nearby hospitals, pharmacies, diagnostic centers, and emergency services with GPS-enabled smart search technology.
-            </p>
-        </div>
+                        {/* Feature 4 - Nearby Search Feature */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22S19,14.25 19,9A7,7 0 0,0 12,2Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    04
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Location-Based Healthcare Search
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Locate nearby hospitals, pharmacies, diagnostic centers, and emergency services with GPS-enabled smart search technology.
+                            </p>
+                        </div>
 
-        {/* Feature 5 - Job Applications */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    05
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Healthcare Career Opportunities
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Browse and apply for medical jobs, nursing positions, healthcare administration roles, and clinical opportunities nationwide.
-            </p>
-        </div>
+                        {/* Feature 5 - Job Applications */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    05
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Healthcare Career Opportunities
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Browse and apply for medical jobs, nursing positions, healthcare administration roles, and clinical opportunities nationwide.
+                            </p>
+                        </div>
 
-        {/* Feature 6 - Blog Reading & Writing */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    06
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Health Knowledge Hub & Blog Platform
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Access expert-written health articles, medical news, wellness tips, and contribute your own healthcare insights to our community.
-            </p>
-        </div>
+                        {/* Feature 6 - Blog Reading & Writing */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    06
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Health Knowledge Hub & Blog Platform
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Access expert-written health articles, medical news, wellness tips, and contribute your own healthcare insights to our community.
+                            </p>
+                        </div>
 
-        {/* Feature 7 - Telemedicine & Virtual Consultations */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5M5,8H15V16H5V8Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    07
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Telemedicine & Virtual Consultations
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Connect with certified doctors through secure video calls, get online prescriptions, and receive medical advice from home.
-            </p>
-        </div>
+                        {/* Feature 7 - Telemedicine & Virtual Consultations */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5M5,8H15V16H5V8Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    07
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Telemedicine & Virtual Consultations
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Connect with certified doctors through secure video calls, get online prescriptions, and receive medical advice from home.
+                            </p>
+                        </div>
 
-        {/* Feature 8 - Health Records & Digital Prescription Management */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,12H14V17H12V12M10,12H11V17H10V12M8,12H9V17H8V12Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    08
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Digital Health Records & Prescription Management
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Securely store medical records, track prescriptions, manage lab reports, and maintain comprehensive health history digitally.
-            </p>
-        </div>
+                        {/* Feature 8 - Health Records & Digital Prescription Management */}
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div
+                                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ backgroundColor: '#2D9AA5' }}
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,12H14V17H12V12M10,12H11V17H10V12M8,12H9V17H8V12Z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
+                                    08
+                                </div>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
+                                Digital Health Records & Prescription Management
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Securely store medical records, track prescriptions, manage lab reports, and maintain comprehensive health history digitally.
+                            </p>
+                        </div>
 
-    </div>
+                    </div>
 
-    {/* Try ZEVA Button */}
-    <div className="text-center mt-12">
-        <a 
-            href="/" 
-            className="inline-block px-8 py-3 text-white font-semibold rounded-lg transition-all duration-300 hover:opacity-90 hover:transform hover:scale-105 shadow-lg"
-            style={{ backgroundColor: '#2D9AA5' }}
-        >
-            Try ZEVA
-        </a>
-    </div>
-</div>
+                    {/* Try ZEVA Button */}
+                    <div className="text-center mt-12">
+                        <a
+                            href="/"
+                            className="inline-block px-8 py-3 text-white font-semibold rounded-lg transition-all duration-300 hover:opacity-90 hover:transform hover:scale-105 shadow-lg"
+                            style={{ backgroundColor: '#2D9AA5' }}
+                        >
+                            Try ZEVA
+                        </a>
+                    </div>
+                </div>
 
                 {/* ==================== CUSTOMER TESTIMONIALS SECTION ==================== */}
                 <div className="mt-16 mb-16">
