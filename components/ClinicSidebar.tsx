@@ -60,6 +60,34 @@ const navItems: NavItem[] = [
       },
     ],
   },
+<<<<<<< HEAD
+  { 
+    label: 'See All Jobs', 
+    path: '/clinic/my-jobs', 
+    icon: '📋',
+    description: 'see all job postings'
+  },
+  { 
+    label: 'See Job Applicants', 
+    path: '/clinic/job-applicants', 
+    icon: '💰',
+    description: 'See Job Applicants'
+    // badge: 3
+  },
+  { 
+    label: 'Blog', 
+    path: '/clinic/BlogForm', 
+    icon: '📊',
+    description: 'Analytics & reports'
+  },
+  // { 
+  //   label: 'Settings', 
+  //   path: '/clinic/settings', 
+  //   icon: '⚙️',
+  //   description: 'Clinic configuration'
+  // },
+=======
+>>>>>>> 86665f868269ea1a3a57e72e845e34d47feee71c
 ];
 
 

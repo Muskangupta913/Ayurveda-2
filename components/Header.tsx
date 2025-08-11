@@ -71,7 +71,8 @@ const Header = () => {
   const getNavItems = (): NavItem[] => {
     const baseItems: NavItem[] = [
       { name: 'Home', href: '/', icon: '🏠' },
-      { name: 'Career', href: '/job-listings', icon: '💼' },
+      { name: 'Career', href: '/job-listings', icon: '🏠' },
+      { name: 'Blog', href: '/blogs/viewBlogs', icon: '🏠' },
       // Add other links here if needed
     ];
 
@@ -190,7 +191,7 @@ const Header = () => {
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40">
                     <div className="py-2">
                       <Link
-                        href="/profile"
+                        href="/user/profile"
                         className="flex items-center space-x-3 px-4 py-3 text-gray-700 transition-colors hover:bg-opacity-10"
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = '#2D9AA5';
@@ -563,7 +564,7 @@ const Header = () => {
                     <p className="font-medium text-gray-800">{user?.name}</p>
                   </div>
                   <Link
-                    href="/profile"
+                    href="/user/profile"
                     onClick={() => setIsMenuOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 font-medium transition-all duration-300"
                     onMouseEnter={(e) => {

@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     router.push('/'); // 👈 navigate here
   };
-  const value = {
+  const value = { 
     user,
     login,
     register,
