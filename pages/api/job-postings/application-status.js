@@ -1,6 +1,8 @@
 import dbConnect from "../../../lib/database";
 import JobApplication from "../../../models/JobApplication";
 import jwt from "jsonwebtoken";
+import { emitNotificationToUser } from "../push-notification/socketio";
+import Notification from "../../../models/Notification";
 
 export default async function handler(req, res) {
   if (req.method !== "PUT") {
@@ -22,10 +24,47 @@ export default async function handler(req, res) {
   }
 
   const { applicationId, status } = req.body;
+try {
+    const updatedApplication = await JobApplication.findByIdAndUpdate(
+      applicationId,
+      { status },
+      { new: true }
+    ).populate("applicantId"); // get applicant details
 
-  try {
-    await JobApplication.findByIdAndUpdate(applicationId, { status });
-    return res.status(200).json({ message: "Status updated" });
+    if (!updatedApplication) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    const applicantUserId = updatedApplication.applicantId._id;
+    const jobTitle = updatedApplication.jobId?.title || "Job Posting";
+
+    // ✅ Create notification in DB
+    const notification = await Notification.create({
+  user: applicantUserId,
+  message: `Your application for "${jobTitle}" has been updated to "${status}"`,
+  type: "job-status",
+  relatedJobApplication: updatedApplication._id, // ✅ so frontend can link
+  relatedJob: updatedApplication.jobId // optional if you want job details page
+});
+
+
+    // ✅ Emit socket event to applicant
+    emitNotificationToUser(applicantUserId.toString(), {
+      _id: notification._id,
+      message: notification.message,
+      createdAt: notification.createdAt,
+      isRead: false
+    });
+
+    // ✅ Also emit "applicationStatusChanged" so UI updates instantly
+    emitNotificationToUser(applicantUserId.toString(), {
+      type: "applicationStatusChanged",
+      message: notification.message,
+      applicationId: updatedApplication._id,
+      newStatus: status
+    });
+
+    return res.status(200).json({ message: "Status updated & notification sent" });
   } catch (error) {
     console.error("Status update error:", error);
     return res.status(500).json({ message: "Server error" });

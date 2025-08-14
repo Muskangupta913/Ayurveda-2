@@ -1,7 +1,8 @@
-// pages/api/blog/addReply.js
 import dbConnect from '../../../lib/database';
 import Blog from '../../../models/Blog';
 import { verifyAuth } from './verifyAuth';
+import Notification from "../../../models/Notification";
+import { emitNotificationToUser } from "../push-notification/socketio";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -23,10 +24,8 @@ export default async function handler(req, res) {
     return res.status(404).json({ success: false, error: 'Blog not found' });
   }
 
-  // Check if current user is the blog author
-  if (String(blog.postedBy) !== String(user._id)) {
-    return res.status(403).json({ success: false, error: 'Only the blog author can reply to comments' });
-  }
+  // Remove author-only reply restriction:
+  // Anyone authenticated can reply, so no check needed here.
 
   const comment = blog.comments.id(commentId);
   if (!comment) {
@@ -41,6 +40,21 @@ export default async function handler(req, res) {
   });
 
   await blog.save();
+
+
+await Notification.create({
+  user: comment.user,
+  message: `You received a reply on your comment in "${blog.title}"`,
+  relatedBlog: blog._id,
+  relatedComment: comment._id,
+});
+
+ emitNotificationToUser(comment.user.toString(), {
+    message: `You received a reply on your comment in "${blog.title}"`,
+    relatedBlog: blog._id,
+    relatedComment: comment._id,
+    createdAt: new Date(),
+  });
 
   res.status(200).json({ success: true, comment });
 }

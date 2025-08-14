@@ -1,8 +1,40 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import NotificationBell from '../../components/NotificationBell';
 
 const AppliedJobs = () => {
   const [appliedJobs, setAppliedJobs] = useState([]);
+   const [commentsWithReplies, setCommentsWithReplies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+   useEffect(() => {
+    async function fetchComments() {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("You must be logged in to see your comments.");
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await axios.get("/api/users/comments-with-replies", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data.success) {
+          setCommentsWithReplies(res.data.commentsWithReplies);
+        } else {
+          setError(res.data.error || "Failed to fetch comments");
+        }
+      } catch (err) {
+        setError("Network error while fetching comments");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchComments();
+  }, []);
 
   useEffect(() => {
     const fetchAppliedJobs = async () => {
@@ -24,17 +56,30 @@ const AppliedJobs = () => {
 
     fetchAppliedJobs();
   }, []);
+   if (loading) return <p>Loading your comments...</p>;
+  if (error) return <p className="text-red-600">Error: {error}</p>;
+  if (commentsWithReplies.length === 0) return <p>No comments found.</p>;
 
   return (
+  <>
     <div className="p-4">
+              <NotificationBell />
       <h2 className="text-xl font-bold mb-4">Jobs You've Applied To</h2>
 
       {appliedJobs.length === 0 ? (
-        <p>No applications yet.</p>
-      ) : (
-        appliedJobs.map((application) => {
-          const job = application.jobId;
-          const applicant = application.applicantInfo;
+  <p>No applications yet.</p>
+) : (
+  appliedJobs.map((application) => {
+    const job = application.jobId;
+    const applicant = application.applicantInfo || {};
+    if (!job) {
+      return (
+        <div key={application._id} className="border p-4 mb-6 rounded shadow-md bg-white">
+          <p className="text-red-600">This job posting is no longer available.</p>
+        </div>
+      );
+    }
+
 
           return (
             <div
@@ -43,11 +88,11 @@ const AppliedJobs = () => {
             >
               {/* Job Information */}
               <h3 className="text-2xl font-semibold mb-1">
-  {job.jobTitle}{" "}
-  {!job.isActive && (
-    <span className="text-sm text-red-600 font-normal">(Job Expired)</span>
-  )}
-</h3>
+                {job.jobTitle}{" "}
+                {!job.isActive && (
+                  <span className="text-sm text-red-600 font-normal">(Job Expired)</span>
+                )}
+              </h3>
 
               <p className="text-gray-700 mb-2">
                 {job.companyName} • {job.location}
@@ -84,7 +129,40 @@ const AppliedJobs = () => {
         })
       )}
     </div>
-  );
-};
 
+    <div className="max-w-3xl mx-auto py-6">
+      <h1 className="text-3xl font-bold mb-4">Your Comments and Replies</h1>
+
+      {commentsWithReplies.map(({ blogId, blogTitle, blogAuthor, commentId, commentText, commentCreatedAt, replies }) => (
+        <div key={commentId} className="border p-4 mb-6 rounded shadow-sm bg-white">
+          <h2 className="text-xl font-semibold mb-1">{blogTitle}</h2>
+          <p className="text-sm text-gray-600 mb-2">Commented on: {new Date(commentCreatedAt).toLocaleString()}</p>
+          <p className="mb-3">{commentText}</p>
+
+          <div className="ml-4">
+            <h3 className="font-semibold mb-1">Replies:</h3>
+            {replies.length === 0 && <p className="italic text-gray-500">No replies yet.</p>}
+
+            {replies.map(r => {
+              const isAuthorReply = blogAuthor && r.user && String(r.user) === String(blogAuthor._id || blogAuthor);
+              return (
+                <div
+                  key={r._id}
+                  className={`ml-4 p-3 mb-2 border-l-4 ${isAuthorReply ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                >
+                  <p className={`font-semibold ${isAuthorReply ? 'text-blue-600' : ''}`}>
+                    {r.username} {isAuthorReply && <span className="text-blue-600 font-normal">(author)</span>}
+                  </p>
+                  <p>{r.text}</p>
+                  <p className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleString()}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  </>
+);
+}
 export default AppliedJobs;

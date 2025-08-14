@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { useRouter } from 'next/router';
 
+
 // Define a type for navigation items
 interface NavItem {
   name: string;
@@ -119,6 +120,7 @@ const Header = () => {
                 {/* <p className="text-xs font-medium -mt-1" style={{ color: '#2D9AA5' }}>NEAR ME</p> */}
               </div>
             </div>
+         
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-1">

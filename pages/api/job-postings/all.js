@@ -1,7 +1,7 @@
 // pages/api/job-postings/all.js
 import dbConnect from "../../../lib/database";
 import JobPosting from "../../../models/JobPosting";
-import User from "../../../models/Users"; 
+import User from "../../../models/Users";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -15,16 +15,34 @@ export default async function handler(req, res) {
 
   const filters = { isActive: true };
 
-  // ✅ Apply filters
-  if (location) filters.location = location;
-  if (jobType) filters.jobType = jobType;
-  if (department) filters.department = department;
-  if (salary) filters.salary = salary;
-  if (jobId) filters._id = jobId;
+  // ✅ Apply filters with case-insensitive partial matching
+  if (location?.trim()) {
+    filters.location = { $regex: location.trim(), $options: "i" };
+  }
 
-  if (skills) {
-    const skillsArray = Array.isArray(skills) ? skills : skills.split(",");
-    filters.skills = { $in: skillsArray };
+  if (jobType?.trim()) {
+    filters.jobType = { $regex: jobType.trim(), $options: "i" };
+  }
+
+  if (department?.trim()) {
+    filters.department = { $regex: department.trim(), $options: "i" };
+  }
+
+  if (salary?.trim()) {
+    filters.salary = salary.trim(); // keep exact match for numeric/string salary
+  }
+
+  if (jobId?.trim()) {
+    filters._id = jobId.trim();
+  }
+
+  if (skills?.trim()) {
+    const skillsArray = Array.isArray(skills)
+      ? skills
+      : skills.split(",").map(s => s.trim()).filter(Boolean);
+
+    // Match if at least one skill from the array exists (case-insensitive)
+    filters.skills = { $in: skillsArray.map(skill => new RegExp(skill, "i")) };
   }
 
   // ✅ Filter by last week

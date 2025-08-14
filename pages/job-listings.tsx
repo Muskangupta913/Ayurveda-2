@@ -13,6 +13,7 @@ const AllJobs = () => {
     time: ""
   });
 
+
    const fetchJobs = async () => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => v && params.append(k, v));

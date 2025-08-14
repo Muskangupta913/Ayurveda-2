@@ -147,6 +147,49 @@ export default function BlogDetail() {
     }
   }
 
+
+  async function handleDelete(commentId: string) {
+  if (!confirm("Are you sure you want to delete this comment/reply?")) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/blog/deleteComment', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ blogId: blog?._id, commentId })
+    });
+
+    const json = await res.json();
+    if (json.success) {
+      setBlog(prev => {
+        if (!prev) return prev;
+
+        // Remove from comments or replies in state
+        return {
+          ...prev,
+          comments: prev.comments
+            .map(c => {
+              if (c._id === commentId) return null; // top-level comment
+              return {
+                ...c,
+                replies: c.replies?.filter(r => r._id !== commentId) // reply
+              };
+            })
+            .filter(Boolean) as typeof prev.comments
+        };
+      });
+    } else {
+      alert(json.error || "Failed to delete");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong");
+  }
+}
+
   if (error) return <p>Error: {error}</p>;
   if (!blog) return <p>Loading blog…</p>;
 
@@ -179,14 +222,114 @@ export default function BlogDetail() {
         Comments ({blog.comments.length})
       </h2>
       <div className="space-y-4 mt-4">
-        {blog.comments.map(c => (
-          <div key={c._id} className="border p-3 rounded">
-            <p className="font-semibold">{c.username}</p>
-            <p className="text-gray-700">{c.text}</p>
-            <p className="text-sm text-gray-500">{new Date(c.createdAt).toLocaleString()}</p>
-          </div>
-        ))}
+
+{blog.comments.map(c => {
+  const canDeleteComment =
+    user &&
+    (String(user._id) === String(c.user) || // comment owner
+     String(user._id) === String(blog.postedBy._id || blog.postedBy)); // blog author
+
+  return (
+    <div key={c._id} className="border p-3 rounded">
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="font-semibold">{c.username}</p>
+          <p className="text-gray-700">{c.text}</p>
+          <p className="text-sm text-gray-500">{new Date(c.createdAt).toLocaleString()}</p>
+        </div>
+
+        {canDeleteComment && (
+          <button
+            onClick={() => handleDelete(c._id)}
+            className="text-red-500 text-sm hover:underline"
+          >
+            Delete
+          </button>
+        )}
       </div>
+
+      {/* Replies */}
+      {c.replies?.map(r => {
+        const isAuthorReply = r.user && String(r.user) === String(blog.postedBy._id || blog.postedBy);
+        const canDeleteReply =
+          user &&
+          (String(user._id) === String(r.user) ||
+           String(user._id) === String(blog.postedBy._id || blog.postedBy));
+
+        return (
+          <div
+            key={r._id}
+            className={`ml-6 mt-2 p-2 border-l-2 ${isAuthorReply ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <p className={`font-semibold ${isAuthorReply ? 'text-blue-600' : ''}`}>
+                  {r.username} {isAuthorReply && <span className="text-blue-600 font-normal">(author)</span>}
+                </p>
+                <p>{r.text}</p>
+                <p className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleString()}</p>
+              </div>
+
+              {canDeleteReply && (
+                <button
+                  onClick={() => handleDelete(r._id)}
+                  className="text-red-500 text-xs hover:underline"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Reply form for blog author */}
+      {user && blog.postedBy.name === user.name && (
+        <div className="mt-2">
+          <input
+            type="text"
+            placeholder="Reply to this comment..."
+            onKeyDown={async (e) => {
+              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/blog/addReply', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({
+                    blogId: blog._id,
+                    commentId: c._id,
+                    text: e.currentTarget.value
+                  })
+                });
+                const json = await res.json();
+                if (json.success) {
+                  setBlog(prev => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      comments: prev.comments.map(comment =>
+                        comment._id === c._id ? json.comment : comment
+                      )
+                    };
+                  });
+                  e.currentTarget.value = '';
+                }
+              }
+            }}
+            className="w-full border rounded p-1 text-sm"
+          />
+        </div>
+      )}
+    </div>
+  );
+})}
+
+      </div>
+
+      
 
       {/* Add comment */}
       <div className="mt-6">
