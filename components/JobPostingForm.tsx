@@ -99,7 +99,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
 
     // Show confirmation modal
     setShowConfirmModal(true);
-    addToast('info', 'Review Required', 'Please review your job details carefully before posting');
+    // addToast('info', 'Review Required', 'Please review your job details carefully before posting');
   };
 
   const confirmSubmit = async () => {

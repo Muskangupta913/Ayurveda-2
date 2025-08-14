@@ -49,6 +49,17 @@ export const calculators: Calculator[] = [
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=200&fit=crop'
   },
   {
+  id: 'depression-test',
+  title: 'Depression Test Calculator',
+  description: 'Begin a gentle test to understand depression signs',
+  icon: Brain,
+  color: 'from-[#2D9AA5] to-[#238a94]',
+  bgColor: 'bg-white',
+  borderColor: 'border-gray-200',
+  hoverColor: 'hover:shadow-lg',
+  image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
+},
+  {
     id: 'breathhold',
     title: 'Breath Hold Calculator',
     description: 'Track your breath holding capacity and improve lung health',
@@ -80,18 +91,7 @@ export const calculators: Calculator[] = [
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
     image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=cro'
-  },
-  {
-  id: 'depression-test',
-  title: 'Depression Test Calculator',
-  description: 'Begin a gentle test to understand depression signs',
-  icon: Brain,
-  color: 'from-[#2D9AA5] to-[#238a94]',
-  bgColor: 'bg-white',
-  borderColor: 'border-gray-200',
-  hoverColor: 'hover:shadow-lg',
-  image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
-},  
+  },  
 {
     id: 'water',
     title: 'Water Intake Tracker',
@@ -253,200 +253,208 @@ const HealthCalculatorApp: React.FC = () => {
     }
   };
 
-  const NavigationBar: React.FC = () => (
-    <div ref={sectionRef} id="games-section" className="rounded-2xl p-6 mb-6">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Track Your Health Status</h1>
-      </div>
+const NavigationBar: React.FC = () => (
+  <div ref={sectionRef} id="games-section" className="bg-white rounded-2xl p-6 mb-6">
+    <div className="text-center mb-8">
+      <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Track Your Health Status</h1>
+    </div>
 
-      {/* Calculators Slider Container */}
-      <div className="relative mb-12">
-        {/* Left Arrow */}
-        <button
-          onClick={scrollLeft}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft size={15} />
-        </button>
+    {/* Calculators Slider Container */}
+    <div className="relative mb-12 px-12">
+      {/* Left Arrow - Positioned closer to cards */}
+      <button
+        onClick={scrollLeft}
+        className="absolute -left-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+        aria-label="Scroll left"
+      >
+        <ChevronLeft size={15} />
+      </button>
 
-        {/* Right Arrow */}
-        <button
-          onClick={scrollRight}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
-          aria-label="Scroll right"
-        >
-          <ChevronRight size={15} />
-        </button>
+      {/* Right Arrow - Positioned closer to cards */}
+      <button
+        onClick={scrollRight}
+        className="absolute -right-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+        aria-label="Scroll right"
+      >
+        <ChevronRight size={15} />
+      </button>
 
-        {/* Scrollable Cards Container */}
-        <div
-          ref={sliderRef}
-          className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 px-12 scroll-smooth"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}
-        >
-          {calculators.map((calc: Calculator) => {
-            const IconComponent = calc.icon;
-            return (
-              <div
-                key={calc.id}
-                className={`${calc.bgColor} ${calc.borderColor} ${calc.hoverColor} min-w-[320px] max-w-[320px] border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group flex-shrink-0 overflow-hidden`}
-              >
-                {/* Image Section */}
-                <div className="relative h-32 overflow-hidden">
-                  <img
-                    src={calc.image}
-                    alt={calc.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <div className={`bg-gradient-to-r ${calc.color} p-2 rounded-lg shadow-lg`}>
-                      <IconComponent className="text-white" size={20} />
-                    </div>
+      {/* Scrollable Cards Container - Display exactly 3 cards */}
+      <div
+        ref={sliderRef}
+        className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 scroll-smooth"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+      >
+        {calculators.map((calc: Calculator) => {
+          const IconComponent = calc.icon;
+          return (
+            <div
+              key={calc.id}
+              className={`${calc.bgColor} ${calc.borderColor} ${calc.hoverColor} flex-shrink-0 border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group overflow-hidden`}
+              style={{ 
+                width: 'calc((100% - 3rem) / 3)', // Exactly 3 cards with gaps
+                minWidth: '280px' // Minimum width for responsiveness
+              }}
+            >
+              {/* Image Section */}
+              <div className="relative h-32 overflow-hidden">
+                <img
+                  src={calc.image}
+                  alt={calc.title}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+                <div className="absolute top-3 left-3">
+                  <div className={`bg-gradient-to-r ${calc.color} p-2 rounded-lg shadow-lg`}>
+                    <IconComponent className="text-white" size={20} />
                   </div>
                 </div>
-
-                {/* Content Section */}
-                <div className="p-5">
-                  <h3 className="font-bold text-gray-800 mb-2 text-lg">{calc.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
-                  <a
-                    href={`/calculator/${calc.id}#games-section`}
-                    onClick={() => {
-                      if (sliderRef.current) {
-                        localStorage.setItem('calcSliderScroll', sliderRef.current.scrollLeft.toString());
-                      }
-                      localStorage.setItem('shouldScrollToGames', 'true');
-                    }}
-                    className="inline-flex items-center bg-[#2D9AA5] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#238a94] transition-colors"
-                  >
-                    Calculate Now
-                    <ArrowRight size={16} className="ml-2" />
-                  </a>
-                </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* View All Button */}
-        <div className="text-center mt-8">
-          <a
-            href="/calculator/allcalc#games-section"
-            onClick={() => {
-              if (sliderRef.current) {
-                localStorage.setItem('calcSliderScroll', sliderRef.current.scrollLeft.toString());
-              }
-              localStorage.setItem('shouldScrollToGames', 'true');
-            }}
-            className="inline-flex items-center bg-orange-400 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-orange-600 transition-colors"
-          >
-            View All Calculators
-            <ArrowRight size={20} className="ml-2" />
-          </a>
-        </div>
+              {/* Content Section */}
+              <div className="p-5">
+                <h3 className="font-bold text-gray-800 mb-2 text-lg">{calc.title}</h3>
+                <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
+                <a
+                  href={`/calculator/${calc.id}#games-section`}
+                  onClick={() => {
+                    if (sliderRef.current) {
+                      localStorage.setItem('calcSliderScroll', sliderRef.current.scrollLeft.toString());
+                    }
+                    localStorage.setItem('shouldScrollToGames', 'true');
+                  }}
+                  className="inline-flex items-center bg-[#2D9AA5] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#238a94] transition-colors"
+                >
+                  Calculate Now
+                  <ArrowRight size={16} className="ml-2" />
+                </a>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Health Games Section */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Health & Wellness Games</h1>
-      </div>
-
-      {/* Games Slider Container */}
-      <div className="relative">
-        {/* Left Arrow */}
-        <button
-          onClick={scrollGamesLeft}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
-          aria-label="Scroll games left"
-        >
-          <ChevronLeft size={15} />
-        </button>
-
-        {/* Right Arrow */}
-        <button
-          onClick={scrollGamesRight}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
-          aria-label="Scroll games right"
-        >
-          <ChevronRight size={15} />
-        </button>
-
-        {/* Scrollable Games Cards Container */}
-        <div
-          ref={gamesSliderRef}
-          className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 px-12 scroll-smooth"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+      {/* View All Button */}
+      <div className="text-center mt-8">
+        <a
+          href="/calculator/allcalc#games-section"
+          onClick={() => {
+            if (sliderRef.current) {
+              localStorage.setItem('calcSliderScroll', sliderRef.current.scrollLeft.toString());
+            }
+            localStorage.setItem('shouldScrollToGames', 'true');
           }}
+          className="inline-flex items-center bg-orange-400 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-orange-600 transition-colors"
         >
-          {games.map((game: Game) => {
-            const IconComponent = game.icon;
-            return (
-              <div
-                key={game.id}
-                className={`${game.bgColor} ${game.borderColor} ${game.hoverColor} min-w-[320px] max-w-[320px] border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group flex-shrink-0 overflow-hidden`}
-              >
-                {/* Image Section */}
-                <div className="relative h-32 overflow-hidden">
-                  <img
-                    src={game.image}
-                    alt={game.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <div className={`bg-gradient-to-r ${game.color} p-2 rounded-lg shadow-lg`}>
-                      <IconComponent className="text-white" size={20} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content Section */}
-                <div className="p-5">
-                  <h3 className="font-bold text-gray-800 mb-2 text-lg">{game.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{game.description}</p>
-                  <a
-                    href={`/games/${game.id}#games-section`}
-                    onClick={() => {
-                      if (gamesSliderRef.current) {
-                        localStorage.setItem('gamesSliderScroll', gamesSliderRef.current.scrollLeft.toString());
-                      }
-                      localStorage.setItem('shouldScrollToGames', 'true');
-                    }}
-                    className="inline-flex items-center bg-[#FF6B6B] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#ee5a52] transition-colors"
-                  >
-                    Play Now
-                    <Gamepad2 size={16} className="ml-2" />
-                  </a>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* View All Games Button */}
-        <div className="text-center mt-8">
-          <a
-            href="/games/allgames#games-section"
-            onClick={() => {
-              if (gamesSliderRef.current) {
-                localStorage.setItem('gamesSliderScroll', gamesSliderRef.current.scrollLeft.toString());
-              }
-              localStorage.setItem('shouldScrollToGames', 'true');
-            }}
-            className="inline-flex items-center bg-purple-500 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-purple-600 transition-colors"
-          >
-            View All Games
-            <Gamepad2 size={20} className="ml-2" />
-          </a>
-        </div>
+          View All Calculators
+          <ArrowRight size={20} className="ml-2" />
+        </a>
       </div>
     </div>
-  );
+
+    {/* Health Games Section */}
+    <div className="text-center mb-8">
+      <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Health & Wellness Games</h1>
+    </div>
+
+    {/* Games Slider Container */}
+    <div className="relative px-12">
+      {/* Left Arrow - Positioned closer to cards */}
+      <button
+        onClick={scrollGamesLeft}
+        className="absolute -left-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+        aria-label="Scroll games left"
+      >
+        <ChevronLeft size={15} />
+      </button>
+
+      {/* Right Arrow - Positioned closer to cards */}
+      <button
+        onClick={scrollGamesRight}
+        className="absolute -right-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+        aria-label="Scroll games right"
+      >
+        <ChevronRight size={15} />
+      </button>
+
+      {/* Scrollable Games Cards Container - Display exactly 3 cards */}
+      <div
+        ref={gamesSliderRef}
+        className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 scroll-smooth"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+      >
+        {games.map((game: Game) => {
+          const IconComponent = game.icon;
+          return (
+            <div
+              key={game.id}
+              className={`${game.bgColor} ${game.borderColor} ${game.hoverColor} flex-shrink-0 border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group overflow-hidden`}
+              style={{ 
+                width: 'calc((100% - 3rem) / 3)', // Exactly 3 cards with gaps
+                minWidth: '280px' // Minimum width for responsiveness
+              }}
+            >
+              {/* Image Section */}
+              <div className="relative h-32 overflow-hidden">
+                <img
+                  src={game.image}
+                  alt={game.title}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+                <div className="absolute top-3 left-3">
+                  <div className={`bg-gradient-to-r ${game.color} p-2 rounded-lg shadow-lg`}>
+                    <IconComponent className="text-white" size={20} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Content Section */}
+              <div className="p-5">
+                <h3 className="font-bold text-gray-800 mb-2 text-lg">{game.title}</h3>
+                <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{game.description}</p>
+                <a
+                  href={`/games/${game.id}#games-section`}
+                  onClick={() => {
+                    if (gamesSliderRef.current) {
+                      localStorage.setItem('gamesSliderScroll', gamesSliderRef.current.scrollLeft.toString());
+                    }
+                    localStorage.setItem('shouldScrollToGames', 'true');
+                  }}
+                  className="inline-flex items-center bg-[#FF6B6B] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#ee5a52] transition-colors"
+                >
+                  Play Now
+                  <Gamepad2 size={16} className="ml-2" />
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* View All Games Button */}
+      <div className="text-center mt-8">
+        <a
+          href="/games/allgames#games-section"
+          onClick={() => {
+            if (gamesSliderRef.current) {
+              localStorage.setItem('gamesSliderScroll', gamesSliderRef.current.scrollLeft.toString());
+            }
+            localStorage.setItem('shouldScrollToGames', 'true');
+          }}
+          className="inline-flex items-center bg-purple-500 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-purple-600 transition-colors"
+        >
+          View All Games
+          <Gamepad2 size={20} className="ml-2" />
+        </a>
+      </div>
+    </div>
+  </div>
+);
 
   const SimpleCalculatorView: React.FC<{ title: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = ({ title, icon: IconComponent }) => (
     <div className="bg-white rounded-2xl shadow-xl p-8">

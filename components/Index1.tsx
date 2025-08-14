@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Thermometer,
     Shield,
@@ -18,8 +18,6 @@ import {
     Eye,
     Brain,
     Wind,
-    ChevronLeft,
-    ChevronRight,
 } from 'lucide-react';
 
 import CalculatorGames from '../components/CalculatorGames';
@@ -33,142 +31,168 @@ interface HealthCondition {
 
 const HealthRiskComponent: React.FC = () => {
     const [selectedCondition, setSelectedCondition] = useState<string>('joints');
+    const [activePage, setActivePage] = useState(0);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const healthConditions: HealthCondition[] = [
         {
             id: 'fever',
             name: 'Fever',
             icon: <Thermometer className="w-8 h-8" />,
-            description: 'Monitor your body temperature and identify potential infections or illnesses early.'
+            description: 'Can signal infection or serious illness.'
         },
         {
             id: 'std',
             name: 'STD',
             icon: <Shield className="w-8 h-8" />,
-            description: 'Regular screening for sexually transmitted diseases is crucial for sexual health.'
+            description: 'May cause infertility or long-term health damage.'
         },
         {
             id: 'liver',
             name: 'Liver',
             icon: <Activity className="w-8 h-8" />,
-            description: 'Liver function tests help detect liver damage and monitor overall liver health.'
+            description: 'Poor function can lead to liver failure.'
         },
         {
             id: 'vitamins',
             name: 'Vitamins',
             icon: <Pill className="w-8 h-8" />,
-            description: 'Vitamin deficiencies can affect immunity, energy levels, and overall wellbeing.'
+            description: 'Deficiency weakens immunity and energy.'
         },
         {
             id: 'diabetes',
             name: 'Diabetes',
             icon: <Droplets className="w-8 h-8" />,
-            description: 'Blood sugar monitoring is essential for preventing diabetes complications.'
+            description: 'Can damage heart, kidneys, eyes, and nerves.'
         },
         {
             id: 'heart',
             name: 'Heart',
             icon: <Heart className="w-8 h-8" />,
-            description: 'Cardiovascular health screening helps prevent heart disease and stroke.'
+            description: 'Increases risk of heart attack and stroke.'
         },
         {
             id: 'thyroid',
             name: 'Thyroid',
             icon: <Zap className="w-8 h-8" />,
-            description: 'Thyroid function affects metabolism, energy, and hormonal balance.'
+            description: 'Can cause fatigue, weight changes, and mood issues.'
         },
         {
             id: 'kidney',
             name: 'Kidney',
             icon: <CircleEllipsis className="w-8 h-8" />,
-            description: 'Kidney function tests help detect early signs of kidney disease.'
+            description: 'Failure can cause toxin buildup and serious illness.'
         },
         {
             id: 'allergy',
             name: 'Allergy',
             icon: <AlertTriangle className="w-8 h-8" />,
-            description: 'Identify allergens that may cause reactions and affect quality of life.'
+            description: 'May trigger asthma or severe reactions.'
         },
-        {
-            id: 'joints',
-            name: 'Joints',
-            icon: <CircleDot className="w-8 h-8" />,
-            description: 'Most of us relate joint pain with age, but that is not true. It does not just affect elderly people...'
-        },
+        // {
+        //     id: 'joints',
+        //     name: 'Joints',
+        //     icon: <CircleDot className="w-8 h-8" />,
+        //     description: 'Can limit mobility and cause chronic pain.'
+        // },
         {
             id: 'bone',
             name: 'Bone',
             icon: <Bone className="w-8 h-8" />,
-            description: 'Strong bones are key to staying active, mobile, and independent as we age. However, bone health often...'
+            description: 'Weak bones raise fracture and disability risk.'
         },
         {
             id: 'acidity',
             name: 'Acidity',
             icon: <Flame className="w-8 h-8" />,
-            description: 'Monitor acid levels to prevent digestive issues and maintain gut health.'
+            description: 'Can damage the esophagus and cause ulcers.'
         },
         {
             id: 'cancer',
             name: 'Cancer',
             icon: <Target className="w-8 h-8" />,
-            description: 'Early cancer screening can significantly improve treatment outcomes.'
+            description: 'Uncontrolled growth can be life-threatening.'
         },
         {
             id: 'anemia',
             name: 'Anemia',
             icon: <Droplets className="w-8 h-8" />,
-            description: 'Iron deficiency and low hemoglobin levels can cause fatigue and weakness.'
+            description: 'Causes fatigue, weakness, and poor focus.'
         },
         {
             id: 'obesity',
             name: 'Obesity',
             icon: <Scale className="w-8 h-8" />,
-            description: 'Weight management is crucial for preventing various chronic diseases.'
+            description: 'Increases diabetes, heart disease, and cancer risk.'
         },
         {
             id: 'hypertension',
             name: 'Hypertension',
             icon: <TrendingUp className="w-8 h-8" />,
-            description: 'High blood pressure monitoring helps prevent cardiovascular complications.'
+            description: 'Raises risk of stroke, heart, and kidney disease.'
         },
         {
             id: 'vision',
             name: 'Vision',
             icon: <Eye className="w-8 h-8" />,
-            description: 'Regular eye exams help detect vision problems and eye diseases early.'
+            description: 'Poor vision can cause accidents and blindness.'
         },
         {
             id: 'mental-health',
             name: 'Mental Health',
             icon: <Brain className="w-8 h-8" />,
-            description: 'Mental wellness screening helps maintain emotional and psychological health.'
+            description: 'Can lead to stress, anxiety, or depression.'
         },
         {
             id: 'respiratory',
             name: 'Respiratory',
             icon: <Wind className="w-8 h-8" />,
-            description: 'Lung function tests help detect breathing disorders and respiratory diseases.'
-        }
+            description: 'Can cause breathlessness and lung damage.'
+        },
     ];
 
-    const selectedConditionData = healthConditions.find(condition => condition.id === selectedCondition);
+    // const selectedConditionData = healthConditions.find(condition => condition.id === selectedCondition);
+
+  const cardsPerPage = 3;
+    const totalPages = Math.ceil(healthConditions.length / cardsPerPage);
 
     const scrollLeft = () => {
-        const container = document.getElementById('health-conditions-bar');
-        if (container) {
-            container.scrollBy({ left: -200, behavior: 'smooth' });
+        if (scrollRef.current) {
+            scrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
         }
     };
 
     const scrollRight = () => {
-        const container = document.getElementById('health-conditions-bar');
-        if (container) {
-            container.scrollBy({ left: 200, behavior: 'smooth' });
+        if (scrollRef.current) {
+            scrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
         }
     };
 
+    useEffect(() => {
+        const handleScroll = () => {
+            if (scrollRef.current) {
+                const scrollPosition = scrollRef.current.scrollLeft;
+                const cardWidth = scrollRef.current.firstChild
+                    ? (scrollRef.current.firstChild as HTMLElement).offsetWidth + 16
+                    : 0;
+                const page = Math.round(scrollPosition / (cardWidth * cardsPerPage));
+                setActivePage(page);
+            }
+        };
+
+        const el = scrollRef.current;
+        if (el) {
+            el.addEventListener('scroll', handleScroll);
+        }
+        return () => {
+            if (el) el.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
+
     return (
-        <div className="w-full bg-gray-50 py-8 px-4">
+
+        <div className="w-full bg-white py-8 px-4">
+
             <div className="max-w-6xl mx-auto">
                 {/* ==================== HEALTH RISK SECTION ==================== */}
                 {/* Header */}
@@ -176,53 +200,53 @@ const HealthRiskComponent: React.FC = () => {
                     <h1 className="text-4xl md:text-5xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
                         Health Risk
                     </h1>
+
                 </div>
 
                 {/* Horizontal Scrollable Bar */}
+                {/* Scroll Section */}
                 <div className="relative mb-8">
-                    {/* Left Arrow */}
-                    <button
+                    {/* Left Fade */}
+                    <div
                         onClick={scrollLeft}
-                        className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-orange-500 text-white rounded-full p-2 shadow-lg hover:bg-orange-600 transition-colors"
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
+                        className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent z-10 cursor-pointer hover:opacity-80 transition-opacity"
+                    />
 
                     {/* Scrollable Container */}
                     <div
+                        ref={scrollRef}
                         id="health-conditions-bar"
-                        className="flex overflow-x-auto scrollbar-hide space-x-4 px-12 py-4"
+                        className="flex overflow-x-auto scrollbar-hide space-x-4 px-4 py-4"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                         {healthConditions.map((condition) => (
                             <div
-                                key={condition.id}
-                                onClick={() => setSelectedCondition(condition.id)}
-                                className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${selectedCondition === condition.id ? 'transform scale-105' : ''
-                                    }`}
+                                // key={condition.id}
+                                // onClick={() => setSelectedCondition(condition.id)}
+                                className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${
+                                    selectedCondition === condition.id ? 'transform scale-105' : ''
+                                }`}
                             >
-                                <div className={`p-6 rounded-lg text-center h-80 flex flex-col justify-between ${selectedCondition === condition.id
-                                    ? 'bg-white shadow-lg border-2'
-                                    : 'bg-white hover:shadow-md'
+                                <div
+                                    className={`p-6 rounded-lg text-center h-55 flex flex-col justify-between ${
+                                        selectedCondition === condition.id
+                                            ? 'bg-white shadow-lg border-2'
+                                            : 'bg-white hover:shadow-md'
                                     }`}
                                     style={{
-                                        borderColor: selectedCondition === condition.id ? '#2D9AA5' : 'transparent'
+                                        borderColor:
+                                            selectedCondition === condition.id ? '#2D9AA5' : 'transparent',
                                     }}
                                 >
-                                    {/* Icon */}
                                     <div
                                         className="mb-4 p-4 rounded-full w-fit mx-auto"
                                         style={{ backgroundColor: '#2D9AA5', color: 'white' }}
                                     >
                                         {condition.icon}
                                     </div>
-
-                                    {/* Name */}
                                     <h3 className="text-lg font-semibold mb-4" style={{ color: '#2D9AA5' }}>
                                         {condition.name}
                                     </h3>
-
-                                    {/* Description */}
                                     <p className="text-gray-600 text-sm leading-relaxed mb-4 flex-1">
                                         {condition.description}
                                     </p>
@@ -231,229 +255,184 @@ const HealthRiskComponent: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Right Arrow */}
-                    <button
+                    {/* Right Fade */}
+                    <div
                         onClick={scrollRight}
-                        className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-orange-500 text-white rounded-full p-2 shadow-lg hover:bg-orange-600 transition-colors"
-                    >
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
+                        className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 cursor-pointer hover:opacity-80 transition-opacity"
+                    />
+                </div>
+
+                {/* Dots Pagination */}
+                <div className="flex justify-center mt-4 space-x-2">
+                    {Array.from({ length: totalPages }).map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => {
+                                if (scrollRef.current) {
+                                    const cardWidth = scrollRef.current.firstChild
+                                        ? (scrollRef.current.firstChild as HTMLElement).offsetWidth + 16
+                                        : 0;
+                                    scrollRef.current.scrollTo({
+                                        left: i * cardWidth * cardsPerPage,
+                                        behavior: 'smooth',
+                                    });
+                                }
+                            }}
+                            className={`w-3 h-3 rounded-full transition-colors ${
+                                i === activePage ? 'bg-orange-500' : 'bg-gray-300'
+                            }`}
+                        />
+                    ))}
                 </div>
 
 
-                <div>
-                    <CalculatorGames />
-                </div>
+                <p className="text-xl font-semibold text-center text-black mt-7">
+                    Your <span style={{ color: '#2D9AA5' }}>health</span> matters — avoid risks. Use <span style={{ color: '#2D9AA5' }}>ZEVA</span> to find nearby clinics and book your appointment today.
+                </p>
+               
+
+               {/* Calculator and games */}
+               
+                <CalculatorGames />
 
 
 
                 {/* ==================== WHY CHOOSE US ==================== */}
-               <div className="mt-16 mb-16">
-    <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#2D9AA5' }}>
-            Why to Choose ZEVA
-        </h2>
-    </div>
+                <div className="mt-16 mb-16">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#2D9AA5' }}>
+                            Why to Choose ZEVA
+                        </h2>
+                    </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
 
-        {/* Feature 1 - Search Healthcare Services */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    01
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Find Healthcare Providers Online
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Discover qualified doctors and trusted clinics near you. Comprehensive wellness centers and luxury spa services launching soon.
-            </p>
-        </div>
+                        {/* Feature 1 - Search Healthcare Services */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">01</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Find Healthcare Providers</h3>
+                            <p className="text-xs text-gray-600">Discover qualified doctors and trusted clinics near you.</p>
+                        </div>
 
-        {/* Feature 2 - Register Healthcare Services */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M15,4A4,4 0 0,0 11,8A4,4 0 0,0 15,12A4,4 0 0,0 19,8A4,4 0 0,0 15,4M15,5.9A2.1,2.1 0 0,1 17.1,8A2.1,2.1 0 0,1 15,10.1A2.1,2.1 0 0,1 12.9,8A2.1,2.1 0 0,1 15,5.9M4,7V10H1V12H4V15H6V12H9V10H6V7H4M15,13C12.33,13 7,14.33 7,17V20H23V17C23,14.33 17.67,13 15,13Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    02
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Healthcare Provider Registration
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Join our platform as a medical professional or healthcare facility. Wellness center and spa partner registration coming soon.
-            </p>
-        </div>
+                        {/* Feature 2 - Register Healthcare Services */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">02</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Provider Registration</h3>
+                            <p className="text-xs text-gray-600">Join our platform as a medical professional or facility.</p>
+                        </div>
 
-        {/* Feature 3 - Health Games & Calculator */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M16.5,7.5L15.09,8.91L12,5.83L8.91,8.91L7.5,7.5L12,3L16.5,7.5M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    03
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Interactive Health & Wellness Tools
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Access engaging health games and advanced calculators to track BMI, calories, and vital health metrics for better wellness management.
-            </p>
-        </div>
+                        {/* Feature 3 - Health Games & Calculator */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">03</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Health Tools & Games</h3>
+                            <p className="text-xs text-gray-600">Interactive calculators for BMI, calories, and health metrics.</p>
+                        </div>
 
-        {/* Feature 4 - Nearby Search Feature */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22S19,14.25 19,9A7,7 0 0,0 12,2Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    04
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Location-Based Healthcare Search
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Locate nearby hospitals, pharmacies, diagnostic centers, and emergency services with GPS-enabled smart search technology.
-            </p>
-        </div>
+                        {/* Feature 4 - Nearby Search Feature */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">04</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Location-Based Search</h3>
+                            <p className="text-xs text-gray-600">Find nearby hospitals, pharmacies, and emergency services.</p>
+                        </div>
 
-        {/* Feature 5 - Job Applications */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    05
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Healthcare Career Opportunities
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Browse and apply for medical jobs, nursing positions, healthcare administration roles, and clinical opportunities nationwide.
-            </p>
-        </div>
+                        {/* Feature 5 - Job Applications */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">05</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Career Opportunities</h3>
+                            <p className="text-xs text-gray-600">Browse medical jobs and healthcare positions nationwide.</p>
+                        </div>
 
-        {/* Feature 6 - Blog Reading & Writing */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    06
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Health Knowledge Hub & Blog Platform
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Access expert-written health articles, medical news, wellness tips, and contribute your own healthcare insights to our community.
-            </p>
-        </div>
+                        {/* Feature 6 - Blog Reading & Writing */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">06</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Knowledge Hub & Blog</h3>
+                            <p className="text-xs text-gray-600">Access expert health articles and contribute insights.</p>
+                        </div>
 
-        {/* Feature 7 - Telemedicine & Virtual Consultations */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5M5,8H15V16H5V8Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    07
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Telemedicine & Virtual Consultations
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Connect with certified doctors through secure video calls, get online prescriptions, and receive medical advice from home.
-            </p>
-        </div>
+                        {/* Feature 7 - Telemedicine & Virtual Consultations */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">07</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Telemedicine Consults</h3>
+                            <p className="text-xs text-gray-600">Connect with doctors via secure video calls from home.</p>
+                        </div>
 
-        {/* Feature 8 - Health Records & Digital Prescription Management */}
-        <div className="text-center">
-            <div className="mb-6">
-                <div
-                    className="w-15 h-15 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: '#2D9AA5' }}
-                >
-                    <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,12H14V17H12V12M10,12H11V17H10V12M8,12H9V17H8V12Z" />
-                    </svg>
-                </div>
-                <div className="text-2xl font-bold mb-2" style={{ color: '#2D9AA5' }}>
-                    08
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: '#2D9AA5' }}>
-                Digital Health Records & Prescription Management
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Securely store medical records, track prescriptions, manage lab reports, and maintain comprehensive health history digitally.
-            </p>
-        </div>
+                        {/* Feature 8 - Health Records & Digital Prescription Management */}
+                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center mb-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m-5-8h.01M9 16h.01M3 16.755V7.245a2 2 0 011.2-1.835l6-2.4a2 2 0 011.6 0l6 2.4A2 2 0 0119 7.245v9.51a2 2 0 01-1.2 1.835l-6 2.4a2 2 0 01-1.6 0l-6-2.4A2 2 0 013 16.755z" />
+                                    </svg>
+                                </div>
+                                {/* <span className="text-sm font-bold text-teal-600">08</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Digital Health Records</h3>
+                            <p className="text-xs text-gray-600">Securely store medical records and manage prescriptions.</p>
+                        </div>
 
-    </div>
+                    </div>
+                    {/* Try ZEVA Button */}
+                    <div className="text-center mt-12">
+                        <a
+                            href="/"
+                            className="inline-block px-8 py-3 text-white font-semibold rounded-lg transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-[0_0_20px_#2D9AA5]"
+                            style={{ backgroundColor: '#2D9AA5' }}
+                        >
+                            Try ZEVA
+                        </a>
+                    </div>
 
-    {/* Try ZEVA Button */}
-    <div className="text-center mt-12">
-        <a 
-            href="/" 
-            className="inline-block px-8 py-3 text-white font-semibold rounded-lg transition-all duration-300 hover:opacity-90 hover:transform hover:scale-105 shadow-lg"
-            style={{ backgroundColor: '#2D9AA5' }}
-        >
-            Try ZEVA
-        </a>
-    </div>
-</div>
+                </div>
 
                 {/* ==================== CUSTOMER TESTIMONIALS SECTION ==================== */}
                 <div className="mt-16 mb-16">

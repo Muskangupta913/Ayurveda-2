@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Mail, Settings, Calendar, Clock ,MessageCircle} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
+import Stats from '../../components/Stats';
 import ClinicLayout from '../../components/ClinicLayout';
 import withClinicAuth from '../../components/withClinicAuth';
 import type { NextPageWithLayout } from '../_app';
@@ -279,6 +279,14 @@ const ClinicDashboard: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
+       {/* // For clinic Dashboard */}
+      <Stats
+        role="clinic"
+        config={{
+          tokenKey: 'clinicToken',
+          primaryColor: '#2D9AA5'
+        }}
+      />
     </div>
   );
 };

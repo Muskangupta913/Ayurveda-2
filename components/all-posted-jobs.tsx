@@ -1,9 +1,75 @@
-// components/common/JobManagement.jsx
-import React, { useEffect, useState } from 'react';
+// components/common/JobManagement.tsx
+import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 
-const JobManagement = ({ 
-  role = 'clinic', // 'clinic' or 'doctor'
+// Type definitions
+interface JobConfig {
+  title: string;
+  subtitle: string;
+  tokenKey: string;
+  primaryColor: string;
+  emptyStateTitle: string;
+  emptyStateDescription: string;
+  emptyStateButtonText: string;
+}
+
+interface Job {
+  _id: string;
+  jobTitle: string;
+  companyName?: string;
+  clinicName?: string;
+  hospitalName?: string;
+  department?: string;
+  jobType?: string;
+  location?: string;
+  salary?: string;
+  isActive: boolean;
+  role?: string;
+  qualification?: string;
+  workingDays?: string;
+  jobTiming?: string;
+  skills?: string[];
+  perks?: string[];
+  languagesPreferred?: string[];
+  description?: string;
+  noOfOpenings?: number;
+  establishment?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ConfirmAction {
+  type: 'toggle' | 'delete';
+  jobId: string;
+  currentStatus?: boolean;
+  jobTitle: string;
+  action: 'activate' | 'deactivate' | 'delete';
+}
+
+interface JobManagementProps {
+  role?: 'clinic' | 'doctor';
+  config?: JobConfig;
+}
+
+// Currency formatter for AED
+const formatCurrency = (amount: string): string => {
+  if (!amount) return 'N/A';
+  // Remove any existing currency symbols and clean the string
+  const cleanAmount = amount.replace(/[^\d.,]/g, '');
+  if (!cleanAmount) return amount;
+  
+  // Try to format as number
+  const numAmount = parseFloat(cleanAmount.replace(/,/g, ''));
+  if (isNaN(numAmount)) return amount;
+  
+  return `AED ${numAmount.toLocaleString('en-AE', { 
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  })}`;
+};
+
+const JobManagement: React.FC<JobManagementProps> = ({ 
+  // role = 'clinic',
   config = {
     title: 'My Job Posts',
     subtitle: 'Manage your job postings and track applications',
@@ -14,16 +80,18 @@ const JobManagement = ({
     emptyStateButtonText: 'Create Your First Job'
   }
 }) => {
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (): Promise<void> => {
     try {
       setLoading(true);
       const token = localStorage.getItem(config.tokenKey);
-      const res = await axios.get('/api/job-postings/my-jobs', {
+      const res = await axios.get<{ jobs: Job[] }>('/api/job-postings/my-jobs', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setJobs(res.data.jobs);
@@ -38,7 +106,18 @@ const JobManagement = ({
     fetchJobs();
   }, [config.tokenKey]);
 
-  const handleToggleJob = (jobId, currentStatus, jobTitle) => {
+  // Filter jobs based on search term and status
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(job => {
+      const matchesSearch = job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'active' && job.isActive) || 
+        (statusFilter === 'inactive' && !job.isActive);
+      return matchesSearch && matchesStatus;
+    });
+  }, [jobs, searchTerm, statusFilter]);
+
+  const handleToggleJob = (jobId: string, currentStatus: boolean, jobTitle: string): void => {
     setConfirmAction({
       type: 'toggle',
       jobId,
@@ -49,7 +128,7 @@ const JobManagement = ({
     setShowConfirmModal(true);
   };
 
-  const handleDeleteJob = (jobId, jobTitle) => {
+  const handleDeleteJob = (jobId: string, jobTitle: string): void => {
     setConfirmAction({
       type: 'delete',
       jobId,
@@ -59,7 +138,9 @@ const JobManagement = ({
     setShowConfirmModal(true);
   };
 
-  const executeAction = async () => {
+  const executeAction = async (): Promise<void> => {
+    if (!confirmAction) return;
+    
     const token = localStorage.getItem(config.tokenKey);
     
     try {
@@ -84,13 +165,13 @@ const JobManagement = ({
     }
   };
 
-  const cancelAction = () => {
+  const cancelAction = (): void => {
     setShowConfirmModal(false);
     setConfirmAction(null);
   };
 
   // Confirmation Modal Component
-  const ConfirmationModal = () => (
+  const ConfirmationModal: React.FC = () => (
     <>
       {/* Backdrop */}
       <div 
@@ -202,7 +283,7 @@ const JobManagement = ({
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-300 rounded w-1/3 mb-4"></div>
             <div className="h-4 bg-gray-300 rounded w-1/2 mb-8"></div>
@@ -227,15 +308,15 @@ const JobManagement = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-6">
             <div 
               className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
-              style={{ backgroundColor: config.primaryColor }}
+              style={{ backgroundColor: '#2D9AA5' }}
             >
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-8 0V6a2 2 0 00-2 2v6.001" />
@@ -248,7 +329,7 @@ const JobManagement = ({
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -291,35 +372,88 @@ const JobManagement = ({
               </div>
             </div>
           </div>
+
+          {/* Search and Filter Section */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Search Bar */}
+              <div className="flex-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search jobs by title..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="text-black block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div className="sm:w-48">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                  className="text-black block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  <option value="all">All Jobs</option>
+                  <option value="active">Active Jobs</option>
+                  <option value="inactive">Inactive Jobs</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Results Count */}
+            <div className="mt-3 text-sm text-gray-600">
+              Showing {filteredJobs.length} of {jobs.length} jobs
+              {searchTerm && ` matching "${searchTerm}"`}
+            </div>
+          </div>
         </div>
 
         {/* Jobs List */}
         <div className="space-y-4">
-          {jobs.length === 0 ? (
+          {filteredJobs.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-8 0V6a2 2 0 00-2 2v6.001" />
+                  {searchTerm || statusFilter !== 'all' ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-8 0V6a2 2 0 00-2 2v6.001" />
+                  )}
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{config.emptyStateTitle}</h3>
-              <p className="text-gray-600 mb-6">{config.emptyStateDescription}</p>
-              <button 
-                className="text-white px-6 py-3 rounded-xl hover:opacity-90 transition-colors font-medium"
-                style={{ backgroundColor: config.primaryColor }}
-              >
-                {config.emptyStateButtonText}
-              </button>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {searchTerm || statusFilter !== 'all' ? 'No Jobs Found' : config.emptyStateTitle}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {searchTerm || statusFilter !== 'all' 
+                  ? 'Try adjusting your search criteria or filters.' 
+                  : config.emptyStateDescription
+                }
+              </p>
+              {(!searchTerm && statusFilter === 'all') && (
+                <button 
+                  className="text-white px-6 py-3 rounded-xl hover:opacity-90 transition-colors font-medium"
+                  style={{ backgroundColor: '#2D9AA5' }}
+                >
+                  {config.emptyStateButtonText}
+                </button>
+              )}
             </div>
           ) : (
-            jobs.map(job => (
+            filteredJobs.map(job => (
               <div key={job._id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
                 <div className="p-4">
                   
                   {/* Job Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm ${
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 ${
                         job.isActive ? 'bg-green-100' : 'bg-gray-100'
                       }`}>
                         <svg className={`w-5 h-5 ${job.isActive ? 'text-green-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,16 +461,16 @@ const JobManagement = ({
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-bold text-gray-900 truncate">{job.jobTitle}</h3>
+                        <h3 className="text-lg font-bold text-gray-900">{job.jobTitle}</h3>
                         <p 
                           className="font-medium text-sm"
-                          style={{ color: config.primaryColor }}
+                          style={{ color: '#2D9AA5' }}
                         >
                           {job.companyName || job.clinicName || job.hospitalName}
                         </p>
                         
                         {/* Job Details */}
-                        <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-600">
+                        <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-600">
                           {job.department && (
                             <span className="flex items-center gap-1">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,18 +497,18 @@ const JobManagement = ({
                           )}
                           {job.salary && (
                             <span className="flex items-center gap-1">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              {/* <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                              </svg>
-                              {job.salary}
+                              </svg> */}
+                              {formatCurrency(job.salary)}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-
+                    
                     {/* Status Badge and Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         job.isActive 
                           ? 'bg-green-100 text-green-800' 
@@ -382,7 +516,6 @@ const JobManagement = ({
                       }`}>
                         {job.isActive ? '● Active' : '● Inactive'}
                       </div>
-                      
                       <button
                         onClick={() => handleToggleJob(job._id, job.isActive, job.jobTitle)}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
@@ -393,13 +526,38 @@ const JobManagement = ({
                       >
                         {job.isActive ? 'Deactivate' : 'Activate'}
                       </button>
-
                       <button
                         onClick={() => handleDeleteJob(job._id, job.jobTitle)}
                         className="px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-xs font-medium transition-all duration-200"
                       >
                         Delete
                       </button>
+                    </div>
+                  </div>
+
+                  {/* All Job Fields Display */}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-700">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                      {/* <div><strong>ID:</strong> {job._id}</div> */}
+                      {/* <div><strong>Role:</strong> {job.role || 'N/A'}</div> */}
+                      <div><strong>Company Name:</strong> {job.companyName || 'N/A'}</div>
+                      <div><strong>Job Title:</strong> {job.jobTitle || 'N/A'}</div>
+                      <div><strong>Department:</strong> {job.department || 'N/A'}</div>
+                      <div><strong>Qualification:</strong> {job.qualification || 'N/A'}</div>
+                      <div><strong>Job Type:</strong> {job.jobType || 'N/A'}</div>
+                      <div><strong>Working Days:</strong> {job.workingDays || 'N/A'}</div>
+                      <div><strong>Location:</strong> {job.location || 'N/A'}</div>
+                      <div><strong>Job Timing:</strong> {job.jobTiming || 'N/A'}</div>
+                      <div><strong>Skills:</strong> {Array.isArray(job.skills) && job.skills.length > 0 ? job.skills.join(', ') : 'N/A'}</div>
+                      <div><strong>Perks:</strong> {Array.isArray(job.perks) && job.perks.length > 0 ? job.perks.join(', ') : 'N/A'}</div>
+                      <div><strong>Languages Preferred:</strong> {Array.isArray(job.languagesPreferred) && job.languagesPreferred.length > 0 ? job.languagesPreferred.join(', ') : 'N/A'}</div>
+                      <div className="sm:col-span-2 lg:col-span-3"><strong>Description:</strong> {job.description || 'N/A'}</div>
+                      <div><strong>No. of Openings:</strong> {job.noOfOpenings !== undefined ? job.noOfOpenings : 'N/A'}</div>
+                      <div><strong>Salary:</strong> {formatCurrency(job.salary || '')}</div>
+                      <div><strong>Establishment:</strong> {job.establishment || 'N/A'}</div>
+                      <div><strong>Is Active:</strong> {job.isActive ? 'Yes' : 'No'}</div>
+                      <div><strong>Created At:</strong> {job.createdAt ? new Date(job.createdAt).toLocaleString() : 'N/A'}</div>
+                      <div><strong>Updated At:</strong> {job.updatedAt ? new Date(job.updatedAt).toLocaleString() : 'N/A'}</div>
                     </div>
                   </div>
                 </div>

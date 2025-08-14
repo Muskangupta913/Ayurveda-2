@@ -40,6 +40,7 @@ import AuthModal from "../components/AuthModal";
 import Image from "next/image";
 import SearchCard from "../components/SearchCard";
 import Index1 from "../components/Index1";
+import CalculatorGames from "../components/CalculatorGames";
 
 // Types
 interface Clinic {
@@ -1319,9 +1320,7 @@ export default function Home(): React.ReactElement {
           </div>
         )}
       </div>
-      <div>
-        <Index1 />
-      </div>
+      
 
       {isVisible && (
         <button
@@ -1365,6 +1364,9 @@ export default function Home(): React.ReactElement {
           box-shadow: 0 0 0 1px rgba(45, 154, 165, 0.3);
         }
       `}</style>
+
+        <Index1 />
     </div>
+    
   );
 }
