@@ -46,39 +46,40 @@ const navItems: NavItem[] = [
       {
         label: 'Job Posting',
         path: '/clinic/job-posting',
-        icon: '💊',
+        icon: '📢',
       },
       {
         label: 'See All Jobs',
         path: '/clinic/my-jobs',
-        icon: '📋',
+        icon: '💼',
       },
       {
         label: 'See Job Applicants',
         path: '/clinic/job-applicants',
-        icon: '💰',
+        icon: '👥'
+
       },
     ],
   },
-<<<<<<< HEAD
-  { 
-    label: 'See All Jobs', 
-    path: '/clinic/my-jobs', 
-    icon: '📋',
-    description: 'see all job postings'
-  },
-  { 
-    label: 'See Job Applicants', 
-    path: '/clinic/job-applicants', 
-    icon: '💰',
-    description: 'See Job Applicants'
-    // badge: 3
-  },
-  { 
-    label: 'Blog', 
-    path: '/clinic/BlogForm', 
-    icon: '📊',
-    description: 'Analytics & reports'
+  // { 
+  //   label: 'See All Jobs', 
+  //   path: '/clinic/my-jobs', 
+  //   icon: '📋',
+  //   description: 'see all job postings'
+  // },
+  // { 
+  //   label: 'See Job Applicants', 
+  //   path: '/clinic/job-applicants', 
+  //   icon: '💰',
+  //   description: 'See Job Applicants'
+  //   // badge: 3
+  // },
+  {
+    label: 'Blog',
+    path: '/clinic/BlogForm',
+    icon: '📝',
+    description: 'Create posts'
+
   },
   // { 
   //   label: 'Settings', 
@@ -86,8 +87,6 @@ const navItems: NavItem[] = [
   //   icon: '⚙️',
   //   description: 'Clinic configuration'
   // },
-=======
->>>>>>> 86665f868269ea1a3a57e72e845e34d47feee71c
 ];
 
 
@@ -293,7 +292,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                             const childActive = router.pathname === child.path;
                             const childHovered = hoveredItem === child.path;
 
-                                                        return (
+                            return (
                               <Link key={child.path} href={child.path!}>
                                 <div
                                   className={clsx(
@@ -306,47 +305,47 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                                   )}
                                   onMouseEnter={() => setHoveredItem(child.path!)}
                                   onMouseLeave={() => setHoveredItem(null)}
-                                   // Don't close dropdown when clicking on child items within the dropdown
-                                 >
-                                   <div className="flex items-center space-x-2">
-                                                                         <div
-                                       className={clsx(
-                                         'text-base p-1.5 rounded-lg transition-all duration-200 relative flex-shrink-0',
-                                         {
-                                           'bg-white/20 text-white': childActive,
-                                           'text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10':
-                                             !childActive,
-                                         }
-                                       )}
-                                     >
+                                // Don't close dropdown when clicking on child items within the dropdown
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <div
+                                      className={clsx(
+                                        'text-base p-1.5 rounded-lg transition-all duration-200 relative flex-shrink-0',
+                                        {
+                                          'bg-white/20 text-white': childActive,
+                                          'text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10':
+                                            !childActive,
+                                        }
+                                      )}
+                                    >
                                       {child.icon}
                                     </div>
-                                                                         <div className="flex-1 min-w-0">
-                                       <div
-                                         className={clsx(
-                                           'font-medium text-sm transition-colors duration-200 truncate',
-                                           {
-                                             'text-white': childActive,
-                                             'text-gray-900 group-hover:text-gray-900': !childActive,
-                                           }
-                                         )}
-                                       >
-                                         {child.label}
-                                       </div>
-                                       {child.description && (
-                                         <div
-                                           className={clsx(
-                                             'text-xs mt-0.5 transition-all duration-200 truncate',
-                                             {
-                                               'text-white/80': childActive,
-                                               'text-gray-500 group-hover:text-gray-600': !childActive,
-                                             }
-                                           )}
-                                         >
-                                           {child.description}
-                                         </div>
-                                       )}
-                                     </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div
+                                        className={clsx(
+                                          'font-medium text-sm transition-colors duration-200 truncate',
+                                          {
+                                            'text-white': childActive,
+                                            'text-gray-900 group-hover:text-gray-900': !childActive,
+                                          }
+                                        )}
+                                      >
+                                        {child.label}
+                                      </div>
+                                      {child.description && (
+                                        <div
+                                          className={clsx(
+                                            'text-xs mt-0.5 transition-all duration-200 truncate',
+                                            {
+                                              'text-white/80': childActive,
+                                              'text-gray-500 group-hover:text-gray-600': !childActive,
+                                            }
+                                          )}
+                                        >
+                                          {child.description}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </Link>
@@ -358,21 +357,21 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                   );
                 }
 
-                                 // Regular (non-dropdown) item
-                 return (
-                   <Link key={item.path} href={item.path!}>
-                     <div
-                       className={clsx(
-                         'group relative block rounded-lg transition-all duration-200 cursor-pointer p-3',
-                         {
-                           'bg-[#2D9AA5] text-white shadow-sm': isActive,
-                           'hover:bg-gray-50 text-gray-700 hover:text-gray-900': !isActive,
-                         }
-                       )}
-                       onMouseEnter={() => setHoveredItem(item.path!)}
-                       onMouseLeave={() => setHoveredItem(null)}
-                       onClick={() => setOpenDropdown(null)} // Close dropdown when regular item is clicked
-                     >
+                // Regular (non-dropdown) item
+                return (
+                  <Link key={item.path} href={item.path!}>
+                    <div
+                      className={clsx(
+                        'group relative block rounded-lg transition-all duration-200 cursor-pointer p-3',
+                        {
+                          'bg-[#2D9AA5] text-white shadow-sm': isActive,
+                          'hover:bg-gray-50 text-gray-700 hover:text-gray-900': !isActive,
+                        }
+                      )}
+                      onMouseEnter={() => setHoveredItem(item.path!)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      onClick={() => setOpenDropdown(null)} // Close dropdown when regular item is clicked
+                    >
                       {isActive && (
                         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
                       )}
@@ -481,7 +480,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
             {/* Mobile Navigation */}
             <nav className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
               <div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-4 px-2">
-              Health Center Management
+                Health Center Management
               </div>
 
               <div className="space-y-1">
@@ -559,51 +558,51 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                             {item.children.map((child) => {
                               const childActive = router.pathname === child.path;
 
-                                                            return (
+                              return (
                                 <Link key={child.path} href={child.path!}>
                                   <div
-                                     className={clsx(
-                                       'group relative block rounded-lg transition-all duration-200 cursor-pointer touch-manipulation active:scale-98',
-                                       child.description ? 'p-3' : 'p-1.5',
-                                       {
-                                         'bg-[#2D9AA5] text-white shadow-sm': childActive,
-                                         'hover:bg-gray-50 text-gray-700 active:bg-gray-100': !childActive,
-                                       }
-                                     )}
-                                     onClick={handleItemClick}
-                                   >
-                                     <div className="flex items-center space-x-2">
-                                                                             <div
-                                         className={clsx(
-                                           'text-base p-1.5 rounded-lg transition-all duration-200 relative flex-shrink-0',
-                                           {
-                                             'bg-white/20 text-white': childActive,
-                                             'text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10': !childActive,
-                                           }
-                                         )}
-                                       >
+                                    className={clsx(
+                                      'group relative block rounded-lg transition-all duration-200 cursor-pointer touch-manipulation active:scale-98',
+                                      child.description ? 'p-3' : 'p-1.5',
+                                      {
+                                        'bg-[#2D9AA5] text-white shadow-sm': childActive,
+                                        'hover:bg-gray-50 text-gray-700 active:bg-gray-100': !childActive,
+                                      }
+                                    )}
+                                    onClick={handleItemClick}
+                                  >
+                                    <div className="flex items-center space-x-2">
+                                      <div
+                                        className={clsx(
+                                          'text-base p-1.5 rounded-lg transition-all duration-200 relative flex-shrink-0',
+                                          {
+                                            'bg-white/20 text-white': childActive,
+                                            'text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10': !childActive,
+                                          }
+                                        )}
+                                      >
                                         {child.icon}
                                       </div>
-                                                                             <div className="flex-1 min-w-0">
-                                         <div
-                                           className={clsx('font-medium text-sm transition-colors duration-200 truncate', {
-                                             'text-white': childActive,
-                                             'text-gray-900': !childActive,
-                                           })}
-                                         >
-                                           {child.label}
-                                         </div>
-                                         {child.description && (
-                                           <div
-                                             className={clsx('text-xs mt-0.5 transition-all duration-200 truncate', {
-                                               'text-white/80': childActive,
-                                               'text-gray-500': !childActive,
-                                             })}
-                                           >
-                                             {child.description}
-                                           </div>
-                                         )}
-                                       </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div
+                                          className={clsx('font-medium text-sm transition-colors duration-200 truncate', {
+                                            'text-white': childActive,
+                                            'text-gray-900': !childActive,
+                                          })}
+                                        >
+                                          {child.label}
+                                        </div>
+                                        {child.description && (
+                                          <div
+                                            className={clsx('text-xs mt-0.5 transition-all duration-200 truncate', {
+                                              'text-white/80': childActive,
+                                              'text-gray-500': !childActive,
+                                            })}
+                                          >
+                                            {child.description}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </Link>
@@ -615,18 +614,18 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                     );
                   }
 
-                                     // Regular (non-dropdown) item
-                   const MenuItemContent = (
-                     <div
-                       className={clsx(
-                         'group relative block rounded-lg transition-all duration-200 cursor-pointer p-3 touch-manipulation active:scale-98',
-                         {
-                           'bg-[#2D9AA5] text-white shadow-sm': isActive,
-                           'hover:bg-gray-50 text-gray-700 active:bg-gray-100': !isActive,
-                         }
-                       )}
-                       onClick={handleRegularItemClick}
-                     >
+                  // Regular (non-dropdown) item
+                  const MenuItemContent = (
+                    <div
+                      className={clsx(
+                        'group relative block rounded-lg transition-all duration-200 cursor-pointer p-3 touch-manipulation active:scale-98',
+                        {
+                          'bg-[#2D9AA5] text-white shadow-sm': isActive,
+                          'hover:bg-gray-50 text-gray-700 active:bg-gray-100': !isActive,
+                        }
+                      )}
+                      onClick={handleRegularItemClick}
+                    >
                       {isActive && (
                         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
                       )}

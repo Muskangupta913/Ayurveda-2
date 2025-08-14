@@ -1,9 +1,10 @@
-import React, { useEffect, useState, ReactElement  } from 'react';
+import React, { useEffect, useState, ReactElement } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import DoctorLayout from '../../components/DoctorLayout';
-import withDoctorAuth from '../../components/withDoctorAuth'; 
-import type { NextPageWithLayout } from '../_app'; 
+import withDoctorAuth from '../../components/withDoctorAuth';
+import type { NextPageWithLayout } from '../_app';
+import Stats from '../../components/Stats';
 
 interface DoctorAnalytics {
   totalReviews: number;
@@ -425,6 +426,14 @@ const DoctorDashboard: NextPageWithLayout = () => {
           </div>
         )}
       </div>
+      {/* // For Clinic Dashboard */}
+      <Stats
+        role="doctor"
+        config={{
+          tokenKey: 'doctorToken',
+          primaryColor: '#2D9AA5'
+        }}
+      />
     </div>
   );
 };
