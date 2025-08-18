@@ -1615,7 +1615,7 @@ export default function FindDoctor() {
                               </div>
                             </div>
                           )}
-
+                          
                           {/* Overlay badges */}
                           <div className="absolute top-3 right-3 flex flex-col gap-2">
                             {doctor.verified && (
@@ -1638,6 +1638,27 @@ export default function FindDoctor() {
                             <Heart className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
                           </button>
                         </div>
+                         {/* Rating */}
+                          <div className="flex items-center gap-2 mb-2 mt-2 ml-1">
+                            {isLoadingReviews ? (
+                              <span className="text-xs text-gray-500">Loading...</span>
+                            ) : hasRating ? (
+                              <>
+                                <div className="flex">
+                                  {renderStars(doctorReviews[doctor._id].averageRating)}
+                                </div>
+                                <span className="text-sm font-medium text-gray-700">
+                                  {doctorReviews[doctor._id].averageRating.toFixed(1)}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  ({doctorReviews[doctor._id].totalReviews})
+                                </span>
+                              </>
+                            ) : reviewsLoaded ? (
+                              <span className="text-xs text-gray-500">No reviews yet</span>
+                            ) : null}
+                          </div>
+
 
                         {/* Doctor Info */}
                         <div className="p-3">
@@ -1672,26 +1693,7 @@ export default function FindDoctor() {
                             )}
                           </div>
 
-                          {/* Rating */}
-                          <div className="flex items-center gap-2 mb-2">
-                            {isLoadingReviews ? (
-                              <span className="text-xs text-gray-500">Loading...</span>
-                            ) : hasRating ? (
-                              <>
-                                <div className="flex">
-                                  {renderStars(doctorReviews[doctor._id].averageRating)}
-                                </div>
-                                <span className="text-sm font-medium text-gray-700">
-                                  {doctorReviews[doctor._id].averageRating.toFixed(1)}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  ({doctorReviews[doctor._id].totalReviews})
-                                </span>
-                              </>
-                            ) : reviewsLoaded ? (
-                              <span className="text-xs text-gray-500">No reviews yet</span>
-                            ) : null}
-                          </div>
+                         
 
                           {/* Availability */}
                           <div className="mb-3">
@@ -1729,7 +1731,7 @@ export default function FindDoctor() {
 
                           {/* Action buttons */}
                           <div className="flex gap-2">
-                            <button
+                            {/* <button
                               onClick={() => {
                                 setSelectedDoctor(doctor);
                                 setShowCalendarModal(true);
@@ -1738,25 +1740,33 @@ export default function FindDoctor() {
                             >
                               <Calendar className="w-3 h-3 mr-1" />
                               View Slot
-                            </button>
+                            </button> */}
 
-                            <button
+                            {/* <button
                               onClick={() => handleReviewClick(doctor)}
                               className="flex items-center justify-center px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                             >
                               <Star className="w-3 h-3" />
-                            </button>
+                            </button> */}
 
                             {doctor.location?.coordinates?.length === 2 && (
                               <a
                                 href={`https://www.google.com/maps/dir/?api=1&destination=${doctor.location.coordinates[1]},${doctor.location.coordinates[0]}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                                className="flex items-center justify-center px-2.5 py-1.5 bg-blue-600 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                               >
                                 <Navigation className="w-3 h-3" />
                               </a>
                             )}
+
+                            {/* View Full Details */}
+                            <button
+                              onClick={() => router.push(`/doctor/${doctor._id}`)}
+                              className="flex-1 flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:cursor-pointer transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                            >
+                              View Details
+                            </button>
                           </div>
 
                           {/* Contact */}
@@ -1772,41 +1782,7 @@ export default function FindDoctor() {
                             </div>
                           )}
 
-                          {/* Recent Reviews Toggle */}
-                          {doctorReviews[doctor._id]?.reviews?.length > 0 && (
-                            <div className="border-t border-gray-100 pt-2 mt-2">
-                              <button
-                                className="font-semibold text-gray-800 text-xs flex items-center hover:text-[#2D9AA5] transition-colors w-full"
-                                onClick={() =>
-                                  setShowReviewsFor(
-                                    showReviewsFor === doctor._id ? null : doctor._id
-                                  )
-                                }
-                              >
-                                Recent Reviews
-                                <ChevronDown
-                                  className={`ml-1 w-3 h-3 transition-transform ${showReviewsFor === doctor._id ? "rotate-180" : ""
-                                    }`}
-                                />
-                              </button>
-                              {showReviewsFor === doctor._id && (
-                                <div className="space-y-1 mt-1">
-                                  {doctorReviews[doctor._id].reviews
-                                    .slice(0, 2)
-                                    .map((review, idx) => (
-                                      <div key={idx} className="bg-gray-50 rounded-lg p-1.5">
-                                        <p className="text-xs text-gray-700 mb-1 line-clamp-3">
-                                          &quot;{review.comment}&quot;
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                          - {review.userId.name}
-                                        </p>
-                                      </div>
-                                    ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          
                         </div>
                       </div>
                     );

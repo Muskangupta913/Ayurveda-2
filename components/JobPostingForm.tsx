@@ -1,5 +1,5 @@
 // components/JobPostingForm.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 const qualifications = ['MBBS', 'BDS', 'BAMS', 'BHMS', 'MD', 'MS', 'PhD', 'Diploma', 'Other'];
 const jobTypes = ['Full Time', 'Part Time', 'Internship'];
@@ -66,6 +66,9 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [currentStep, setCurrentStep] = useState<number>(0); // 0..3
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Toast functions
   const addToast = (type: ToastType, title: string, message: string) => {
@@ -84,22 +87,93 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
+    setTouched(prev => ({ ...prev, [name]: true }));
+    // live-validate the field
+    const fieldError = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: fieldError }));
   };
 
-  const handleSubmit = () => {
-    // Validate required fields
-    if (!formData.companyName || !formData.jobTitle || !formData.department || !formData.jobType) {
-      addToast('error', 'Missing Required Fields', 'Please fill in all required fields (Company Name, Job Title, Department, Job Type)');
+  const sectionFields: string[][] = useMemo(() => ([
+    // Section 0: Basic Information
+    ['companyName', 'jobTitle', 'department', 'qualification', 'jobType', 'location'],
+    // Section 1: Job Details
+    ['jobTiming', 'workingDays', 'salary', 'noOfOpenings', 'establishment'],
+    // Section 2: Job Description
+    ['description'],
+    // Section 3: Additional Requirements
+    ['skills', 'perks', 'languagesPreferred'],
+  ]), []);
+
+  const validateField = (name: string, value: string): string => {
+    if (!value || value.toString().trim() === '') return 'This field is required';
+    if (name === 'noOfOpenings') {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return 'Enter a valid number greater than 0';
+    }
+    if (name === 'establishment') {
+      // basic year check (optional formatting)
+      if (!/^\d{2,4}$/.test(value.trim())) return 'Enter a valid year (e.g., 2015)';
+    }
+    return '';
+  };
+
+  const validateSection = (step: number): Record<string, string> => {
+    const fields = sectionFields[step] || [];
+    const sectionErrors: Record<string, string> = {};
+    fields.forEach((f) => {
+      const err = validateField(f, (formData as any)[f] || '');
+      if (err) sectionErrors[f] = err;
+    });
+    return sectionErrors;
+  };
+
+  const validateAll = (): Record<string, string> => {
+    const allErrors: Record<string, string> = {};
+    sectionFields.flat().forEach((f) => {
+      const err = validateField(f, (formData as any)[f] || '');
+      if (err) allErrors[f] = err;
+    });
+    return allErrors;
+  };
+
+  const goNext = () => {
+    const sectionErrs = validateSection(currentStep);
+    setErrors(prev => ({ ...prev, ...sectionErrs }));
+    // mark section touched so errors show
+    const touchedUpdate: Record<string, boolean> = {};
+    sectionFields[currentStep].forEach(f => { touchedUpdate[f] = true; });
+    setTouched(prev => ({ ...prev, ...touchedUpdate }));
+    if (Object.keys(sectionErrs).length > 0) {
+      addToast('error', 'Incomplete Section', 'Please fill all required fields to continue');
       return;
     }
+    setCurrentStep(s => Math.min(s + 1, sectionFields.length - 1));
+  };
 
-    // Show confirmation modal
+  const goBack = () => setCurrentStep(s => Math.max(s - 1, 0));
+
+  const handleSubmit = () => {
+    const allErrs = validateAll();
+    setErrors(prev => ({ ...prev, ...allErrs }));
+    // mark all touched
+    const allTouched: Record<string, boolean> = {};
+    sectionFields.flat().forEach(f => { allTouched[f] = true; });
+    setTouched(prev => ({ ...prev, ...allTouched }));
+    if (Object.keys(allErrs).length > 0) {
+      addToast('error', 'Missing Required Fields', 'Please complete all fields before submitting');
+      // jump to first invalid section
+      for (let i = 0; i < sectionFields.length; i++) {
+        const fields = sectionFields[i];
+        if (fields.some(f => allErrs[f])) { setCurrentStep(i); break; }
+      }
+      return;
+    }
     setShowConfirmModal(true);
-    // addToast('info', 'Review Required', 'Please review your job details carefully before posting');
   };
 
   const confirmSubmit = async () => {
@@ -126,6 +200,9 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
         establishment: '',
         workingDays: '',
       });
+      setErrors({});
+      setTouched({});
+      setCurrentStep(0);
     } catch (error) {
       console.error(error);
       addToast('error', 'Failed to Post Job', 'There was an error posting your job. Please try again or contact support.');
@@ -392,12 +469,30 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
           </div>
         </div>
 
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
-          {/* Basic Information */}
-          <div className="mb-6 sm:mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        {/* Form - Multi-step slider */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8 overflow-hidden">
+          {/* Step indicators */}
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            {['Basic Information', 'Job Details', 'Job Description', 'Additional Requirements'].map((label, idx) => (
+              <div key={label} className="flex-1 flex items-center">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${currentStep >= idx ? 'bg-[#2D9AA5] text-white' : 'bg-gray-200 text-gray-600'}`}>{idx + 1}</div>
+                {idx < 3 && (
+                  <div className={`h-1 flex-1 mx-2 ${currentStep > idx ? 'bg-[#2D9AA5]' : 'bg-gray-200'}`}></div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Sliding container */}
+          <div className="relative w-full overflow-hidden">
+            <div
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ width: '400%', transform: `translateX(-${currentStep * 25}%)` }}
+            >
+              {/* Section 1: Basic Information */}
+              <div className="w-full px-1 sm:px-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Company Name *
@@ -409,6 +504,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base resize-none placeholder-gray-500"
                 />
+                    {touched.companyName && errors.companyName && <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>}
               </div>
 
               <div>
@@ -422,6 +518,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                 />
+                    {touched.jobTitle && errors.jobTitle && <p className="mt-1 text-xs text-red-600">{errors.jobTitle}</p>}
               </div>
 
               <div>
@@ -437,6 +534,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   <option value="">Select Department</option>
                   {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
                 </select>
+                    {touched.department && errors.department && <p className="mt-1 text-xs text-red-600">{errors.department}</p>}
               </div>
 
               <div>
@@ -452,6 +550,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   <option value="">Select Qualification</option>
                   {qualifications.map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
+                    {touched.qualification && errors.qualification && <p className="mt-1 text-xs text-red-600">{errors.qualification}</p>}
               </div>
 
               <div>
@@ -467,6 +566,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   <option value="">Select Job Type</option>
                   {jobTypes.map(j => <option key={j} value={j}>{j}</option>)}
                 </select>
+                    {touched.jobType && errors.jobType && <p className="mt-1 text-xs text-red-600">{errors.jobType}</p>}
               </div>
 
               <div>
@@ -480,14 +580,14 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                 />
+                    {touched.location && errors.location && <p className="mt-1 text-xs text-red-600">{errors.location}</p>}
               </div>
             </div>
           </div>
-
-          {/* Job Details */}
-          <div className="mb-6 sm:mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {/* Section 2: Job Details */}
+              <div className="w-full px-1 sm:px-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Job Timing
@@ -499,6 +599,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                 />
+                    {touched.jobTiming && errors.jobTiming && <p className="mt-1 text-xs text-red-600">{errors.jobTiming}</p>}
               </div>
 
               <div>
@@ -512,6 +613,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                 />
+                    {touched.workingDays && errors.workingDays && <p className="mt-1 text-xs text-red-600">{errors.workingDays}</p>}
               </div>
 
               <div>
@@ -525,6 +627,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                 />
+                    {touched.salary && errors.salary && <p className="mt-1 text-xs text-red-600">{errors.salary}</p>}
               </div>
 
               <div>
@@ -539,6 +642,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                 />
+                    {touched.noOfOpenings && errors.noOfOpenings && <p className="mt-1 text-xs text-red-600">{errors.noOfOpenings}</p>}
               </div>
 
               <div className="sm:col-span-2">
@@ -552,84 +656,107 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   onChange={handleChange}
                   className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                 />
+                    {touched.establishment && errors.establishment && <p className="mt-1 text-xs text-red-600">{errors.establishment}</p>}
+              </div>
+                </div>
+              </div>
+
+              {/* Section 3: Job Description */}
+              <div className="w-full px-1 sm:px-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Description</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    placeholder="Describe the job role, responsibilities, and requirements..."
+                    onChange={handleChange}
+                    rows={5}
+                    className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base resize-none placeholder-gray-500"
+                  />
+                  {touched.description && errors.description && <p className="mt-1 text-xs text-red-600">{errors.description}</p>}
+                </div>
+              </div>
+
+              {/* Section 4: Additional Requirements */}
+              <div className="w-full px-1 sm:px-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Requirements</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Required Skills
+                      <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
+                    </label>
+                    <input
+                      name="skills"
+                      value={formData.skills}
+                      placeholder="e.g. Communication, Team Work, Problem Solving"
+                      onChange={handleChange}
+                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                    />
+                    {touched.skills && errors.skills && <p className="mt-1 text-xs text-red-600">{errors.skills}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Perks & Benefits
+                      <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
+                    </label>
+                    <input
+                      name="perks"
+                      value={formData.perks}
+                      placeholder="e.g. Health Insurance, Paid Leave, Training"
+                      onChange={handleChange}
+                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                    />
+                    {touched.perks && errors.perks && <p className="mt-1 text-xs text-red-600">{errors.perks}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Preferred Languages
+                      <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
+                    </label>
+                    <input
+                      name="languagesPreferred"
+                      value={formData.languagesPreferred}
+                      placeholder="e.g. English, Hindi, Local Language"
+                      onChange={handleChange}
+                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                    />
+                    {touched.languagesPreferred && errors.languagesPreferred && <p className="mt-1 text-xs text-red-600">{errors.languagesPreferred}</p>}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="mb-6 sm:mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Description</h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                placeholder="Describe the job role, responsibilities, and requirements..."
-                onChange={handleChange}
-                rows={5}
-                className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base resize-none placeholder-gray-500"
-              />
-            </div>
-          </div>
-
-          {/* Additional Requirements */}
-          <div className="mb-6 sm:mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Requirements</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Required Skills
-                  <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
-                </label>
-                <input
-                  name="skills"
-                  value={formData.skills}
-                  placeholder="e.g. Communication, Team Work, Problem Solving"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Perks & Benefits
-                  <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
-                </label>
-                <input
-                  name="perks"
-                  value={formData.perks}
-                  placeholder="e.g. Health Insurance, Paid Leave, Training"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Preferred Languages
-                  <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
-                </label>
-                <input
-                  name="languagesPreferred"
-                  value={formData.languagesPreferred}
-                  placeholder="e.g. English, Hindi, Local Language"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end pt-4 border-t border-gray-200">
+          {/* Navigation */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
             <button
-              onClick={handleSubmit}
-              className="bg-[#2D9AA5] text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-[#247a83] transition-colors font-medium text-sm sm:text-base"
+              onClick={goBack}
+              disabled={currentStep === 0}
+              className="px-4 sm:px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Post Job
+              Back
             </button>
+            {currentStep < sectionFields.length - 1 ? (
+              <button
+                onClick={goNext}
+                className="bg-[#2D9AA5] text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-[#247a83] transition-colors font-medium text-sm sm:text-base"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                className="bg-[#2D9AA5] text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-[#247a83] transition-colors font-medium text-sm sm:text-base"
+              >
+                Review & Submit
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -58,7 +58,13 @@ function ReviewForm() {
 
       console.log('Review submitted:', response.data);
       setSubmitted(true);
-      setTimeout(() => router.push('/'), 3000);
+      setTimeout(() => {
+        if (clinicId) {
+          window.location.href = `/clinics/${clinicId}`;
+        } else {
+          window.location.href = '/';
+        }
+      }, 3000);
     } catch (err) {
       console.error(err);
       alert('Failed to submit review');

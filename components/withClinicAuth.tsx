@@ -45,7 +45,7 @@ export default function withClinicAuth<P extends Record<string, unknown> = Recor
               // ⏳ Wait 3 seconds before redirecting
               setTimeout(() => {
                 router.replace('/clinic/login-clinic');
-              }, 9000);
+              }, 4000);
             } else {
               toast.error('Authentication failed.');
               router.replace('/clinic/login-clinic');
