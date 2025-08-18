@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
@@ -8,39 +7,17 @@ import {
   Search,
   Star,
   Clock,
-  Phone,
   Navigation,
-  Heart,
   Shield,
-  Award,
-  Filter,
-  Stethoscope,
-  Mail,
-  GraduationCap,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
   MessageCircle,
-  Users,
-  Leaf,
-  TrendingUp,
-  Globe,
-  Calendar,
-  Video,
-  BookOpen,
-  Target,
-  CheckCircle,
   X,
 } from "lucide-react";
-import { ChangeEvent, FormEvent } from "react";
 import React from "react";
-import type { KeyboardEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import AuthModal from "../components/AuthModal";
 import Image from "next/image";
 import SearchCard from "../components/SearchCard";
 import Index1 from "../components/Index1";
-import CalculatorGames from "../components/CalculatorGames";
 
 // Types
 interface Clinic {
@@ -110,27 +87,8 @@ export default function Home(): React.ReactElement {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
 
-  // Add state to track if a search has been performed
-  // Removed: searchPerformed, specializationFocused, handleSearchClick, res
 
-  // Add a ref for the registration section
-  const registrationRef = useRef<HTMLDivElement | null>(null);
 
-  // Add a state variable for the selected file name
-  const [resumeFileName, setResumeFileName] = useState<string>("");
-
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [errorModal, setErrorModal] = useState<ErrorModalState>({
-    show: false,
-    message: "",
-  });
-
-  // Add state for treatments and specialization type
-  const [treatments, setTreatments] = useState<string[]>([]);
-  const [specializationType, setSpecializationType] = useState<
-    "dropdown" | "other"
-  >("dropdown");
-  const [customSpecialization, setCustomSpecialization] = useState("");
 
   const [clinicReviews, setClinicReviews] = useState<{
     [key: string]: ReviewData;
@@ -200,7 +158,6 @@ export default function Home(): React.ReactElement {
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const suggestionsDropdownRef = useRef<HTMLDivElement | null>(null);
-  const [fileError, setFileError] = useState("");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -331,12 +288,6 @@ export default function Home(): React.ReactElement {
 
     return getSortedClinics(filtered);
   };
-
- 
-  
-
-
- 
 
   // Distance Badge
 
@@ -1218,9 +1169,9 @@ export default function Home(): React.ReactElement {
                           )}
 
                           {/* Heart icon */}
-                          <button className="absolute top-2 left-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
+                          {/* <button className="absolute top-2 left-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
                             <Heart className="w-3 h-3 text-gray-400 hover:text-red-500 transition-colors" />
-                          </button>
+                          </button> */}
                         </div>
 
                         {/* Clinic Info - Reduced padding */}
@@ -1284,31 +1235,39 @@ export default function Home(): React.ReactElement {
                          
                           {/* Action buttons - Slightly smaller padding */}
                           <div className="flex gap-1.5">
-                            <button
+                            {/* <button
                               onClick={() => handleEnquiryClick(clinic)}
                               className="flex-1 flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-lg hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5] transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                             >
                               <MessageCircle className="w-3 h-3 mr-1" />
                               Enquiry
-                            </button>
+                            </button> */}
 
-                            <button
+                            {/* <button
                               onClick={() => handleReviewClick(clinic)}
                               className="flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                             >
                               <Star className="w-3 h-3" />
-                            </button>
+                            </button> */}
 
                             {clinic.location?.coordinates?.length === 2 && (
                               <a
                                 href={`https://www.google.com/maps/dir/?api=1&destination=${clinic.location.coordinates[1]},${clinic.location.coordinates[0]}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                                className="flex items-center justify-center px-2.5 py-1.5 bg-blue-600 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
                               >
                                 <Navigation className="w-3 h-3" />
                               </a>
                             )}
+
+                            {/* View Full Details */}
+                            <button
+                              onClick={() => router.push(`/clinics/${clinic._id}`)}
+                              className="flex-1 flex items-center justify-center px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:cursor-pointer transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
+                            >
+                              View Details
+                            </button>
                           </div>
                         </div>
                       </div>

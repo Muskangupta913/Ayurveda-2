@@ -13,12 +13,27 @@ export default function withDoctorAuth<P extends object>(
     const router = useRouter();
 
     useEffect(() => {
-      const checkAuth = async () => {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('doctorToken') : null;
+      const clearStorage = () => {
+        // Remove generic and doctor-specific keys from both storages
+        const keys = ['token', 'doctorToken', 'doctorUser'];
+        keys.forEach((k) => {
+          try { localStorage.removeItem(k); } catch {}
+          try { sessionStorage.removeItem(k); } catch {}
+        });
+      };
 
-        if (!token) {
+      const checkAuth = async () => {
+        const token = typeof window !== 'undefined'
+          ? (localStorage.getItem('doctorToken') || sessionStorage.getItem('doctorToken') || localStorage.getItem('token') || sessionStorage.getItem('token'))
+          : null;
+        const user = typeof window !== 'undefined'
+          ? (localStorage.getItem('doctorUser') || sessionStorage.getItem('doctorUser'))
+          : null;
+
+        if (!token || !user) {
           toast.error('Please login to continue');
-          router.replace('/doctor/login');
+          clearStorage();
+          setTimeout(() => router.replace('/doctor/login'), 4000);
           return;
         }
 
@@ -35,19 +50,18 @@ export default function withDoctorAuth<P extends object>(
             setIsAuthenticated(true);
           } else {
             if (data.message === 'Token expired') {
-              toast.error('Session expired. Please login again.');
+              toast.error('Session expired. Logging out in 4 seconds…');
             } else {
-              toast.error('Authentication failed. Please login again.');
+              toast.error('Authentication failed. Logging out in 4 seconds…');
             }
-
-            localStorage.removeItem('doctorToken');
-            router.replace('/doctor/login');
+            clearStorage();
+            setTimeout(() => router.replace('/doctor/login'), 4000);
           }
         } catch (error) {
           console.error('Doctor token verification failed:', error);
-          toast.error('Something went wrong. Please login again.');
-          localStorage.removeItem('doctorToken');
-          router.replace('/doctor/login');
+          toast.error('Something went wrong. Logging out in 4 seconds…');
+          clearStorage();
+          setTimeout(() => router.replace('/doctor/login'), 4000);
         } finally {
           setIsLoading(false);
         }

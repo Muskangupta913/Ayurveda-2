@@ -2,8 +2,8 @@
 // import { NextSeoProps } from 'next-seo';
 
 const config = {
-  title: "Ayurveda Near Me – Trusted Ayurvedic Clinics in Dubai & UAE",
-  description: "Find certified Ayurvedic doctors and healing centers near you. Explore top Ayurveda clinics in Dubai and across the UAE for natural treatments and holistic care.",
+  title: "ZEVA",
+  description: "",
   openGraph: {
     type: "website",
     locale: "en_US",

@@ -77,9 +77,15 @@ function EnquiryFormPage() {
     }
   };
 
-  // Navigate to homepage
-  const goToHomepage = () => {
-    router.push('/');
+  // Navigate to clinic page
+  const goToClinicPage = () => {
+    if (clinicId) {
+      // Redirect to the dynamic clinic page
+      window.location.href = `/clinics/${clinicId}`;
+    } else {
+      // fallback to home if no id
+      window.location.href = '/';
+    }
   };
 
   if (!clinicDetails) return <p className="p-4">Loading clinic info...</p>;
@@ -139,11 +145,11 @@ function EnquiryFormPage() {
                   
                   {/* Homepage Button */}
                   <button
-                    onClick={goToHomepage}
+                    onClick={goToClinicPage}
                     className="mt-6 flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl mx-auto"
                   >
                     <Home className="w-5 h-5" />
-                    <span>Go to Homepage</span>
+                    <span>Go to Clinic Page</span>
                   </button>
                 </div>
               ) : (
