@@ -12,7 +12,8 @@ export default async function handler(req, res) {
   await dbConnect();
 
   const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: "No token provided" });
+  if (!authHeader)
+    return res.status(401).json({ message: "No token provided" });
 
   const token = authHeader.split(" ")[1];
   let userId;
@@ -24,12 +25,13 @@ export default async function handler(req, res) {
   }
 
   const { applicationId, status } = req.body;
-try {
+  try {
     const updatedApplication = await JobApplication.findByIdAndUpdate(
       applicationId,
       { status },
       { new: true }
-    ).populate("applicantId"); // get applicant details
+    ).populate("applicantId")
+.populate("jobId"); // ✅ populate job posting// get applicant details
 
     if (!updatedApplication) {
       return res.status(404).json({ message: "Application not found" });
@@ -37,23 +39,23 @@ try {
 
     const applicantUserId = updatedApplication.applicantId._id;
     const jobTitle = updatedApplication.jobId?.title || "Job Posting";
+    console.log('jobtitle',jobTitle);
 
     // ✅ Create notification in DB
     const notification = await Notification.create({
-  user: applicantUserId,
-  message: `Your application for "${jobTitle}" has been updated to "${status}"`,
-  type: "job-status",
-  relatedJobApplication: updatedApplication._id, // ✅ so frontend can link
-  relatedJob: updatedApplication.jobId // optional if you want job details page
-});
-
+      user: applicantUserId,
+      message: `Your application for "${jobTitle}" has been updated to "${status}"`,
+      type: "job-status",
+       relatedJobApplication: updatedApplication._id,   // JobApplication ID
+  relatedJob: updatedApplication.jobId._id   
+    });
 
     // ✅ Emit socket event to applicant
     emitNotificationToUser(applicantUserId.toString(), {
       _id: notification._id,
       message: notification.message,
       createdAt: notification.createdAt,
-      isRead: false
+      isRead: false,
     });
 
     // ✅ Also emit "applicationStatusChanged" so UI updates instantly
@@ -61,10 +63,12 @@ try {
       type: "applicationStatusChanged",
       message: notification.message,
       applicationId: updatedApplication._id,
-      newStatus: status
+      newStatus: status,
     });
 
-    return res.status(200).json({ message: "Status updated & notification sent" });
+    return res
+      .status(200)
+      .json({ message: "Status updated & notification sent" });
   } catch (error) {
     console.error("Status update error:", error);
     return res.status(500).json({ message: "Server error" });

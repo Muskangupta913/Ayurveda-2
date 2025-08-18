@@ -22,7 +22,7 @@ export default function BlogList() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
-    const router = useRouter();
+  const router = useRouter();
 
   // Modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -70,11 +70,11 @@ export default function BlogList() {
 
   const handleLike = async (blogId: string) => {
     if (!isAuthenticated) {
-    setAuthModalMode("login");
-    setShowAuthModal(true);
-    pendingLikeBlogId.current = blogId;
-    return;
-  }
+      setAuthModalMode("login");
+      setShowAuthModal(true);
+      pendingLikeBlogId.current = blogId;
+      return;
+    }
 
     try {
       const res = await fetch("/api/blog/likeBlog", {
@@ -104,13 +104,13 @@ export default function BlogList() {
       console.error("Like error:", err);
     }
   };
-const handleComment = async (blogId: string, text: string) => {
-  if (!isAuthenticated) {
-    setAuthModalMode("login");
-    setShowAuthModal(true);
-    pendingComment.current = { blogId, text };
-    return;
-  }
+  const handleComment = async (blogId: string, text: string) => {
+    if (!isAuthenticated) {
+      setAuthModalMode("login");
+      setShowAuthModal(true);
+      pendingComment.current = { blogId, text };
+      return;
+    }
 
     try {
       const res = await fetch("/api/blog/commentBlog", {
@@ -121,18 +121,18 @@ const handleComment = async (blogId: string, text: string) => {
         },
         body: JSON.stringify({ blogId, text }),
       });
- const json = await res.json();
-    if (res.ok && json.success) {
-      setBlogs(prev =>
-        prev.map(blog =>
-          blog._id === blogId
-            ? { ...blog, commentsCount: json.commentsCount }
-            : blog
-        )
-      );
-    } else {
-      console.error("Failed to post comment:", json.error);
-    }
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setBlogs((prev) =>
+          prev.map((blog) =>
+            blog._id === blogId
+              ? { ...blog, commentsCount: json.commentsCount }
+              : blog
+          )
+        );
+      } else {
+        console.error("Failed to post comment:", json.error);
+      }
     } catch (err) {
       console.error("Comment error:", err);
     }
@@ -185,18 +185,17 @@ const handleComment = async (blogId: string, text: string) => {
                 >
                   👍 Like {blog.likesCount ?? 0}
                 </button>
-
                 <button
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/blogs/${blog._id}`);
-  }}
-  className="text-green-500"
->
-  💬 Comment {blog.commentsCount ?? 0}
-</button>
-;
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    router.push(`/blogs/${blog._id}`);
+                  }}
+                  className="text-green-500"
+                >
+                  💬 Comment {blog.commentsCount ?? 0}
+                </button>
+                ;
               </div>
             </div>
           );
@@ -204,15 +203,15 @@ const handleComment = async (blogId: string, text: string) => {
       </div>
 
       {/* Auth Modal */}
-     {showAuthModal && (
-  <AuthModal
-    isOpen={showAuthModal}
-    onClose={() => setShowAuthModal(false)}
-    onSuccess={() => {
-      setShowAuthModal(false);
-      // Will retry like/comment after login because of useEffect
-    }}
-    initialMode={authModalMode}
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={() => {
+            setShowAuthModal(false);
+            // Will retry like/comment after login because of useEffect
+          }}
+          initialMode={authModalMode}
         />
       )}
     </>

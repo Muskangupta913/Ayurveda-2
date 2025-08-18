@@ -11,6 +11,12 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "JobApplication",
     },
+    
+    relatedJob: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "JobPosting",
+},
+
       relatedComment: { type: mongoose.Schema.Types.ObjectId },
 
     // Optional: For blog reply notifications

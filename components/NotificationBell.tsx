@@ -7,35 +7,32 @@ let socket;
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-  // Count unread notifications
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     const decoded = jwtDecode(token);
-    const userId = decoded.userId;
+    setUserId(decoded.userId);
 
-    // 1️⃣ Fetch existing notifications
-    fetch(`/api/push-notification/reply-notifications?userId=${userId}`)
-      .then(res => res.json())
-      .then(data => {
-        setNotifications(data.notifications || []);
-      })
-      .catch(err => console.error("Error fetching notifications:", err));
+    // Fetch existing notifications
+    fetch(`/api/push-notification/reply-notifications?userId=${decoded.userId}`)
+      .then((res) => res.json())
+      .then((data) => setNotifications(data.notifications || []))
+      .catch((err) => console.error("Error fetching notifications:", err));
 
-    // 2️⃣ Socket.IO connection
+    // Socket.IO connection
     socket = io({ path: "/api/push-notification/socketio" });
-    socket.emit("register", userId);
+    socket.emit("register", decoded.userId);
 
-    // Receive new notifications live
     socket.on("newNotification", (notif) => {
       if (Notification.permission === "granted") {
         new Notification("New Reply", { body: notif.message });
       }
-      setNotifications(prev => [{ ...notif, isRead: false }, ...prev]);
+      setNotifications((prev) => [{ ...notif, isRead: false }, ...prev]);
     });
 
     if (Notification.permission !== "granted") {
@@ -47,7 +44,6 @@ export default function NotificationBell() {
     };
   }, []);
 
-  // 3️⃣ Mark all as read when dropdown opens
   const handleToggleDropdown = () => {
     const newState = !showDropdown;
     setShowDropdown(newState);
@@ -56,19 +52,41 @@ export default function NotificationBell() {
       fetch(`/api/push-notification/mark-read`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: notifications.filter(n => !n.isRead).map(n => n._id) })
+        body: JSON.stringify({
+          ids: notifications.filter((n) => !n.isRead).map((n) => n._id),
+        }),
       }).then(() => {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       });
     }
   };
 
+  // Delete single notification
+  const deleteNotification = (id) => {
+    fetch(`/api/push-notification/delete-notification?id=${id}`, { method: "DELETE" })
+      .then((res) => res.json())
+      .then(() => {
+        setNotifications((prev) => prev.filter((n) => n._id !== id));
+      })
+      .catch((err) => console.error("Delete error:", err));
+  };
+
+  // Clear all notifications
+  const clearAllNotifications = () => {
+    if (!userId) return;
+    fetch(`/api/push-notification/clearAll-notification?userId=${userId}`, {
+      method: "DELETE",
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setNotifications([]);
+      })
+      .catch((err) => console.error("Clear all error:", err));
+  };
+
   return (
     <div className="relative">
-      <button
-        onClick={handleToggleDropdown}
-        className="relative p-2"
-      >
+      <button onClick={handleToggleDropdown} className="relative p-2">
         🔔
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full px-1">
@@ -82,22 +100,50 @@ export default function NotificationBell() {
           {notifications.length === 0 ? (
             <p className="p-4 text-gray-500">No notifications</p>
           ) : (
-            notifications.map((n, i) => (
-              <div
-                key={n._id || i}
-                className={`p-3 border-b cursor-pointer ${
-                  n.isRead ? "bg-gray-100" : "bg-white"
-                } hover:bg-gray-50`}
-                onClick={() => {
-                  window.location.href = `/blogs/${n.relatedBlog}#${n.relatedComment}`;
-                }}
-              >
-                <p className="text-sm">{n.message}</p>
-                <p className="text-xs text-gray-400">
-                  {new Date(n.createdAt).toLocaleString()}
-                </p>
+            <>
+              <div className="flex justify-between items-center px-3 py-2 border-b">
+                <span className="font-semibold">Notifications</span>
+                <button
+                  onClick={clearAllNotifications}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  Clear All
+                </button>
               </div>
-            ))
+
+              {notifications.map((n) => (
+                <div
+                  key={n._id}
+                  className={`p-3 border-b flex justify-between items-start ${
+                    n.isRead ? "bg-gray-100" : "bg-white"
+                  } hover:bg-gray-50`}
+                >
+                  <div
+    className="flex-1 cursor-pointer"
+    onClick={() => {
+      if (n.type === "blog-reply" && n.relatedBlog) {
+        window.location.href = `/blogs/${n.relatedBlog}#${n.relatedComment}`;
+      }else if (n.type === "job-status" && n.relatedJob) {
+  // ✅ Go to JobPosting page
+  window.location.href = `/job-details/${n.relatedJob}`;
+        // depending on your route for job application details
+      }
+    }}
+  >
+                    <p className="text-sm">{n.message}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(n.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => deleteNotification(n._id)}
+                    className="ml-2 text-xs text-gray-500 hover:text-red-600"
+                  >
+                    ✖
+                  </button>
+                </div>
+              ))}
+            </>
           )}
         </div>
       )}

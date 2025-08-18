@@ -9,11 +9,17 @@ export default async function handler(req, res) {
 
     try {
       await Notification.findByIdAndDelete(id);
-      return res.status(200).json({ success: true, message: "Notification deleted" });
+      return res
+        .status(200)
+        .json({ success: true, message: "Notification deleted" });
     } catch (err) {
-      return res.status(500).json({ success: false, message: "Failed to delete notification" });
+      return res
+        .status(500)
+        .json({ success: false, message: "Failed to delete notification" });
     }
   } else {
-    return res.status(405).json({ success: false, message: "Method not allowed" });
+    return res
+      .status(405)
+      .json({ success: false, message: "Method not allowed" });
   }
 }

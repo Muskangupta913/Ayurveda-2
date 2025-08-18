@@ -26,10 +26,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const applications = await JobApplication.find({ applicantId: userId })
-      .populate("jobId"); // pulls full job details
+    const applications = await JobApplication.find({ 
+      applicantId: userId,
+      jobId: { $ne: null } // Filter out applications where jobId is null
+    }).populate("jobId"); // pulls full job details
 
-    return res.status(200).json(applications);
+    // Additional filtering to ensure populated jobId is not null
+    // This handles cases where the referenced job was deleted
+    const validApplications = applications.filter(app => app.jobId !== null);
+
+    return res.status(200).json(validApplications);
   } catch (error) {
     console.error("Error fetching applied jobs:", error);
     return res.status(500).json({ message: "Server error" });
