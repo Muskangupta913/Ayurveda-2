@@ -18,6 +18,7 @@ import AuthModal from "../components/AuthModal";
 import Image from "next/image";
 import SearchCard from "../components/SearchCard";
 import Index1 from "../components/Index1";
+import Blog from "../components/blog";
 
 // Types
 interface Clinic {
@@ -595,7 +596,7 @@ export default function Home(): React.ReactElement {
     fetchReviews();
   }, [clinics]);
 
- 
+
 
   // Helper functions to add
   const totalPages = Math.ceil(getFilteredClinics().length / clinicsPerPage);
@@ -614,7 +615,7 @@ export default function Home(): React.ReactElement {
     }));
   };
 
- 
+
 
 
 
@@ -1116,7 +1117,7 @@ export default function Home(): React.ReactElement {
                   {getFilteredClinics().map((clinic, index) => {
                     const hasRating = clinicReviews[clinic._id]?.totalReviews > 0;
                     const reviewsLoaded = clinicReviews[clinic._id] !== undefined;
-// i need form here  
+                    // i need form here  
 
                     return (
                       <div
@@ -1232,7 +1233,7 @@ export default function Home(): React.ReactElement {
                               </div>
                             )}
                           </div>
-                         
+
                           {/* Action buttons - Slightly smaller padding */}
                           <div className="flex gap-1.5">
                             {/* <button
@@ -1279,7 +1280,7 @@ export default function Home(): React.ReactElement {
           </div>
         )}
       </div>
-      
+
 
       {isVisible && (
         <button
@@ -1323,9 +1324,11 @@ export default function Home(): React.ReactElement {
           box-shadow: 0 0 0 1px rgba(45, 154, 165, 0.3);
         }
       `}</style>
-
-        <Index1 />
+      <Index1 />
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Blog />
+        </div>
     </div>
-    
+
   );
 }

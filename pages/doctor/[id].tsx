@@ -49,6 +49,7 @@ export default function DoctorDetail() {
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
+  const [modalReview, setModalReview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -159,6 +160,17 @@ export default function DoctorDetail() {
   };
 
   const futureSlots = (profile?.timeSlots || []).filter((ts) => isTodayOrFuture(ts.date));
+
+  useEffect(() => {
+    if (modalReview) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [modalReview]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (error || !profile) return <div className="min-h-screen flex items-center justify-center">{error || 'Not found'}</div>;
@@ -354,59 +366,67 @@ export default function DoctorDetail() {
                 </div>
               </div>
             )}
+
+            {/* Reviews Section - moved below slots */}
+            <div className="mt-8">
+              <h3 className="font-semibold text-gray-800 text-xl mb-4">Recent Reviews</h3>
+              {reviewsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5] mx-auto"></div>
+                  <p className="text-gray-500 mt-2">Loading reviews...</p>
+                </div>
+              ) : reviewData && reviewData.reviews.length > 0 ? (
+                <div className="space-y-4">
+                  {reviewData.reviews.slice(0, 6).map((r, idx) => (
+                    <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center text-white text-sm font-medium">
+                          {r.userId.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          {(() => {
+                            const lines = r.comment.split(/\r?\n/);
+                            const isLong = lines.length > 7;
+                            const displayText = isLong ? lines.slice(0, 7).join('\n') : r.comment;
+                            return (
+                              <>
+                                <p
+                                  className="text-sm text-gray-800 mb-2 leading-relaxed"
+                                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line', display: '-webkit-box', WebkitLineClamp: isLong ? 7 : 'unset', WebkitBoxOrient: 'vertical', overflow: isLong ? 'hidden' : 'visible' }}
+                                >
+                                  "{displayText}"
+                                </p>
+                                {isLong && (
+                                  <button
+                                    className="text-xs text-[#2D9AA5] underline cursor-pointer mb-2"
+                                    onClick={() => setModalReview(r.comment)}
+                                  >
+                                    Read More
+                                  </button>
+                                )}
+                                <p className="text-xs text-gray-500 font-medium">- {r.userId.name}</p>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-gray-400 text-2xl">💬</span>
+                  </div>
+                  <p className="text-gray-500">No reviews yet</p>
+                  <p className="text-gray-400 text-sm mt-1">Be the first to leave a review!</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Column - Reviews */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-6">
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800 text-xl">Recent Reviews</h3>
-                  {reviewData && reviewData.reviews.length > 0 && (
-                    <button
-                      className="text-sm text-[#2D9AA5] hover:text-[#2D9AA5]/80 font-medium"
-                      onClick={() => setShowReviews((v) => !v)}
-                    >
-                      {showReviews ? 'Hide' : 'Show All'}
-                    </button>
-                  )}
-                </div>
-                
-                {reviewsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5] mx-auto"></div>
-                    <p className="text-gray-500 mt-2">Loading reviews...</p>
-                  </div>
-                ) : reviewData && reviewData.reviews.length > 0 ? (
-                  showReviews && (
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
-                      {reviewData.reviews.slice(0, 6).map((r, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center text-white text-sm font-medium">
-                              {r.userId.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-800 mb-2 leading-relaxed">"{r.comment}"</p>
-                              <p className="text-xs text-gray-500 font-medium">- {r.userId.name}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <span className="text-gray-400 text-2xl">💬</span>
-                    </div>
-                    <p className="text-gray-500">No reviews yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Be the first to leave a review!</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* REMOVE the entire right column review section (lines 360-414) */}
         </div>
       </div>
     </div>
@@ -470,6 +490,22 @@ export default function DoctorDetail() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+    )}
+    <CalculatorGames/>
+
+    {/* Modal for full review */}
+    {modalReview && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg w-full relative">
+          <button
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+            onClick={() => setModalReview(null)}
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="text-gray-800 whitespace-pre-line break-words">{modalReview}</div>
         </div>
       </div>
     )}

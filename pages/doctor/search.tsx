@@ -13,10 +13,6 @@ import {
   Shield,
   Calendar,
   X,
-  Clock3,
-  HeartHandshake,
-  Zap,
-  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import AuthModal from "../../components/AuthModal";
