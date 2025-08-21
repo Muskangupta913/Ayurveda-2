@@ -177,7 +177,7 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
                 </div>
                 <div>
                   <span className="font-bold text-xl text-gray-900 block">
-                    AyurVeda
+                    ZEVA
                   </span>
                   <span className="text-sm text-[#2D9AA5] font-medium">Admin Dashboard</span>
                 </div>
@@ -321,7 +321,7 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
                     </div>
                     <div>
                       <span className="font-bold text-lg text-gray-900 block">
-                        AyurVeda
+                        ZEVA
                       </span>
                       <span className="text-xs text-[#2D9AA5] font-medium">Admin Dashboard</span>
                     </div>

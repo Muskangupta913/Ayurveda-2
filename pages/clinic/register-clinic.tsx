@@ -510,12 +510,12 @@ const RegisterClinic: React.FC & {
           <div className="flex justify-center mb-4">
             <Leaf className="w-12 h-12 text-[#2D9AA5]" />
           </div>
-          <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] bg-clip-text text-transparent mb-4">
-            Register Your Health Center
+          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] bg-clip-text text-transparent mb-4">
+            Register Your Health Center on ZEVA Today
           </h1>
-          <p className="text-gray-700 text-lg">
+          {/* <p className="text-gray-700 text-lg">
             Join the ancient healing network
-          </p>
+          </p> */}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">

@@ -164,153 +164,198 @@ function DoctorReviewForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-all duration-200 hover:translate-x-1"
+  <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 p-2 sm:p-4 lg:p-8">
+    <div className="max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 sm:mb-6 transition-all duration-200 hover:translate-x-1 text-sm sm:text-base"
+        >
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          Back
+        </button>
+        
+        <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div 
+            className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-lg"
+            style={{
+              background: 'linear-gradient(to right, #2D9AA5, #228B8D)'
+            }}
           >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
-          
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <MessageSquare className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                Write a Review
-              </h1>
-              <p className="text-gray-600 mt-2 text-lg">Share your experience with Dr. {doctorName}</p>
-            </div>
+            <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              Write a Review
+            </h1>
+            <p className="text-gray-600 mt-1 sm:mt-2 text-base sm:text-lg">Share your experience with Dr. {doctorName}</p>
           </div>
         </div>
+      </div>
 
-        {/* Review Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 relative overflow-hidden">
-          {/* Subtle background pattern */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-50 to-purple-50 rounded-full -translate-y-20 translate-x-20 opacity-50"></div>
-          
-          <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
-            {/* Doctor Info */}
-            <div className="flex items-center gap-4 p-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-100">
-              <div className="w-14 h-14 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center shadow-md">
-                <User className="w-7 h-7 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 text-lg">Dr. {doctorName}</h3>
-                <p className="text-gray-600">Healthcare Provider</p>
-              </div>
+      {/* Review Form */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
+        {/* Subtle background pattern */}
+        <div 
+          className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 rounded-full -translate-y-16 sm:-translate-y-20 translate-x-16 sm:translate-x-20 opacity-50"
+          style={{
+            background: 'linear-gradient(to bottom right, #F0FDFA, #CCFBF1)'
+          }}
+        ></div>
+        
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 relative z-10">
+          {/* Doctor Info */}
+          <div 
+            className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl border border-gray-100"
+            style={{
+              background: 'linear-gradient(to right, #F7FFFE, #ECFDF5)'
+            }}
+          >
+            <div 
+              className="w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-md"
+              style={{
+                background: 'linear-gradient(to right, #CCFBF1, #A7F3D0)'
+              }}
+            >
+              <User className="w-5 h-5 sm:w-7 sm:h-7" style={{ color: '#2D9AA5' }} />
             </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-base sm:text-lg">Dr. {doctorName}</h3>
+              <p className="text-gray-600 text-sm sm:text-base">Healthcare Provider</p>
+            </div>
+          </div>
 
-            {/* Rating Section */}
-            <div className="text-center bg-gray-50 rounded-xl p-8">
-              <label className="block text-lg font-medium text-gray-700 mb-6">
-                Rate your experience
-              </label>
-              
-              <div className="flex justify-center gap-3 mb-6">
-                {renderStars()}
-              </div>
-              
-              {/* Emoji and Rating Display */}
-              <div className="flex items-center justify-center gap-4 mb-4">
-                {(hoverRating || rating) > 0 && (
-                  <>
-                    <div className={`text-3xl transition-all duration-300 ${
-                      showEmojiAnimation ? 'animate-bounce scale-125' : ''
+          {/* Rating Section */}
+          <div className="text-center bg-gray-50 rounded-xl p-4 sm:p-6 lg:p-8">
+            <label className="block text-base sm:text-lg font-medium text-gray-700 mb-4 sm:mb-6">
+              Rate your experience
+            </label>
+            
+            <div className="flex justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+              {renderStars()}
+            </div>
+            
+            {/* Emoji and Rating Display */}
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              {(hoverRating || rating) > 0 && (
+                <>
+                  <div className={`text-2xl sm:text-3xl transition-all duration-300 ${
+                    showEmojiAnimation ? 'animate-bounce scale-125' : ''
+                  }`}>
+                    {getRatingEmoji(hoverRating || rating)}
+                  </div>
+                  <div className="text-center">
+                    <p className={`text-xl sm:text-2xl font-bold transition-colors duration-300 ${
+                      getRatingColor(hoverRating || rating)
                     }`}>
-                      {getRatingEmoji(hoverRating || rating)}
-                    </div>
-                    <div className="text-center">
-                      <p className={`text-2xl font-bold transition-colors duration-300 ${
-                        getRatingColor(hoverRating || rating)
-                      }`}>
-                        {getRatingText(hoverRating || rating)}
-                      </p>
-                      <p className="text-gray-600 text-lg">
-                        ({hoverRating || rating}/5)
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-              
-              {/* Rating feedback text */}
-              {rating > 0 && (
-                <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    {rating <= 2 && "We're sorry to hear about your experience. Your feedback helps us improve."}
-                    {rating === 3 && "Thank you for your feedback. We appreciate your honest review."}
-                    {rating >= 4 && "We're delighted to hear about your positive experience!"}
-                  </p>
-                </div>
+                      {getRatingText(hoverRating || rating)}
+                    </p>
+                    <p className="text-gray-600 text-base sm:text-lg">
+                      ({hoverRating || rating}/5)
+                    </p>
+                  </div>
+                </>
               )}
             </div>
-
-            {/* Comment Section */}
-            <div>
-              <label className="block text-lg font-medium text-gray-700 mb-4">
-                Share your thoughts (optional)
-              </label>
-              <div className="relative">
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  rows={4}
-                  className="text-gray-700 w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200 hover:border-gray-300 placeholder-black"
-                  placeholder="Tell us about your experience with this doctor..."
-                  maxLength={500}
-                />
-                <div className="absolute bottom-3 right-3">
-                  <Heart className="w-4 h-4 text-gray-300" />
-                </div>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500 mt-3">
-                <span>Your feedback helps other patients make informed decisions</span>
-                <span className={`font-medium ${comment.length > 450 ? 'text-orange-500' : ''}`}>
-                  {comment.length}/500
-                </span>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 animate-pulse">
-                <p className="text-red-600 font-medium">{error}</p>
+            
+            {/* Rating feedback text */}
+            {rating > 0 && (
+              <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white rounded-lg border border-gray-200">
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {rating <= 2 && "We're sorry to hear about your experience. Your feedback helps us improve."}
+                  {rating === 3 && "Thank you for your feedback. We appreciate your honest review."}
+                  {rating >= 4 && "We're delighted to hear about your positive experience!"}
+                </p>
               </div>
             )}
+          </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-3 shadow-lg ${
-                loading
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white hover:shadow-xl"
-              }`}
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5" />
-                  <span>Submit Review</span>
-                </>
-              )}
-            </button>
-          </form>
-        </div>
+          {/* Comment Section */}
+          <div>
+            <label className="block text-base sm:text-lg font-medium text-gray-700 mb-3 sm:mb-4">
+              Share your thoughts (optional)
+            </label>
+            <div className="relative">
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={4}
+                className="text-gray-700 w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl resize-none transition-all duration-200 hover:border-gray-300 placeholder-gray-400 text-sm sm:text-base"
+                style={{
+                  focusRingColor: '#2D9AA5'
+                }}
+                onFocus={(e) => {
+                  e.target.style.outline = 'none';
+                  e.target.style.borderColor = '#2D9AA5';
+                  e.target.style.boxShadow = '0 0 0 2px rgba(45, 154, 165, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#E5E7EB';
+                  e.target.style.boxShadow = 'none';
+                }}
+                placeholder="Tell us about your experience with this doctor..."
+                maxLength={500}
+              />
+              <div className="absolute bottom-3 right-3">
+                <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-gray-300" />
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between text-xs sm:text-sm text-gray-500 mt-2 sm:mt-3 gap-1 sm:gap-0">
+              <span>Your feedback helps other patients make informed decisions</span>
+              <span className={`font-medium ${comment.length > 450 ? 'text-orange-500' : ''}`}>
+                {comment.length}/500
+              </span>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3 sm:p-4 animate-pulse">
+              <p className="text-red-600 font-medium text-sm sm:text-base">{error}</p>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 sm:gap-3 shadow-lg text-sm sm:text-base ${
+              loading
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "text-white hover:shadow-xl"
+            }`}
+            style={!loading ? {
+              background: 'linear-gradient(to right, #2D9AA5, #228B8D)',
+            } : {}}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.target.style.background = 'linear-gradient(to right, #236B73, #1A6B6B)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.target.style.background = 'linear-gradient(to right, #2D9AA5, #228B8D)';
+              }
+            }}
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Submitting...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Submit Review</span>
+              </>
+            )}
+          </button>
+        </form>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 DoctorReviewForm.getLayout = function PageLayout(page: React.ReactNode) {

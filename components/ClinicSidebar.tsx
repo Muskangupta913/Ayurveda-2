@@ -38,12 +38,6 @@ const navItems: NavItem[] = [
     description: "All Patient Enquiries",
   },
   {
-    label: "Analytics of blog",
-    path: "/clinic/getAuthorCommentsAndLikes",
-    icon: "👨‍⚕️",
-    description: "Analytics of blog",
-  },
-  {
     label: "Jobs",
     icon: "💼",
     description: "Manage job postings",
@@ -66,16 +60,26 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: "Blog",
-    path: "/clinic/BlogForm",
-    icon: "📊",
-    description: "Write a",
-  },
-  {
-    label: "Published Blogs",
-    path: "/clinic/published-blogs",
-    icon: "📝",
-    description: "Published & drafts",
+    label: "Blogs",
+    icon: "📄",
+    description: "Manage Blogs",
+    children: [
+      {
+        label: "Write Blog",
+        path: "/clinic/BlogForm",
+        icon: "📝",
+      },
+      {
+        label: "Published and Drafts Blogs",
+        path: "/clinic/published-blogs",
+        icon: "📄",
+      },
+      {
+        label: "Analytics of blog",
+        path: "/clinic/getAuthorCommentsAndLikes",
+        icon: "📊",
+      },
+    ],
   },
 ];
 
@@ -225,7 +229,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                 </div>
                 <div>
                   <span className="font-bold text-xl text-gray-900 block">
-                    AyurVeda
+                    ZEVA
                   </span>
                   <span className="text-sm text-[#2D9AA5] font-medium">
                     Healthcare Excellence
@@ -337,7 +341,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                                     setHoveredItem(child.path!)
                                   }
                                   onMouseLeave={() => setHoveredItem(null)}
-                                  // Don't close dropdown when clicking on child items within the dropdown
+                                // Don't close dropdown when clicking on child items within the dropdown
                                 >
                                   <div className="flex items-center space-x-2">
                                     <div
@@ -521,7 +525,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                     </div>
                     <div>
                       <span className="font-bold text-lg text-gray-900 block">
-                        AyurVeda
+                        ZEVA
                       </span>
                       <span className="text-xs text-[#2D9AA5] font-medium">
                         Healthcare Excellence

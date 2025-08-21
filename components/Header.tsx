@@ -3,13 +3,18 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { useRouter } from 'next/router';
+import { 
+  HomeIcon, 
+  BriefcaseIcon, 
+  PencilSquareIcon, 
+  KeyIcon 
+} from "@heroicons/react/24/solid";
 
-
-// Define a type for navigation items
+// Define a type for navigation items - updated to accept both string and JSX element
 interface NavItem {
   name: string;
   href: string;
-  icon: string;
+  icon: string | React.ComponentType<any>; // Updated to accept both emoji string and React component
   action?: () => void;
 }
 
@@ -19,6 +24,8 @@ const Header = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [isRegisterDropdownOpen, setIsRegisterDropdownOpen] = useState(false);
   const [isDashboardDropdownOpen, setIsDashboardDropdownOpen] = useState(false);
+  const [isMobileDashboardDropdownOpen, setIsMobileDashboardDropdownOpen] = useState(false);
+  const [isMobileRegisterDropdownOpen, setIsMobileRegisterDropdownOpen] = useState(false);
 
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
@@ -68,12 +75,38 @@ const Header = () => {
     setIsRegisterDropdownOpen(prev => !prev);
   };
 
-  // Navigation items - dynamically change based on auth status
+  // Function to handle mobile dashboard dropdown toggle
+  const handleMobileDashboardDropdownToggle = () => {
+    if (isMobileRegisterDropdownOpen) {
+      setIsMobileRegisterDropdownOpen(false);
+    }
+    setIsMobileDashboardDropdownOpen(prev => !prev);
+  };
+
+  // Function to handle mobile register dropdown toggle
+  const handleMobileRegisterDropdownToggle = () => {
+    if (isMobileDashboardDropdownOpen) {
+      setIsMobileDashboardDropdownOpen(false);
+    }
+    setIsMobileRegisterDropdownOpen(prev => !prev);
+  };
+
+  // Helper function to render icons
+  const renderIcon = (icon: string | React.ComponentType<any>, className: string = "w-4 h-4") => {
+    if (typeof icon === 'string') {
+      return <span className="text-sm">{icon}</span>;
+    } else {
+      const IconComponent = icon;
+      return <IconComponent className={className} />;
+    }
+  };
+
+  // Navigation items - dynamically change based on auth status - Updated with Heroicons
   const getNavItems = (): NavItem[] => {
     const baseItems: NavItem[] = [
-      { name: 'Home', href: '/', icon: '🏠' },
-      { name: 'Career', href: '/job-listings', icon: '💼' },
-      { name: 'Blog', href: '/blogs/viewBlogs', icon: '✍️' },
+      { name: 'Home', href: '/', icon: HomeIcon }, // Using HomeIcon here
+      { name: 'Career', href: '/job-listings', icon: BriefcaseIcon }, // Using BriefcaseIcon
+      { name: 'Blog', href: '/blogs/viewBlogs', icon: PencilSquareIcon }, // Using PencilSquareIcon
       // Add other links here if needed
     ];
 
@@ -84,7 +117,7 @@ const Header = () => {
     } else {
       return [
         ...baseItems,
-        { name: 'User Login', href: '#', icon: '🔑', action: () => openAuthModal('login') },
+        { name: 'User Login', href: '#', icon: KeyIcon, action: () => openAuthModal('login') }, // Using KeyIcon
       ];
     }
   };
@@ -117,16 +150,21 @@ const Header = () => {
                 {/* Subtle background accent */}
                 <div className="absolute inset-0 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-110"></div>
                 <div className="relative px-3 py-2">
-                  <h1 className="text-3xl font-bold text-transparent bg-clip-text tracking-wide" style={{ backgroundImage: `linear-gradient(135deg, #2D9AA5, #1f7a82, #2D9AA5)` }}>
-                    ZEVA
-                  </h1>
+                  <div className="flex items-center gap-3">
+                    {/* <span className="text-6xl text-cyan-400 drop-shadow-[0_0_20px_rgba(0,255,255,0.7)] animate-bounce">
+                      ⚕
+                    </span> */}
+                    <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-400 to-cyan-300 drop-shadow-lg">
+                      ZEVA
+                    </h1>
+                  </div>
+
                   <div className="h-0.5 w-0 bg-gradient-to-r from-transparent via-teal-400 to-transparent group-hover:w-full transition-all duration-500"></div>
                 </div>
               </div>
             </div>
-         
 
-            {/* Desktop Navigation with enhanced hover effects */}
+            {/* Desktop Navigation with enhanced hover effects - Updated icon rendering */}
             <div className="hidden lg:flex items-center space-x-1">
               {navItems.map((item) =>
                 item.action ? (
@@ -146,8 +184,8 @@ const Header = () => {
                     }}
                   >
                     <span className="flex items-center space-x-2">
-                      <span className="text-sm group-hover:scale-125 transition-transform duration-300">
-                        {item.icon}
+                      <span className="group-hover:scale-125 transition-transform duration-300">
+                        {renderIcon(item.icon)}
                       </span>
                       <span className="relative">
                         {item.name}
@@ -172,8 +210,8 @@ const Header = () => {
                     }}
                   >
                     <span className="flex items-center space-x-2">
-                      <span className="text-sm group-hover:scale-125 transition-transform duration-300">
-                        {item.icon}
+                      <span className="group-hover:scale-125 transition-transform duration-300">
+                        {renderIcon(item.icon)}
                       </span>
                       <span className="relative">
                         {item.name}
@@ -492,7 +530,7 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Enhanced Mobile Menu */}
+          {/* Enhanced Mobile Menu - Updated icon rendering */}
           <div className={`lg:hidden transition-all duration-500 overflow-hidden ${isMenuOpen ? 'max-h-screen pb-6' : 'max-h-0'}`}>
             <div className="pt-4 space-y-2">
               {navItems.map((item) =>
@@ -516,7 +554,7 @@ const Header = () => {
                     }}
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-lg">{item.icon}</span>
+                      {renderIcon(item.icon, "w-5 h-5")}
                     </div>
                     <span>{item.name}</span>
                   </button>
@@ -538,7 +576,7 @@ const Header = () => {
                     }}
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-lg">{item.icon}</span>
+                      {renderIcon(item.icon, "w-5 h-5")}
                     </div>
                     <span>{item.name}</span>
                   </Link>
@@ -546,13 +584,25 @@ const Header = () => {
               )}
 
               {/* Enhanced Mobile Dashboard Login Dropdown */}
-              <details className="px-4 py-3 rounded-xl border border-opacity-30 shadow-sm" style={{ backgroundColor: 'rgba(45, 154, 165, 0.08)', borderColor: '#2D9AA5' }}>
+              <details 
+                className="px-4 py-3 rounded-xl border border-opacity-30 shadow-sm" 
+                style={{ backgroundColor: 'rgba(45, 154, 165, 0.08)', borderColor: '#2D9AA5' }}
+                open={isMobileDashboardDropdownOpen}
+                onToggle={(e) => {
+                  const isOpen = (e.target as HTMLDetailsElement).open;
+                  if (isOpen) {
+                    handleMobileDashboardDropdownToggle();
+                  } else {
+                    setIsMobileDashboardDropdownOpen(false);
+                  }
+                }}
+              >
                 <summary className="cursor-pointer font-semibold mb-3 list-none flex items-center justify-between" style={{ color: '#2D9AA5' }}>
                   <span className="flex items-center space-x-2">
                     <span>🏥</span>
                     <span>Dashboard Login</span>
                   </span>
-                  <span className="text-sm">▼</span>
+                  <span className={`text-sm transition-transform duration-300 ${isMobileDashboardDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
                 </summary>
                 <div className="mt-2 space-y-2 pl-4">
                   <Link
@@ -605,13 +655,25 @@ const Header = () => {
               </details>
 
               {/* Enhanced Mobile Register Dropdown */}
-              <details className="px-4 py-3 rounded-xl border border-opacity-30 shadow-sm" style={{ backgroundColor: 'rgba(45, 154, 165, 0.05)', borderColor: '#2D9AA5' }}>
+              <details 
+                className="px-4 py-3 rounded-xl border border-opacity-30 shadow-sm" 
+                style={{ backgroundColor: 'rgba(45, 154, 165, 0.05)', borderColor: '#2D9AA5' }}
+                open={isMobileRegisterDropdownOpen}
+                onToggle={(e) => {
+                  const isOpen = (e.target as HTMLDetailsElement).open;
+                  if (isOpen) {
+                    handleMobileRegisterDropdownToggle();
+                  } else {
+                    setIsMobileRegisterDropdownOpen(false);
+                  }
+                }}
+              >
                 <summary className="cursor-pointer font-semibold mb-3 list-none flex items-center justify-between" style={{ color: '#2D9AA5' }}>
                   <span className="flex items-center space-x-2">
                     <span>📝</span>
                     <span>Register</span>
                   </span>
-                  <span className="text-sm">▼</span>
+                  <span className={`text-sm transition-transform duration-300 ${isMobileRegisterDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
                 </summary>
                 <div className="mt-2 space-y-2 pl-4">
                   <Link
@@ -725,7 +787,7 @@ const Header = () => {
                   <span className="font-medium">info@zeva.com</span>
                 </span>
                 <span className="flex items-center space-x-2 hover:scale-105 transition-transform duration-300">
-                  <span className="text-base">🌍</span>
+                  <span className="text-base">🕌</span>
                   <span className="font-medium">Healthcare Near You</span>
                 </span>
               </div>

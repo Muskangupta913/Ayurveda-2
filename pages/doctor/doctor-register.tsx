@@ -4,6 +4,7 @@ import axios from "axios";
 import { ChangeEvent, FormEvent } from "react";
 import React from "react";
 import type { KeyboardEvent } from "react";
+import Layout from "@/components/Layout";
 
 export default function DoctorRegister() {
   const router = useRouter();
@@ -245,9 +246,12 @@ export default function DoctorRegister() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
               </svg>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-black mb-3">Join Our Ayurvedic Network</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-black mb-3">
+  Join Our Healthcare Network
+</h1>
+
             <p className="text-base sm:text-lg text-black/70 max-w-3xl mx-auto leading-relaxed">
-              Expand your practice and connect with thousands of patients seeking authentic Ayurvedic care
+              Expand your practice with ZEVA and connect with thousands of patients seeking trusted healthcare.
             </p>
           </div>
 
@@ -260,7 +264,7 @@ export default function DoctorRegister() {
                 {/* Form Header */}
                 <div className="bg-gradient-to-r from-[#2D9AA5] to-cyan-600 text-white p-6 text-center">
                   <h2 className="text-xl font-bold mb-2">Doctor Registration</h2>
-                  <p className="text-cyan-100 text-sm">Join our network of Ayurvedic practitioners</p>
+                  <p className="text-cyan-100 text-sm">Join our network of healthcare practitioners</p>
                 </div>
 
                 {/* Form Body */}
@@ -645,5 +649,5 @@ export default function DoctorRegister() {
   );
 }
 DoctorRegister.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; // No layout
+  return <Layout>{page}</Layout>;
 };

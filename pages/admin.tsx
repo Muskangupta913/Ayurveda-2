@@ -60,12 +60,12 @@ export default function AdminLogin() {
   };
 
 
- return (
+  return (
     <>
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className="bg-teal-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3" style={{backgroundColor: '#2D9AA5'}}>
+          <div className="bg-teal-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3" style={{ backgroundColor: '#2D9AA5' }}>
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
@@ -77,7 +77,7 @@ export default function AdminLogin() {
 
       <div className="min-h-screen flex">
         {/* Left Side - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{background: `linear-gradient(to bottom right, #2D9AA5, #238B96, #1A7A82)`}}>
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: `linear-gradient(to bottom right, #2D9AA5, #238B96, #1A7A82)` }}>
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-10 left-10 w-20 h-20 border-2 border-white rounded-full"></div>
@@ -104,7 +104,7 @@ export default function AdminLogin() {
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold">AyurVeda</h1>
+                  <h1 className="text-3xl font-bold">ZEVA</h1>
                   <p className="text-teal-200 text-sm uppercase tracking-wider">
                     Admin Portal
                   </p>
@@ -118,8 +118,7 @@ export default function AdminLogin() {
               </h2>
 
               <p className="text-teal-100 text-lg leading-relaxed mb-8">
-                Manage your Ayurveda clinic network, monitor appointments, and
-                oversee patient care with our comprehensive admin platform.
+                ZEVA — the ultimate command center for healthcare networks, doctors, and patient care.
               </p>
 
               <div className="space-y-4">
@@ -129,7 +128,7 @@ export default function AdminLogin() {
                   "Appointment Scheduling",
                 ].map((item, index) => (
                   <div className="flex items-center gap-3" key={index}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{backgroundColor: '#2D9AA5'}}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#2D9AA5' }}>
                       <svg
                         className="w-4 h-4 text-white"
                         fill="currentColor"
@@ -150,8 +149,8 @@ export default function AdminLogin() {
           </div>
 
           {/* Decorative Elements */}
-          <div className="absolute bottom-0 right-0 w-32 h-32 rounded-tl-full opacity-20" style={{background: `linear-gradient(to top left, #2D9AA5, transparent)`}}></div>
-          <div className="absolute top-0 left-0 w-24 h-24 rounded-br-full opacity-20" style={{background: `linear-gradient(to bottom right, #2D9AA5, transparent)`}}></div>
+          <div className="absolute bottom-0 right-0 w-32 h-32 rounded-tl-full opacity-20" style={{ background: `linear-gradient(to top left, #2D9AA5, transparent)` }}></div>
+          <div className="absolute top-0 left-0 w-24 h-24 rounded-br-full opacity-20" style={{ background: `linear-gradient(to bottom right, #2D9AA5, transparent)` }}></div>
         </div>
 
         {/* Right Side - Login Form */}
@@ -159,7 +158,7 @@ export default function AdminLogin() {
           <div className="w-full max-w-md">
             {/* Mobile Logo */}
             <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{background: `linear-gradient(to bottom right, #2D9AA5, #238B96)`}}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, #2D9AA5, #238B96)` }}>
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -173,8 +172,8 @@ export default function AdminLogin() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">AyurVeda</h1>
-                <p className="text-xs uppercase tracking-wider" style={{color: '#2D9AA5'}}>
+                <h1 className="text-xl font-bold text-gray-800">ZEVA</h1>
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#2D9AA5' }}>
                   Admin Portal
                 </p>
               </div>
@@ -230,7 +229,7 @@ export default function AdminLogin() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="text-black w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl"
-                      placeholder="admin@ayurveda.com"
+                      placeholder="admin@.com"
                       required
                     />
                   </div>
@@ -330,7 +329,7 @@ export default function AdminLogin() {
 
             {/* Additional Links */}
             <div className="mt-6 text-center text-sm text-gray-500">
-              <Link href="/" className="text-blue-600 hover:text-blue-500 font-medium ml-1">Back to Home</Link>
+              <Link href="/" className="text-blue-600 hover:text-grey-500 font-medium ml-1">Back to Home</Link>
               {/* <span>•</span>
               <a
                 href="#"

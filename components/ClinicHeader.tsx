@@ -95,7 +95,7 @@ const ClinicHeader: React.FC<ClinicHeaderProps> = ({
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                AyurVeda
+                ZEVA
               </h1>
               <p className="text-sm text-[#2D9AA5] font-medium -mt-1">Healthcare Excellence</p>
             </div>
