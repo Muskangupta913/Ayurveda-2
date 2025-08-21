@@ -7,7 +7,9 @@ const AppliedJobs = () => {
   const [commentsWithReplies, setCommentsWithReplies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+   const [hiddenUnavailableJobs, setHiddenUnavailableJobs] = useState([]);
+      const [chats, setChats] = useState([]);
+  const [chatsLoading, setChatsLoading] = useState(false);
   useEffect(() => {
     async function fetchComments() {
       setLoading(true);
@@ -55,6 +57,31 @@ const AppliedJobs = () => {
     };
 
     fetchAppliedJobs();
+  }, []);
+  useEffect(() => {
+    const fetchChats = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      setChatsLoading(true);
+      try {
+        const response = await axios.get("/api/chat/user-chats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.data.success) {
+          setChats(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch chats", error);
+      } finally {
+        setChatsLoading(false);
+      }
+    };
+
+    fetchChats();
   }, []);
 
   if (loading) return <p>Loading your comments...</p>;
@@ -161,6 +188,73 @@ const AppliedJobs = () => {
           </div>
         ))}
       </div>
+       {/* Chat History Section */}
+    <div className="max-w-3xl mx-auto py-6">
+      <h1 className="text-3xl font-bold mb-4">Your Chat History with Doctors</h1>
+      
+      {chatsLoading ? (
+        <p>Loading chat history...</p>
+      ) : chats.length === 0 ? (
+        <p className="text-gray-500">No chat history yet.</p>
+      ) : (
+        <div className="space-y-6">
+          {chats.map((chat) => (
+            <div key={chat._id} className="border p-4 rounded shadow-sm bg-white">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold mb-1">Dr. {chat.doctor.name}</h2>
+                  <p className="text-sm text-gray-600">
+                    Health Issue: {chat.prescriptionRequest.healthIssue}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Status: {chat.prescriptionRequest.status}
+                  </p>
+                </div>
+                <button
+                  onClick={() => window.location.href = `/user/chat/${chat.prescriptionRequest._id}`}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Continue Chat
+                </button>
+              </div>
+
+              {/* Show last few messages */}
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {chat.messages.slice(-3).map((msg) => (
+                  <div
+                    key={msg._id}
+                    className={`p-2 rounded ${
+                      msg.senderRole === "user"
+                        ? "bg-blue-100 ml-4"
+                        : "bg-gray-100 mr-4"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="font-medium text-sm">
+                        {msg.senderRole === "user" ? "You" : `Dr. ${chat.doctor.name}`}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    {msg.messageType === "prescription" ? (
+                      <div className="mt-1">
+                        <div className="font-medium text-sm">Prescription:</div>
+                        <div className="bg-white p-2 rounded border text-sm">
+                          {msg.prescription}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm mt-1">{msg.content}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
     </>
   );
 };
