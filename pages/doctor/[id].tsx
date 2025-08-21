@@ -45,12 +45,17 @@ export default function DoctorDetail() {
   const { isAuthenticated } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
-  const [pendingAction, setPendingAction] = useState<null | { type: 'enquiry' | 'review' }>(null);
+  const [pendingAction, setPendingAction] = useState<null | { type: 'enquiry' | 'review' | 'prescription' }>(null);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
   const [modalReview, setModalReview] = useState<string | null>(null);
-
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+  const [prescriptionForm, setPrescriptionForm] = useState({
+    healthIssue: '',
+    symptoms: ''
+  });
+  const [prescriptionLoading, setPrescriptionLoading] = useState(false);
   useEffect(() => {
     if (!id) return;
     const fetchProfile = async () => {
@@ -129,6 +134,17 @@ export default function DoctorDetail() {
     router.push(`/doctor/enquiry-form?${params.toString()}`);
   };
 
+  const handlePrescriptionRequest = () => {
+    if (!profile) return;
+    if (!isAuthenticated) {
+      setPendingAction({ type: 'prescription' });
+      setAuthModalMode('login');
+      setShowAuthModal(true);
+      return;
+    }
+    setShowPrescriptionModal(true);
+  };
+
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
     if (!profile || !pendingAction) return;
@@ -138,8 +154,42 @@ export default function DoctorDetail() {
     } else if (pendingAction.type === 'review') {
       const params = new URLSearchParams({ doctorId: profile._id, doctorName: profile.user.name });
       router.push(`/doctor/review-form?${params.toString()}`);
+    } else if (pendingAction.type === 'prescription') {
+      setShowPrescriptionModal(true);
     }
     setPendingAction(null);
+  };
+
+  const handlePrescriptionSubmit = async () => {
+    if (!prescriptionForm.healthIssue.trim()) {
+      alert('Please describe your health issue');
+      return;
+    }
+
+    setPrescriptionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/api/prescription/request', {
+        doctorId: id,
+        healthIssue: prescriptionForm.healthIssue,
+        symptoms: prescriptionForm.symptoms
+      }, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
+      });
+
+      if (response.data.success) {
+        alert('Prescription request sent successfully!');
+        setShowPrescriptionModal(false);
+        setPrescriptionForm({ healthIssue: '', symptoms: '' });
+      }
+    } catch (error) {
+      // @ts-ignore
+      alert(error?.response?.data?.message || 'Failed to send prescription request');
+    } finally {
+      setPrescriptionLoading(false);
+    }
   };
 
   const handleAuthModalClose = () => {
@@ -241,6 +291,12 @@ export default function DoctorDetail() {
                   className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all font-medium shadow-md"
                 >
                   Write a Review
+                </button>
+                <button
+                  onClick={handlePrescriptionRequest}
+                  className="inline-flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all font-medium shadow-md"
+                >
+                  Request Prescription
                 </button>
 
                 {/* Directions Button */}
@@ -489,6 +545,65 @@ export default function DoctorDetail() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPrescriptionModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-gray-100 flex flex-col">
+            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white p-6 flex items-center justify-between">
+              <h3 className="text-xl font-semibold">Request Prescription</h3>
+              <button 
+                onClick={() => setShowPrescriptionModal(false)} 
+                className="p-2 hover:bg-white/20 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Health Issue *
+                  </label>
+                  <textarea
+                    value={prescriptionForm.healthIssue}
+                    onChange={(e) => setPrescriptionForm(prev => ({ ...prev, healthIssue: e.target.value }))}
+                    placeholder="Describe your health issue in detail..."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                    rows={4}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Symptoms (Optional)
+                  </label>
+                  <textarea
+                    value={prescriptionForm.symptoms}
+                    onChange={(e) => setPrescriptionForm(prev => ({ ...prev, symptoms: e.target.value }))}
+                    placeholder="Describe any symptoms you're experiencing..."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handlePrescriptionSubmit}
+                    disabled={prescriptionLoading}
+                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+                  >
+                    {prescriptionLoading ? 'Sending...' : 'Send Request'}
+                  </button>
+                  <button
+                    onClick={() => setShowPrescriptionModal(false)}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
