@@ -70,9 +70,20 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     x: number;
     y: number;
   }>({ x: 0, y: 0 });
+  
+  // Video context menu state
+  const [showVideoContextMenu, setShowVideoContextMenu] =
+    useState<boolean>(false);
+  const [contextMenuVideo, setContextMenuVideo] =
+    useState<HTMLElement | null>(null);
   // Sharing moved to reusable component
   const [paramlink, setParamlink] = useState<string>("");
   const [paramlinkError, setParamlinkError] = useState<string>("");
+
+  // New video-related state
+  const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
+  const [videoUrl, setVideoUrl] = useState<string>("");
+  const [videoType, setVideoType] = useState<"youtube" | "drive">("youtube");
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem(tokenKey);
@@ -89,18 +100,22 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     console.log("Context menu state changed:", showImageContextMenu);
   }, [showImageContextMenu]);
 
-  // Global click handler to close context menu
+  // Global click handler to close context menus
   useEffect(() => {
     const handleGlobalClick = (e: globalThis.MouseEvent) => {
       if (showImageContextMenu) {
         setShowImageContextMenu(false);
         setContextMenuImage(null);
       }
+      if (showVideoContextMenu) {
+        setShowVideoContextMenu(false);
+        setContextMenuVideo(null);
+      }
     };
 
     document.addEventListener("click", handleGlobalClick);
     return () => document.removeEventListener("click", handleGlobalClick);
-  }, [showImageContextMenu]);
+  }, [showImageContextMenu, showVideoContextMenu]);
 
   // Support loading by query param when navigated from Published Blogs page
   const router = useRouter();
@@ -141,11 +156,12 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, content, selectedPublished]);
 
-  // Add image click handlers after content changes
+  // Add image and video click handlers after content changes
   useEffect(() => {
-    const attachImageListeners = () => {
+    const attachMediaListeners = () => {
       const editorContainer = document.querySelector(".ql-editor");
       if (editorContainer) {
+        // Handle images
         const images = editorContainer.querySelectorAll("img");
         console.log("Found images:", images.length);
 
@@ -172,23 +188,56 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           (img as HTMLImageElement).title =
             "Double-click to add/edit link, Right-click for more options";
         });
+
+        // Handle video remove buttons with direct event listeners
+        const videoRemoveButtons = editorContainer.querySelectorAll(".remove-video-btn");
+        console.log("Found video remove buttons:", videoRemoveButtons.length);
+        
+        videoRemoveButtons.forEach((button) => {
+          // Remove existing listeners to prevent duplicates
+          button.removeEventListener("click", handleVideoRemoveDirectClick as EventListener);
+          button.removeEventListener("mousedown", handleVideoRemoveDirectClick as EventListener);
+          
+          // Add both click and mousedown for better compatibility
+          button.addEventListener("click", handleVideoRemoveDirectClick as EventListener);
+          button.addEventListener("mousedown", handleVideoRemoveDirectClick as EventListener);
+          
+          // Make sure the button looks clickable
+          (button as HTMLElement).style.cursor = "pointer";
+        });
+
+        // Also use event delegation as backup
+        editorContainer.removeEventListener("click", handleEditorClick as EventListener);
+        editorContainer.addEventListener("click", handleEditorClick as EventListener);
       }
     };
 
-    const timer = setTimeout(attachImageListeners, 1000);
+    // Attach listeners immediately and also with a delay
+    attachMediaListeners();
+    const timer = setTimeout(attachMediaListeners, 100);
+    const timer2 = setTimeout(attachMediaListeners, 500);
 
     const editorContainer = document.querySelector(".ql-editor");
     if (editorContainer) {
-      editorContainer.addEventListener("focus", attachImageListeners);
-      editorContainer.addEventListener("input", attachImageListeners);
+      editorContainer.addEventListener("focus", attachMediaListeners);
+      editorContainer.addEventListener("input", attachMediaListeners);
+      // Also listen for DOM changes
+      const observer = new MutationObserver(attachMediaListeners);
+      observer.observe(editorContainer, { childList: true, subtree: true });
+      
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(timer2);
+        observer.disconnect();
+        editorContainer.removeEventListener("focus", attachMediaListeners);
+        editorContainer.removeEventListener("input", attachMediaListeners);
+        editorContainer.removeEventListener("click", handleEditorClick as EventListener);
+      };
     }
 
     return () => {
       clearTimeout(timer);
-      if (editorContainer) {
-        editorContainer.removeEventListener("focus", attachImageListeners);
-        editorContainer.removeEventListener("input", attachImageListeners);
-      }
+      clearTimeout(timer2);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]);
@@ -209,6 +258,139 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       setParamlink(slugify(title));
     }
   }, [title, selectedDraft, selectedPublished]);
+
+  // New video utility functions
+  const extractYouTubeId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  const extractGoogleDriveId = (url: string): string | null => {
+    const patterns = [
+      /\/file\/d\/([a-zA-Z0-9-_]+)/,
+      /id=([a-zA-Z0-9-_]+)/,
+      /drive\.google\.com.*\/([a-zA-Z0-9-_]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  const createVideoEmbed = (url: string, type: "youtube" | "drive"): string => {
+    const videoId = Date.now().toString() + Math.random().toString(36).substr(2, 9); // More unique ID
+    
+    if (type === "youtube") {
+      const youtubeId = extractYouTubeId(url);
+      if (!youtubeId) return "";
+      
+      return `<div class="video-wrapper" data-video-id="${videoId}" style="margin: 20px 0; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; position: relative;">
+        <div class="video-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 14px; color: #6b7280; display: flex; align-items: center; gap: 6px;">
+            <span>🎥</span> YouTube Video
+          </span>
+          <div 
+            class="remove-video-btn" 
+            data-video-id="${videoId}"
+            style="background: #ef4444; color: white; border: 1px solid #ef4444; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; z-index: 1000; position: relative; user-select: none; font-weight: 500;"
+            contenteditable="false"
+            title="Click to remove this video"
+          >
+            🗑️ Remove
+          </div>
+        </div>
+        <div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 6px;">
+          <iframe 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+            src="https://www.youtube.com/embed/${youtubeId}" 
+            frameborder="0" 
+            allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+          </iframe>
+        </div>
+      </div>`;
+    } else {
+      const fileId = extractGoogleDriveId(url);
+      if (!fileId) return "";
+      
+      return `<div class="video-wrapper" data-video-id="${videoId}" style="margin: 20px 0; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; position: relative;">
+        <div class="video-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 14px; color: #6b7280; display: flex; align-items: center; gap: 6px;">
+            <span>📁</span> Google Drive Video
+          </span>
+          <div 
+            class="remove-video-btn" 
+            data-video-id="${videoId}"
+            style="background: #ef4444; color: white; border: 1px solid #ef4444; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; z-index: 1000; position: relative; user-select: none; font-weight: 500;"
+            contenteditable="false"
+            title="Click to remove this video"
+          >
+            🗑️ Remove
+          </div>
+        </div>
+        <div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 6px;">
+          <iframe 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+            src="https://drive.google.com/file/d/${fileId}/preview" 
+            frameborder="0" 
+            allowfullscreen>
+          </iframe>
+        </div>
+      </div>`;
+    }
+  };
+
+  const validateVideoUrl = (url: string, type: "youtube" | "drive"): boolean => {
+    if (type === "youtube") {
+      return extractYouTubeId(url) !== null;
+    } else {
+      return extractGoogleDriveId(url) !== null;
+    }
+  };
+
+  const handleVideoInsert = () => {
+    const trimmedUrl = videoUrl.trim();
+    
+    if (!trimmedUrl) {
+      showToast("Please enter a video URL", "warning");
+      return;
+    }
+
+    if (!validateVideoUrl(trimmedUrl, videoType)) {
+      const message = videoType === "youtube" 
+        ? "Please enter a valid YouTube URL (e.g., https://youtube.com/watch?v=... or https://youtu.be/...)"
+        : "Please enter a valid Google Drive video URL (e.g., https://drive.google.com/file/d/.../view)";
+      showToast(message, "error");
+      return;
+    }
+
+    const videoEmbed = createVideoEmbed(trimmedUrl, videoType);
+    if (!videoEmbed) {
+      showToast("Failed to create video embed", "error");
+      return;
+    }
+
+    // Insert the video embed into the content
+    const newContent = content + videoEmbed;
+    setContent(newContent);
+    
+    // Close modal and reset
+    setShowVideoModal(false);
+    setVideoUrl("");
+    setVideoType("youtube");
+    
+    showToast(`${videoType === "youtube" ? "YouTube" : "Google Drive"} video added successfully!`, "success");
+  };
 
   const ensureLinksUnderlined = (htmlContent: string) => {
     if (typeof window === "undefined") return htmlContent;
@@ -306,6 +488,125 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     setShowImageContextMenu(true);
   };
 
+  // Direct click handler for video remove buttons
+  const handleVideoRemoveDirectClick = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("Video remove button clicked directly!");
+    
+    const target = e.target as HTMLElement;
+    const button = target.classList.contains('remove-video-btn') ? target : target.closest('.remove-video-btn') as HTMLElement;
+    
+    if (button) {
+      const videoId = button.getAttribute("data-video-id");
+      console.log("Video ID to remove:", videoId);
+      
+      if (videoId) {
+        removeVideoById(videoId);
+      }
+    }
+  };
+
+  // Event delegation handler for editor clicks
+  const handleEditorClick = (e: Event) => {
+    const target = e.target as HTMLElement;
+    
+    console.log("Editor clicked, target:", target.className, target.tagName);
+    
+    // Check if clicked element is a video remove button or its child
+    if (target.classList.contains('remove-video-btn') || target.closest('.remove-video-btn')) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log("Video remove button detected via delegation!");
+      
+      const button = target.classList.contains('remove-video-btn') ? target : target.closest('.remove-video-btn') as HTMLElement;
+      const videoId = button?.getAttribute("data-video-id");
+      
+      console.log("Video ID from delegation:", videoId);
+      
+      if (videoId) {
+        removeVideoById(videoId);
+      }
+    }
+  };
+
+  const handleVideoRemoveClick = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const button = e.target as HTMLElement;
+    const videoId = button.getAttribute("data-video-id") || 
+                   button.closest('.remove-video-btn')?.getAttribute("data-video-id");
+    
+    if (videoId) {
+      removeVideoById(videoId);
+    }
+  };
+
+  const removeVideoById = (videoId: string) => {
+    console.log("removeVideoById called with:", videoId);
+
+    try {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = content;
+
+      const videoWrapper = tempDiv.querySelector(`.video-wrapper[data-video-id="${videoId}"]`);
+      
+      if (videoWrapper) {
+        videoWrapper.remove();
+        setContent(tempDiv.innerHTML);
+        showToast("Video removed successfully!", "success");
+      } else {
+        showToast("Video not found in content", "error");
+      }
+    } catch (error) {
+      console.error("Error removing video:", error);
+      showToast("Failed to remove video", "error");
+    }
+  };
+
+  const removeVideo = () => {
+    console.log("removeVideo called");
+    if (contextMenuVideo) {
+      console.log("Removing video:", contextMenuVideo);
+
+      try {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = content;
+
+        const videoContainers = tempDiv.querySelectorAll(".video-container");
+        let videoRemoved = false;
+
+        videoContainers.forEach((container) => {
+          const iframe = container.querySelector("iframe");
+          const contextIframe = contextMenuVideo.querySelector("iframe");
+          
+          if (iframe && contextIframe && iframe.src === contextIframe.src && !videoRemoved) {
+            container.remove();
+            videoRemoved = true;
+          }
+        });
+
+        if (videoRemoved) {
+          setContent(tempDiv.innerHTML);
+          showToast("Video removed successfully!", "success");
+        } else {
+          showToast("Video not found in content", "error");
+        }
+      } catch (error) {
+        console.error("Error removing video:", error);
+        showToast("Failed to remove video", "error");
+      }
+    } else {
+      console.log("No contextMenuVideo found");
+      showToast("No video selected for removal", "error");
+    }
+
+    setShowVideoContextMenu(false);
+    setContextMenuVideo(null);
+  };
   const removeImage = () => {
     console.log("removeImage called");
     if (contextMenuImage) {
@@ -845,9 +1146,20 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           </label>
           <div className="mb-2 text-sm text-gray-600">
             💡 Tip: Double-click on any image to add or edit its link, or
-            right-click for more options (remove image). URLs must include
-            https:// or http:// protocol (e.g., "https://example.com")
+            right-click for more options (remove image). Each video has a remove button above it for easy deletion.
+            URLs must include https:// or http:// protocol (e.g., "https://example.com")
           </div>
+          
+          {/* Video Insert Button */}
+          <div className="mb-3">
+            <button
+              onClick={() => setShowVideoModal(true)}
+              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center gap-2 text-sm"
+            >
+              <span>🎥</span> Insert Video
+            </button>
+          </div>
+
           <ReactQuill
             key={`editor-${selectedDraft || selectedPublished || "new"}`}
             value={content}
@@ -937,6 +1249,109 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
         </div>
       </div>
 
+      {/* Video Modal */}
+      {showVideoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Insert Video</h3>
+            
+            {/* Video Type Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video Type
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="youtube"
+                    checked={videoType === "youtube"}
+                    onChange={(e) => setVideoType(e.target.value as "youtube" | "drive")}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">YouTube</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="drive"
+                    checked={videoType === "drive"}
+                    onChange={(e) => setVideoType(e.target.value as "youtube" | "drive")}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Google Drive</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Video URL Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video URL
+              </label>
+              <input
+                type="text"
+                value={videoUrl}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  setVideoUrl(e.target.value);
+                  const url = e.target.value.trim();
+                  if (url && validateVideoUrl(url, videoType)) {
+                    e.target.style.borderColor = "#10b981";
+                  } else if (url) {
+                    e.target.style.borderColor = "#ef4444";
+                  } else {
+                    e.target.style.borderColor = "#d1d5db";
+                  }
+                }}
+                placeholder={
+                  videoType === "youtube"
+                    ? "https://youtube.com/watch?v=... or https://youtu.be/..."
+                    : "https://drive.google.com/file/d/.../view"
+                }
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <div className="mt-1 text-xs text-gray-500">
+                {videoType === "youtube" ? (
+                  <>
+                    📹 Supported formats:
+                    <br />• https://youtube.com/watch?v=VIDEO_ID
+                    <br />• https://youtu.be/VIDEO_ID
+                    <br />• https://youtube.com/embed/VIDEO_ID
+                  </>
+                ) : (
+                  <>
+                    📁 Supported formats:
+                    <br />• https://drive.google.com/file/d/FILE_ID/view
+                    <br />• https://drive.google.com/open?id=FILE_ID
+                    <br />Make sure the video is publicly accessible or shared with "Anyone with link"
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleVideoInsert}
+                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+              >
+                Insert Video
+              </button>
+              <button
+                onClick={() => {
+                  setShowVideoModal(false);
+                  setVideoUrl("");
+                  setVideoType("youtube");
+                }}
+                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Link Modal */}
       {showLinkModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -995,6 +1410,31 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Context Menu - keeping for backward compatibility but not actively used */}
+      {showVideoContextMenu && (
+        <div
+          className="fixed inset-0 z-50"
+          onClick={() => setShowVideoContextMenu(false)}
+        >
+          <div
+            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg py-2 min-w-[150px]"
+            style={{
+              left: contextMenuPosition.x,
+              top: contextMenuPosition.y,
+              zIndex: 1000,
+            }}
+            onClick={(e: MouseEvent) => e.stopPropagation()}
+          >
+            <button
+              onClick={removeVideo}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2 text-red-600"
+            >
+              <span>🎥</span> Remove Video
+            </button>
           </div>
         </div>
       )}
@@ -1080,6 +1520,61 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
         .ql-editor a:visited:hover {
           color: #6d28d9;
           text-decoration-color: #6d28d9;
+        }
+
+        .video-container iframe {
+          border-radius: 8px;
+        }
+
+        .ql-editor .video-container {
+          margin: 16px 0;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .ql-editor .video-wrapper {
+          margin: 20px 0 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 8px !important;
+          padding: 12px !important;
+          background: #f9fafb !important;
+        }
+
+        .ql-editor .video-header {
+          display: flex !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          margin-bottom: 8px !important;
+        }
+
+        .ql-editor .remove-video-btn {
+          background: #ef4444 !important;
+          color: white !important;
+          border: 1px solid #ef4444 !important;
+          padding: 6px 10px !important;
+          border-radius: 4px !important;
+          font-size: 12px !important;
+          cursor: pointer !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+          transition: all 0.2s !important;
+          user-select: none !important;
+          z-index: 1000 !important;
+          position: relative !important;
+          font-weight: 500 !important;
+          pointer-events: auto !important;
+        }
+
+        .ql-editor .remove-video-btn:hover {
+          background: #dc2626 !important;
+          border-color: #dc2626 !important;
+          transform: scale(1.05) !important;
+        }
+
+        .ql-editor .remove-video-btn:active {
+          transform: scale(0.95) !important;
         }
       `}</style>
     </div>

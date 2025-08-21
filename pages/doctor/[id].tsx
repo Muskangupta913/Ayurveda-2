@@ -176,339 +176,340 @@ export default function DoctorDetail() {
   if (error || !profile) return <div className="min-h-screen flex items-center justify-center">{error || 'Not found'}</div>;
 
   return (
-  <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-    <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} onSuccess={handleAuthSuccess} initialMode={authModalMode} />
-    
-    <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      {/* Header Section with Circular Photo and Info */}
-      <div className="bg-gray-50 px-6 py-8 border-b border-gray-200">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-          {/* Profile Photo - Circular */}
-          <div className="flex justify-center lg:justify-start">
-            {profile.photos?.[0] ? (
-              <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
-                <img 
-                  src={profile.photos[0]} 
-                  alt={profile.user?.name} 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white shadow-lg bg-gray-200 flex items-center justify-center">
-                <span className="text-gray-500 text-lg">No Photo</span>
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} onSuccess={handleAuthSuccess} initialMode={authModalMode} />
 
-          {/* Doctor Info */}
-          <div className="flex-1 text-center lg:text-left text-gray-800">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-2">{profile.user?.name}</h1>
-            {profile.degree && (
-              <p className="text-xl font-medium text-[#2D9AA5] mb-3">{profile.degree}</p>
-            )}
-            {profile.address && (
-              <p className="text-gray-600 mb-3">{profile.address}</p>
-            )}
-            
-            {/* Rating */}
-            <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
-              {reviewsLoading ? (
-                <span className="text-gray-600">Loading rating...</span>
-              ) : reviewData && reviewData.totalReviews > 0 ? (
-                <>
-                  <div className="flex items-center">{renderStars(reviewData.averageRating)}</div>
-                  <span className="font-medium text-gray-800">{reviewData.averageRating.toFixed(1)}</span>
-                  <span className="text-gray-600">({reviewData.totalReviews} reviews)</span>
-                </>
+      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        {/* Header Section with Circular Photo and Info */}
+        <div className="bg-gray-50 px-6 py-8 border-b border-gray-200">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            {/* Profile Photo - Circular */}
+            <div className="flex justify-center lg:justify-start">
+              {profile.photos?.[0] ? (
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
+                  <img
+                    src={profile.photos[0]}
+                    alt={profile.user?.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               ) : (
-                <span className="text-gray-600">No reviews yet</span>
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white shadow-lg bg-gray-200 flex items-center justify-center">
+                  <span className="text-gray-500 text-lg">No Photo</span>
+                </div>
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-3">
-              {futureSlots.length > 0 && (
-                <button
-                  onClick={() => setShowCalendarModal(true)}
-                  className="inline-flex items-center justify-center px-6 py-3 bg-[#2D9AA5] hover:bg-[#2D9AA5]/90 text-white rounded-lg transition-all font-medium shadow-md"
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  View Slots
-                </button>
+            {/* Doctor Info */}
+            <div className="flex-1 text-center lg:text-left text-gray-800">
+              <h1 className="text-3xl sm:text-4xl font-bold mb-2">{profile.user?.name}</h1>
+              {profile.degree && (
+                <p className="text-xl font-medium text-[#2D9AA5] mb-3">{profile.degree}</p>
               )}
-              <button
-                onClick={handleReviewClick}
-                className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all font-medium shadow-md"
-              >
-                Write a Review
-              </button>
-              
-              {/* Directions Button */}
-              {(() => {
-                const coords = profile.location?.coordinates;
-                const mapsHref = coords && coords.length === 2
-                  ? `https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}`
-                  : (profile.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(profile.address)}` : null);
-                return mapsHref ? (
-                  <a
-                    href={mapsHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all font-medium shadow-md"
+              {profile.address && (
+                <p className="text-gray-600 mb-3">{profile.address}</p>
+              )}
+
+              {/* Rating */}
+              <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
+                {reviewsLoading ? (
+                  <span className="text-gray-600">Loading rating...</span>
+                ) : reviewData && reviewData.totalReviews > 0 ? (
+                  <>
+                    <div className="flex items-center">{renderStars(reviewData.averageRating)}</div>
+                    <span className="font-medium text-gray-800">{reviewData.averageRating.toFixed(1)}</span>
+                    <span className="text-gray-600">({reviewData.totalReviews} reviews)</span>
+                  </>
+                ) : (
+                  <span className="text-gray-600">No reviews yet</span>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+                {futureSlots.length > 0 && (
+                  <button
+                    onClick={() => setShowCalendarModal(true)}
+                    className="inline-flex items-center justify-center px-6 py-3 bg-[#2D9AA5] hover:bg-[#2D9AA5]/90 text-white rounded-lg transition-all font-medium shadow-md"
                   >
-                    <Navigation className="w-4 h-4 mr-2" />
-                    Directions
-                  </a>
-                ) : null;
-              })()}
+                    <Calendar className="w-4 h-4 mr-2" />
+                    View Slots
+                  </button>
+                )}
+                <button
+                  onClick={handleReviewClick}
+                  className="inline-flex items-center justify-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all font-medium shadow-md"
+                >
+                  Write a Review
+                </button>
+
+                {/* Directions Button */}
+                {(() => {
+                  const coords = profile.location?.coordinates;
+                  const mapsHref = coords && coords.length === 2
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}`
+                    : (profile.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(profile.address)}` : null);
+                  return mapsHref ? (
+                    <a
+                      href={mapsHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all font-medium shadow-md"
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      Directions
+                    </a>
+                  ) : null;
+                })()}
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Doctor Details */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Experience, Fee, Contact Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {typeof profile.experience === 'number' && (
+                  <div className="p-4 bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 rounded-lg border border-[#2D9AA5]/20">
+                    <h3 className="font-semibold text-gray-800 mb-1">Experience</h3>
+                    <p className="text-gray-700 text-lg font-medium">{profile.experience} years</p>
+                  </div>
+                )}
+                {typeof profile.consultationFee === 'number' && (
+                  <div className="p-4 bg-gradient-to-br from-green-50 to-green-25 rounded-lg border border-green-200">
+                    <h3 className="font-semibold text-gray-800 mb-1">Consultation Fee</h3>
+                    <p className="text-gray-700 text-lg font-medium">AED {profile.consultationFee}</p>
+                  </div>
+                )}
+                {profile.clinicContact && (
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-25 rounded-lg border border-blue-200">
+                    <h3 className="font-semibold text-gray-800 mb-1">Contact</h3>
+                    <a href={`tel:${profile.clinicContact}`} className="text-blue-600 hover:underline text-lg font-medium">
+                      {profile.clinicContact}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Treatments Section */}
+              {profile.treatments && profile.treatments.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-4 text-xl">Treatments & Services</h3>
+                  <div className="space-y-4">
+                    {profile.treatments.map((t, idx) => (
+                      <div key={idx} className="p-4 bg-gradient-to-br from-purple-50 to-purple-25 border border-purple-200 rounded-lg">
+                        <div className="mb-3">
+                          <span className="px-4 py-2 rounded-full bg-purple-600 text-white text-sm font-medium inline-block">
+                            {t.mainTreatment}
+                          </span>
+                        </div>
+                        {t.subTreatments && t.subTreatments.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {t.subTreatments.map((s, i) => (
+                              <span key={i} className="px-3 py-1 rounded-full bg-white text-purple-700 text-xs border border-purple-300 shadow-sm">
+                                {s.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Available Slots Section */}
+              {futureSlots.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-4 text-xl">Available Appointments</h3>
+                  <div className="space-y-4">
+                    {futureSlots.map((slot, idx) => (
+                      <div key={idx} className="border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-gray-50 to-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-gray-900 text-lg">{slot.date}</h4>
+                          <span className="text-sm font-medium text-[#2D9AA5] bg-[#2D9AA5]/10 px-3 py-1 rounded-full border border-[#2D9AA5]/20">
+                            {slot.availableSlots} slots available
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {slot.sessions?.morning?.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-700 mb-2">Morning Sessions</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {slot.sessions.morning.map((t, i) => (
+                                  <button key={i} className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm">
+                                    {t}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {slot.sessions?.evening?.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-700 mb-2">Evening Sessions</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {slot.sessions.evening.map((t, i) => (
+                                  <button key={i} className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm">
+                                    {t}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reviews Section - moved below slots */}
+              <div className="mt-8">
+                <h3 className="font-semibold text-gray-800 text-xl mb-4">Recent Reviews</h3>
+                {reviewsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5] mx-auto"></div>
+                    <p className="text-gray-500 mt-2">Loading reviews...</p>
+                  </div>
+                ) : reviewData && reviewData.reviews.length > 0 ? (
+                  <div className="space-y-4">
+                    {reviewData.reviews.slice(0, 6).map((r, idx) => (
+                      <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center text-white text-sm font-medium">
+                            {r.userId.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            {(() => {
+                              const comment = r.comment ?? ""; // fallback if comment is null/undefined
+                              const lines = comment.split(/\r?\n/);
+                              const isLong = lines.length > 7;
+                              const displayText = isLong ? lines.slice(0, 7).join('\n') : comment;
+                              return (
+                                <>
+                                  <p
+                                    className="text-sm text-gray-800 mb-2 leading-relaxed"
+                                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line', display: '-webkit-box', WebkitLineClamp: isLong ? 7 : 'unset', WebkitBoxOrient: 'vertical', overflow: isLong ? 'hidden' : 'visible' }}
+                                  >
+                                    "{displayText}"
+                                  </p>
+                                  {isLong && (
+                                    <button
+                                      className="text-xs text-[#2D9AA5] underline cursor-pointer mb-2"
+                                      onClick={() => setModalReview(r.comment)}
+                                    >
+                                      Read More
+                                    </button>
+                                  )}
+                                  <p className="text-xs text-gray-500 font-medium">- {r.userId.name}</p>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-gray-400 text-2xl">💬</span>
+                    </div>
+                    <p className="text-gray-500">No reviews yet</p>
+                    <p className="text-gray-400 text-sm mt-1">Be the first to leave a review!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column - Reviews */}
+            {/* REMOVE the entire right column review section (lines 360-414) */}
           </div>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Doctor Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Experience, Fee, Contact Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {typeof profile.experience === 'number' && (
-                <div className="p-4 bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 rounded-lg border border-[#2D9AA5]/20">
-                  <h3 className="font-semibold text-gray-800 mb-1">Experience</h3>
-                  <p className="text-gray-700 text-lg font-medium">{profile.experience} years</p>
-                </div>
-              )}
-              {typeof profile.consultationFee === 'number' && (
-                <div className="p-4 bg-gradient-to-br from-green-50 to-green-25 rounded-lg border border-green-200">
-                  <h3 className="font-semibold text-gray-800 mb-1">Consultation Fee</h3>
-                  <p className="text-gray-700 text-lg font-medium">AED {profile.consultationFee}</p>
-                </div>
-              )}
-              {profile.clinicContact && (
-                <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-25 rounded-lg border border-blue-200">
-                  <h3 className="font-semibold text-gray-800 mb-1">Contact</h3>
-                  <a href={`tel:${profile.clinicContact}`} className="text-blue-600 hover:underline text-lg font-medium">
-                    {profile.clinicContact}
-                  </a>
-                </div>
-              )}
+      {/* Appointment Modal */}
+      {showCalendarModal && futureSlots.length > 0 && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden border border-gray-100 flex flex-col">
+            <div className="sticky top-0 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white p-6 flex items-center justify-between">
+              <h3 className="text-xl font-semibold">Available Appointments</h3>
+              <button
+                onClick={() => setShowCalendarModal(false)}
+                className="p-2 hover:bg-white/20 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-
-            {/* Treatments Section */}
-            {profile.treatments && profile.treatments.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-4 text-xl">Treatments & Services</h3>
-                <div className="space-y-4">
-                  {profile.treatments.map((t, idx) => (
-                    <div key={idx} className="p-4 bg-gradient-to-br from-purple-50 to-purple-25 border border-purple-200 rounded-lg">
-                      <div className="mb-3">
-                        <span className="px-4 py-2 rounded-full bg-purple-600 text-white text-sm font-medium inline-block">
-                          {t.mainTreatment}
-                        </span>
-                      </div>
-                      {t.subTreatments && t.subTreatments.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {t.subTreatments.map((s, i) => (
-                            <span key={i} className="px-3 py-1 rounded-full bg-white text-purple-700 text-xs border border-purple-300 shadow-sm">
-                              {s.name}
-                            </span>
-                          ))}
+            <div className="p-6 overflow-y-auto">
+              <div className="space-y-6">
+                {futureSlots.map((slot, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-900 text-lg">{slot.date}</h4>
+                      <span className="text-sm font-medium text-[#2D9AA5] bg-[#2D9AA5]/10 px-4 py-2 rounded-full border border-[#2D9AA5]/20">
+                        {slot.availableSlots} slots available
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {slot.sessions?.morning?.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                            <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                            Morning Sessions
+                          </h5>
+                          <div className="flex flex-wrap gap-2">
+                            {slot.sessions.morning.map((t, i) => (
+                              <button key={i} className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm">
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {slot.sessions?.evening?.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                            <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                            Evening Sessions
+                          </h5>
+                          <div className="flex flex-wrap gap-2">
+                            {slot.sessions.evening.map((t, i) => (
+                              <button key={i} className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm">
+                                {t}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Available Slots Section */}
-            {futureSlots.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-4 text-xl">Available Appointments</h3>
-                <div className="space-y-4">
-                  {futureSlots.map((slot, idx) => (
-                    <div key={idx} className="border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-gray-50 to-white">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-gray-900 text-lg">{slot.date}</h4>
-                        <span className="text-sm font-medium text-[#2D9AA5] bg-[#2D9AA5]/10 px-3 py-1 rounded-full border border-[#2D9AA5]/20">
-                          {slot.availableSlots} slots available
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {slot.sessions?.morning?.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-medium text-gray-700 mb-2">Morning Sessions</h5>
-                            <div className="flex flex-wrap gap-2">
-                              {slot.sessions.morning.map((t, i) => (
-                                <button key={i} className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm">
-                                  {t}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {slot.sessions?.evening?.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-medium text-gray-700 mb-2">Evening Sessions</h5>
-                            <div className="flex flex-wrap gap-2">
-                              {slot.sessions.evening.map((t, i) => (
-                                <button key={i} className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm">
-                                  {t}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Reviews Section - moved below slots */}
-            <div className="mt-8">
-              <h3 className="font-semibold text-gray-800 text-xl mb-4">Recent Reviews</h3>
-              {reviewsLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5] mx-auto"></div>
-                  <p className="text-gray-500 mt-2">Loading reviews...</p>
-                </div>
-              ) : reviewData && reviewData.reviews.length > 0 ? (
-                <div className="space-y-4">
-                  {reviewData.reviews.slice(0, 6).map((r, idx) => (
-                    <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center text-white text-sm font-medium">
-                          {r.userId.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1">
-                          {(() => {
-                            const lines = r.comment.split(/\r?\n/);
-                            const isLong = lines.length > 7;
-                            const displayText = isLong ? lines.slice(0, 7).join('\n') : r.comment;
-                            return (
-                              <>
-                                <p
-                                  className="text-sm text-gray-800 mb-2 leading-relaxed"
-                                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line', display: '-webkit-box', WebkitLineClamp: isLong ? 7 : 'unset', WebkitBoxOrient: 'vertical', overflow: isLong ? 'hidden' : 'visible' }}
-                                >
-                                  "{displayText}"
-                                </p>
-                                {isLong && (
-                                  <button
-                                    className="text-xs text-[#2D9AA5] underline cursor-pointer mb-2"
-                                    onClick={() => setModalReview(r.comment)}
-                                  >
-                                    Read More
-                                  </button>
-                                )}
-                                <p className="text-xs text-gray-500 font-medium">- {r.userId.name}</p>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-gray-400 text-2xl">💬</span>
                   </div>
-                  <p className="text-gray-500">No reviews yet</p>
-                  <p className="text-gray-400 text-sm mt-1">Be the first to leave a review!</p>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           </div>
-
-          {/* Right Column - Reviews */}
-          {/* REMOVE the entire right column review section (lines 360-414) */}
         </div>
-      </div>
-    </div>
+      )}
+      <CalculatorGames />
 
-    {/* Appointment Modal */}
-    {showCalendarModal && futureSlots.length > 0 && (
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden border border-gray-100 flex flex-col">
-          <div className="sticky top-0 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white p-6 flex items-center justify-between">
-            <h3 className="text-xl font-semibold">Available Appointments</h3>
-            <button 
-              onClick={() => setShowCalendarModal(false)} 
-              className="p-2 hover:bg-white/20 rounded-full transition"
+      {/* Modal for full review */}
+      {modalReview && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg w-full relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setModalReview(null)}
             >
               <X className="w-5 h-5" />
             </button>
-          </div>
-          <div className="p-6 overflow-y-auto">
-            <div className="space-y-6">
-              {futureSlots.map((slot, idx) => (
-                <div key={idx} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold text-gray-900 text-lg">{slot.date}</h4>
-                    <span className="text-sm font-medium text-[#2D9AA5] bg-[#2D9AA5]/10 px-4 py-2 rounded-full border border-[#2D9AA5]/20">
-                      {slot.availableSlots} slots available
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {slot.sessions?.morning?.length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                          <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
-                          Morning Sessions
-                        </h5>
-                        <div className="flex flex-wrap gap-2">
-                          {slot.sessions.morning.map((t, i) => (
-                            <button key={i} className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm">
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {slot.sessions?.evening?.length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                          <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
-                          Evening Sessions
-                        </h5>
-                        <div className="flex flex-wrap gap-2">
-                          {slot.sessions.evening.map((t, i) => (
-                            <button key={i} className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm">
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <div className="text-gray-800 whitespace-pre-line break-words">{modalReview}</div>
           </div>
         </div>
-      </div>
-    )}
-    <CalculatorGames/>
-
-    {/* Modal for full review */}
-    {modalReview && (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg w-full relative">
-          <button
-            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-            onClick={() => setModalReview(null)}
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="text-gray-800 whitespace-pre-line break-words">{modalReview}</div>
-        </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
 }
