@@ -11,13 +11,7 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "JobApplication",
     },
-    
-    relatedJob: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "JobPosting",
-},
-
-      relatedComment: { type: mongoose.Schema.Types.ObjectId },
+    relatedComment: { type: mongoose.Schema.Types.ObjectId },
 
     // Optional: For blog reply notifications
     relatedBlog: {
@@ -25,9 +19,19 @@ const notificationSchema = new mongoose.Schema(
       ref: "Blog",
     },
 
+    // Optional: For chat/prescription notifications
+    relatedChat: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chat",
+    },
+    relatedPrescriptionRequest: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PrescriptionRequest",
+    },
+
     type: {
       type: String,
-      enum: ["blog-reply", "job-status"],
+      enum: ["blog-reply", "job-status", "chat-message", "prescription"],
     },
   },
   { timestamps: true }
