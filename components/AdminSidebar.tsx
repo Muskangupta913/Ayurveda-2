@@ -38,24 +38,24 @@ const navItems: NavItem[] = [
     icon: '📝',
     description: 'Add new Treatment'
   },
-  // { 
-  //   label: 'User Management', 
-  //   path: '/admin/users', 
-  //   icon: '👥',
-  //   description: 'Manage users & roles'
-  // },
+  { 
+    label: 'All Blogs', 
+    path: '/admin/all-blogs', 
+    icon: '👥',
+    description: 'Manage users & roles'
+  },
   { 
     label: 'Analytics', 
     path: '/admin/analytics', 
     icon: '📊',
     description: 'View detailed reports'
   },
-  // { 
-  //   label: 'Settings', 
-  //   path: '/admin/settings', 
-  //   icon: '⚙️',
-  //   description: 'System configuration'
-  // },
+  { 
+    label: 'Manage Job', 
+    path: '/admin/job-manage', 
+    icon: '⚙️',
+    description: 'Approve or decline job'
+  },
 ];
 
 interface AdminSidebarProps {

@@ -20,6 +20,7 @@ interface Application {
   jobId: JobInfo;
   applicantId: ApplicantInfo;
   status: string;
+  resumeUrl?: string;  // ✅ add resumeUrl here
 }
 
 type FilterType = 'All' | 'Part Time' | 'Full Time' | 'Internship';
@@ -224,6 +225,21 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
                           {app.applicantId?.phone}
                         </a>
                       </div>
+
+                      {/* ✅ Resume link */}
+                      {app.resumeUrl && (
+                        <div className="col-span-2">
+                          <span className="text-gray-500">Resume:</span>
+                          <a
+                            href={app.resumeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-[#2D9AA5] hover:underline"
+                          >
+                            View Resume
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
 

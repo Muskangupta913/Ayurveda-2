@@ -1,4 +1,3 @@
-//models/JobApplication.js
 import mongoose from "mongoose";
 
 const JobApplicationSchema = new mongoose.Schema({
@@ -18,13 +17,18 @@ const JobApplicationSchema = new mongoose.Schema({
     phone: String,
     role: String,
   },
+  resume: {
+    type: String, // Store resume file path or URL
+    required: true,
+  },
   status: {
-  type: String,
-  enum: ["pending", "contacted", "rejected"],
-  default: "pending",
-}
-
+    type: String,
+    enum: ["pending", "contacted", "rejected"],
+    default: "pending",
+  },
 }, { timestamps: true });
-delete mongoose.models.JobApplication; 
 
-export default mongoose.models.JobApplication || mongoose.model("JobApplication", JobApplicationSchema);
+delete mongoose.models.JobApplication;
+
+export default mongoose.models.JobApplication ||
+  mongoose.model("JobApplication", JobApplicationSchema);

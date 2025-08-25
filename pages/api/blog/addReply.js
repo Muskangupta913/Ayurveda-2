@@ -46,12 +46,14 @@ await Notification.create({
   user: comment.user,
   message: `You received a reply on your comment in "${blog.title}"`,
   relatedBlog: blog._id,
+    type: "blog-reply", 
   relatedComment: comment._id,
 });
 
  emitNotificationToUser(comment.user.toString(), {
     message: `You received a reply on your comment in "${blog.title}"`,
     relatedBlog: blog._id,
+     type: "blog-reply",
     relatedComment: comment._id,
     createdAt: new Date(),
   });

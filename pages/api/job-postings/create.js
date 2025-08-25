@@ -28,6 +28,7 @@ export default async function handler(req, res) {
       ...req.body,
       postedBy: userId,
       role,
+       status: 'pending',
     });
 
     res.status(201).json({ success: true, job: newJob });
