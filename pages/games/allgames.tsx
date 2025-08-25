@@ -1,14 +1,16 @@
 // pages/allgames.tsx
-import React from 'react';
-import { games } from '../../components/CalculatorGames';
+"use client";
 
-function AllGames(){
+import { useRouter } from "next/navigation";
+import React from "react";
+import { games } from "../../components/CalculatorGames";
+
+function AllGames() {
+  const router = useRouter();
 
   const handleGameClick = (gameId: string) => {
-    // For now, just log the game ID
     console.log(`Navigating to game: ${gameId}`);
-    // You can implement navigation later
-    // router.push(`/games/${gameId}`);
+    router.push(`/games/${gameId}`);
   };
 
   return (
@@ -24,13 +26,14 @@ function AllGames(){
                 Health Games
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-white/90 leading-relaxed">
-                Zeva — bringing you fun, interactive games to learn, play, and boost your well-being
+                Zeva — bringing you fun, interactive games to learn, play, and
+                boost your well-being
               </p>
               <div className="mt-6 flex justify-center lg:justify-start">
                 <div className="w-20 h-1 bg-white/60 rounded-full"></div>
               </div>
             </div>
-            
+
             {/* Right side - Stats */}
             <div className="lg:justify-self-end">
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-6 sm:p-8">
@@ -39,22 +42,32 @@ function AllGames(){
                     <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">
                       {games.length}+
                     </div>
-                    <div className="text-white/80 text-xs sm:text-sm">Health Games</div>
+                    <div className="text-white/80 text-xs sm:text-sm">
+                      Health Games
+                    </div>
                   </div>
                   <div className="text-center border-l border-r border-white/20">
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">100%</div>
-                    <div className="text-white/80 text-xs sm:text-sm">Free to Play</div>
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">
+                      100%
+                    </div>
+                    <div className="text-white/80 text-xs sm:text-sm">
+                      Free to Play
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">24/7</div>
-                    <div className="text-white/80 text-xs sm:text-sm">Available</div>
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">
+                      24/7
+                    </div>
+                    <div className="text-white/80 text-xs sm:text-sm">
+                      Available
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        
+
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full -translate-x-12 -translate-y-12"></div>
         <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-16 translate-y-16"></div>
@@ -62,8 +75,6 @@ function AllGames(){
 
       {/* Games Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20">
-        
-        {/* Games Cards Grid */}
         <div className="grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {games.map((game, index) => {
             const Icon = game.icon;
@@ -73,19 +84,19 @@ function AllGames(){
                 className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden cursor-pointer"
                 style={{
                   animationDelay: `${index * 100}ms`,
-                  animation: 'fadeInUp 0.6s ease-out forwards'
+                  animation: "fadeInUp 0.6s ease-out forwards",
                 }}
                 onClick={() => handleGameClick(game.id)}
               >
                 {/* Image Container */}
                 <div className="relative overflow-hidden rounded-t-2xl">
-                  <img 
-                    src={game.image} 
-                    alt={game.title} 
-                    className="w-full h-36 sm:h-40 md:h-44 object-cover transition-transform duration-700 group-hover:scale-110" 
+                  <img
+                    src={game.image}
+                    alt={game.title}
+                    className="w-full h-36 sm:h-40 md:h-44 object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
+
                   {/* Floating Icon */}
                   <div className="absolute top-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                     <Icon className="text-[#FF6B6B]" size={18} />
@@ -102,22 +113,30 @@ function AllGames(){
                       {game.title}
                     </h2>
                   </div>
-                  
+
                   <p className="text-gray-600 text-xs sm:text-sm leading-relaxed mb-4 line-clamp-3">
                     {game.description}
                   </p>
 
                   {/* Action Button */}
                   <div className="flex items-center justify-between">
-                    <button 
+                    <button
                       onClick={() => handleGameClick(game.id)}
                       className="bg-[#FF6B6B] hover:bg-[#ee5a52] text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg cursor-pointer"
                     >
                       Play Now
                     </button>
                     <div className="flex items-center text-xs text-gray-500">
-                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                      <svg
+                        className="w-4 h-4 mr-1"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       Free
                     </div>
@@ -177,10 +196,10 @@ function AllGames(){
       `}</style>
     </div>
   );
-};
-
-export default AllGames;
+}
 
 AllGames.getLayout = function PageLayout(page: React.ReactNode) {
   return page; // No layout
-}
+};
+
+export default AllGames;

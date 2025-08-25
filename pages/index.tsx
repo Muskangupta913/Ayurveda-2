@@ -691,7 +691,7 @@ export default function Home(): React.ReactElement {
                           >
                             <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center mr-4">
                               <span className="text-lg">
-                                {s.type === "treatment" ? "🌿" : "🕉️"}
+                                {s.type === "treatment" ? "⚕️" : "🕉️"}
                               </span>
                             </div>
                             <div className="flex-1">
@@ -796,7 +796,7 @@ export default function Home(): React.ReactElement {
                               <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center mr-4">
                                 <span className="text-lg">
                                   {s.type === "treatment"
-                                    ? "🌿"
+                                    ? "⚕️"
                                     : s.type === "subcategory"
                                       ? "🌱"
                                       : "🪔"}

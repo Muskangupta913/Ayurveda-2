@@ -344,7 +344,7 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
               {/* Comments Preview */}
               {blog.comments.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-medium mb-2">Recent Comments:</h4>
+                  <h4 className="text-black text-sm font-medium mb-2">Recent Comments:</h4>
                   {blog.comments.slice(0, 2).map(comment => (
                     <div key={comment._id} className="mb-2">
                       <div className="bg-gray-50 rounded p-2">
