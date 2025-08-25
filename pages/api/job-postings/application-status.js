@@ -30,27 +30,30 @@ export default async function handler(req, res) {
       applicationId,
       { status },
       { new: true }
-    ).populate("applicantId")
-.populate("jobId"); // ✅ populate job posting// get applicant details
+    )
+      .populate("applicantId")
+      .populate("jobId");
 
     if (!updatedApplication) {
       return res.status(404).json({ message: "Application not found" });
     }
 
     const applicantUserId = updatedApplication.applicantId._id;
-    const jobTitle = updatedApplication.jobId?.title || "Job Posting";
-    console.log('jobtitle',jobTitle);
+    const jobTitle = updatedApplication.jobId?.jobTitle || "Job Posting";
+
+    console.log("Populated JobId:", jobTitle );
+
 
     // ✅ Create notification in DB
     const notification = await Notification.create({
       user: applicantUserId,
       message: `Your application for "${jobTitle}" has been updated to "${status}"`,
       type: "job-status",
-       relatedJobApplication: updatedApplication._id,   // JobApplication ID
-  relatedJob: updatedApplication.jobId._id   
+      relatedJobApplication: updatedApplication._id,
+      relatedJob: updatedApplication.jobId._id,
     });
 
-    // ✅ Emit socket event to applicant
+    // ✅ Emit socket events
     emitNotificationToUser(applicantUserId.toString(), {
       _id: notification._id,
       message: notification.message,
@@ -58,7 +61,6 @@ export default async function handler(req, res) {
       isRead: false,
     });
 
-    // ✅ Also emit "applicationStatusChanged" so UI updates instantly
     emitNotificationToUser(applicantUserId.toString(), {
       type: "applicationStatusChanged",
       message: notification.message,
@@ -66,9 +68,12 @@ export default async function handler(req, res) {
       newStatus: status,
     });
 
-    return res
-      .status(200)
-      .json({ message: "Status updated & notification sent" });
+    // ✅ Return full response (not just message)
+    return res.status(200).json({
+      message: "Status updated & notification sent",
+      application: updatedApplication,
+      notification,
+    });
   } catch (error) {
     console.error("Status update error:", error);
     return res.status(500).json({ message: "Server error" });

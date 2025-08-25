@@ -1,3 +1,5 @@
+// api/blog/published.js
+
 import dbConnect from "../../../lib/database";
 import Blog from "../../../models/Blog";
 import jwt from "jsonwebtoken";
@@ -74,12 +76,10 @@ export default async function handler(req, res) {
             }).populate("postedBy", "name email");
 
             if (!blog) {
-              return res
-                .status(404)
-                .json({
-                  success: false,
-                  message: "Published blog not found or you lack permission",
-                });
+              return res.status(404).json({
+                success: false,
+                message: "Published blog not found or you lack permission",
+              });
             }
             return res.status(200).json({ success: true, blog });
           }
@@ -249,80 +249,80 @@ export default async function handler(req, res) {
         break;
 
       case "DELETE":
-  try {
-    // Authenticate user
-    const { userId, role } = await authenticate(req);
+        try {
+          // Authenticate user
+          const { userId, role } = await authenticate(req);
 
-    // Check authorization for deleting published blogs
-    authorize(role, allowedRoles.delete);
+          // Check authorization for deleting published blogs
+          authorize(role, allowedRoles.delete);
 
-    const { id } = req.query;
+          const { id } = req.query;
 
-    if (!id) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Blog ID required" });
-    }
+          if (!id) {
+            return res
+              .status(400)
+              .json({ success: false, message: "Blog ID required" });
+          }
 
-    // Find the existing blog
-    const existingBlog = await Blog.findById(id);
-    if (!existingBlog) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Published blog not found" });
-    }
+          // Find the existing blog
+          const existingBlog = await Blog.findById(id);
+          if (!existingBlog) {
+            return res
+              .status(404)
+              .json({ success: false, message: "Published blog not found" });
+          }
 
-    // Check if user owns the blog or has delete permissions
-    if (
-      existingBlog.postedBy.toString() !== userId &&
-      !allowedRoles.delete.includes(role)
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "You do not have permission to delete this published blog",
-      });
-    }
+          // Check if user owns the blog or has delete permissions
+          if (
+            existingBlog.postedBy.toString() !== userId &&
+            !allowedRoles.delete.includes(role)
+          ) {
+            return res.status(403).json({
+              success: false,
+              message:
+                "You do not have permission to delete this published blog",
+            });
+          }
 
-    // Clear comments and likes before deleting
-    existingBlog.comments = [];
-    existingBlog.likes = [];
-    await existingBlog.save();
+          // Clear comments and likes before deleting
+          existingBlog.comments = [];
+          existingBlog.likes = [];
+          await existingBlog.save();
 
-    // Now delete the blog itself
-    await Blog.findByIdAndDelete(id);
+          // Now delete the blog itself
+          await Blog.findByIdAndDelete(id);
 
-    res.status(200).json({
-      success: true,
-      message: "Published blog and all related comments & likes deleted successfully",
-    });
-  } catch (error) {
-    if (
-      error.message.includes("No token") ||
-      error.message.includes("Authentication failed")
-    ) {
-      return res
-        .status(401)
-        .json({ success: false, message: error.message });
-    }
-    if (error.message.includes("Access denied")) {
-      return res
-        .status(403)
-        .json({ success: false, message: error.message });
-    }
-    res.status(400).json({ success: false, error: error.message });
-  }
-  break;
+          res.status(200).json({
+            success: true,
+            message:
+              "Published blog and all related comments & likes deleted successfully",
+          });
+        } catch (error) {
+          if (
+            error.message.includes("No token") ||
+            error.message.includes("Authentication failed")
+          ) {
+            return res
+              .status(401)
+              .json({ success: false, message: error.message });
+          }
+          if (error.message.includes("Access denied")) {
+            return res
+              .status(403)
+              .json({ success: false, message: error.message });
+          }
+          res.status(400).json({ success: false, error: error.message });
+        }
+        break;
 
       default:
         res.status(405).json({ success: false, message: "Method not allowed" });
     }
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 }

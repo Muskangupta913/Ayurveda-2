@@ -29,10 +29,7 @@ const JobPostingSchema = new mongoose.Schema({
     enum: ['Full Time', 'Part Time', 'Internship'],
     required: true,
   },
-  workingDays: {
-  type: String,
-  default: '',
-},
+  workingDays: { type: String, default: '' },
   location: { type: String, required: true },
   jobTiming: { type: String, required: true },
   skills: [String],
@@ -42,12 +39,13 @@ const JobPostingSchema = new mongoose.Schema({
   noOfOpenings: { type: Number, required: true },
   salary: { type: String, required: true },
   establishment: { type: String },
-  isActive: {
-    type: Boolean,
-    default: true,
-  }
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'declined'],
+    default: 'pending',
+  },
+  isActive: { type: Boolean, default: true }
 }, { timestamps: true });
+
 delete mongoose.models.JobPosting;
-
-
 export default mongoose.models.JobPosting || mongoose.model('JobPosting', JobPostingSchema);

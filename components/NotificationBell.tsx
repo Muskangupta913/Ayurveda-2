@@ -120,15 +120,15 @@ export default function NotificationBell() {
                 >
                   <div
     className="flex-1 cursor-pointer"
-    onClick={() => {
-      if (n.type === "blog-reply" && n.relatedBlog) {
-        window.location.href = `/blogs/${n.relatedBlog}#${n.relatedComment}`;
-      }else if (n.type === "job-status" && n.relatedJob) {
-  // ✅ Go to JobPosting page
+   onClick={() => {
+  if (n.type === "blog-reply" && n.relatedBlog) {
+    window.location.href = `/blogs/${n.relatedBlog}#${n.relatedComment}`;
+  } else if (n.type === "job-status" && n.relatedJob) {
   window.location.href = `/job-details/${n.relatedJob}`;
-        // depending on your route for job application details
-      }
-    }}
+
+
+  }
+}}
   >
                     <p className="text-sm">{n.message}</p>
                     <p className="text-xs text-gray-400">

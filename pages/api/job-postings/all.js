@@ -13,7 +13,10 @@ export default async function handler(req, res) {
   // ✅ Extract all query params
   const { location, jobType, department, skills, salary, time, jobId } = req.query;
 
-  const filters = { isActive: true };
+  const filters = { 
+    isActive: true,
+    status: "approved"   // ✅ Only approved jobs
+  };
 
   // ✅ Apply filters with case-insensitive partial matching
   if (location?.trim()) {
@@ -29,7 +32,7 @@ export default async function handler(req, res) {
   }
 
   if (salary?.trim()) {
-    filters.salary = salary.trim(); // keep exact match for numeric/string salary
+    filters.salary = salary.trim(); // exact match
   }
 
   if (jobId?.trim()) {
@@ -41,7 +44,6 @@ export default async function handler(req, res) {
       ? skills
       : skills.split(",").map(s => s.trim()).filter(Boolean);
 
-    // Match if at least one skill from the array exists (case-insensitive)
     filters.skills = { $in: skillsArray.map(skill => new RegExp(skill, "i")) };
   }
 

@@ -4,7 +4,7 @@ import type { GetServerSideProps } from "next";
 import { useEffect, useState, useRef } from "react";
 import parse from "html-react-parser";
 import { useAuth } from "@/context/AuthContext";
-import AuthModal from "../../components/AuthModal"; // Adjust path as needed
+import AuthModal from "../../components/AuthModal";
 import SocialMediaShare from "../../components/SocialMediaShare";
 // Server-side only imports used in getServerSideProps
 import dbConnect from "../../lib/database";
@@ -12,22 +12,34 @@ import dbConnect from "../../lib/database";
 // @ts-ignore - JS model import
 import BlogModel from "../../models/Blog";
 
+type BlogReply = {
+  _id: string;
+  username: string;
+  text: string;
+  createdAt: string;
+  user?: string | null;
+};
+
+type BlogComment = {
+  _id: string;
+  username: string;
+  text: string;
+  createdAt: string;
+  user?: string | null;
+  replies?: BlogReply[];
+};
+
 type Blog = {
   _id: string;
   title: string;
   content: string;
-  postedBy: { name: string };
+  postedBy: { name: string; _id?: string | null };
   createdAt: string;
   image?: string;
   likesCount: number;
   liked?: boolean;
-  comments: {
-    _id: string;
-    username: string;
-    text: string;
-    createdAt: string;
-  }[];
-  paramlink?: string; // Added for social sharing
+  comments: BlogComment[];
+  paramlink?: string | null;
 };
 
 type SeoMeta = {
@@ -52,6 +64,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
   const [newComment, setNewComment] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState("login");
+  const [replyTexts, setReplyTexts] = useState<{[commentId: string]: string}>({});
 
   // Track pending actions after login
   const shouldLikeAfterLogin = useRef(false);
@@ -65,6 +78,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
     }
     return "https://zeva360.com";
   };
+
   // Compute share URL
   const shareUrl = blog
     ? `${getBaseUrl()}/blogs/${blog.paramlink || blog._id}`
@@ -168,12 +182,24 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
         body: JSON.stringify({ blogId: id, text: commentText }),
       });
       const json = await res.json();
-      if (json.success && blog) {
+      if (json.success && json.comment && blog) {
+        // Add the new comment to existing comments
+        const newComment: BlogComment = {
+          _id: json.comment._id,
+          username: json.comment.username,
+          text: json.comment.text,
+          createdAt: json.comment.createdAt,
+          user: json.comment.user,
+          replies: json.comment.replies || []
+        };
+
         setBlog({
           ...blog,
-          comments: json.comments,
+          comments: [...blog.comments, newComment],
         });
         setNewComment("");
+      } else {
+        console.error("Failed to add comment:", json.error);
       }
     } catch (err) {
       console.error(err);
@@ -219,6 +245,71 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
     } catch (err) {
       console.error(err);
       alert("Something went wrong");
+    }
+  }
+
+  // Handle reply submission
+  async function handleReplySubmit(commentId: string) {
+    const replyText = replyTexts[commentId];
+    if (!replyText?.trim()) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/blog/addReply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          blogId: blog?._id,
+          commentId: commentId,
+          text: replyText,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setBlog((prev) => {
+          if (!prev) return prev;
+
+          // Normalize the updated comment data
+          const normalizeComment = (comment: any) => ({
+            _id: String(comment._id || ''),
+            username: comment.username || "Anonymous",
+            text: comment.text || "",
+            createdAt: comment.createdAt 
+              ? new Date(comment.createdAt).toISOString()
+              : new Date().toISOString(),
+            user: comment.user ? String(comment.user) : null,
+            replies: Array.isArray(comment.replies) 
+              ? comment.replies.map((r: any) => ({
+                  _id: String(r._id || ''),
+                  username: r.username || user?.name || "Anonymous",
+                  text: r.text || "",
+                  createdAt: r.createdAt 
+                    ? new Date(r.createdAt).toISOString()
+                    : new Date().toISOString(),
+                  user: r.user ? String(r.user) : null,
+                }))
+              : []
+          });
+
+          return {
+            ...prev,
+            comments: prev.comments.map((comment) =>
+              comment._id === commentId ? normalizeComment(json.comment) : comment
+            ),
+          };
+        });
+        // Clear the reply text for this comment
+        setReplyTexts(prev => ({
+          ...prev,
+          [commentId]: ""
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add reply");
     }
   }
 
@@ -296,7 +387,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
           const canDeleteComment =
             user &&
             (String(user._id) === String(c.user) || // comment owner
-              String(user._id) === String(blog.postedBy._id || blog.postedBy)); // blog author
+              String(user._id) === String(blog.postedBy._id)); // blog author
 
           return (
             <div key={c._id} className="border p-3 rounded">
@@ -320,15 +411,14 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
               </div>
 
               {/* Replies */}
-              {c.replies?.map((r) => {
+              {c.replies && c.replies.length > 0 && c.replies.map((r) => {
                 const isAuthorReply =
                   r.user &&
-                  String(r.user) === String(blog.postedBy._id || blog.postedBy);
+                  String(r.user) === String(blog.postedBy._id);
                 const canDeleteReply =
                   user &&
                   (String(user._id) === String(r.user) ||
-                    String(user._id) ===
-                      String(blog.postedBy._id || blog.postedBy));
+                    String(user._id) === String(blog.postedBy._id));
 
                 return (
                   <div
@@ -378,34 +468,14 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                   <input
                     type="text"
                     placeholder="Reply to this comment..."
-                    onKeyDown={async (e) => {
-                      if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                        const token = localStorage.getItem("token");
-                        const res = await fetch("/api/blog/addReply", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                          },
-                          body: JSON.stringify({
-                            blogId: blog._id,
-                            commentId: c._id,
-                            text: e.currentTarget.value,
-                          }),
-                        });
-                        const json = await res.json();
-                        if (json.success) {
-                          setBlog((prev) => {
-                            if (!prev) return prev;
-                            return {
-                              ...prev,
-                              comments: prev.comments.map((comment) =>
-                                comment._id === c._id ? json.comment : comment
-                              ),
-                            };
-                          });
-                          e.currentTarget.value = "";
-                        }
+                    value={replyTexts[c._id] || ""}
+                    onChange={(e) => setReplyTexts(prev => ({
+                      ...prev,
+                      [c._id]: e.target.value
+                    }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleReplySubmit(c._id);
                       }
                     }}
                     className="w-full border rounded p-1 text-sm"
@@ -479,7 +549,7 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
     await dbConnect();
     // @ts-ignore
     const blogDoc = await BlogModel.findById(id)
-      .populate("postedBy", "name")
+      .populate("postedBy", "name _id")
       .lean();
     if (!blogDoc) {
       return { notFound: true };
@@ -495,12 +565,15 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
     const image =
       imageFromContent || `${baseUrl}/assets/health_treatments_logo.png`;
 
-    // Create the blog object, conditionally including the image property
+    // Create the blog object, ensuring no undefined values
     const initialBlog: Blog = {
       _id: String(blogDoc._id),
       title: blogDoc.title || "Blog",
       content: blogDoc.content || "",
-      postedBy: { name: blogDoc.postedBy?.name || "Author" },
+      postedBy: { 
+        name: blogDoc.postedBy?.name || "Author",
+        _id: blogDoc.postedBy?._id ? String(blogDoc.postedBy._id) : null
+      },
       createdAt: blogDoc.createdAt
         ? new Date(blogDoc.createdAt).toISOString()
         : new Date().toISOString(),
@@ -508,13 +581,27 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
       liked: false,
       comments: Array.isArray(blogDoc.comments)
         ? blogDoc.comments.map((c: any) => ({
-            _id: String(c._id),
-            username: c.username,
-            text: c.text,
-            createdAt: new Date(c.createdAt).toISOString(),
+            _id: String(c._id || ''),
+            username: c.username || "Anonymous",
+            text: c.text || "",
+            createdAt: c.createdAt 
+              ? new Date(c.createdAt).toISOString()
+              : new Date().toISOString(),
+            user: c.user ? String(c.user) : null,
+            replies: Array.isArray(c.replies) 
+              ? c.replies.map((r: any) => ({
+                  _id: String(r._id || ''),
+                  username: r.username || "Anonymous",
+                  text: r.text || "",
+                  createdAt: r.createdAt 
+                    ? new Date(r.createdAt).toISOString()
+                    : new Date().toISOString(),
+                  user: r.user ? String(r.user) : null,
+                }))
+              : []
           }))
         : [],
-      paramlink: blogDoc.paramlink || undefined, // Include paramlink
+      paramlink: blogDoc.paramlink || null,
     };
 
     // Only add image property if it exists (not null/undefined)
@@ -532,6 +619,7 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
 
     return { props: { initialBlog, seo } };
   } catch (e) {
+    console.error("getServerSideProps error:", e);
     return { props: { initialBlog: null, seo: null } };
   }
 };
