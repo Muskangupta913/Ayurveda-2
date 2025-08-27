@@ -734,63 +734,6 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
               <p className="text-gray-600 mt-1">
                 Monitor and manage your blog performance
               </p>
-<<<<<<< HEAD
-              
-              {/* Comments Preview */}
-              {blog.comments.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-black text-sm font-medium mb-2">Recent Comments:</h4>
-                  {blog.comments.slice(0, 2).map(comment => (
-                    <div key={comment._id} className="mb-2">
-                      <div className="bg-gray-50 rounded p-2">
-                        <p className="text-xs font-medium">{comment.username}</p>
-                        <p className="text-xs text-gray-600 line-clamp-2">{comment.text}</p>
-                        
-                        {/* Replies */}
-                        {comment.replies?.map(reply => (
-                          <div key={reply._id} className="ml-4 mt-2 bg-white rounded p-2">
-                            <p className="text-xs font-medium text-[#2D9AA5]">{reply.username}</p>
-                            <p className="text-xs text-gray-600">{reply.text}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteComment(blog._id, reply._id);
-                              }}
-                              className="text-red-500 text-xs hover:underline mt-1"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))}
-                        
-                        {/* Reply Input */}
-                        <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="text"
-                            placeholder="Reply..."
-                            className="flex-1 text-xs border rounded px-2 py-1"
-                            value={replyTexts[`${blog._id}_${comment._id}`] || ''}
-                            onChange={(e) => handleReplyChange(blog._id, comment._id, e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                submitReply(blog._id, comment._id);
-                              }
-                            }}
-                          />
-                          <button
-                            className="px-2 py-1 bg-[#2D9AA5] text-white rounded text-xs"
-                            onClick={() => submitReply(blog._id, comment._id)}
-                          >
-                            Reply
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {blog.comments.length > 2 && (
-                    <p className="text-xs text-gray-500">+{blog.comments.length - 2} more comments</p>
-                  )}
-=======
             </div>
             <div className="flex items-center space-x-3">
               <button
@@ -953,7 +896,6 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
                   <button className="p-1 hover:bg-gray-100 rounded">
                     <MoreVertical size={16} className="text-gray-400" />
                   </button>
->>>>>>> f83a4b7bfdcee5c9bc3221732444cb0be71e9ecb
                 </div>
 
                 <div className="flex items-center justify-between mb-4">

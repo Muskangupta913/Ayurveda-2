@@ -51,11 +51,8 @@ export default async function handler(req, res) {
         email: user.email,
       },
       jwtSecret,
-     { expiresIn: '1d' }
+      { expiresIn: "1d" }
     );
-
-   
-
 
     return res.status(200).json({
       message: "Login successful",

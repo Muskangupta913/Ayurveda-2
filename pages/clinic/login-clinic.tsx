@@ -2,9 +2,8 @@
 import { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
-import Link from 'next/link';
+import Link from "next/link";
 import type { AxiosError } from "axios";
-
 
 export default function ClinicLogin() {
   interface ClinicLoginForm {
@@ -12,8 +11,8 @@ export default function ClinicLogin() {
     password: string;
   }
   const [form, setForm] = useState<ClinicLoginForm>({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,7 +82,10 @@ export default function ClinicLogin() {
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className="bg-teal-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3" style={{ backgroundColor: '#2D9AA5' }}>
+          <div
+            className="bg-teal-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3"
+            style={{ backgroundColor: "#2D9AA5" }}
+          >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
@@ -98,7 +100,12 @@ export default function ClinicLogin() {
 
       <div className="min-h-screen flex">
         {/* Left Side - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: `linear-gradient(to bottom right, #2D9AA5, #238B96, #1A7A82)` }}>
+        <div
+          className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
+          style={{
+            background: `linear-gradient(to bottom right, #2D9AA5, #238B96, #1A7A82)`,
+          }}
+        >
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-10 left-10 w-20 h-20 border-2 border-white rounded-full"></div>
@@ -139,7 +146,9 @@ export default function ClinicLogin() {
               </h2>
 
               <p className="text-teal-100 text-lg leading-relaxed mb-8">
-                Access your Health Center management system to handle appointments, manage patient records, and provide exceptional healthcare services.
+                Access your Health Center management system to handle
+                appointments, manage patient records, and provide exceptional
+                healthcare services.
               </p>
 
               <div className="space-y-4">
@@ -149,7 +158,10 @@ export default function ClinicLogin() {
                   "Treatment Records",
                 ].map((item, index) => (
                   <div className="flex items-center gap-3" key={index}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#2D9AA5' }}>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: "#2D9AA5" }}
+                    >
                       <svg
                         className="w-4 h-4 text-white"
                         fill="currentColor"
@@ -170,8 +182,18 @@ export default function ClinicLogin() {
           </div>
 
           {/* Decorative Elements */}
-          <div className="absolute bottom-0 right-0 w-32 h-32 rounded-tl-full opacity-20" style={{ background: `linear-gradient(to top left, #2D9AA5, transparent)` }}></div>
-          <div className="absolute top-0 left-0 w-24 h-24 rounded-br-full opacity-20" style={{ background: `linear-gradient(to bottom right, #2D9AA5, transparent)` }}></div>
+          <div
+            className="absolute bottom-0 right-0 w-32 h-32 rounded-tl-full opacity-20"
+            style={{
+              background: `linear-gradient(to top left, #2D9AA5, transparent)`,
+            }}
+          ></div>
+          <div
+            className="absolute top-0 left-0 w-24 h-24 rounded-br-full opacity-20"
+            style={{
+              background: `linear-gradient(to bottom right, #2D9AA5, transparent)`,
+            }}
+          ></div>
         </div>
 
         {/* Right Side - Login Form */}
@@ -179,7 +201,12 @@ export default function ClinicLogin() {
           <div className="w-full max-w-md">
             {/* Mobile Logo */}
             <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, #2D9AA5, #238B96)` }}>
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(to bottom right, #2D9AA5, #238B96)`,
+                }}
+              >
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -194,7 +221,10 @@ export default function ClinicLogin() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">ZEVA</h1>
-                <p className="text-xs uppercase tracking-wider" style={{ color: '#2D9AA5' }}>
+                <p
+                  className="text-xs uppercase tracking-wider"
+                  style={{ color: "#2D9AA5" }}
+                >
                   Health Center Portal
                 </p>
               </div>
@@ -248,7 +278,9 @@ export default function ClinicLogin() {
                     <input
                       type="email"
                       value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, email: e.target.value })
+                      }
                       className="text-black w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl"
                       placeholder="Healthcenter@.com"
                       required
@@ -278,7 +310,9 @@ export default function ClinicLogin() {
                     <input
                       type={showPassword ? "text" : "password"}
                       value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, password: e.target.value })
+                      }
                       className="text-black w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl"
                       placeholder="Enter your password"
                       required
@@ -319,7 +353,8 @@ export default function ClinicLogin() {
                   className="w-full text-white py-3 px-4 rounded-xl font-semibold text-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] hover:opacity-90"
                   style={{
                     background: `linear-gradient(to right, #2D9AA5, #238B96)`,
-                    boxShadow: '0 10px 15px -3px rgba(45, 154, 165, 0.3), 0 4px 6px -2px rgba(45, 154, 165, 0.05)'
+                    boxShadow:
+                      "0 10px 15px -3px rgba(45, 154, 165, 0.3), 0 4px 6px -2px rgba(45, 154, 165, 0.05)",
                   }}
                 >
                   {loading ? (
@@ -389,8 +424,3 @@ export default function ClinicLogin() {
 ClinicLogin.getLayout = function PageLayout(page: React.ReactNode) {
   return page; // No layout
 };
-
-
-
-
-
