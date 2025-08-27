@@ -56,6 +56,12 @@ const AdminBlogs = () => {
               <p className="text-sm text-gray-400">
                 {new Date(blog.createdAt).toLocaleString()}
               </p>
+              <button
+              onClick={() => deleteBlog(blog._id)}
+              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+            >
+              <Trash2 size={20} />
+            </button>
               <p className="mt-1 text-sm text-gray-600">
                 Likes: {blog.likes.length} | Comments: {blog.comments.length}
               </p>

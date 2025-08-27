@@ -12,18 +12,17 @@ export default async function handler(req, res) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // only admin role can fetch
     if (decoded.role !== "admin") {
       return res.status(403).json({ message: "Forbidden - Admin only" });
     }
 
-    if (req.method === "GET") {
-      const blogs = await Blog.find({})
-        .populate("postedBy", "name email role")
-        .populate("comments.user", "name email")
-        .sort({ createdAt: -1 });
+    if (req.method === "DELETE") {
+      const { id } = req.query;
+      const blog = await Blog.findByIdAndDelete(id);
 
-      return res.status(200).json({ success: true, blogs });
+      if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+      return res.status(200).json({ success: true, message: "Blog deleted" });
     } else {
       return res.status(405).json({ message: "Method not allowed" });
     }
