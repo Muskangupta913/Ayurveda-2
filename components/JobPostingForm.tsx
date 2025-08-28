@@ -100,12 +100,12 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
 
   const sectionFields: string[][] = useMemo(() => ([
     // Section 0: Basic Information
-    ['companyName', 'jobTitle', 'department', 'qualification', 'jobType', 'location'],
+    ['companyName', 'establishment', 'jobTitle', 'department', 'qualification', 'jobType', 'location'],
     // Section 1: Job Details
-    ['jobTiming', 'workingDays', 'salary', 'noOfOpenings', 'establishment'],
-    // Section 2: Job Description
+    ['jobTiming', 'workingDays', 'salary', 'noOfOpenings'],
+    // Section 2: Job Description (only description)
     ['description'],
-    // Section 3: Additional Requirements
+    // Section 3: Additional Requirements (no description)
     ['skills', 'perks', 'languagesPreferred'],
   ]), []);
 
@@ -341,18 +341,18 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
         >
           {/* Colored top border */}
           <div className={`h-1 w-full ${toast.type === 'success' ? 'bg-green-500' :
-              toast.type === 'error' ? 'bg-red-500' :
-                toast.type === 'warning' ? 'bg-yellow-500' :
-                  'bg-blue-500'
+            toast.type === 'error' ? 'bg-red-500' :
+              toast.type === 'warning' ? 'bg-yellow-500' :
+                'bg-blue-500'
             }`} />
 
           <div className="p-4">
             <div className="flex items-start gap-3">
               {/* Icon */}
               <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${toast.type === 'success' ? 'bg-green-100' :
-                  toast.type === 'error' ? 'bg-red-100' :
-                    toast.type === 'warning' ? 'bg-yellow-100' :
-                      'bg-blue-100'
+                toast.type === 'error' ? 'bg-red-100' :
+                  toast.type === 'warning' ? 'bg-yellow-100' :
+                    'bg-blue-100'
                 }`}>
                 {toast.type === 'success' && (
                   <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -403,9 +403,9 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
           <div className="h-1 bg-gray-100">
             <div
               className={`h-full transition-all duration-[5000ms] ease-linear ${toast.type === 'success' ? 'bg-green-400' :
-                  toast.type === 'error' ? 'bg-red-400' :
-                    toast.type === 'warning' ? 'bg-yellow-400' :
-                      'bg-blue-400'
+                toast.type === 'error' ? 'bg-red-400' :
+                  toast.type === 'warning' ? 'bg-yellow-400' :
+                    'bg-blue-400'
                 }`}
               style={{
                 width: '100%',
@@ -446,6 +446,9 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     `}</style>
     </div>
   );
+
+  // Debug log for troubleshooting Establishment Year error display
+  console.log('errors:', errors, 'touched:', touched, 'formData:', formData);
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 lg:p-6">
@@ -490,183 +493,218 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               style={{ width: '400%', transform: `translateX(-${currentStep * 25}%)` }}
             >
               {/* Section 1: Basic Information */}
-              <div className="w-full px-1 sm:px-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company Name *
-                </label>
-                <input
-                  name="companyName"
-                  value={formData.companyName}
-                  placeholder="Enter company name"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base resize-none placeholder-gray-500"
-                />
-                    {touched.companyName && errors.companyName && <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>}
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* Company Name */}
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Company Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      name="companyName"
+                      value={formData.companyName}
+                      placeholder="Enter company name"
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
+                    {touched.companyName && errors.companyName && (
+                      <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>
+                    )}
+                  </div>
+
+                  {/* Establishment Year - Moved from Section 2 */}
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Establishment Year <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      name="establishment"
+                      value={formData.establishment}
+                      placeholder="Enter establishment year"
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
+                    {touched.establishment && errors.establishment && (
+                      <p className="mt-1 text-xs text-red-600">{errors.establishment}</p>
+                    )}
+                  </div>
+
+                  {/* Job Title */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Job Title <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      name="jobTitle"
+                      value={formData.jobTitle}
+                      placeholder="Enter job title"
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
+                    {touched.jobTitle && errors.jobTitle && (
+                      <p className="mt-1 text-xs text-red-600">{errors.jobTitle}</p>
+                    )}
+                  </div>
+
+                  {/* Department */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Department <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map((dep) => (
+                        <option key={dep} value={dep}>
+                          {dep}
+                        </option>
+                      ))}
+                    </select>
+                    {touched.department && errors.department && (
+                      <p className="mt-1 text-xs text-red-600">{errors.department}</p>
+                    )}
+                  </div>
+
+                  {/* Qualification */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Required Qualification
+                    </label>
+                    <select
+                      name="qualification"
+                      value={formData.qualification}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    >
+                      <option value="">Select Qualification</option>
+                      {qualifications.map((q) => (
+                        <option key={q} value={q}>
+                          {q}
+                        </option>
+                      ))}
+                    </select>
+                    {touched.qualification && errors.qualification && (
+                      <p className="mt-1 text-xs text-red-600">{errors.qualification}</p>
+                    )}
+                  </div>
+
+                  {/* Job Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Job Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="jobType"
+                      value={formData.jobType}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    >
+                      <option value="">Select Job Type</option>
+                      {jobTypes.map((j) => (
+                        <option key={j} value={j}>
+                          {j}
+                        </option>
+                      ))}
+                    </select>
+                    {touched.jobType && errors.jobType && (
+                      <p className="mt-1 text-xs text-red-600">{errors.jobType}</p>
+                    )}
+                  </div>
+
+                  {/* Location */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location
+                    </label>
+                    <input
+                      name="location"
+                      value={formData.location}
+                      placeholder="Enter location"
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
+                    {touched.location && errors.location && (
+                      <p className="mt-1 text-xs text-red-600">{errors.location}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Job Title *
-                </label>
-                <input
-                  name="jobTitle"
-                  value={formData.jobTitle}
-                  placeholder="Enter job title"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
-                    {touched.jobTitle && errors.jobTitle && <p className="mt-1 text-xs text-red-600">{errors.jobTitle}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Department *
-                </label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  className="text-gray-800 w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base bg-white placeholder-gray-800"
-                >
-                  <option value="">Select Department</option>
-                  {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
-                </select>
-                    {touched.department && errors.department && <p className="mt-1 text-xs text-red-600">{errors.department}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Required Qualification
-                </label>
-                <select
-                  name="qualification"
-                  value={formData.qualification}
-                  onChange={handleChange}
-                  className="text-gray-800 w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base bg-white placeholder-gray-800"
-                >
-                  <option value="">Select Qualification</option>
-                  {qualifications.map(q => <option key={q} value={q}>{q}</option>)}
-                </select>
-                    {touched.qualification && errors.qualification && <p className="mt-1 text-xs text-red-600">{errors.qualification}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Job Type *
-                </label>
-                <select
-                  name="jobType"
-                  value={formData.jobType}
-                  onChange={handleChange}
-                  className="text-gray-800 w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base bg-white placeholder-gray-800"
-                >
-                  <option value="">Select Job Type</option>
-                  {jobTypes.map(j => <option key={j} value={j}>{j}</option>)}
-                </select>
-                    {touched.jobType && errors.jobType && <p className="mt-1 text-xs text-red-600">{errors.jobType}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Location
-                </label>
-                <input
-                  name="location"
-                  value={formData.location}
-                  placeholder="Enter location"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
-                    {touched.location && errors.location && <p className="mt-1 text-xs text-red-600">{errors.location}</p>}
-              </div>
-            </div>
-          </div>
-              {/* Section 2: Job Details */}
-              <div className="w-full px-1 sm:px-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Details</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Job Timing
-                </label>
-                <input
-                  name="jobTiming"
-                  value={formData.jobTiming}
-                  placeholder="e.g. 9 AM - 6 PM"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
+              {/* Section 2: Job Details - Removed extra spacing and establishment year */}
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">Job Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Job Timing
+                    </label>
+                    <input
+                      name="jobTiming"
+                      value={formData.jobTiming}
+                      placeholder="e.g. 9 AM - 6 PM"
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
                     {touched.jobTiming && errors.jobTiming && <p className="mt-1 text-xs text-red-600">{errors.jobTiming}</p>}
-              </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Working Days
-                </label>
-                <input
-                  name="workingDays"
-                  placeholder="e.g. Monday–Friday"
-                  value={formData.workingDays}
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Working Days
+                    </label>
+                    <input
+                      name="workingDays"
+                      placeholder="e.g. Monday–Friday"
+                      value={formData.workingDays}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
                     {touched.workingDays && errors.workingDays && <p className="mt-1 text-xs text-red-600">{errors.workingDays}</p>}
-              </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Salary
-                </label>
-                <input
-                  name="salary"
-                  value={formData.salary}
-                  placeholder="Enter salary range"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Salary
+                    </label>
+                    <input
+                      name="salary"
+                      value={formData.salary}
+                      placeholder="Enter salary range"
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
                     {touched.salary && errors.salary && <p className="mt-1 text-xs text-red-600">{errors.salary}</p>}
-              </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Openings
-                </label>
-                <input
-                  name="noOfOpenings"
-                  type="number"
-                  value={formData.noOfOpenings}
-                  placeholder="Enter number"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Openings
+                    </label>
+                    <input
+                      name="noOfOpenings"
+                      type="number"
+                      value={formData.noOfOpenings}
+                      placeholder="Enter number"
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                    />
                     {touched.noOfOpenings && errors.noOfOpenings && <p className="mt-1 text-xs text-red-600">{errors.noOfOpenings}</p>}
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Establishment Year
-                </label>
-                <input
-                  name="establishment"
-                  value={formData.establishment}
-                  placeholder="Enter establishment year"
-                  onChange={handleChange}
-                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
-                />
-                    {touched.establishment && errors.establishment && <p className="mt-1 text-xs text-red-600">{errors.establishment}</p>}
-              </div>
+                  </div>
                 </div>
               </div>
 
               {/* Section 3: Job Description */}
-              <div className="w-full px-1 sm:px-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Description</h3>
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">Job Description</h3>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
+                    Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     name="description"
@@ -674,16 +712,16 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                     placeholder="Describe the job role, responsibilities, and requirements..."
                     onChange={handleChange}
                     rows={5}
-                    className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base resize-none placeholder-gray-500"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition resize-none"
                   />
                   {touched.description && errors.description && <p className="mt-1 text-xs text-red-600">{errors.description}</p>}
                 </div>
               </div>
 
               {/* Section 4: Additional Requirements */}
-              <div className="w-full px-1 sm:px-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Requirements</h3>
-                <div className="space-y-4">
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">Additional Requirements</h3>
+                <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Required Skills
@@ -694,7 +732,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.skills}
                       placeholder="e.g. Communication, Team Work, Problem Solving"
                       onChange={handleChange}
-                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.skills && errors.skills && <p className="mt-1 text-xs text-red-600">{errors.skills}</p>}
                   </div>
@@ -709,7 +747,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.perks}
                       placeholder="e.g. Health Insurance, Paid Leave, Training"
                       onChange={handleChange}
-                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.perks && errors.perks && <p className="mt-1 text-xs text-red-600">{errors.perks}</p>}
                   </div>
@@ -724,7 +762,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.languagesPreferred}
                       placeholder="e.g. English, Hindi, Local Language"
                       onChange={handleChange}
-                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.languagesPreferred && errors.languagesPreferred && <p className="mt-1 text-xs text-red-600">{errors.languagesPreferred}</p>}
                   </div>
@@ -769,6 +807,5 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     </div>
   );
 };
-
 export default JobPostingForm;
 export type { JobFormData };

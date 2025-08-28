@@ -11,7 +11,6 @@ import {
   Eye,
   Reply,
   Trash2,
-  Send,
   Filter,
   Calendar,
   MoreVertical,
@@ -21,10 +20,11 @@ import {
   SortDesc,
   Clock,
   AlertCircle,
-  Star,
   RefreshCw,
 } from "lucide-react";
 import parse from "html-react-parser";
+
+
 
 type Reply = {
   _id: string;
@@ -42,18 +42,25 @@ type Comment = {
   replies?: Reply[];
 };
 
-type Blog = {
-  _id: string;
+interface Blog {
+  image?: string;
   title: string;
-  likesCount: number;
-  commentsCount: number;
-  comments: Comment[];
+  postedBy?: { name?: string };
   createdAt: string;
-  postedBy?: { _id: string } | string;
-};
+  content?: string;
+  youtubeUrl?: string;
+  likesCount: number;
+  comments?: { id: string; text: string }[];
+}
 
 interface Props {
   tokenKey: "clinicToken" | "doctorToken";
+}
+
+interface BlogDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  blog: Blog | null;
 }
 
 type FilterOption = "all" | "today" | "week" | "month" | "year";
@@ -73,9 +80,8 @@ const StatCard: React.FC<{
         <p className="text-2xl font-bold text-gray-900">{value}</p>
         {trend && (
           <div
-            className={`flex items-center mt-2 text-sm ${
-              trendUp ? "text-green-600" : "text-red-600"
-            }`}
+            className={`flex items-center mt-2 text-sm ${trendUp ? "text-green-600" : "text-red-600"
+              }`}
           >
             <TrendingUp
               size={14}
@@ -318,8 +324,13 @@ const CommentsPopup: React.FC<{
 };
 
 // BlogDetailsModal component
-const BlogDetailsModal = ({ isOpen, onClose, blog }) => {
+const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
+  isOpen,
+  onClose,
+  blog,
+}) => {
   if (!isOpen || !blog) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
@@ -329,6 +340,7 @@ const BlogDetailsModal = ({ isOpen, onClose, blog }) => {
         >
           <X size={24} />
         </button>
+
         {blog.image && (
           <a href={blog.image} target="_blank" rel="noopener noreferrer">
             <img
@@ -338,12 +350,16 @@ const BlogDetailsModal = ({ isOpen, onClose, blog }) => {
             />
           </a>
         )}
+
         <h2 className="text-2xl font-bold mb-2">{blog.title}</h2>
+
         <p className="text-gray-600 mb-2">
           By {blog.postedBy?.name || "Author"} |{" "}
           {new Date(blog.createdAt).toLocaleString()}
         </p>
+
         <div className="mb-4">{parse(blog.content || "")}</div>
+
         {blog.youtubeUrl && (
           <div className="mb-4">
             <iframe
@@ -365,6 +381,7 @@ const BlogDetailsModal = ({ isOpen, onClose, blog }) => {
             </a>
           </div>
         )}
+
         <div className="flex gap-4 mt-4">
           <span className="text-sm text-gray-700">
             Likes: {blog.likesCount}
@@ -518,11 +535,11 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
           avgEngagement:
             blogs.length > 0
               ? (
-                  blogs.reduce(
-                    (sum, blog) => sum + blog.likesCount + blog.commentsCount,
-                    0
-                  ) / blogs.length
-                ).toFixed(2)
+                blogs.reduce(
+                  (sum, blog) => sum + blog.likesCount + blog.commentsCount,
+                  0
+                ) / blogs.length
+              ).toFixed(2)
               : 0,
         },
         blogs: blogs.map((blog) => ({
@@ -546,9 +563,8 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `blog-analytics-${
-        new Date().toISOString().split("T")[0]
-      }.json`;
+      a.download = `blog-analytics-${new Date().toISOString().split("T")[0]
+        }.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -724,11 +740,11 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-40">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 top-0 z-40">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-[#2D9AA5]">
                 Blog Analytics
               </h1>
               <p className="text-gray-600 mt-1">
@@ -779,7 +795,10 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
               <button
                 onClick={exportData}
                 disabled={isExporting}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="flex items-center px-4 py-2 
+bg-[#2D9AA5] text-white rounded-lg text-sm font-medium 
+hover:bg-[#23747D] transition-colors disabled:opacity-50
+"
               >
                 <Download size={16} className="mr-2" />
                 {isExporting ? "Exporting..." : "Export Data"}
@@ -795,29 +814,29 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
           <StatCard
             title="Total Blogs"
             value={blogs.length}
-            icon={<BarChart3 size={24} className="text-blue-600" />}
-            trend="+12% from last month"
+            icon={<BarChart3 size={24} className="text-[#2D9AA5]" />}
+            // trend="+12% from last month"
             trendUp={true}
           />
           <StatCard
             title="Total Likes"
             value={totalLikes}
-            icon={<ThumbsUp size={24} className="text-blue-600" />}
-            trend="+8% from last month"
+            icon={<ThumbsUp size={24} className="text-[#2D9AA5]" />}
+            // trend="+8% from last month"
             trendUp={true}
           />
           <StatCard
             title="Total Comments"
             value={totalComments}
-            icon={<MessageCircle size={24} className="text-blue-600" />}
-            trend="+15% from last month"
+            icon={<MessageCircle size={24} className="text-[#2D9AA5]" />}
+            // trend="+15% from last month"
             trendUp={true}
           />
           <StatCard
             title="Avg Engagement"
             value={avgEngagement}
-            icon={<Users size={24} className="text-blue-600" />}
-            trend="+5% from last month"
+            icon={<Users size={24} className="text-[#2D9AA5]" />}
+            // trend="+5% from last month"
             trendUp={true}
           />
         </div>
@@ -841,7 +860,7 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
               <input
                 type="text"
                 placeholder="Search blogs by title..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -935,7 +954,7 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
                         width: `${Math.min(
                           ((blog.likesCount + blog.commentsCount) /
                             Math.max(totalLikes + totalComments, 100)) *
-                            100,
+                          100,
                           100
                         )}%`,
                       }}
@@ -1109,11 +1128,10 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                          currentPage === page
+                        className={`px-3 py-2 text-sm font-medium rounded-lg ${currentPage === page
                             ? "bg-blue-600 text-white"
                             : "text-gray-500 hover:bg-gray-50 border border-gray-300"
-                        }`}
+                          }`}
                       >
                         {page}
                       </button>
