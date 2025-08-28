@@ -14,16 +14,89 @@ const JobPostingSchema = new mongoose.Schema({
   },
   companyName: { type: String, required: true },
   jobTitle: { type: String, required: true },
-  department: {
+   department: {
     type: String,
-    enum: ['Software', 'Dental', 'Cardiology', 'Pathology', 'Administration', 'Radiology', 'General Medicine'],
+    enum: [
+      // --- Software & IT ---
+      'Software Development',
+      'Frontend',
+      'Backend',
+      'Full Stack',
+      'DevOps',
+      'QA & Testing',
+      'Automation Testing',
+      'Manual Testing',
+      'UI/UX',
+      'Data Science',
+      'AI/ML',
+      'Cloud Computing',
+      'Cybersecurity',
+      'Database Administration',
+      'Product Management',
+      'Business Analysis',
+
+      // --- Medical & Clinical ---
+      'General Medicine',
+      'Cardiology',
+      'Radiology',
+      'Dental',
+      'Pathology',
+      'Pediatrics',
+      'Orthopedics',
+      'Gynecology',
+      'Dermatology',
+      'Anesthesiology',
+      'Surgery',
+      'ENT',
+      'Psychiatry',
+      'Physiotherapy',
+
+      // --- Other ---
+      'Administration',
+      'Pharmacy',
+      'Research',
+      'Other',
+    ],
     required: true,
   },
   qualification: {
     type: String,
-    enum: ['MBBS', 'BDS', 'BAMS', 'BHMS', 'MD', 'MS', 'PhD', 'Diploma', 'Other'],
+    enum: [
+      // --- Software & IT ---
+      'B.Tech',
+      'M.Tech',
+      'BCA',
+      'MCA',
+      'Diploma in CS/IT',
+      'B.Sc IT',
+      'M.Sc IT',
+      'BBA',
+      'MBA',
+      'Other Software',
+
+      // --- Medical ---
+      'MBBS',
+      'BDS',
+      'BAMS',
+      'BHMS',
+      'MD',
+      'MS',
+      'PhD',
+      'Diploma',
+      'Nursing',
+      'Pharmacy',
+      'Other Medical',
+
+      // --- General ---
+      'Graduate',
+      'Post Graduate',
+      '12th Pass',
+      '10th Pass',
+      'Other',
+    ],
     required: true,
   },
+
   jobType: {
     type: String,
     enum: ['Full Time', 'Part Time', 'Internship'],
@@ -39,6 +112,10 @@ const JobPostingSchema = new mongoose.Schema({
   noOfOpenings: { type: Number, required: true },
   salary: { type: String, required: true },
   establishment: { type: String },
+  experience: {
+    type: String, // e.g. "Fresher", "1-3 years", "5+ years"
+    required: true,
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'declined'],

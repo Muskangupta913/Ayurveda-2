@@ -35,6 +35,7 @@ interface Job {
   description?: string;
   noOfOpenings?: number;
   establishment?: string;
+  experience?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -856,6 +857,7 @@ const JobManagement: React.FC<JobManagementProps> = ({
                           <div><strong>Job Timing:</strong> {job.jobTiming || 'N/A'}</div>
                           <div><strong>No. of Openings:</strong> {job.noOfOpenings !== undefined ? job.noOfOpenings : 'N/A'}</div>
                           <div><strong>Establishment:</strong> {job.establishment || 'N/A'}</div>
+                           <div><strong>Experience:</strong> {job.experience || 'N/A'}</div>
                           <div><strong>Created:</strong> {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</div>
                           
                           {/* Skills Row */}

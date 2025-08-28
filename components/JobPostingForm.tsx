@@ -29,6 +29,7 @@ interface JobFormData {
   description: string;
   noOfOpenings: string;
   salary: string;
+  experience:string;
   establishment: string;
   workingDays: string;
 }
@@ -60,6 +61,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     description: '',
     noOfOpenings: '',
     salary: '',
+    experience:'',
     establishment: '',
     workingDays: '',
   });
@@ -102,7 +104,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     // Section 0: Basic Information
     ['companyName', 'jobTitle', 'department', 'qualification', 'jobType', 'location'],
     // Section 1: Job Details
-    ['jobTiming', 'workingDays', 'salary', 'noOfOpenings', 'establishment'],
+    ['jobTiming', 'workingDays', 'salary', 'experience', 'noOfOpenings', 'establishment'],
     // Section 2: Job Description
     ['description'],
     // Section 3: Additional Requirements
@@ -197,6 +199,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
         description: '',
         noOfOpenings: '',
         salary: '',
+        experience:'',
         establishment: '',
         workingDays: '',
       });
@@ -267,6 +270,10 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               <div className="bg-gray-50/80 backdrop-blur-sm p-3 rounded-lg border border-gray-200/50">
                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Salary</label>
                 <p className="text-sm font-medium text-gray-900 mt-1">{formData.salary || 'Not specified'}</p>
+              </div>
+              <div className="bg-gray-50/80 backdrop-blur-sm p-3 rounded-lg border border-gray-200/50">
+                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Experience</label>
+                <p className="text-sm font-medium text-gray-900 mt-1">{formData.experience || 'Not specified'}</p>
               </div>
               <div className="bg-gray-50/80 backdrop-blur-sm p-3 rounded-lg border border-gray-200/50">
                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Openings</label>
@@ -629,6 +636,21 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                 />
                     {touched.salary && errors.salary && <p className="mt-1 text-xs text-red-600">{errors.salary}</p>}
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Experience
+                </label>
+                <input
+                  name="experience"
+                  value={formData.experience}
+                  placeholder="Enter Experience"
+                  onChange={handleChange}
+                  className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                />
+                    {touched.experience && errors.experience && <p className="mt-1 text-xs text-red-600">{errors.experience}</p>}
+              </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

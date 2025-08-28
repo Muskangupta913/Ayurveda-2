@@ -95,6 +95,7 @@ const shareLink = typeof window !== "undefined" && window.location.href;
         <p><strong>Working Days:</strong> {job.workingDays}</p>
         <p><strong>No of openings:</strong> {job.noOfOpenings}</p>
         <p><strong>Establishment:</strong> {job.establishment}</p>
+        <p><strong>Experience Required:</strong> {job.experience}</p>
         <p><strong>Qualification Required:</strong> {job.qualification}</p>
         <p><strong>Timing:</strong> {job.jobTiming}</p>
         <p><strong>Skills:</strong> {job.skills.join(", ")}</p>
