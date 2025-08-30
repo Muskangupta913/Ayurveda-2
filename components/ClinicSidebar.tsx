@@ -789,7 +789,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
         </aside>
       </div>
 
-      <style jsx>{`
+      {/* <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
@@ -811,7 +811,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
         .custom-scrollbar {
           -webkit-overflow-scrolling: touch;
         }
-      `}</style>
+      `}</style> */}
     </>
   );
 };

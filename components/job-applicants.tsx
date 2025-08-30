@@ -1,5 +1,5 @@
 // components/ApplicationsDashboard.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 
 interface JobInfo {
@@ -20,16 +20,24 @@ interface Application {
   jobId: JobInfo;
   applicantId: ApplicantInfo;
   status: string;
-  resumeUrl?: string;  // ✅ add resumeUrl here
+  resumeUrl?: string;
+  createdAt?: string;
+}
+
+// ✅ Added interface for API response
+interface ApplicationsResponse {
+  applications: Application[];
 }
 
 type FilterType = 'All' | 'Part Time' | 'Full Time' | 'Internship';
+type StatusFilter = 'All' | 'pending' | 'contacted' | 'rejected';
+type SortOption = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'job-title' | 'status';
 
 interface ApplicationsDashboardProps {
-  tokenKey?: string; // Default: "clinicToken"
-  apiEndpoint?: string; // Default: "/api/job-postings/job-applications"
-  updateStatusEndpoint?: string; // Default: "/api/job-postings/application-status"
-  deleteEndpoint?: string; // Default: "/api/job-postings/delete-application"
+  tokenKey?: string;
+  apiEndpoint?: string;
+  updateStatusEndpoint?: string;
+  deleteEndpoint?: string;
 }
 
 const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
@@ -40,10 +48,16 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
 }) => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [filter, setFilter] = useState<FilterType>('All');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [locationFilter, setLocationFilter] = useState<string>('All');
+  const [roleFilter, setRoleFilter] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [applicationToDelete, setApplicationToDelete] = useState<Application | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -53,13 +67,14 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
         setLoading(true);
         setError(null);
         
-        const res = await axios.get(apiEndpoint, {
+        // ✅ Fixed TypeScript error with proper typing
+        const res = await axios.get<ApplicationsResponse>(apiEndpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        setApplications(res.data.applications);
+        setApplications(res.data.applications || []);
       } catch (error) {
         console.error("Failed to load applications", error);
         setError("Failed to load applications. Please try again.");
@@ -119,12 +134,89 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
     setShowDeleteModal(true);
   };
 
-  const filteredApplications = applications.filter(app => {
-    if (filter === 'All') return true;
-    return app.jobId?.jobType === filter;
-  });
+  // ✅ Get unique values for filter dropdowns
+  const uniqueLocations = useMemo(() => {
+    const locations = applications.map(app => app.jobId?.location).filter(Boolean);
+    return ['All', ...Array.from(new Set(locations))];
+  }, [applications]);
+
+  const uniqueRoles = useMemo(() => {
+    const roles = applications.map(app => app.applicantId?.role).filter(Boolean);
+    return ['All', ...Array.from(new Set(roles))];
+  }, [applications]);
+
+  // ✅ Advanced filtering and sorting logic
+  const filteredAndSortedApplications = useMemo(() => {
+    let filtered = applications.filter(app => {
+      // Job type filter
+      if (filter !== 'All' && app.jobId?.jobType !== filter) return false;
+      
+      // Status filter
+      if (statusFilter !== 'All' && (app.status || 'pending') !== statusFilter) return false;
+      
+      // Location filter
+      if (locationFilter !== 'All' && app.jobId?.location !== locationFilter) return false;
+      
+      // Role filter
+      if (roleFilter !== 'All' && app.applicantId?.role !== roleFilter) return false;
+      
+      // Search query (searches in job title, applicant name, email)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const jobTitle = app.jobId?.jobTitle?.toLowerCase() || '';
+        const applicantName = app.applicantId?.name?.toLowerCase() || '';
+        const applicantEmail = app.applicantId?.email?.toLowerCase() || '';
+        
+        if (!jobTitle.includes(query) && !applicantName.includes(query) && !applicantEmail.includes(query)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+
+    // Sort applications
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'oldest':
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        case 'name-asc':
+          return (a.applicantId?.name || '').localeCompare(b.applicantId?.name || '');
+        case 'name-desc':
+          return (b.applicantId?.name || '').localeCompare(a.applicantId?.name || '');
+        case 'job-title':
+          return (a.jobId?.jobTitle || '').localeCompare(b.jobId?.jobTitle || '');
+        case 'status':
+          return (a.status || 'pending').localeCompare(b.status || 'pending');
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [applications, filter, statusFilter, searchQuery, locationFilter, roleFilter, sortBy]);
+
+  const clearAllFilters = () => {
+    setFilter('All');
+    setStatusFilter('All');
+    setSearchQuery('');
+    setLocationFilter('All');
+    setRoleFilter('All');
+    setSortBy('newest');
+  };
 
   const filterOptions: FilterType[] = ['All', 'Part Time', 'Full Time', 'Internship'];
+  const statusOptions: StatusFilter[] = ['All', 'pending', 'contacted', 'rejected'];
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'newest', label: 'Newest First' },
+    { value: 'oldest', label: 'Oldest First' },
+    { value: 'name-asc', label: 'Name A-Z' },
+    { value: 'name-desc', label: 'Name Z-A' },
+    { value: 'job-title', label: 'Job Title' },
+    { value: 'status', label: 'Status' }
+  ];
 
   if (loading) {
     return (
@@ -145,7 +237,9 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Applications</h2>
-          <p className="text-gray-600">{applications.length} total applications</p>
+          <p className="text-gray-600">
+            {filteredAndSortedApplications.length} of {applications.length} applications
+          </p>
         </div>
 
         {/* Error Message */}
@@ -155,9 +249,27 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
           </div>
         )}
 
-        {/* Filter */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="text-black relative">
+            <input
+              type="text"
+              placeholder="Search by job title, applicant name, or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Filters */}
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-2 mb-3">
             {filterOptions.map((type) => (
               <button
                 key={type}
@@ -172,18 +284,121 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
               </button>
             ))}
           </div>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <svg className={`h-4 w-4 transform transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+              Advanced Filters
+            </button>
+            
+            {(filter !== 'All' || statusFilter !== 'All' || searchQuery || locationFilter !== 'All' || roleFilter !== 'All' || sortBy !== 'newest') && (
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Clear All Filters
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Advanced Filters */}
+        {showAdvancedFilters && (
+          <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                  className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                >
+                  {statusOptions.map(status => (
+                    <option key={status} value={status}>
+                      {status === 'All' ? 'All Statuses' : status.charAt(0).toUpperCase() + status.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Location Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                <select
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                >
+                  {uniqueLocations.map(location => (
+                    <option key={location} value={location}>
+                      {location === 'All' ? 'All Locations' : location}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Role Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                >
+                  {uniqueRoles.map(role => (
+                    <option key={role} value={role}>
+                      {role === 'All' ? 'All Roles' : role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                >
+                  {sortOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Applications */}
-        {filteredApplications.length === 0 ? (
+        {filteredAndSortedApplications.length === 0 ? (
           <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
             <p className="text-gray-500">
-              {filter === 'All' ? 'No applications yet.' : `No ${filter} applications found.`}
+              {applications.length === 0 
+                ? 'No applications yet.' 
+                : 'No applications match your current filters.'
+              }
             </p>
+            {applications.length > 0 && (
+              <button
+                onClick={clearAllFilters}
+                className="mt-3 px-4 py-2 bg-[#2D9AA5] text-white rounded-lg text-sm font-medium hover:bg-[#247a84] transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredApplications.map((app) => (
+            {filteredAndSortedApplications.map((app) => (
               <div key={app._id} className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                   {/* Left: Job & Applicant Info */}
@@ -226,7 +441,6 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
                         </a>
                       </div>
 
-                      {/* ✅ Resume link */}
                       {app.resumeUrl && (
                         <div className="col-span-2">
                           <span className="text-gray-500">Resume:</span>

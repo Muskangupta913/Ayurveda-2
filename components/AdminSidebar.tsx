@@ -50,6 +50,12 @@ const navItems: NavItem[] = [
     icon: '📊',
     description: 'View detailed reports'
   },
+  {
+  label: 'Request Call Back',
+  path: '/admin/get-in-touch',
+  icon: '📞',
+  description: 'View and export user call back requests'
+},
   { 
     label: 'Manage Job', 
     path: '/admin/job-manage', 
@@ -414,7 +420,7 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
         </div>
       </aside>
     </div>
-
+{/* 
     <style jsx>{`
     .custom-scrollbar::-webkit-scrollbar {
       width: 4px;
@@ -437,7 +443,7 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
     .custom-scrollbar {
       -webkit-overflow-scrolling: touch;
     }
-  `}</style>
+  `}</style> */}
   </>
 );
 };

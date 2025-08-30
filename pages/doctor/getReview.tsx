@@ -180,181 +180,187 @@ function DoctorReviews() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header Section */}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-              <MessageSquare className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                Patient Reviews
-              </h1>
-              <p className="text-gray-600 mt-1">Monitor and manage your patient feedback</p>
-            </div>
-          </div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+            Patient Reviews
+          </h1>
+          <p className="text-gray-600">
+            Monitor and manage your patient feedback
+          </p>
         </div>
 
+        {/* Error State */}
         {error ? (
-          <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-6 mb-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <span className="text-red-600 font-bold">!</span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-red-800">Error Loading Reviews</h3>
-                <p className="text-red-600">{error}</p>
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm text-red-700">
+                  <strong>Error:</strong> {error}
+                </p>
               </div>
             </div>
           </div>
         ) : (
           <>
-            {/* Stats Overview */}
+            {/* Stats Cards */}
             {reviews.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold text-gray-900">{reviews.length}</div>
-                      <div className="text-gray-600 font-medium">Total Reviews</div>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {/* Total Reviews */}
+                <div className="bg-white rounded-lg shadow-sm p-6 border">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-blue-100 rounded-lg">
                       <MessageSquare className="w-6 h-6 text-blue-600" />
                     </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold text-gray-900">{getAverageRating()}</div>
-                      <div className="flex items-center mt-1 mb-2">
-                        {renderStars(Math.round(parseFloat(getAverageRating())))}
-                      </div>
-                      <div className="text-gray-600 font-medium">Average Rating</div>
-                    </div>
-                    <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <Star className="w-6 h-6 text-yellow-600 fill-current" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Total Reviews</p>
+                      <p className="text-2xl font-bold text-gray-900">{reviews.length}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-gray-600 font-medium">Rating Distribution</div>
-                    <TrendingUp className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div className="space-y-2">
-                    {[5, 4, 3, 2, 1].map(rating => (
-                      <div key={rating} className="flex items-center text-sm">
-                        <span className="w-3 text-gray-900 font-medium">{rating}</span>
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mx-2" />
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 mx-2">
-                          <div
-                            className="bg-gradient-to-r from-yellow-400 to-orange-400 h-2 rounded-full transition-all duration-300"
-                            style={{
-                              width: `${reviews.length ? (stats[rating] / reviews.length) * 100 : 0}%`
-                            }}
-                          ></div>
+                {/* Average Rating */}
+                <div className="bg-white rounded-lg shadow-sm p-6 border">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Star className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Average Rating</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-2xl font-bold text-gray-900">{getAverageRating()}</p>
+                        <div className="flex">
+                          {renderStars(Math.round(parseFloat(getAverageRating())))}
                         </div>
-                        <span className="w-8 text-gray-600 text-right">{stats[rating]}</span>
                       </div>
-                    ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5 Star Reviews */}
+                <div className="bg-white rounded-lg shadow-sm p-6 border">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <TrendingUp className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">5 Star Reviews</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats[5] || 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Reviews */}
+                <div className="bg-white rounded-lg shadow-sm p-6 border">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Calendar className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">This Month</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {reviews.filter(r => {
+                          const reviewDate = new Date(r.createdAt);
+                          const currentDate = new Date();
+                          return reviewDate.getMonth() === currentDate.getMonth() &&
+                            reviewDate.getFullYear() === currentDate.getFullYear();
+                        }).length}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Search and Filter Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Search Bar */}
-                <div className="flex-1 relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder="Search reviews, patient names..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50 hover:bg-white transition-colors duration-200"
-                  />
+            {/* Search and Filter */}
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+                {/* Search */}
+                <div className="flex-1 max-w-md">
+                  <div className="relative">
+                    <Search className="absolute inset-y-0 left-0 pl-3 h-full w-5 text-gray-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search reviews..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
                 </div>
 
-                {/* Rating Filter */}
-                <div className="flex items-center gap-3">
-                  <Filter className="text-gray-400 w-5 h-5" />
+                {/* Filter */}
+                <div className="flex items-center space-x-3">
+                  <Filter className="w-5 h-5 text-gray-400" />
                   <select
                     value={selectedRating}
                     onChange={(e) => setSelectedRating(e.target.value)}
-                    className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50 hover:bg-white transition-colors duration-200 min-w-[140px]"
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="all">All Ratings</option>
-                    <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-                    <option value="4">⭐⭐⭐⭐ (4)</option>
-                    <option value="3">⭐⭐⭐ (3)</option>
-                    <option value="2">⭐⭐ (2)</option>
-                    <option value="1">⭐ (1)</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="2">2 Stars</option>
+                    <option value="1">1 Star</option>
                   </select>
                 </div>
               </div>
             </div>
 
-            {/* Reviews Section */}
+            {/* Reviews List */}
             {filteredReviews.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 md:p-12 text-center mx-2 sm:mx-4 md:mx-0">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                  <User className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3 px-2">
-                  {reviews.length === 0 ? "No Reviews Yet" : "No Reviews Found"}
+              <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+                <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {reviews.length === 0 ? "No reviews yet" : "No reviews found"}
                 </h3>
-                <p className="text-sm sm:text-base text-gray-600 max-w-xs sm:max-w-md mx-auto px-2 leading-relaxed">
+                <p className="text-gray-500">
                   {reviews.length === 0
-                    ? "You haven't received any reviews yet. Encourage your patients to share their feedback!"
-                    : "Try adjusting your search terms or filter criteria to find specific reviews."
-                  }
+                    ? "Your patients haven't left any reviews yet."
+                    : "Try adjusting your search or filter criteria."}
                 </p>
               </div>
             ) : (
-              <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
+              <div className="space-y-6">
                 {filteredReviews.map((review) => (
-                  <div
-                    key={review._id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 hover:shadow-md hover:border-gray-200 transition-all duration-200 mx-1 sm:mx-0"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2 sm:gap-0">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                  <div key={review._id} className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
+                      {/* Review Header */}
+                      <div className="flex items-start space-x-4 flex-1">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-gray-600" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
-                            {review.userId?.name || "Anonymous Patient"}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <div className="flex">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-lg font-medium text-gray-900 truncate">
+                              {review.userId?.name || "Anonymous Patient"}
+                            </h4>
+                            <div className="flex items-center ml-4">
                               {renderStars(review.rating)}
+                              <span className="ml-2 text-sm text-gray-600">
+                                {review.rating}/5
+                              </span>
                             </div>
-                            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getRatingColor(review.rating)} whitespace-nowrap`}>
-                              {review.rating}/5
-                            </span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-500 mb-4">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {formatDate(review.createdAt)}
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="flex items-center text-xs sm:text-sm text-gray-500 ml-10 sm:ml-0 flex-shrink-0">
-                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                        <span className="whitespace-nowrap">{formatDate(review.createdAt)}</span>
+                    {/* Review Content */}
+                    {review.comment && (
+                      <div className="mt-4 pl-14">
+                        <p className="text-gray-700 leading-relaxed">
+                          {review.comment}
+                        </p>
                       </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-3 ml-10 sm:ml-13">
-                      <p className="text-gray-900 leading-relaxed text-sm break-words">
-                        {review.comment || "No comment provided."}
-                      </p>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

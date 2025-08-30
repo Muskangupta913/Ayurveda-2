@@ -110,7 +110,7 @@ const JobPostingSchema = new mongoose.Schema({
   languagesPreferred: [String],
   description: { type: String },
   noOfOpenings: { type: Number, required: true },
-  salary: { type: String, required: true },
+  salaryType: { type: String, enum: ["month", "year"], required: true },
   establishment: { type: String },
   experience: {
     type: String, // e.g. "Fresher", "1-3 years", "5+ years"

@@ -231,19 +231,43 @@ const TreatmentManager = ({
   };
 
   return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-medium text-black">
-        {icon}
-        {label}
-      </label>
+    <div className="space-y-6">
+      {/* Styled Header */}
+      <div className="rounded-xl p-6 shadow-lg relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #2D9AA5 0%, #3BAEB8 50%, #2D9AA5 100%)' }}>
+        {/* Floating Circle Decorations */}
+        <div className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full blur-sm"></div>
+        <div className="absolute top-8 right-8 w-24 h-24 bg-white/5 rounded-full blur-md"></div>
+        <div className="absolute bottom-4 left-4 w-12 h-12 bg-white/8 rounded-full blur-sm"></div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              {icon}
+            </div>
+            <h2 className="text-xl font-bold text-white">{label}</h2>
+          </div>
+          <p className="text-white/90 text-sm">Select and manage treatments for this case</p>
+        </div>
+      </div>
 
       {/* Treatment Selection */}
-      <div className="space-y-2">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 space-y-4">
         {!showCustomInput ? (
           <div className="relative">
             <select
               onChange={(e) => handleTreatmentSelection(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-black"
+              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 text-gray-900"
+              style={{
+                borderColor: '#E5E7EB',
+              }}
+              onFocus={(e) => {
+                (e.target as HTMLSelectElement).style.borderColor = '#2D9AA5';
+                (e.target as HTMLSelectElement).style.boxShadow = '0 0 0 3px rgba(45, 154, 165, 0.1)';
+              }}
+              onBlur={(e) => {
+                (e.target as HTMLSelectElement).style.borderColor = '#E5E7EB';
+                (e.target as HTMLSelectElement).style.boxShadow = 'none';
+              }}
               value={selectedTreatmentId}
             >
               <option value="">Select a treatment</option>
@@ -258,19 +282,33 @@ const TreatmentManager = ({
               <button
                 type="button"
                 onClick={handleAddSelectedTreatment}
-                className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                className="mt-3 px-4 py-2 text-white rounded-lg text-sm transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                style={{ backgroundColor: '#2D9AA5' }}
+                onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
+                onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
               >
                 Add Selected Treatment
               </button>
             )}
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <input
               type="text"
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder-black text-black"
+              className="flex-1 px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 text-gray-900"
+              style={{
+                borderColor: '#E5E7EB'
+              }}
+              onFocus={(e) => {
+                (e.target as HTMLInputElement).style.borderColor = '#2D9AA5';
+                (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px rgba(45, 154, 165, 0.1)';
+              }}
+              onBlur={(e) => {
+                (e.target as HTMLInputElement).style.borderColor = '#E5E7EB';
+                (e.target as HTMLInputElement).style.boxShadow = 'none';
+              }}
               placeholder="Enter custom treatment name"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -282,7 +320,10 @@ const TreatmentManager = ({
             <button
               type="button"
               onClick={onAdd}
-              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-black-800 transition-colors"
+              className="px-4 py-3 text-white rounded-lg transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+              style={{ backgroundColor: '#2D9AA5' }}
+              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
+              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -292,7 +333,7 @@ const TreatmentManager = ({
                 setShowCustomInput(false);
                 setNewItem("");
               }}
-              className="px-4 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-300"
             >
               <X className="w-4 h-4" />
             </button>
@@ -301,7 +342,7 @@ const TreatmentManager = ({
       </div>
 
       {/* Selected Treatments */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {items?.map(
           (
             item: {
@@ -317,31 +358,35 @@ const TreatmentManager = ({
             return (
               <div
                 key={index}
-                className="border border-gray-200 rounded-lg p-3"
+                className="border-2 rounded-xl p-4 bg-gradient-to-br from-teal-50 to-cyan-50 transition-all duration-300 hover:shadow-lg"
+                style={{ borderColor: '#2D9AA5' }}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-black">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-lg" style={{ color: '#21737b' }}>
                     {item.mainTreatment}
                   </span>
                   <button
                     type="button"
                     onClick={() => onRemove(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-all duration-300"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
                 {/* Sub-treatment Selection */}
-                <div className="ml-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
+                <div className="ml-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium" style={{ color: '#21737b' }}>
                       Sub-treatments:
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowSubTreatmentInput(index)}
-                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                      className="px-3 py-1 text-white rounded-full text-xs transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                      style={{ backgroundColor: '#2D9AA5' }}
+                      onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
+                      onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
                     >
                       + Add Sub-treatment
                     </button>
@@ -349,89 +394,118 @@ const TreatmentManager = ({
 
                   {/* Sub-treatment Input */}
                   {showSubTreatmentInput === index && (
-                    <div className="flex gap-2 items-center">
-                      <select
-                        onChange={(e) =>
-                          handleSubTreatmentSelection(index, e.target.value)
-                        }
-                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                        value={
-                          selectedSubTreatment?.index === index
-                            ? selectedSubTreatment.value
-                            : ""
-                        }
-                      >
-                        <option value="">Select sub-treatment</option>
-                        {selectedTreatment?.subcategories?.map((sub: any) => (
-                          <option key={sub.slug} value={sub.name}>
-                            {sub.name}
+                    <div className="bg-white/80 backdrop-blur-sm border rounded-lg p-3" style={{ borderColor: '#2D9AA5' }}>
+                      <div className="flex gap-2 items-center">
+                        <select
+                          onChange={(e) =>
+                            handleSubTreatmentSelection(index, e.target.value)
+                          }
+                          className="text-black flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all duration-300"
+                          style={{
+                            focusBorderColor: '#2D9AA5',
+                            focusRingColor: '#2D9AA5'
+                          }}
+                          onFocus={(e) => {
+                            (e.target as HTMLSelectElement).style.borderColor = '#2D9AA5';
+                            (e.target as HTMLSelectElement).style.boxShadow = '0 0 0 2px rgba(45, 154, 165, 0.1)';
+                          }}
+                          onBlur={(e) => {
+                            (e.target as HTMLSelectElement).style.borderColor = '#D1D5DB';
+                            (e.target as HTMLSelectElement).style.boxShadow = 'none';
+                          }}
+                          value={
+                            selectedSubTreatment?.index === index
+                              ? selectedSubTreatment.value
+                              : ""
+                          }
+                        >
+                          <option value="">Select sub-treatment</option>
+                          {selectedTreatment?.subcategories?.map((sub: any) => (
+                            <option key={sub.slug} value={sub.name}>
+                              {sub.name}
+                            </option>
+                          ))}
+                          <option value="custom">
+                            + Add Custom Sub-treatment
                           </option>
-                        ))}
-                        <option value="custom">
-                          + Add Custom Sub-treatment
-                        </option>
-                      </select>
+                        </select>
 
-                      {selectedSubTreatment?.index === index &&
-                        selectedSubTreatment.value && (
-                          <button
-                            type="button"
-                            onClick={handleAddSelectedSubTreatment}
-                            className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
-                          >
-                            Add
-                          </button>
+                        {selectedSubTreatment?.index === index &&
+                          selectedSubTreatment.value && (
+                            <button
+                              type="button"
+                              onClick={handleAddSelectedSubTreatment}
+                              className="px-3 py-2 text-white rounded-lg text-xs transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                              style={{ backgroundColor: '#2D9AA5' }}
+                              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
+                              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
+                            >
+                              Add
+                            </button>
+                          )}
+
+                        {showCustomSubTreatmentInput === index && (
+                          <>
+                            <input
+                              type="text"
+                              value={customSubTreatment}
+                              onChange={(e) =>
+                                setCustomSubTreatment(e.target.value)
+                              }
+                              className="text-black flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all duration-300"
+                              onFocus={(e) => {
+                                (e.target as HTMLInputElement).style.borderColor = '#2D9AA5';
+                                (e.target as HTMLInputElement).style.boxShadow = '0 0 0 2px rgba(45, 154, 165, 0.1)';
+                              }}
+                              onBlur={(e) => {
+                                (e.target as HTMLInputElement).style.borderColor = '#D1D5DB';
+                                (e.target as HTMLInputElement).style.boxShadow = 'none';
+                              }}
+                              placeholder="Custom sub-treatment name"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddSubTreatment(index);
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddSubTreatment(index)}
+                              className="px-3 py-2 text-white rounded-lg text-xs transition-all duration-300 hover:shadow-lg transform hover:scale-105"
+                              style={{ backgroundColor: '#2D9AA5' }}
+                              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
+                              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
+                            >
+                              Add
+                            </button>
+                          </>
                         )}
 
-                      {showCustomSubTreatmentInput === index && (
-                        <>
-                          <input
-                            type="text"
-                            value={customSubTreatment}
-                            onChange={(e) =>
-                              setCustomSubTreatment(e.target.value)
-                            }
-                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                            placeholder="Custom sub-treatment name"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                handleAddSubTreatment(index);
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAddSubTreatment(index)}
-                            className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
-                          >
-                            Add
-                          </button>
-                        </>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowSubTreatmentInput(null);
-                          setShowCustomSubTreatmentInput(null);
-                          setCustomSubTreatment("");
-                          setSelectedSubTreatment(null);
-                        }}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
-                      >
-                        Cancel
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSubTreatmentInput(null);
+                            setShowCustomSubTreatmentInput(null);
+                            setCustomSubTreatment("");
+                            setSelectedSubTreatment(null);
+                          }}
+                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition-all duration-300"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   )}
 
                   {/* Existing Sub-treatments */}
                   {item.subTreatments && item.subTreatments.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-2">
                       {item.subTreatments.map((subTreatment, subIndex) => (
                         <span
                           key={subIndex}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                          className="inline-flex items-center gap-2 px-3 py-1 text-white text-sm rounded-full transition-all duration-300 hover:shadow-lg"
+                          style={{ backgroundColor: '#2D9AA5' }}
                         >
                           {subTreatment.name}
                           <button
@@ -439,7 +513,7 @@ const TreatmentManager = ({
                             onClick={() =>
                               handleRemoveSubTreatment(index, subIndex)
                             }
-                            className="text-red-400 hover:text-red-600"
+                            className="text-white/80 hover:text-white p-0.5 rounded-full hover:bg-white/20 transition-all duration-300"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -606,9 +680,9 @@ function DoctorDashboard() {
       updated[index].sessions[session] = (
         typeof value === "string"
           ? value
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
           : value
       ) as string[];
     } else {
@@ -964,7 +1038,7 @@ function DoctorDashboard() {
                 <div className="flex items-center space-x-4 sm:space-x-6">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-full flex items-center justify-center">
                     <svg
-                      className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600"
+                      className="w-10 h-10 sm:w-12 sm:h-12 text-[#2D9AA5]"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
@@ -978,12 +1052,12 @@ function DoctorDashboard() {
                     </svg>
                   </div>
                   <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-[#9812fa] break-words">
+                    <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-[#2D9AA5] break-words">
                       Dr. {user.name}
                     </h1>
                     {/* <p className="text-lg sm:text-xl mb-1 text-[#646c7d] break-words">
-                      {doctorProfile.specialization}
-                    </p> */}
+        {doctorProfile.specialization}
+      </p> */}
                     <p className="text-[#646c7d] break-words">
                       {doctorProfile.degree}
                     </p>
@@ -991,7 +1065,7 @@ function DoctorDashboard() {
                 </div>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="mt-4 sm:mt-6 lg:mt-0 bg-white text-blue-600 px-6 sm:px-8 py-2 sm:py-3 rounded-xl font-semibold hover:bg-blue-50 transition duration-200 shadow-lg w-full sm:w-auto"
+                  className="mt-4 sm:mt-6 lg:mt-0 bg-white text-[#2D9AA5] px-6 sm:px-8 py-2 sm:py-3 rounded-xl font-semibold hover:bg-[#2D9AA5] hover:text-white transition duration-200 shadow-lg w-full sm:w-auto border border-[#2D9AA5]"
                 >
                   Edit Profile
                 </button>
@@ -1115,7 +1189,7 @@ function DoctorDashboard() {
                       <p className="text-sm text-black font-medium mb-1">
                         Experience
                       </p>
-                      <p className="text-2xl font-bold text-blue-600">
+                      <p className="text-2xl font-bold text-[#2D9AA5]">
                         {doctorProfile.experience} years
                       </p>
                     </div>
@@ -1304,7 +1378,7 @@ function DoctorDashboard() {
               {/* Wave Background Effect and Floating Circles here, then header content */}
               <div className="p-4 pt-12 sm:p-6 sm:pt-16">
                 {/* Add pt-16 for spacing below the button */}
-                <h2 className="text-xl sm:text-2xl font-bold text-[#9812fa]">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#2D9AA5]">
                   Edit Profile
                 </h2>
                 <p className="text-[#646c7d]">
@@ -1355,11 +1429,10 @@ function DoctorDashboard() {
                         value={form[field as keyof FormData] as string}
                         onChange={handleChange}
                         disabled={field === "phone"} // ✅ Still disabled if needed
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-black bg-white ${
-                          field === "phone"
-                            ? "cursor-not-allowed bg-gray-100"
-                            : ""
-                        }`}
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-black bg-white ${field === "phone"
+                          ? "cursor-not-allowed bg-gray-100"
+                          : ""
+                          }`}
                         placeholder={`Enter ${field
                           .replace(/([A-Z])/g, " $1")
                           .toLowerCase()}`}
@@ -1603,7 +1676,12 @@ function DoctorDashboard() {
               <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  className="flex-1 bg-gradient-to-r from-[#2D9AA5] to-[#23747D]
+ text-white px-8 py-3 rounded-xl font-semibold 
+ hover:from-[#23747D] hover:to-[#1B5A60] 
+ transition duration-200 shadow-lg hover:shadow-xl 
+ transform hover:-translate-y-0.5
+"
                 >
                   Save Changes
                 </button>
