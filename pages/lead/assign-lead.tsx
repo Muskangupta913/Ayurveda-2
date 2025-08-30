@@ -157,10 +157,17 @@ export default function LeadsPage() {
                 <td className="border p-2">{lead.name}</td>
                 <td className="border p-2">{lead.phone}</td>
                 <td className="border p-2">
-                  {Array.isArray(lead.treatments)
-                    ? lead.treatments.map((t) => t?.name).join(", ")
-                    : ""}
-                </td>
+  {Array.isArray(lead.treatments)
+    ? lead.treatments
+        .map((t) =>
+          t.subTreatment
+            ? `${t.subTreatment} (${t.treatment?.name || "Unknown"})`
+            : t.treatment?.name || "Unknown"
+        )
+        .join(", ")
+    : ""}
+</td>
+
                 <td className="border p-2">{lead.source}</td>
                 <td className="border p-2">{lead.offerTag}</td>
                 <td className="border p-2">{lead.status}</td>

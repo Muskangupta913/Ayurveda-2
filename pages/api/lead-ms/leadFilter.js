@@ -39,7 +39,8 @@ export default async function handler(req, res) {
 
       const leads = await Lead.find(filter)
         .populate("treatments", "name")
-        .populate("assignedTo", "name role");
+        .populate("assignedTo", "name role")
+        .populate("treatments.treatment", "name");
 
       return res.status(200).json({ success: true, leads });
     } catch (err) {
