@@ -793,7 +793,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       Experience
                     </label>
                     <input
-                      type="number"
+                      // type="number"
                       name="experience"
                       value={formData.experience}
                       placeholder="Enter Experience"
