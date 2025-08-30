@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   await dbConnect();
 
-  const { location, jobType, department, skills, salary, time, jobId } = req.query;
+  const { location, jobType, department, skills, salary, time,experience, jobId } = req.query;
 
   // ✅ Always only approved + active
   const filters = { 
@@ -35,6 +35,9 @@ export default async function handler(req, res) {
   // ✅ Salary (exact match, you can change to regex if flexible matching needed)
   if (salary?.trim()) {
     filters.salary = salary.trim();
+  }
+  if(experience?.trim()){
+    filters.experience = experience.trim();
   }
 
   // ✅ Job ID

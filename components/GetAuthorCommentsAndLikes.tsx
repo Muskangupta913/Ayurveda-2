@@ -9,7 +9,7 @@ import {
   TrendingUp,
   Users,
   Eye,
-  Reply,
+  Reply as ReplyIcon,
   Trash2,
   Filter,
   Calendar,
@@ -24,9 +24,7 @@ import {
 } from "lucide-react";
 import parse from "html-react-parser";
 
-
-
-type Reply = {
+type CommentReply = {
   _id: string;
   user?: string;
   username: string;
@@ -39,10 +37,11 @@ type Comment = {
   username: string;
   text: string;
   createdAt: string;
-  replies?: Reply[];
+  replies?: CommentReply[];
 };
 
 interface Blog {
+  _id: string;
   image?: string;
   title: string;
   postedBy?: { name?: string };
@@ -50,11 +49,20 @@ interface Blog {
   content?: string;
   youtubeUrl?: string;
   likesCount: number;
-  comments?: { id: string; text: string }[];
+  commentsCount: number;
+  comments: any[]; // or a better type for comments
 }
 
 interface Props {
-  tokenKey: "clinicToken" | "doctorToken";
+  tokenKey: "clinicToken" | "doctorToken" | "adminToken";
+  blog: Blog;
+  totalLikes: number;
+  totalComments: number;
+  avgEngagement: number;
+  setDetailsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setDetailsBlog: React.Dispatch<React.SetStateAction<Blog | null>>;
+  setDetailsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  openCommentsPopup: (blog: Blog) => void;
 }
 
 interface BlogDetailsModalProps {
@@ -85,7 +93,7 @@ const StatCard: React.FC<{
           >
             <TrendingUp
               size={14}
-              className={`mr-1 ${!trendUp && "rotate-180"}`}
+              className={`mr-1 ${!trendUp ? "rotate-180" : ""}`}
             />
             {trend}
           </div>
@@ -172,7 +180,6 @@ const CommentsPopup: React.FC<{
   const handleReply = async (commentId: string) => {
     const text = replyTexts[commentId]?.trim();
     if (!text) return;
-
     await onReply(blog._id, commentId, text);
     setReplyTexts((prev) => ({ ...prev, [commentId]: "" }));
     setActiveReply(null);
@@ -308,7 +315,7 @@ const CommentsPopup: React.FC<{
                         onClick={() => setActiveReply(comment._id)}
                         className="flex items-center text-sm text-blue-600 hover:text-blue-700 transition-colors"
                       >
-                        <Reply size={14} className="mr-1" />
+                        <ReplyIcon size={14} className="mr-1" />
                         Reply
                       </button>
                     )}
@@ -1129,8 +1136,8 @@ hover:bg-[#23747D] transition-colors disabled:opacity-50
                         key={page}
                         onClick={() => setCurrentPage(page)}
                         className={`px-3 py-2 text-sm font-medium rounded-lg ${currentPage === page
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-500 hover:bg-gray-50 border border-gray-300"
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-500 hover:bg-gray-50 border border-gray-300"
                           }`}
                       >
                         {page}

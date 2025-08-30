@@ -29,9 +29,12 @@ interface JobFormData {
   description: string;
   noOfOpenings: string;
   salary: string;
+  salaryType: string;   // ✅ Added
+  experience: string;
   establishment: string;
   workingDays: string;
 }
+
 
 interface JobPostingFormProps {
   onSubmit: (formData: JobFormData) => Promise<void>;
@@ -60,9 +63,12 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     description: '',
     noOfOpenings: '',
     salary: '',
+    salaryType: '',   // ✅ Added
+    experience: '',
     establishment: '',
     workingDays: '',
   });
+
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -102,23 +108,37 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     // Section 0: Basic Information
     ['companyName', 'establishment', 'jobTitle', 'department', 'qualification', 'jobType', 'location'],
     // Section 1: Job Details
-    ['jobTiming', 'workingDays', 'salary', 'noOfOpenings'],
-    // Section 2: Job Description (only description)
+    ['jobTiming', 'workingDays', 'salary', 'experience', 'noOfOpenings', 'establishment'],
+    // Section 2: Job Description
     ['description'],
     // Section 3: Additional Requirements (no description)
     ['skills', 'perks', 'languagesPreferred'],
   ]), []);
 
   const validateField = (name: string, value: string): string => {
-    if (!value || value.toString().trim() === '') return 'This field is required';
+    if (!value || value.toString().trim() === '') {
+      // SalaryType should only be required if salary is entered
+      if (name === "salaryType") {
+        return "Please select Per Month or Per Year"; // specific message
+      }
+      return "This field is required"; // default message
+    }
+
     if (name === 'noOfOpenings') {
       const n = Number(value);
       if (!Number.isFinite(n) || n <= 0) return 'Enter a valid number greater than 0';
     }
+
     if (name === 'establishment') {
-      // basic year check (optional formatting)
       if (!/^\d{2,4}$/.test(value.trim())) return 'Enter a valid year (e.g., 2015)';
     }
+
+    if (name === 'salaryType') {
+      if (formData.salary && !value) {
+        return 'Please select Per Month or Per Year';
+      }
+    }
+
     return '';
   };
 
@@ -178,7 +198,25 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
 
   const confirmSubmit = async () => {
     try {
-      await onSubmit(formData);
+      // ✅ Normalize salary before sending
+      let salaryRaw: any = formData.salary ? formData.salary.replace(/,/g, "") : "";
+
+      if (salaryRaw.includes("-")) {
+        const [min, max] = salaryRaw.split("-").map(v => v.trim());
+        salaryRaw = `${Number(min)} - ${Number(max)}`; // ✅ send as "1111 - 2222"
+      } else if (salaryRaw) {
+        salaryRaw = `${Number(salaryRaw)}`; // ✅ "1111"
+      }
+
+
+      const payload = {
+        ...formData,
+        salary: salaryRaw,
+        salaryType: formData.salaryType, // ✅ explicitly included
+      };
+
+      await onSubmit(payload);
+
       addToast('success', 'Job Posted Successfully!', 'Your job posting is now live and candidates can apply');
       setShowConfirmModal(false);
 
@@ -197,6 +235,8 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
         description: '',
         noOfOpenings: '',
         salary: '',
+        salaryType: '',   // ✅ reset as well
+        experience: '',
         establishment: '',
         workingDays: '',
       });
@@ -208,6 +248,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
       addToast('error', 'Failed to Post Job', 'There was an error posting your job. Please try again or contact support.');
     }
   };
+
 
   // Confirmation Modal Component
   const ConfirmationModal = () => (
@@ -267,6 +308,10 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               <div className="bg-gray-50/80 backdrop-blur-sm p-3 rounded-lg border border-gray-200/50">
                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Salary</label>
                 <p className="text-sm font-medium text-gray-900 mt-1">{formData.salary || 'Not specified'}</p>
+              </div>
+              <div className="bg-gray-50/80 backdrop-blur-sm p-3 rounded-lg border border-gray-200/50">
+                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Experience</label>
+                <p className="text-sm font-medium text-gray-900 mt-1">{formData.experience || 'Not specified'}</p>
               </div>
               <div className="bg-gray-50/80 backdrop-blur-sm p-3 rounded-lg border border-gray-200/50">
                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Number of Openings</label>
@@ -672,14 +717,75 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Salary
                     </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="salary"
+                        value={formData.salary}
+                        placeholder="e.g. 10,000 or 10,000 - 20,000"
+                        onChange={(e) => {
+                          let rawValue = e.target.value;
+
+                          // Allow only digits, commas, spaces, and hyphen
+                          if (/^[0-9,\s-]*$/.test(rawValue)) {
+                            // Remove commas before formatting
+                            let cleaned = rawValue.replace(/,/g, "");
+
+                            if (cleaned.includes("-")) {
+                              // Split into range
+                              let [min, max] = cleaned.split("-").map((v) => v.trim());
+                              let formattedMin = min && !isNaN(Number(min)) ? Number(min).toLocaleString("en-IN") : "";
+                              let formattedMax = max && !isNaN(Number(max)) ? Number(max).toLocaleString("en-IN") : "";
+                              rawValue =
+                                formattedMin + (cleaned.includes("-") ? " - " : "") + (formattedMax ? formattedMax : "");
+                            } else {
+                              // Single number formatting
+                              rawValue = cleaned && !isNaN(Number(cleaned)) ? Number(cleaned).toLocaleString("en-IN") : "";
+                            }
+
+                            setFormData({ ...formData, salary: rawValue });
+                          }
+                        }}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      />
+
+
+                      <select
+                        name="salaryType"
+                        value={formData.salaryType}
+                        onChange={handleChange}
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      >
+                        <option value="">Select</option>
+                        <option value="month">Per Month</option>
+                        <option value="year">Per Year</option>
+                      </select>
+                    </div>
+
+                    {touched.salary && errors.salary && (
+                      <p className="mt-1 text-xs text-red-600">{errors.salary}</p>
+                    )}
+                    {touched.salaryType && errors.salaryType && (
+                      <p className="mt-1 text-xs text-red-600">{errors.salaryType}</p>
+                    )}
+                  </div>
+
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Experience
+                    </label>
                     <input
-                      name="salary"
-                      value={formData.salary}
-                      placeholder="Enter salary range"
+                      type="number"
+                      name="experience"
+                      value={formData.experience}
+                      placeholder="Enter Experience"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
                     />
-                    {touched.salary && errors.salary && <p className="mt-1 text-xs text-red-600">{errors.salary}</p>}
+                    {touched.experience && errors.experience && (
+                      <p className="mt-1 text-xs text-red-600">{errors.experience}</p>
+                    )}
                   </div>
 
                   <div>
