@@ -646,22 +646,20 @@ function HealthyFoodPickerGame() {
         {/* Food Grid */}
         <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-3 sm:p-4">
           <div 
-            className="grid gap-2 sm:gap-3"
-            style={{
-              gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`
-            }}
+            className="grid gap-1 md:gap-1.5 grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8"
+            style={{ maxHeight: '60vh' }}
           >
             {gameGrid.map((food) => {
               const isSelected = selectedFoods.has(food.id);
-              const rarityBorder = food.rarity === 'legendary' ? 'border-4 border-yellow-400 shadow-lg' :
-                                 food.rarity === 'rare' ? 'border-2 border-purple-400' :
+              const rarityBorder = food.rarity === 'legendary' ? 'border-2 border-yellow-400 shadow-md' :
+                                 food.rarity === 'rare' ? 'border border-purple-400' :
                                  'border border-gray-200';
               
               const selectionStyle = isSelected 
                 ? food.isHealthy 
-                  ? 'bg-green-100 border-green-400 transform scale-95' 
-                  : 'bg-red-100 border-red-400 transform scale-95'
-                : 'bg-white hover:bg-gray-50 hover:scale-105 hover:shadow-md';
+                  ? 'bg-green-100 border-green-400 scale-95' 
+                  : 'bg-red-100 border-red-400 scale-95'
+                : 'bg-white hover:bg-gray-100';
 
               return (
                 <button
@@ -669,41 +667,37 @@ function HealthyFoodPickerGame() {
                   onClick={() => selectFood(food.id)}
                   disabled={isSelected}
                   className={`
-                    relative p-2 sm:p-3 rounded-xl transition-all duration-200 cursor-pointer
+                    flex flex-col items-center justify-center
+                    p-1 md:p-0.5
+                    rounded-lg shadow-sm
+                    min-h-[36px] max-h-[48px] min-w-[36px] max-w-[70px]
+                    text-[10px] md:text-[9px] leading-tight
+                    transition
                     ${rarityBorder} ${selectionStyle}
-                    ${isSelected ? 'cursor-not-allowed opacity-70' : 'hover:shadow-lg'}
+                    ${isSelected ? 'cursor-not-allowed opacity-70' : 'hover:shadow-md'}
                   `}
-                  style={{
-                    minHeight: '60px',
-                    opacity: isSelected ? 0.7 : 1
-                  }}
+                  style={{ height: '48px', width: '70px', opacity: isSelected ? 0.7 : 1 }}
                 >
                   {/* Rarity indicator */}
                   {food.rarity === 'legendary' && (
-                    <div className="absolute -top-1 -right-1 text-xs bg-yellow-400 text-yellow-900 px-1 rounded-full font-bold">
+                    <div className="absolute top-0 right-0 text-[10px] bg-yellow-400 text-yellow-900 px-0.5 rounded font-bold">
                       ⭐
                     </div>
                   )}
                   {food.rarity === 'rare' && (
-                    <div className="absolute -top-1 -right-1 text-xs bg-purple-400 text-purple-900 px-1 rounded-full font-bold">
+                    <div className="absolute top-0 right-0 text-[10px] bg-purple-400 text-purple-900 px-0.5 rounded font-bold">
                       💎
                     </div>
                   )}
                   
                   {/* Food emoji */}
-                  <div className="text-2xl sm:text-3xl md:text-4xl mb-1">
-                    {food.name}
-                  </div>
+                  <span className="text-lg md:text-base mb-0.5">{food.name}</span>
                   
                   {/* Food label */}
-                  <p className="text-xs sm:text-sm font-medium text-gray-700 truncate">
-                    {food.label}
-                  </p>
+                  <span className="truncate w-full text-center">{food.label}</span>
                   
                   {/* Calories */}
-                  <p className="text-xs text-gray-500">
-                    {food.calories} cal
-                  </p>
+                  <span className="text-[9px] text-gray-500">{food.calories} cal</span>
                   
                   {/* Selection feedback */}
                   {isSelected && (
