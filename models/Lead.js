@@ -8,12 +8,11 @@ const LeadSchema = new mongoose.Schema(
     age: { type: Number },
 
     treatments: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Treatment",
-        index: true,
-      },
-    ],
+    {
+      treatment: { type: mongoose.Schema.Types.ObjectId, ref: "Treatment", required: true },
+      subTreatment: { type: String }, // store sub-treatment name
+    },
+  ],
 
     source: {
       type: String,

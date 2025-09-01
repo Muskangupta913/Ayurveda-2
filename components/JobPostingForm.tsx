@@ -1,9 +1,26 @@
 // components/JobPostingForm.tsx
 import React, { useMemo, useState } from 'react';
 
-const qualifications = ['MBBS', 'BDS', 'BAMS', 'BHMS', 'MD', 'MS', 'PhD', 'Diploma', 'Other'];
+const qualifications = [
+  "B.Tech","M.Tech","BCA","MCA","Diploma in CS/IT",
+  "B.Sc IT","M.Sc IT","BBA","MBA","Other Software",
+  "MBBS","BDS","BAMS","BHMS","MD","MS","PhD",
+  "Diploma","Nursing","Pharmacy","Other Medical",
+  "Graduate","Post Graduate","12th Pass","10th Pass","Other"
+];
+
+const departments = [
+  "Software Development","Frontend","Backend","Full Stack","DevOps",
+  "QA & Testing","Automation Testing","Manual Testing","UI/UX","Data Science",
+  "AI/ML","Cloud Computing","Cybersecurity","Database Administration",
+  "Product Management","Business Analysis",
+  "General Medicine","Cardiology","Radiology","Dental","Pathology",
+  "Pediatrics","Orthopedics","Gynecology","Dermatology",
+  "Anesthesiology","Surgery","ENT","Psychiatry","Physiotherapy",
+  "Administration","Pharmacy","Research","Other"
+];
+
 const jobTypes = ['Full Time', 'Part Time', 'Internship'];
-const departments = ['Software', 'Dental', 'Cardiology', 'Pathology', 'Administration', 'Radiology', 'General Medicine'];
 
 // Toast types
 type ToastType = 'success' | 'error' | 'warning' | 'info';

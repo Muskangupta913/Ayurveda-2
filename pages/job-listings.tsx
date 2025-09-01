@@ -35,7 +35,12 @@ const AllJobs = () => {
 
       {/* Filters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <input name="location" onChange={handleChange} placeholder="Location" className="border p-2 rounded" />
+        <input
+  name="location"
+  onChange={handleChange}
+  placeholder="Search by Location (e.g. Noida Sec 2)"
+  className="border p-2 rounded"
+/>
         <select name="jobType" onChange={handleChange} className="border p-2 rounded">
           <option value="">Job Type</option>
           <option>Full Time</option>
@@ -43,14 +48,59 @@ const AllJobs = () => {
           <option>Internship</option>
         </select>
         <select name="department" onChange={handleChange} className="border p-2 rounded">
-          <option value="">Department</option>
-          <option>Dental</option>
-          <option>Cardiology</option>
-          <option>Radiology</option>
-          <option>Software</option>
+          <option value="">Select Department</option>
+           <option>Software Development</option>
+  <option>Frontend</option>
+  <option>Backend</option>
+  <option>Full Stack</option>
+  <option>DevOps</option>
+  <option>QA & Testing</option>
+  <option>Automation Testing</option>
+  <option>Manual Testing</option>
+  <option>UI/UX</option>
+  <option>Data Science</option>
+  <option>AI/ML</option>
+  <option>Cloud Computing</option>
+  <option>Cybersecurity</option>
+  <option>Database Administration</option>
+  <option>Product Management</option>
+  <option>Business Analysis</option>
+  <option>General Medicine</option>
+  <option>Cardiology</option>
+  <option>Radiology</option>
+  <option>Dental</option>
+  <option>Pathology</option>
+  <option>Pediatrics</option>
+  <option>Orthopedics</option>
+  <option>Gynecology</option>
+  <option>Dermatology</option>
+  <option>Anesthesiology</option>
+  <option>Surgery</option>
+  <option>ENT</option>
+  <option>Psychiatry</option>
+  <option>Physiotherapy</option>
+  <option>Administration</option>
+  <option>Pharmacy</option>
+  <option>Research</option>
+  <option>Other</option>
         </select>
+        <select name="experience" onChange={handleChange} className="border p-2 rounded">
+  <option value="">Select Experience</option>
+  <option value="fresher">Fresher</option>
+  <option value="1-2">1-2 years</option>
+  <option value="2-4">2-4 years</option>
+  <option value="4-6">4-6 years</option>
+  <option value="7+">7+ years</option>
+</select>
+
+
         <input name="skills" onChange={handleChange} placeholder="Skills (comma separated)" className="border p-2 rounded" />
-        <input name="salary" onChange={handleChange} placeholder="Salary" className="border p-2 rounded" />
+      <input
+  name="salary"
+  onChange={handleChange}
+  placeholder="Enter salary (e.g. 20000)"
+  className="border p-2 rounded"
+/>
         <select name="time" onChange={handleChange} className="border p-2 rounded">
           <option value="">Posted Anytime</option>
           <option value="week">Last 7 Days</option>

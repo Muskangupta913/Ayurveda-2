@@ -280,7 +280,7 @@ const RegisterClinic: React.FC & {
         const response = await axios.get("/api/clinics/treatments");
         if (response.data.success) {
           setTreatments(response.data.treatments);
-        }
+        } 
       } catch (error: unknown) {
         if (error instanceof Error) {
           // console.error('Error fetching treatments:', error.message);

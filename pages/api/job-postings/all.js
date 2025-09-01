@@ -1,6 +1,6 @@
 import dbConnect from "../../../lib/database";
-import JobPosting from "../../../models/JobPosting";
 import User from "../../../models/Users";
+import JobPosting from "../../../models/JobPosting";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   await dbConnect();
 
-  const { location, jobType, department, skills, salary, time,experience, jobId } = req.query;
+  const { location, jobType, department, skills, salary, time, experience, jobId } = req.query;
 
   // ✅ Always only approved + active
   const filters = { 
@@ -17,10 +17,8 @@ export default async function handler(req, res) {
     status: "approved"
   };
 
-  // ✅ Location filter (case-insensitive partial match)
-  if (location?.trim()) {
-    filters.location = { $regex: location.trim(), $options: "i" };
-  }
+  // ✅ Normalize text helper
+  const normalize = (str) => str.replace(/[\s\-.]/g, "").toLowerCase();
 
   // ✅ Job type
   if (jobType?.trim()) {
@@ -30,14 +28,6 @@ export default async function handler(req, res) {
   // ✅ Department
   if (department?.trim()) {
     filters.department = { $regex: department.trim(), $options: "i" };
-  }
-
-  // ✅ Salary (exact match, you can change to regex if flexible matching needed)
-  if (salary?.trim()) {
-    filters.salary = salary.trim();
-  }
-  if(experience?.trim()){
-    filters.experience = experience.trim();
   }
 
   // ✅ Job ID
@@ -62,12 +52,68 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Debug logs (optional, remove in production)
-    console.log("Filters used:", filters);
-
-    const jobs = await JobPosting.find(filters)
+    let jobs = await JobPosting.find(filters)
       .populate("postedBy", "username role")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // ✅ Location normalization check (real fuzzy match)
+    if (location?.trim()) {
+      const normalizedQuery = normalize(location);
+      jobs = jobs.filter(
+        job => job.location && normalize(job.location).includes(normalizedQuery)
+      );
+    }
+
+    // ✅ Experience filter (range based, now AFTER jobs are fetched)
+   // ✅ Experience filter (range + "Fresher")
+if (experience?.trim()) {
+  let min = 0, max = Infinity;
+  const expFilter = experience.trim();
+
+  switch (expFilter) {
+    case "fresher":
+      min = 0; max = 0; break; // treat Fresher as 0 years
+    case "1-2":
+      min = 1; max = 2; break;
+    case "2-4":
+      min = 2; max = 4; break;
+    case "4-6":
+      min = 4; max = 6; break;
+    case "7+":
+      min = 7; max = Infinity; break;
+  }
+
+  jobs = jobs.filter(job => {
+    if (!job.experience) return false;
+
+    const expStr = job.experience.toString().toLowerCase();
+
+    // direct fresher match
+    if (expFilter === "fresher" && expStr.includes("fresher")) return true;
+
+    // numeric extraction
+    const expNum = parseInt(expStr.match(/\d+/)?.[0] || "0", 10);
+    return expNum >= min && expNum <= max;
+  });
+}
+
+
+    // ✅ Salary filter (range check instead of exact match)
+    if (salary?.trim()) {
+      const salaryNumber = parseInt(salary.trim(), 10);
+      jobs = jobs.filter(job => {
+        if (!job.salary) return false;
+
+        const parts = job.salary.split("-").map(s => parseInt(s.trim(), 10)).filter(Boolean);
+        if (parts.length === 2) {
+          return salaryNumber >= parts[0] && salaryNumber <= parts[1];
+        } else if (parts.length === 1) {
+          return salaryNumber === parts[0];
+        }
+        return false;
+      });
+    }
 
     res.status(200).json({ success: true, jobs });
   } catch (error) {

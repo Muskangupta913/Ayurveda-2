@@ -1,5 +1,6 @@
 import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
+import Treatment from "../../../models/Treatment";
 import { getUserFromReq, requireRole } from "./auth";
 
 export default async function handler(req, res) {
