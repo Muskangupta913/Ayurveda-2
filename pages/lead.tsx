@@ -9,45 +9,53 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      const { data } = await axios.post("/api/lead-ms/login", {
-        email,
-        password,
-      });
+  try {
+    const { data } = await axios.post("/api/lead-ms/login", {
+      email,
+      password,
+    });
 
-      if (data?.success) {
-        console.log("Login successful:", data.user);
-   
+    if (data?.success) {
+      console.log("Login successful:", data.user);
 
+      const apiRole = data.role?.trim().toLowerCase();
+      const selectedRole = roleChoice?.trim().toLowerCase();
+
+      // Store tokens & user info separately for lead and agent
+      if (apiRole === "lead") {
         localStorage.setItem("leadToken", data.token);
-        localStorage.setItem("role", data.role);
         localStorage.setItem("leadUser", JSON.stringify(data.user));
-
-        const apiRole = data.role?.trim().toLowerCase();
-        const selectedRole = roleChoice?.trim().toLowerCase();
-
-        if (apiRole === "lead" && selectedRole === "lead") {
-          console.log("✅ Lead login successful - redirecting");
-          window.location.href = "/lead/dashboard";
-        } else if (apiRole === "agent" && selectedRole === "agent") {
-          console.log("✅ Agent login successful - redirecting");
-          window.location.href = "/agent";
-        } else {
-          console.log("❌ Role mismatch:", { apiRole, selectedRole });
-          alert(
-            `Role mismatch. API returned: ${apiRole}, but you selected: ${selectedRole}`
-          );
-        }
-      } else {
-        alert(data?.message || "Login failed");
+      } else if (apiRole === "agent") {
+        localStorage.setItem("agentToken", data.token);
+        localStorage.setItem("agentUser", JSON.stringify(data.user));
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      alert("Login request failed");
+
+      localStorage.setItem("role", apiRole);
+
+      // Redirect based on role match
+      if (apiRole === "lead" && selectedRole === "lead") {
+        console.log("✅ Lead login successful - redirecting");
+        window.location.href = "/lead/dashboard";
+      } else if (apiRole === "agent" && selectedRole === "agent") {
+        console.log("✅ Agent login successful - redirecting");
+        window.location.href = "/agent/dashboard";
+      } else {
+        console.log("❌ Role mismatch:", { apiRole, selectedRole });
+        alert(
+          `Role mismatch. API returned: ${apiRole}, but you selected: ${selectedRole}`
+        );
+      }
+    } else {
+      alert(data?.message || "Login failed");
     }
+  } catch (error) {
+    console.error("Login error:", error);
+    alert("Login request failed");
   }
+}
+
 
   return (
     <div

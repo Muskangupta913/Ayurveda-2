@@ -141,24 +141,25 @@ const handleTreatmentChange = (e) => {
 
   // Upload CSV / Excel
   const handleUpload = async () => {
-    if (!file) return alert("Select a CSV file");
-    setLoading(true);
-    const formDataObj = new FormData();
-    formDataObj.append("file", file);
-    formDataObj.append("mode", "bulk");
-    try {
-      const res = await axios.post("/api/lead-ms/create-lead", formDataObj, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-      });
-      alert(`Uploaded ${res.data.count} leads successfully!`);
-      setFile(null);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to upload leads");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!file) return alert("Select a CSV or Excel file");
+  setLoading(true);
+  const formDataObj = new FormData();
+  formDataObj.append("file", file);
+  formDataObj.append("mode", "bulk");
+  try {
+    const res = await axios.post("/api/lead-ms/create-lead", formDataObj, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+    });
+    alert(`Uploaded ${res.data.count} leads successfully!`);
+    setFile(null);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to upload leads");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="p-4 space-y-6">
@@ -328,17 +329,23 @@ const handleTreatmentChange = (e) => {
       </form>
 
       {/* CSV Upload */}
-      <div className="p-4 border rounded space-y-2">
-        <h2 className="font-bold text-lg">Upload Leads via CSV</h2>
-        <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files[0])} />
-        <button
-          onClick={handleUpload}
-          disabled={loading}
-          className="bg-green-500 text-white px-4 py-2 rounded"
-        >
-          {loading ? "Uploading..." : "Upload CSV"}
-        </button>
-      </div>
+      {/* File Upload */}
+<div className="p-4 border rounded space-y-2">
+  <h2 className="font-bold text-lg">Upload Leads (CSV or Excel)</h2>
+  <input
+    type="file"
+    accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    onChange={(e) => setFile(e.target.files[0])}
+  />
+  <button
+    onClick={handleUpload}
+    disabled={loading}
+    className="bg-green-500 text-white px-4 py-2 rounded"
+  >
+    {loading ? "Uploading..." : "Upload File"}
+  </button>
+</div>
+
     </div>
   );
 }

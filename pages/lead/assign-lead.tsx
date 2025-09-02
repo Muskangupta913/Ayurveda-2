@@ -67,6 +67,23 @@ export default function LeadsPage() {
     }
   };
 
+  const deleteLead = async (leadId) => {
+    if(!window.confirm("Are you sure you want to delete this lead?")) return;
+
+    try{
+      await axios.delete("/api/lead-ms/lead-delete",{
+        headers:{Authorization:`Bearer ${token}`},
+        data:{leadId}
+      });
+      alert("Lead deleted");
+      fetchLeads();
+    }catch(err){
+      console.error("Error deleting lead", err);
+      alert(err.response?.data?.message || "Error deleting lead")
+
+      }
+    };
+
   return (
     <div className="p-6">
       <h1 className="text-xl font-bold mb-4">Leads Management</h1>
@@ -175,13 +192,19 @@ export default function LeadsPage() {
                   {lead.assignedTo ? lead.assignedTo.name : "Not Assigned"}
                 </td>
                 <td className="border p-2">
-                  <button
-                    onClick={() => setSelectedLead(lead._id)}
-                    className="bg-green-500 text-white px-3 py-1 rounded"
-                  >
-                    Assign
-                  </button>
-                </td>
+  <button
+    onClick={() => setSelectedLead(lead._id)}
+    className="bg-green-500 text-white px-3 py-1 rounded mr-2"
+  >
+    Assign
+  </button>
+  <button
+    onClick={() => deleteLead(lead._id)}
+    className="bg-red-500 text-white px-3 py-1 rounded"
+  >
+    Delete
+  </button>
+</td>
               </tr>
             ))
           ) : (

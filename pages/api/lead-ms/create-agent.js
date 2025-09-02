@@ -1,6 +1,7 @@
 import dbConnect from '../../../lib/database';
 import User from '../../../models/Users';
 import { getUserFromReq, requireRole } from '../lead-ms/auth';
+import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST')
@@ -14,13 +15,14 @@ export default async function handler(req, res) {
   const { name, email, phone, password } = req.body;
   if (!name || !email || !phone || !password)
     return res.status(400).json({ success: false, message: 'Missing fields' });
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   try {
     const agent = new User({
       name,
       email,
       phone,
-      password,
+      password: hashedPassword,
       role: 'agent',
       isApproved: true,
     });
