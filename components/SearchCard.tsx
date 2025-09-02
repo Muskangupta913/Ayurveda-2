@@ -33,7 +33,7 @@ const cardData: {
     icon: Building2,
     gradient: "from-[#2D9AA5]/90 to-[#238a94]/90",
     description: "Find medical clinics near you",
-    bgImage: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=500&h=300&fit=crop&auto=format"
+    bgImage: "https://www.shutterstock.com/shutterstock/videos/3726842021/thumb/10.jpg?ip=x480"
   },
   { 
     type: "doctor", 
@@ -42,7 +42,7 @@ const cardData: {
     icon: Stethoscope,
     gradient: "from-[#2D9AA5]/90 to-[#1e7278]/90",
     description: "Connect with healthcare professionals",
-    bgImage: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&h=300&fit=crop&auto=format"
+    bgImage: "https://investin.org/cdn/shop/articles/jafar-ahmed-E285pJbC4uE-unsplash.jpg?v=1634293259"
   },
   { 
     type: "spa", 
@@ -62,7 +62,7 @@ const cardData: {
     icon: Heart,
     gradient: "from-[#2D9AA5]/90 to-[#52c4d0]/90",
     description: "Complete wellness solutions",
-    bgImage: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=300&fit=crop&auto=format"
+    bgImage: "https://www.opsisarch.com/wp-content/uploads//2020/05/Western-Oregon-University-Health-Wellness-Center-Multiuse-Exercise-Studio-Yoga-Opsis-Architecture.jpg"
   },
 ];
 

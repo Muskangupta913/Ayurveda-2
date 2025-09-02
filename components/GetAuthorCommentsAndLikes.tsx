@@ -49,6 +49,7 @@ interface Blog {
   content?: string;
   youtubeUrl?: string;
   likesCount: number;
+  likes: any[];
   commentsCount: number;
   comments: any[]; // or a better type for comments
 }
@@ -174,6 +175,27 @@ const CommentsPopup: React.FC<{
 }> = ({ blog, isOpen, onClose, onReply, onDelete }) => {
   const [replyTexts, setReplyTexts] = useState<{ [key: string]: string }>({});
   const [activeReply, setActiveReply] = useState<string | null>(null);
+  // New state for delete confirmation modal
+  const [deleteTarget, setDeleteTarget] = useState<{ blogId: string; commentId: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Show modal instead of alert
+  const handleDelete = (blogId: string, commentId: string) => {
+    setDeleteTarget({ blogId, commentId });
+  };
+
+  const confirmDelete = async () => {
+    if (deleteTarget) {
+      setDeleting(true);
+      await onDelete(deleteTarget.blogId, deleteTarget.commentId);
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteTarget(null);
+  };
 
   if (!isOpen) return null;
 
@@ -186,7 +208,7 @@ const CommentsPopup: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-white/40 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
@@ -233,7 +255,7 @@ const CommentsPopup: React.FC<{
                       </div>
                     </div>
                     <button
-                      onClick={() => onDelete(blog._id, comment._id)}
+                      onClick={() => handleDelete(blog._id, comment._id)}
                       className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
                     >
                       <Trash2 size={16} />
@@ -267,7 +289,7 @@ const CommentsPopup: React.FC<{
                               </div>
                             </div>
                             <button
-                              onClick={() => onDelete(blog._id, reply._id)}
+                              onClick={() => handleDelete(blog._id, reply._id)}
                               className="p-1 text-red-400 hover:text-red-600"
                             >
                               <Trash2 size={14} />
@@ -285,7 +307,7 @@ const CommentsPopup: React.FC<{
                       <div className="space-y-3">
                         <textarea
                           placeholder="Write your reply..."
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                          className="text-black w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                           rows={3}
                           value={replyTexts[comment._id] || ""}
                           onChange={(e) =>
@@ -326,6 +348,34 @@ const CommentsPopup: React.FC<{
           )}
         </div>
       </div>
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center">
+            <div className="mb-4">
+              <Trash2 size={32} className="mx-auto text-red-500 mb-2" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Comment?</h3>
+              <p className="text-gray-600">Are you sure you want to delete this comment? This action cannot be undone.</p>
+            </div>
+            <div className="flex justify-center gap-4 mt-6">
+              <button
+                onClick={cancelDelete}
+                className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -339,66 +389,284 @@ const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
   if (!isOpen || !blog) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
-        <button
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-          onClick={onClose}
-        >
-          <X size={24} />
-        </button>
-
-        {blog.image && (
-          <a href={blog.image} target="_blank" rel="noopener noreferrer">
-            <img
-              src={blog.image}
-              alt={blog.title}
-              className="w-full h-64 object-cover rounded mb-4"
-            />
-          </a>
-        )}
-
-        <h2 className="text-2xl font-bold mb-2">{blog.title}</h2>
-
-        <p className="text-gray-600 mb-2">
-          By {blog.postedBy?.name || "Author"} |{" "}
-          {new Date(blog.createdAt).toLocaleString()}
-        </p>
-
-        <div className="mb-4">{parse(blog.content || "")}</div>
-
-        {blog.youtubeUrl && (
-          <div className="mb-4">
-            <iframe
-              width="100%"
-              height="315"
-              src={blog.youtubeUrl}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
-            <a
-              href={blog.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline block mt-2"
+    <>
+      <style jsx global>{`
+        .blog-content img,
+        .blog-content * img,
+        .blog-content video,
+        .blog-content * video,
+        .blog-content iframe,
+        .blog-content * iframe {
+          display: block !important;
+          margin: 2.5rem auto !important;
+          width: 700px !important;
+          max-width: 700px !important;
+          min-width: 700px !important;
+          height: 400px !important;
+          max-height: 400px !important;
+          min-height: 400px !important;
+          object-fit: cover !important;
+          border-radius: 16px !important;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          transition: all 0.4s ease !important;
+        }
+        .blog-content img:hover,
+        .blog-content video:hover,
+        .blog-content iframe:hover {
+          transform: translateY(-4px) scale(1.02) !important;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.08) !important;
+        }
+        /* Enhanced YouTube and Google Drive embeds - UNIFORM SIZE */
+        .blog-content iframe[src*="youtube"],
+        .blog-content iframe[src*="youtu.be"],
+        .blog-content iframe[src*="drive.google"],
+        .blog-content iframe[src*="docs.google"],
+        .blog-content iframe[src*="googleapis"],
+        .blog-content iframe[src*="embed"],
+        .blog-content iframe[title*="YouTube"],
+        .blog-content iframe[title*="Google Drive"],
+        .blog-content *[src*="youtube"],
+        .blog-content *[src*="youtu.be"],
+        .blog-content *[src*="drive.google"],
+        .blog-content *[src*="docs.google"] {
+          display: block !important;
+          margin: 2.5rem auto !important;
+          width: 700px !important;
+          max-width: 700px !important;
+          min-width: 700px !important;
+          height: 400px !important;
+          max-height: 400px !important;
+          min-height: 400px !important;
+          border-radius: 16px !important;
+          border: none !important;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04) !important;
+          transition: all 0.4s ease !important;
+        }
+        .blog-content iframe[src*="youtube"]:hover,
+        .blog-content iframe[src*="youtu.be"]:hover {
+          transform: translateY(-4px) scale(1.02) !important;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.08) !important;
+        }
+        .blog-content *:has(iframe[src*="youtube"]),
+        .blog-content *:has(iframe[src*="youtu.be"]),
+        .blog-content *:has(iframe[src*="drive.google"]),
+        .blog-content *:has(iframe[src*="docs.google"]),
+        .blog-content *:has(*[src*="youtube"]),
+        .blog-content *:has(*[src*="youtu.be"]),
+        .blog-content *:has(*[src*="drive.google"]) {
+          text-align: center !important;
+          display: block !important;
+          width: 100% !important;
+        }
+        .blog-content .video-wrapper,
+        .blog-content .embed-responsive,
+        .blog-content .youtube-embed,
+        .blog-content .video-embed,
+        .blog-content .iframe-wrapper {
+          text-align: center !important;
+          display: block !important;
+          width: 100% !important;
+        }
+        .blog-content .video-wrapper iframe,
+        .blog-content .embed-responsive iframe,
+        .blog-content .youtube-embed iframe,
+        .blog-content .video-embed iframe,
+        .blog-content .iframe-wrapper iframe {
+          display: block !important;
+          margin: 2.5rem auto !important;
+          width: 700px !important;
+          max-width: 700px !important;
+          min-width: 700px !important;
+          height: 400px !important;
+          max-height: 400px !important;
+          min-height: 400px !important;
+          border-radius: 16px !important;
+          border: none !important;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04) !important;
+        }
+        @media (max-width: 768px) {
+          .blog-content img,
+          .blog-content * img,
+          .blog-content video,
+          .blog-content * video,
+          .blog-content iframe,
+          .blog-content * iframe,
+          .blog-content iframe[src*="youtube"],
+          .blog-content iframe[src*="youtu.be"],
+          .blog-content iframe[src*="drive.google"],
+          .blog-content iframe[src*="docs.google"],
+          .blog-content iframe[src*="googleapis"],
+          .blog-content *[src*="youtube"],
+          .blog-content *[src*="youtu.be"],
+          .blog-content *[src*="drive.google"],
+          .blog-content .video-wrapper iframe,
+          .blog-content .embed-responsive iframe,
+          .blog-content .youtube-embed iframe,
+          .blog-content .video-embed iframe,
+          .blog-content .iframe-wrapper iframe {
+            width: 500px !important;
+            max-width: 500px !important;
+            min-width: 500px !important;
+            height: 300px !important;
+            max-height: 300px !important;
+            min-height: 300px !important;
+            margin: 1.5rem auto !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .blog-content img,
+          .blog-content * img,
+          .blog-content video,
+          .blog-content * video,
+          .blog-content iframe,
+          .blog-content * iframe,
+          .blog-content iframe[src*="youtube"],
+          .blog-content iframe[src*="youtu.be"],
+          .blog-content iframe[src*="drive.google"],
+          .blog-content iframe[src*="docs.google"],
+          .blog-content iframe[src*="googleapis"],
+          .blog-content *[src*="youtube"],
+          .blog-content *[src*="youtu.be"],
+          .blog-content *[src*="drive.google"],
+          .blog-content .video-wrapper iframe,
+          .blog-content .embed-responsive iframe,
+          .blog-content .youtube-embed iframe,
+          .blog-content .video-embed iframe,
+          .blog-content .iframe-wrapper iframe {
+            width: 380px !important;
+            max-width: 380px !important;
+            min-width: 380px !important;
+            height: 228px !important;
+            max-height: 228px !important;
+            min-height: 228px !important;
+          }
+        }
+        @media (max-width: 400px) {
+          .blog-content img,
+          .blog-content * img,
+          .blog-content video,
+          .blog-content * video,
+          .blog-content iframe,
+          .blog-content * iframe,
+          .blog-content iframe[src*="youtube"],
+          .blog-content iframe[src*="youtu.be"],
+          .blog-content iframe[src*="drive.google"],
+          .blog-content iframe[src*="docs.google"],
+          .blog-content iframe[src*="googleapis"],
+          .blog-content *[src*="youtube"],
+          .blog-content *[src*="youtu.be"],
+          .blog-content *[src*="drive.google"],
+          .blog-content .video-wrapper iframe,
+          .blog-content .embed-responsive iframe,
+          .blog-content .youtube-embed iframe,
+          .blog-content .video-embed iframe,
+          .blog-content .iframe-wrapper iframe {
+            width: 320px !important;
+            max-width: 320px !important;
+            min-width: 320px !important;
+            height: 192px !important;
+            max-height: 192px !important;
+            min-height: 192px !important;
+          }
+        }
+      `}</style>
+      <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-white/30 p-4">
+        <div className="bg-white rounded-2xl max-w-4xl w-full relative overflow-hidden max-h-[95vh] shadow-2xl">
+          {/* Header with close button */}
+          <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 rounded-full bg-[#2D9AA5]"></div>
+              <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                Blog Post
+              </span>
+            </div>
+            <button
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
+              onClick={onClose}
             >
-              Watch on YouTube
-            </a>
+              <X size={24} />
+            </button>
           </div>
-        )}
 
-        <div className="flex gap-4 mt-4">
-          <span className="text-sm text-gray-700">
-            Likes: {blog.likesCount}
-          </span>
-          <span className="text-sm text-gray-700">
-            Comments: {blog.comments?.length || 0}
-          </span>
+          {/* Scrollable content */}
+          <div className="overflow-y-auto max-h-[calc(95vh-80px)]">
+            <div className="px-8 py-6">
+              {/* Blog Title */}
+              <h1 className="text-4xl font-bold mb-6 text-gray-900 leading-tight text-center">
+                {blog.title}
+              </h1>
+
+              {/* Author and Date Info */}
+              <div className="flex items-center justify-center mb-8 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-[#2D9AA5] rounded-full flex items-center justify-center">
+                    <span className="text-white font-semibold text-lg">
+                      {(blog.postedBy?.name || "A").charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {blog.postedBy?.name || "Anonymous Author"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Published on{" "}
+                      {new Date(blog.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Blog Content */}
+              <div className="prose prose-lg max-w-none mb-8">
+                <div className="blog-content text-gray-800 leading-relaxed space-y-4">
+                  {parse(blog.content || "")}
+                </div>
+              </div>
+
+              {/* Engagement Stats */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex items-center justify-center space-x-8">
+                  <div className="flex items-center space-x-2 bg-gray-50 px-4 py-3 rounded-xl">
+                    <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-700">
+                      {blog.likes?.length || 0} Likes
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2 bg-gray-50 px-4 py-3 rounded-xl">
+                    <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M21 6h-2l-2-2H7L5 6H3a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1zM8 18H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V8h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V8h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V8h2v2z" />
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-700">
+                      {blog.comments?.length || 0} Comments
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -431,6 +699,15 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
   useEffect(() => {
     applyFiltersAndSort();
   }, [blogs, searchTerm, filterOption, sortOption]);
+
+  // Update popupBlog after add/delete comment/reply
+  useEffect(() => {
+    if (popupBlog) {
+      // Find the latest version of the popupBlog from blogs
+      const updated = blogs.find((b) => b._id === popupBlog._id);
+      if (updated) setPopupBlog(updated);
+    }
+  }, [blogs]);
 
   const fetchBlogs = async () => {
     setLoading(true);
