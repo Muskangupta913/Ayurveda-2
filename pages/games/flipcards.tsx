@@ -640,17 +640,26 @@ function ZevaAdvancedMemoryGame(){
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Hero Header */}
-          <div className="text-center mb-8 sm:mb-12">
+          <div className="text-center mb-8 sm:mb-12 relative">
+            {/* Settings Button - Top Right */}
+            <button
+              onClick={() => setStatus('settings')}
+              className="absolute top-0 right-0 p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-medium transition-all duration-300 border border-white/20 flex items-center justify-center gap-2 hover:scale-105 backdrop-blur-sm"
+            >
+              <Settings className="w-5 h-5" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-gradient-to-r from-[#2D9AA5] to-blue-600 blur-3xl opacity-30 animate-pulse" />
-              <h1 className="relative text-6xl sm:text-7xl lg:text-9xl font-black tracking-wider mb-4">
+              <h1 className="relative text-4xl sm:text-5xl lg:text-7xl font-black tracking-wider mb-4">
                 <span className="bg-gradient-to-r from-[#2D9AA5] via-blue-400 to-[#2D9AA5] bg-clip-text text-transparent animate-gradient">
                   ZEVA
                 </span>
               </h1>
             </div>
-            <p className="text-xl sm:text-2xl lg:text-3xl text-gray-300 font-light mb-6">
-              Advanced Memory Challenge System
+            <p className="text-l sm:text-xl lg:text-2xl text-gray-300 font-light mb-6">
+              Memory Challenge System
             </p>
             <div className="flex flex-wrap justify-center gap-4 mt-6">
               <div className="bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 border border-white/20 hover:scale-105 transition-transform duration-300">
@@ -796,14 +805,6 @@ function ZevaAdvancedMemoryGame(){
                 >
                   <Trophy className="w-5 h-5" />
                   View Full Statistics
-                </button>
-                
-                <button
-                  onClick={() => setStatus('settings')}
-                  className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-medium transition-all duration-300 border border-white/20 flex items-center justify-center gap-3 hover:scale-105"
-                >
-                  <Settings className="w-5 h-5" />
-                  Game Settings
                 </button>
                 
                 {state.unlocked > 1 && (
@@ -1010,7 +1011,7 @@ function ZevaAdvancedMemoryGame(){
                       </svg>
                     ) : (
                       <div className="text-center">
-                        <div className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 bg-white/30 rounded-full group-hover:bg-white/50 transition-all duration-300 mb-1" />
+                        <div className="w-3 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 bg-white/30 rounded-full group-hover:bg-white/50 transition-all duration-300 mb-1" />
                         <div className="text-[8px] sm:text-[10px] lg:text-xs font-bold text-[#2D9AA5] tracking-wider">
                           ZEVA
                         </div>

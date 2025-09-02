@@ -14,7 +14,7 @@ const JobPostingSchema = new mongoose.Schema({
   },
   companyName: { type: String, required: true },
   jobTitle: { type: String, required: true },
-   department: {
+  department: {
     type: String,
     enum: [
       // --- Software & IT ---
@@ -110,6 +110,7 @@ const JobPostingSchema = new mongoose.Schema({
   languagesPreferred: [String],
   description: { type: String },
   noOfOpenings: { type: Number, required: true },
+  salary: { type: String, required: true },
   salaryType: { type: String, enum: ["month", "year"], required: true },
   establishment: { type: String },
   experience: {

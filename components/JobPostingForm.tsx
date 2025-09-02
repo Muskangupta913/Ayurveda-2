@@ -2,22 +2,22 @@
 import React, { useMemo, useState } from 'react';
 
 const qualifications = [
-  "B.Tech","M.Tech","BCA","MCA","Diploma in CS/IT",
-  "B.Sc IT","M.Sc IT","BBA","MBA","Other Software",
-  "MBBS","BDS","BAMS","BHMS","MD","MS","PhD",
-  "Diploma","Nursing","Pharmacy","Other Medical",
-  "Graduate","Post Graduate","12th Pass","10th Pass","Other"
+  "B.Tech", "M.Tech", "BCA", "MCA", "Diploma in CS/IT",
+  "B.Sc IT", "M.Sc IT", "BBA", "MBA", "Other Software",
+  "MBBS", "BDS", "BAMS", "BHMS", "MD", "MS", "PhD",
+  "Diploma", "Nursing", "Pharmacy", "Other Medical",
+  "Graduate", "Post Graduate", "12th Pass", "10th Pass", "Other"
 ];
 
 const departments = [
-  "Software Development","Frontend","Backend","Full Stack","DevOps",
-  "QA & Testing","Automation Testing","Manual Testing","UI/UX","Data Science",
-  "AI/ML","Cloud Computing","Cybersecurity","Database Administration",
-  "Product Management","Business Analysis",
-  "General Medicine","Cardiology","Radiology","Dental","Pathology",
-  "Pediatrics","Orthopedics","Gynecology","Dermatology",
-  "Anesthesiology","Surgery","ENT","Psychiatry","Physiotherapy",
-  "Administration","Pharmacy","Research","Other"
+  "Software Development", "Frontend", "Backend", "Full Stack", "DevOps",
+  "QA & Testing", "Automation Testing", "Manual Testing", "UI/UX", "Data Science",
+  "AI/ML", "Cloud Computing", "Cybersecurity", "Database Administration",
+  "Product Management", "Business Analysis",
+  "General Medicine", "Cardiology", "Radiology", "Dental", "Pathology",
+  "Pediatrics", "Orthopedics", "Gynecology", "Dermatology",
+  "Anesthesiology", "Surgery", "ENT", "Psychiatry", "Physiotherapy",
+  "Administration", "Pharmacy", "Research", "Other"
 ];
 
 const jobTypes = ['Full Time', 'Part Time', 'Internship'];
@@ -125,7 +125,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     // Section 0: Basic Information
     ['companyName', 'establishment', 'jobTitle', 'department', 'qualification', 'jobType', 'location'],
     // Section 1: Job Details
-    ['jobTiming', 'workingDays', 'salary', 'experience', 'noOfOpenings', 'establishment'],
+    ['jobTiming', 'workingDays', 'salary', 'salaryType', 'experience', 'noOfOpenings'],
     // Section 2: Job Description
     ['description'],
     // Section 3: Additional Requirements (no description)
@@ -136,7 +136,10 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     if (!value || value.toString().trim() === '') {
       // SalaryType should only be required if salary is entered
       if (name === "salaryType") {
-        return "Please select Per Month or Per Year"; // specific message
+        if (formData.salary && formData.salary.trim() !== '') {
+          return "Please select Per Month or Per Year";
+        }
+        return "";
       }
       return "This field is required"; // default message
     }
@@ -150,9 +153,14 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
       if (!/^\d{2,4}$/.test(value.trim())) return 'Enter a valid year (e.g., 2015)';
     }
 
-    if (name === 'salaryType') {
-      if (formData.salary && !value) {
-        return 'Please select Per Month or Per Year';
+    if (name === 'salary') {
+      // If salary is entered, salaryType becomes required
+      if (value && value.trim() !== '' && (!formData.salaryType || formData.salaryType.trim() === '')) {
+        // Set salaryType error as well
+        setErrors(prev => ({ ...prev, salaryType: 'Please select Per Month or Per Year' }));
+      } else if ((!value || value.trim() === '') && formData.salaryType) {
+        // If salary is cleared but salaryType is still selected, clear salaryType error
+        setErrors(prev => ({ ...prev, salaryType: '' }));
       }
     }
 
@@ -166,6 +174,14 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
       const err = validateField(f, (formData as any)[f] || '');
       if (err) sectionErrors[f] = err;
     });
+
+    // Additional validation for salary and salaryType dependency
+    if (fields.includes('salary') || fields.includes('salaryType')) {
+      if (formData.salary && formData.salary.trim() !== '' && (!formData.salaryType || formData.salaryType.trim() === '')) {
+        sectionErrors.salaryType = 'Please select Per Month or Per Year';
+      }
+    }
+
     return sectionErrors;
   };
 
@@ -175,6 +191,12 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
       const err = validateField(f, (formData as any)[f] || '');
       if (err) allErrors[f] = err;
     });
+
+    // Additional validation for salary and salaryType dependency
+    if (formData.salary && formData.salary.trim() !== '' && (!formData.salaryType || formData.salaryType.trim() === '')) {
+      allErrors.salaryType = 'Please select Per Month or Per Year';
+    }
+
     return allErrors;
   };
 
@@ -219,11 +241,14 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
       let salaryRaw: any = formData.salary ? formData.salary.replace(/,/g, "") : "";
 
       if (salaryRaw.includes("-")) {
-        const [min, max] = salaryRaw.split("-").map(v => v.trim());
+        const [min, max] = salaryRaw
+          .split("-")
+          .map((v: string) => v.trim()); // 👈 typed as string
         salaryRaw = `${Number(min)} - ${Number(max)}`; // ✅ send as "1111 - 2222"
       } else if (salaryRaw) {
         salaryRaw = `${Number(salaryRaw)}`; // ✅ "1111"
       }
+
 
 
       const payload = {
@@ -513,21 +538,21 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
   console.log('errors:', errors, 'touched:', touched, 'formData:', formData);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 lg:p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-3 md:p-4 lg:p-6">
+      <div className="max-w-xs sm:max-w-sm md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#2D9AA5] rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-8 0V6a2 2 0 00-2 2v6.001" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
                 {title}
               </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-0.5 sm:mt-1">
                 {subtitle}
               </p>
             </div>
@@ -535,17 +560,31 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
         </div>
 
         {/* Form - Multi-step slider */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 lg:p-8 overflow-hidden">
           {/* Step indicators */}
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            {['Basic Information', 'Job Details', 'Job Description', 'Additional Requirements'].map((label, idx) => (
-              <div key={label} className="flex-1 flex items-center">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${currentStep >= idx ? 'bg-[#2D9AA5] text-white' : 'bg-gray-200 text-gray-600'}`}>{idx + 1}</div>
-                {idx < 3 && (
-                  <div className={`h-1 flex-1 mx-2 ${currentStep > idx ? 'bg-[#2D9AA5]' : 'bg-gray-200'}`}></div>
-                )}
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-4 sm:mb-6 overflow-x-auto">
+            <div className="flex items-center min-w-max w-full justify-between">
+              {['Basic Information', 'Job Details', 'Job Description', 'Additional Requirements'].map((label, idx) => (
+                <div key={label} className="flex-1 flex items-center min-w-0">
+                  <div className="flex flex-col items-center">
+                    <div className={`flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-semibold ${currentStep >= idx ? 'bg-[#2D9AA5] text-white' : 'bg-gray-200 text-gray-600'}`}>
+                      {idx + 1}
+                    </div>
+                    <span className="text-xs sm:text-sm text-gray-600 mt-1 text-center hidden sm:block">
+                      {label.split(' ').map((word, i) => (
+                        <span key={i} className="block">{word}</span>
+                      ))}
+                    </span>
+                    <span className="text-xs text-gray-600 mt-1 text-center block sm:hidden">
+                      Step {idx + 1}
+                    </span>
+                  </div>
+                  {idx < 3 && (
+                    <div className={`h-0.5 sm:h-1 flex-1 mx-1 sm:mx-2 ${currentStep > idx ? 'bg-[#2D9AA5]' : 'bg-gray-200'}`}></div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Sliding container */}
@@ -555,13 +594,13 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               style={{ width: '400%', transform: `translateX(-${currentStep * 25}%)` }}
             >
               {/* Section 1: Basic Information */}
-              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h3>
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 lg:p-8">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Basic Information</h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {/* Company Name */}
                   <div className="col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Company Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -569,16 +608,16 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.companyName}
                       placeholder="Enter company name"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.companyName && errors.companyName && (
                       <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>
                     )}
                   </div>
 
-                  {/* Establishment Year - Moved from Section 2 */}
+                  {/* Establishment Year */}
                   <div className="col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Establishment Year <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -586,7 +625,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.establishment}
                       placeholder="Enter establishment year"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.establishment && errors.establishment && (
                       <p className="mt-1 text-xs text-red-600">{errors.establishment}</p>
@@ -594,8 +633,8 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   </div>
 
                   {/* Job Title */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Job Title <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -603,7 +642,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.jobTitle}
                       placeholder="Enter job title"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.jobTitle && errors.jobTitle && (
                       <p className="mt-1 text-xs text-red-600">{errors.jobTitle}</p>
@@ -611,15 +650,15 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   </div>
 
                   {/* Department */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Department <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="department"
                       value={formData.department}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     >
                       <option value="">Select Department</option>
                       {departments.map((dep) => (
@@ -634,15 +673,15 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   </div>
 
                   {/* Qualification */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Required Qualification
                     </label>
                     <select
                       name="qualification"
                       value={formData.qualification}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     >
                       <option value="">Select Qualification</option>
                       {qualifications.map((q) => (
@@ -657,15 +696,15 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   </div>
 
                   {/* Job Type */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Job Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="jobType"
                       value={formData.jobType}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     >
                       <option value="">Select Job Type</option>
                       {jobTypes.map((j) => (
@@ -680,8 +719,8 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                   </div>
 
                   {/* Location */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Location
                     </label>
                     <input
@@ -689,7 +728,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.location}
                       placeholder="Enter location"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.location && errors.location && (
                       <p className="mt-1 text-xs text-red-600">{errors.location}</p>
@@ -698,12 +737,12 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                 </div>
               </div>
 
-              {/* Section 2: Job Details - Removed extra spacing and establishment year */}
-              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Job Details</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Section 2: Job Details */}
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 lg:p-8">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Job Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Job Timing
                     </label>
                     <input
@@ -711,13 +750,13 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.jobTiming}
                       placeholder="e.g. 9 AM - 6 PM"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.jobTiming && errors.jobTiming && <p className="mt-1 text-xs text-red-600">{errors.jobTiming}</p>}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Working Days
                     </label>
                     <input
@@ -725,16 +764,16 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       placeholder="e.g. Monday–Friday"
                       value={formData.workingDays}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.workingDays && errors.workingDays && <p className="mt-1 text-xs text-red-600">{errors.workingDays}</p>}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Salary
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         type="text"
                         name="salary"
@@ -760,18 +799,22 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                               rawValue = cleaned && !isNaN(Number(cleaned)) ? Number(cleaned).toLocaleString("en-IN") : "";
                             }
 
-                            setFormData({ ...formData, salary: rawValue });
+                            setFormData(prev => ({ ...prev, salary: rawValue }));
+                            setTouched(prev => ({ ...prev, salary: true }));
+                            // Validate both salary and salaryType when salary changes
+                            const salaryError = validateField('salary', rawValue);
+                            const salaryTypeError = validateField('salaryType', formData.salaryType);
+                            setErrors(prev => ({ ...prev, salary: salaryError, salaryType: salaryTypeError }));
                           }
                         }}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                        className="flex-1 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                       />
-
 
                       <select
                         name="salaryType"
                         value={formData.salaryType}
                         onChange={handleChange}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm sm:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                        className="w-full sm:w-auto sm:min-w-[140px] rounded-lg border border-gray-300 bg-white px-3 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                       >
                         <option value="">Select</option>
                         <option value="month">Per Month</option>
@@ -787,26 +830,24 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                     )}
                   </div>
 
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Experience
                     </label>
                     <input
-                      // type="number"
                       name="experience"
                       value={formData.experience}
                       placeholder="Enter Experience"
                       onChange={handleChange}
-                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-sm sm:text-base placeholder-gray-500"
+                      className="text-black w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-colors text-xs sm:text-sm md:text-base placeholder-gray-500"
                     />
                     {touched.experience && errors.experience && (
                       <p className="mt-1 text-xs text-red-600">{errors.experience}</p>
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="col-span-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Number of Openings
                     </label>
                     <input
@@ -815,7 +856,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.noOfOpenings}
                       placeholder="Enter number"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.noOfOpenings && errors.noOfOpenings && <p className="mt-1 text-xs text-red-600">{errors.noOfOpenings}</p>}
                   </div>
@@ -823,10 +864,10 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
               </div>
 
               {/* Section 3: Job Description */}
-              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Job Description</h3>
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 lg:p-8">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Job Description</h3>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                     Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -834,19 +875,19 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                     value={formData.description}
                     placeholder="Describe the job role, responsibilities, and requirements..."
                     onChange={handleChange}
-                    rows={5}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition resize-none"
+                    rows={window.innerWidth < 640 ? 4 : 5}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition resize-none"
                   />
                   {touched.description && errors.description && <p className="mt-1 text-xs text-red-600">{errors.description}</p>}
                 </div>
               </div>
 
               {/* Section 4: Additional Requirements */}
-              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Additional Requirements</h3>
-                <div className="space-y-6">
+              <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 lg:p-8">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Additional Requirements</h3>
+                <div className="space-y-4 sm:space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Required Skills
                       <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
                     </label>
@@ -855,13 +896,13 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.skills}
                       placeholder="e.g. Communication, Team Work, Problem Solving"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.skills && errors.skills && <p className="mt-1 text-xs text-red-600">{errors.skills}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Perks & Benefits
                       <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
                     </label>
@@ -870,13 +911,13 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.perks}
                       placeholder="e.g. Health Insurance, Paid Leave, Training"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.perks && errors.perks && <p className="mt-1 text-xs text-red-600">{errors.perks}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Preferred Languages
                       <span className="text-gray-500 text-xs ml-1">(comma separated)</span>
                     </label>
@@ -885,7 +926,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                       value={formData.languagesPreferred}
                       placeholder="e.g. English, Hindi, Local Language"
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500 focus:border-[#2D9AA5] focus:ring-2 focus:ring-[#2D9AA5] transition"
                     />
                     {touched.languagesPreferred && errors.languagesPreferred && <p className="mt-1 text-xs text-red-600">{errors.languagesPreferred}</p>}
                   </div>
@@ -895,25 +936,25 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-gray-200 mt-4 sm:mt-6">
             <button
               onClick={goBack}
               disabled={currentStep === 0}
-              className="px-4 sm:px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 sm:px-4 md:px-6 py-2 text-sm sm:text-base rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Back
             </button>
             {currentStep < sectionFields.length - 1 ? (
               <button
                 onClick={goNext}
-                className="bg-[#2D9AA5] text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-[#247a83] transition-colors font-medium text-sm sm:text-base"
+                className="bg-[#2D9AA5] text-white px-4 sm:px-6 md:px-8 py-2 sm:py-3 rounded-lg hover:bg-[#247a83] transition-colors font-medium text-sm sm:text-base"
               >
                 Next
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
-                className="bg-[#2D9AA5] text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-[#247a83] transition-colors font-medium text-sm sm:text-base"
+                className="bg-[#2D9AA5] text-white px-4 sm:px-6 md:px-8 py-2 sm:py-3 rounded-lg hover:bg-[#247a83] transition-colors font-medium text-sm sm:text-base"
               >
                 Review & Submit
               </button>
