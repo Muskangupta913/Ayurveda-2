@@ -140,14 +140,14 @@ function UserProfile() {
     );
   }
 
- return (
+return (
  <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
    <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
      {/* Header */}
      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
          <div className="flex items-center">
-           <div className="bg-blue-600 p-2 sm:p-3 rounded-lg mr-3 sm:mr-4">
+           <div className="bg-[#2D9AA5] p-2 sm:p-3 rounded-lg mr-3 sm:mr-4">
              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
            </div>
            <div>
@@ -155,8 +155,8 @@ function UserProfile() {
              <p className="text-sm sm:text-base text-gray-600">Manage and analyze user registrations</p>
            </div>
          </div>
-         <div className="bg-blue-50 px-3 sm:px-4 py-2 rounded-lg self-start sm:self-auto">
-           <span className="text-sm font-medium text-blue-600">Total Users: {users.length}</span>
+         <div className="bg-[#2D9AA5]/10 px-3 sm:px-4 py-2 rounded-lg self-start sm:self-auto">
+           <span className="text-sm font-medium text-[#2D9AA5]">Total Users: {users.length}</span>
          </div>
        </div>
      </div>
@@ -172,7 +172,7 @@ function UserProfile() {
              placeholder="Search by name, email, or phone..."
              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
-             className="text-gray-700 w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+             className="text-gray-700 w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent text-sm sm:text-base"
            />
          </div>
 
@@ -180,7 +180,7 @@ function UserProfile() {
          <div className="flex flex-col xs:flex-row gap-3">
            <button
              onClick={downloadCSV}
-             className="flex items-center justify-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+             className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#267982] transition-colors text-sm sm:text-base"
            >
              <Download className="h-4 w-4 mr-2" />
              Download CSV
@@ -190,7 +190,7 @@ function UserProfile() {
              <select
                value={sortField}
                onChange={(e) => sortUsers(e.target.value as keyof User)}
-               className="text-gray-700 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base flex-1 xs:flex-none"
+               className="text-gray-700 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent text-sm sm:text-base flex-1 xs:flex-none"
              >
                <option value="name">Sort by Name</option>
                <option value="email">Sort by Email</option>
@@ -209,12 +209,12 @@ function UserProfile() {
              <div className="flex flex-col sm:flex-row sm:items-center flex-1 min-w-0 gap-3 sm:gap-0">
                {/* User Avatar & Name */}
                <div className="flex items-center min-w-0">
-                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-full flex-shrink-0">
+                 <div className="bg-gradient-to-r from-[#2D9AA5] to-[#359BA8] p-2 rounded-full flex-shrink-0">
                    <User className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                  </div>
                  <div className="ml-3 min-w-0 flex-1">
                    <h3 className="text-sm font-semibold text-gray-900 truncate">{user.name}</h3>
-                   <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full mt-1">
+                   <span className="inline-block px-2 py-1 text-xs font-medium bg-[#2D9AA5]/10 text-[#2D9AA5] rounded-full mt-1">
                      {user.role}
                    </span>
                  </div>
@@ -274,7 +274,7 @@ function UserProfile() {
                      onClick={() => setCurrentPage(pageNum)}
                      className={`px-2 sm:px-3 py-2 text-sm font-medium rounded-lg flex-shrink-0 ${
                        currentPage === pageNum
-                         ? 'bg-blue-600 text-white'
+                         ? 'bg-[#2D9AA5] text-white'
                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
                      }`}
                    >

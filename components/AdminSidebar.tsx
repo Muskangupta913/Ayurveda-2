@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
     description: 'Manage users & roles'
   },
   { 
-    label: 'Analytics', 
+    label: 'User Analytics', 
     path: '/admin/analytics', 
     icon: '📊',
     description: 'View detailed reports'

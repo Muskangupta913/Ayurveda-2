@@ -10,11 +10,13 @@ import {
   Search,
   MapPin,
   Clock,
-  DollarSign,
-  Calendar,
   X,
   Grid,
   List,
+  User,
+  Mail,
+  Phone,
+  CheckCircle,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -76,6 +78,8 @@ function AdminClinicApproval() {
   });
   const [plusCode, setPlusCode] = useState<string | null>(null);
   const [addressSummary, setAddressSummary] = useState<string | null>(null);
+  const [showTreatmentsPopup, setShowTreatmentsPopup] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
 
   const itemsPerPage = 12;
 
@@ -235,133 +239,74 @@ function AdminClinicApproval() {
       show: boolean;
       image: string | null;
     }>({ show: false, image: null });
+    const [showTreatmentsPopup, setShowTreatmentsPopup] = useState(false);
 
     return (
-      <div className="bg-white rounded-lg shadow-md border border-gray-300 hover:shadow-lg transition-all duration-200">
-        <div className="p-3 sm:p-4">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-200 relative">
+        <div className="p-4">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm sm:text-base font-semibold text-black truncate">
-                  {clinic.name}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-700">
-                  {clinic.owner?.name}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                {clinic.name}
+              </h3>
+              <p className="text-sm text-gray-600">
+                <User size={16} className="inline-block mr-1" /> {clinic.owner?.name}
+              </p>
+              <p className="text-sm text-gray-500">
+                <Mail size={16} className="inline-block mr-1" /> {clinic.owner?.email}
+              </p>
+              {clinic.owner?.phone && (
+                <p className="text-sm text-gray-500">
+                  <Phone size={16} className="inline-block mr-1" /> {clinic.owner.phone}
                 </p>
-                <p className="text-xs text-gray-600 break-all">
-                  {clinic.owner?.email}
-                </p>
-                {clinic.owner?.phone && (
-                  <p className="text-xs text-gray-600 break-all">
-                    {clinic.owner.phone}
-                  </p>
-                )}
-                <p className="text-xs text-gray-600 break-all">
-                  {clinic.address}
-                </p>
-              </div>
+              )}
+              <p className="text-sm text-gray-500">
+                <MapPin size={16} className="inline-block mr-1" /> {clinic.address}
+              </p>
             </div>
           </div>
 
-          {/* Quick Info for Grid View */}
-          {viewMode === "grid" && (
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center text-xs sm:text-sm text-black">
-                <MapPin size={12} className="mr-2 flex-shrink-0" />
-                <span
-                  className="text-blue-600 truncate cursor-pointer underline"
-                  onClick={() => handleAddressClick(clinic.address)}
-                >
-                  {clinic.address}
-                </span>
-              </div>
-              <div className="flex items-center text-xs sm:text-sm text-black">
-                <span className="mr-2 flex-shrink-0">د.إ</span>
-                <span className="truncate">{clinic.pricing}</span>
-              </div>
+          {/* Quick Info */}
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center text-sm text-blue-800">
+              <MapPin size={16} className="mr-2" />
+              <span className="underline cursor-pointer" onClick={() => handleAddressClick(clinic.address)}>
+                {clinic.address}
+              </span>
             </div>
-          )}
-
-          {/* Always Visible Content (Previously Expanded Content) */}
-          <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-            {viewMode === "list" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-center text-xs sm:text-sm text-black">
-                  <MapPin size={12} className="mr-2 flex-shrink-0" />
-                  <span
-                    className="cursor-pointer hover:text-blue-600 transition-colors break-all"
-                    onClick={() => handleAddressClick(clinic.address)}
-                  >
-                    {clinic.address}
-                  </span>
-                </div>
-                <div className="flex items-center text-xs sm:text-sm text-black">
-                  <DollarSign size={12} className="mr-2 flex-shrink-0" />
-                  <span className="truncate">{clinic.pricing}</span>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center text-xs sm:text-sm text-black">
-              <Clock size={12} className="mr-2 flex-shrink-0" />
-              <span className="truncate">{clinic.timings}</span>
+            <div className="flex items-center text-sm text-gray-800">
+              <span> AED {clinic.pricing}</span>
             </div>
-
-            <div className="flex items-start text-xs sm:text-sm text-black">
-              <Calendar size={12} className="mr-2 flex-shrink-0 mt-0.5" />
-              <div className="flex flex-wrap gap-1">
-                {clinic.treatments?.map((treatment, index) => (
-                  <span
-                    key={index}
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
-                  >
-                    {treatment.mainTreatment}
-                  </span>
-                ))}
-              </div>
+            <div className="flex items-center text-sm text-gray-800">
+              <Clock size={16} className="mr-2" />
+              <span>{clinic.timings}</span>
             </div>
-
-            {/* Clickable Image Option */}
-            {clinic.photos?.[0] && (
-              <div className="mt-3">
-                <button
-                  onClick={() => {
-                    console.log("Original photo URL:", clinic.photos[0]);
-                    console.log(
-                      "Processed photo URL:",
-                      getImagePath(clinic.photos[0])
-                    );
-                    setImagePopup({ show: true, image: clinic.photos[0] });
-                  }}
-                  className="text-blue-600 hover:text-blue-800 underline text-xs sm:text-sm font-medium transition-colors"
-                >
-                  **Click to View Clinic Image**
-                </button>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-1 mt-2">
+              <button
+                className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs hover:bg-blue-600"
+                onClick={() => {
+                  setShowTreatmentsPopup(true);
+                }}
+              >
+                Show Treatments
+              </button>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-4 pt-3 border-t border-gray-200">
-            <div className="flex flex-wrap gap-2">
+          {/* Image and Actions */}
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-2 mt-2 sm:mt-0">
               {actions.map((action) => (
                 <button
                   key={action}
-                  onClick={() =>
-                    setConfirmAction({
-                      show: true,
-                      type: action,
-                      clinicId: clinic._id,
-                    })
-                  }
-                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${
-                    action === "approve"
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : action === "decline"
+                  onClick={() => setConfirmAction({ show: true, type: action, clinicId: clinic._id })}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${action === "approve"
+                    ? "bg-green-500 hover:bg-green-600 text-white"
+                    : action === "decline"
                       ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                       : "bg-red-500 hover:bg-red-600 text-white"
-                  }`}
+                    }`}
                 >
                   {action.charAt(0).toUpperCase() + action.slice(1)}
                 </button>
@@ -370,41 +315,61 @@ function AdminClinicApproval() {
           </div>
         </div>
 
-        {/* Image Popup Modal */}
-        {imagePopup?.show && imagePopup.image && (
-          <div
-            className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 overflow-hidden"
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              overflowY: "hidden",
-            }}
-            onWheel={(e) => e.preventDefault()}
-            onTouchMove={(e) => e.preventDefault()}
-          >
-            <div className="bg-white rounded-lg p-4 max-w-2xl max-h-[90vh] overflow-auto shadow-2xl">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-black">
-                  {clinic.name} - Clinic Image
-                </h3>
-                <button
-                  onClick={() => setImagePopup({ show: false, image: null })}
-                  className="text-gray-500 hover:text-gray-700 text-xl"
-                >
-                  ×
-                </button>
+        {/* Treatments Pop-up */}
+        {showTreatmentsPopup && (
+          <div className="fixed inset-0 backdrop-blur-md bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto transform transition-all duration-300 ease-out">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#2D9AA5] to-[#3BB5C1] rounded-t-2xl p-6 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
+                <div className="relative">
+                  <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    Available Treatments
+                  </h2>
+                  <p className="text-white/90 text-sm">Our comprehensive medical services</p>
+                </div>
               </div>
-              <div className="flex justify-center">
-                <Image
-                  src={getImagePath(imagePopup.image)}
-                  alt={clinic.name}
-                  width={600}
-                  height={400}
-                  className="max-w-full h-auto rounded-lg"
-                />
+
+              {/* Content */}
+              <div className="p-6 max-h-96 overflow-y-auto">
+                <div className="space-y-3">
+                  {clinic.treatments.map((treatment, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 hover:bg-[#2D9AA5]/5 transition-all duration-200 group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-2 h-2 rounded-full bg-[#2D9AA5] group-hover:scale-125 transition-transform"></div>
+                        <span className="text-gray-800 font-medium text-sm group-hover:text-[#2D9AA5] transition-colors">
+                          {treatment.mainTreatment}
+                        </span>
+                      </div>
+                      <ul className="list-disc pl-6">
+                        {treatment.subTreatments.map((subTreatment, subIndex) => (
+                          <li key={subIndex} className="text-gray-600 text-xs">
+                            {subTreatment.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 pt-0">
+                <button
+                  className="w-full bg-[#2D9AA5] text-white py-3 px-6 rounded-xl font-semibold hover:bg-[#2D9AA5]/90 active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-xl"
+                  onClick={() => setShowTreatmentsPopup(false)}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
@@ -505,19 +470,17 @@ function AdminClinicApproval() {
                     );
                     setCurrentPage(1);
                   }}
-                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-                    activeTab === tab.key
-                      ? `border-${tab.color}-500 text-${tab.color}-600`
-                      : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === tab.key
+                    ? `border-[#2D9AA5] text-[#2D9AA5]`
+                    : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
+                    }`}
                 >
                   {tab.label}
                   <span
-                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${
-                      activeTab === tab.key
-                        ? `bg-${tab.color}-100 text-${tab.color}-800`
-                        : "bg-gray-100 text-black"
-                    }`}
+                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${activeTab === tab.key
+                      ? `bg-[#2D9AA5]/10 text-[#2D9AA5]`
+                      : "bg-gray-100 text-black"
+                      }`}
                   >
                     {tab.count}
                   </span>
@@ -540,7 +503,7 @@ function AdminClinicApproval() {
                 placeholder="Search clinics, owners..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="text-black w-full pl-9 pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="text-black w-full pl-9 pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
               />
             </div>
 
@@ -640,9 +603,9 @@ function AdminClinicApproval() {
               {/* Icon based on action type */}
               <div className="mx-auto mb-3 sm:mb-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center">
                 {confirmAction.type === "approve" && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#2D9AA5]/10 rounded-full flex items-center justify-center">
                     <svg
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-green-600"
+                      className="w-6 h-6 sm:w-8 sm:h-8 text-[#2D9AA5]"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -727,19 +690,18 @@ function AdminClinicApproval() {
                     }
                     setConfirmAction({ show: false, type: "", clinicId: null });
                   }}
-                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${
-                    confirmAction.type === "approve"
-                      ? "bg-green-500 hover:bg-green-600"
-                      : confirmAction.type === "decline"
+                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${confirmAction.type === "approve"
+                    ? "bg-[#2D9AA5] hover:bg-[#2D9AA5]/90"
+                    : confirmAction.type === "decline"
                       ? "bg-yellow-500 hover:bg-yellow-600"
                       : "bg-red-500 hover:bg-red-600"
-                  }`}
+                    }`}
                 >
                   {confirmAction.type === "approve"
                     ? "Approve"
                     : confirmAction.type === "decline"
-                    ? "Decline"
-                    : "Delete"}
+                      ? "Decline"
+                      : "Delete"}
                 </button>
               </div>
             </div>
@@ -781,7 +743,7 @@ function AdminClinicApproval() {
                     href={`https://www.google.com/maps/dir/?api=1&destination=${selectedLocation.lat},${selectedLocation.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-xs sm:text-sm font-medium"
+                    className="text-[#2D9AA5] hover:underline text-xs sm:text-sm font-medium"
                   >
                     Directions
                   </a>
@@ -789,7 +751,7 @@ function AdminClinicApproval() {
                     href={`https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-xs sm:text-sm font-medium"
+                    className="text-[#2D9AA5] hover:underline text-xs sm:text-sm font-medium"
                   >
                     View larger map
                   </a>
@@ -805,6 +767,26 @@ function AdminClinicApproval() {
                 </GoogleMap>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {showTreatmentsPopup && selectedClinic && (
+        <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
+            <h2 className="text-xl font-bold mb-4">Treatments</h2>
+            <ul className="list-disc pl-5">
+              {selectedClinic.treatments.map((treatment, index) => (
+                <li key={index} className="mb-2">
+                  {treatment.mainTreatment}
+                </li>
+              ))}
+            </ul>
+            <button
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              onClick={() => setShowTreatmentsPopup(false)}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
