@@ -157,6 +157,23 @@ function DoctorChat() {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+  try {
+    const token = localStorage.getItem("doctorToken");
+    const response = await axios.delete("/api/prescription/delete-message", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { chatId: chat?._id, messageId }
+    });
+
+    if (response.data.success) {
+      setChat(response.data.chat); // update chat after deletion
+    }
+  } catch (error) {
+    console.error("Failed to delete message:", error);
+  }
+};
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -290,36 +307,48 @@ function DoctorChat() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-        {chat.messages.map((msg) => (
-          <div
-            key={msg._id}
-            className={`flex ${
-              msg.senderRole === "doctor" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                msg.senderRole === "doctor"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-900 border"
-              }`}
-            >
-              {msg.messageType === "prescription" ? (
-                <div>
-                  <div className="font-medium mb-2">Prescription:</div>
-                  <div className="bg-white text-gray-900 p-3 rounded border">
-                    {msg.prescription}
-                  </div>
-                </div>
-              ) : (
-                <div>{msg.content}</div>
-              )}
-              <div className="text-xs mt-1 opacity-70">
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </div>
-            </div>
+       {chat.messages.map((msg) => (
+  <div
+    key={msg._id}
+    className={`flex ${
+      msg.senderRole === "doctor" ? "justify-end" : "justify-start"
+    }`}
+  >
+    <div
+      className={`relative max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+        msg.senderRole === "doctor"
+          ? "bg-blue-600 text-white"
+          : "bg-white text-gray-900 border"
+      }`}
+    >
+      {/* Message Content */}
+      {msg.messageType === "prescription" ? (
+        <div>
+          <div className="font-medium mb-2">Prescription:</div>
+          <div className="bg-white text-gray-900 p-3 rounded border">
+            {msg.prescription}
           </div>
-        ))}
+        </div>
+      ) : (
+        <div>{msg.content}</div>
+      )}
+      <div className="text-xs mt-1 opacity-70">
+        {new Date(msg.timestamp).toLocaleTimeString()}
+      </div>
+
+      {/* Delete button (only for sender) */}
+      {msg.sender._id === chat.doctor._id && (
+        <button
+          onClick={() => handleDeleteMessage(msg._id)}
+          className="absolute top-0 right-0 text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  </div>
+))}
+
         <div ref={messagesEndRef} />
       </div>
 

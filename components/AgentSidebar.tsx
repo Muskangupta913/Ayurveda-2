@@ -20,10 +20,10 @@ const navItems: NavItem[] = [
     description: "Overview & metrics",
   },
   {
-    label: "Create Agent",
-    path: "/lead/create-agent",
+    label: "Assigned Lead",
+    path: "/agent/assigned-leads",
     icon: "📅",
-    description: "Manage Clinic",
+    description: "Assigned Leads",
   },
   {
     label: "Create Lead",

@@ -1,36 +1,55 @@
 import dbConnect from "../../../lib/database";
 import PrescriptionRequest from "../../../models/PrescriptionRequest";
-import { verifyToken } from "../auth/verify";
+import Chat from "../../../models/Chat";  // import Chat model
+import { getUserFromReq } from "../lead-ms/auth";
 
 export default async function handler(req, res) {
-  await dbConnect();
-
   if (req.method !== "DELETE") {
-    return res.status(405).json({ success: false, error: "Method not allowed" });
+    return res
+      .status(405)
+      .json({ success: false, message: "Method not allowed" });
   }
 
+  await dbConnect();
+
   try {
-    const { prescriptionId } = req.body;
-    const userId = verifyToken(req);
-
-    if (!prescriptionId) {
-      return res.status(400).json({ success: false, error: "PrescriptionId required" });
+    const user = await getUserFromReq(req); // doctor auth
+    if (!user || user.role !== "doctor") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Unauthorized" });
     }
 
-    const prescription = await PrescriptionRequest.findById(prescriptionId);
+    const { id } = req.query;
+    if (!id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Prescription ID is required" });
+    }
+
+    // Ensure prescription belongs to this doctor
+    const prescription = await PrescriptionRequest.findOne({
+      _id: id,
+      doctor: user._id,
+    });
     if (!prescription) {
-      return res.status(404).json({ success: false, error: "Prescription not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Prescription not found" });
     }
 
-    if (prescription.user.toString() !== userId && prescription.doctor.toString() !== userId) {
-      return res.status(403).json({ success: false, error: "Not authorized to delete this prescription" });
-    }
+    // ✅ Delete the prescription
+    await PrescriptionRequest.deleteOne({ _id: id });
 
-    await PrescriptionRequest.findByIdAndDelete(prescriptionId);
+    // ✅ Also delete any chats linked to this prescription
+    await Chat.deleteMany({ prescriptionRequest: id });
 
-    return res.status(200).json({ success: true, message: "Prescription deleted successfully" });
-  } catch (error) {
-    console.error("Delete prescription error:", error);
-    return res.status(500).json({ success: false, error: "Server error" });
+    return res.json({
+      success: true,
+      message: "Prescription and related chats deleted successfully",
+    });
+  } catch (err) {
+    console.error("Delete prescription error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 }

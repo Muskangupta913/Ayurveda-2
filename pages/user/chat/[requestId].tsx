@@ -133,6 +133,27 @@ function UserChat() {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.delete(
+      `/api/chat/delete?messageId=${messageId}&prescriptionRequestId=${requestId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.success) {
+      setChat(response.data.data.chat); // refresh chat with updated messages
+    }
+  } catch (error) {
+    console.error("Failed to delete message:", error);
+  }
+};
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -236,38 +257,47 @@ function UserChat() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-        {chat.messages.map((msg) => (
-          <div
-            key={msg._id}
-            className={`flex ${
-              msg.senderRole === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                msg.senderRole === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-900 border"
-              }`}
-            >
-              {msg.messageType === "prescription" ? (
-                <div>
-                  <div className="font-medium mb-2">
-                    Prescription from Dr. {chat.doctor.name}:
-                  </div>
-                  <pre className="bg-yellow-50 text-gray-900 p-3 rounded border border-yellow-200 whitespace-pre-wrap font-mono text-sm">
-                    {msg.prescription}
-                  </pre>
-                </div>
-              ) : (
-                <div>{msg.content}</div>
-              )}
-              <div className="text-xs mt-1 opacity-70">
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </div>
-            </div>
+      {chat.messages.map((msg) => (
+  <div
+    key={msg._id}
+    className={`flex ${msg.senderRole === "user" ? "justify-end" : "justify-start"}`}
+  >
+    <div
+      className={`relative max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+        msg.senderRole === "user"
+          ? "bg-blue-600 text-white"
+          : "bg-white text-gray-900 border"
+      }`}
+    >
+      {msg.messageType === "prescription" ? (
+        <div>
+          <div className="font-medium mb-2">
+            Prescription from Dr. {chat.doctor.name}:
           </div>
-        ))}
+          <pre className="bg-yellow-50 text-gray-900 p-3 rounded border border-yellow-200 whitespace-pre-wrap font-mono text-sm">
+            {msg.prescription}
+          </pre>
+        </div>
+      ) : (
+        <div>{msg.content}</div>
+      )}
+      <div className="text-xs mt-1 opacity-70">
+        {new Date(msg.timestamp).toLocaleTimeString()}
+      </div>
+
+      {/* Show delete button only for user’s own messages */}
+      {msg.senderRole === "user" && (
+        <button
+          onClick={() => deleteMessage(msg._id)}
+          className="absolute top-1 right-1 text-xs text-red-500 hover:text-red-700"
+        >
+          Delete
+        </button>
+      )}
+    </div>
+  </div>
+))}
+
         <div ref={messagesEndRef} />
       </div>
 
