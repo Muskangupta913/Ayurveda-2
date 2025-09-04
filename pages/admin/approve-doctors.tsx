@@ -74,13 +74,15 @@ function AdminDoctors() {
     type: "",
     doctorId: null,
   });
+  // Add state for treatments modal
+  const [treatmentsModal, setTreatmentsModal] = useState<{ open: boolean; doctor: Doctor | null }>({ open: false, doctor: null });
 
   const itemsPerPage = 12;
 
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/admin/getAllDoctors");
+      const res = await axios.get<{ doctorProfiles: Doctor[] }>("/api/admin/getAllDoctors");
       setDoctors(res.data.doctorProfiles);
     } catch (err) {
       console.error("Failed to fetch doctors", err);
@@ -251,7 +253,7 @@ function AdminDoctors() {
       console.log("Fetching location for address:", address);
 
       // First try with Google Maps Geocoding API
-      const response = await axios.get(
+      const response = await axios.get<{ results: Array<{ geometry: { location: { lat: number; lng: number } } }> }>(
         `https://maps.googleapis.com/maps/api/geocode/json`,
         {
           params: {
@@ -390,8 +392,16 @@ function AdminDoctors() {
               <span>{doctor.user.email}</span>
             </div>
 
+             {/* Treatments Button */}
+          <button
+            className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs hover:bg-blue-600"
+            onClick={() => setTreatmentsModal({ open: true, doctor })}
+          >
+            Show Treatments
+          </button>
+          
             {/* Treatments Display */}
-            {doctor.treatments && doctor.treatments.length > 0 && (
+            {/* {doctor.treatments && doctor.treatments.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center text-xs sm:text-sm text-black">
                   <Briefcase size={12} className="mr-2 flex-shrink-0" />
@@ -420,7 +430,7 @@ function AdminDoctors() {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* Resume URL */}
             {doctor.resumeUrl && (
@@ -560,6 +570,7 @@ function AdminDoctors() {
               ))}
             </div>
           </div>
+         
         </div>
       </div>
     );
@@ -896,6 +907,78 @@ function AdminDoctors() {
           </div>
         </div>
       )}
+      {/* Treatments Modal */}
+      {treatmentsModal.open && treatmentsModal.doctor && (
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs sm:max-w-lg max-h-[90vh] overflow-hidden mx-2 sm:mx-0 transform transition-all duration-300">
+      
+      {/* Header */}
+      <div className="bg-gradient-to-r from-[#2D9AA5] to-[#3BB5C1] p-4 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
+        <div className="flex items-center justify-between relative">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold">Dr. {treatmentsModal.doctor.user.name}</h3>
+              <p className="text-white/90 text-xs sm:text-sm">Available Treatments</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setTreatmentsModal({ open: false, doctor: null })}
+            className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-xl transition-all duration-200 w-8 h-8 flex items-center justify-center"
+            aria-label="Close treatments modal"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-6 overflow-auto max-h-[calc(90vh-120px)]">
+        {treatmentsModal.doctor.treatments && treatmentsModal.doctor.treatments.length > 0 ? (
+          <div className="space-y-4">
+            {treatmentsModal.doctor.treatments.map((treatment, idx) => (
+              <div key={idx} className="bg-gray-50 rounded-xl p-4 hover:bg-[#2D9AA5]/5 transition-all duration-200 group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-[#2D9AA5] group-hover:scale-125 transition-transform"></div>
+                  <div className="font-semibold text-gray-900 group-hover:text-[#2D9AA5] transition-colors">
+                    {treatment.mainTreatment}
+                  </div>
+                </div>
+                {treatment.subTreatments && treatment.subTreatments.length > 0 && (
+                  <div className="ml-5 space-y-2">
+                    {treatment.subTreatments.map((sub, subIdx) => (
+                      <div key={subIdx} className="flex items-center gap-2 text-sm text-gray-700">
+                        <div className="w-1 h-1 rounded-full bg-[#2D9AA5]/60"></div>
+                        <span className="group-hover:text-gray-800 transition-colors">{sub.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.007-5.824-2.709M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <p className="text-gray-500 text-sm">No treatments available for this doctor.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

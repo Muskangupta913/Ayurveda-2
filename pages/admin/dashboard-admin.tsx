@@ -5,6 +5,7 @@ import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth'; 
 import type { NextPageWithLayout } from '../_app';
 
+
 interface AnalyticsData {
   pendingClinicCount: number;
   pendingDoctorCount: number;
@@ -297,10 +298,10 @@ const AdminDashboard = () => {
     return <ErrorComponent />;
   }
 
-  return (
+ return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Progress Bar */}
-      <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600"></div>
+      <div className="h-1 bg-gradient-to-r from-[#2D9AA5] via-[#2D9AA5] to-[#2D9AA5]"></div>
       
       <div className="container mx-auto px-4 py-8">
         {/* Enhanced Header Section with Waveform Design - Removed Pending Requests */}
@@ -311,22 +312,22 @@ const AdminDashboard = () => {
               <path d="M0,100 C150,200 350,0 500,100 C650,200 850,0 1000,100 L1000,200 L0,200 Z" fill="url(#wave-gradient)" />
               <defs>
                 <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#1E40AF" />
-                  <stop offset="50%" stopColor="#7C3AED" />
-                  <stop offset="100%" stopColor="#0891B2" />
+                  <stop offset="0%" stopColor="#2D9AA5" />
+                  <stop offset="50%" stopColor="#2D9AA5" />
+                  <stop offset="100%" stopColor="#2D9AA5" />
                 </linearGradient>
               </defs>
             </svg>
           </div>
 
           {/* Floating Circle Decorations */}
-          <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-sm"></div>
-          <div className="absolute top-12 right-12 w-32 h-32 bg-gradient-to-br from-indigo-400/8 to-cyan-400/8 rounded-full blur-md"></div>
-          <div className="absolute bottom-8 left-8 w-24 h-24 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-sm"></div>
+          <div className="absolute top-4 right-4 w-20 h-20 bg-[#2D9AA5]/10 rounded-full blur-sm"></div>
+          <div className="absolute top-12 right-12 w-32 h-32 bg-[#2D9AA5]/8 rounded-full blur-md"></div>
+          <div className="absolute bottom-8 left-8 w-24 h-24 bg-[#2D9AA5]/10 rounded-full blur-sm"></div>
 
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center relative z-10">
             <div className="mb-6 lg:mb-0">
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 bg-gradient-to-r from-[#2D9AA5] via-[#2D9AA5] to-[#2D9AA5] bg-clip-text text-transparent">
                 {getGreeting()}, Admin!
               </h1>
               <p className="text-gray-600 text-base sm:text-lg mb-3">
@@ -334,13 +335,13 @@ const AdminDashboard = () => {
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
                 <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-[#2D9AA5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <span className="font-medium text-xs sm:text-sm">{formatDate(currentDateTime)}</span>
                 </div>
                 <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                  <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-[#2D9AA5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span className="font-medium text-xs sm:text-sm">{formatTime(currentDateTime)}</span>
@@ -359,28 +360,21 @@ const AdminDashboard = () => {
                     strokeWidth="2"
                     className="opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                   />
-                  <defs>
-                    <linearGradient id="users-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#6366F1" />
-                      <stop offset="50%" stopColor="#8B5CF6" />
-                      <stop offset="100%" stopColor="#06B6D4" />
-                    </linearGradient>
-                  </defs>
                 </svg>
 
-                <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 rounded-xl p-4 sm:p-6 min-w-[160px] border-2 border-transparent bg-clip-padding relative z-10 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                <div className="bg-gradient-to-br from-[#2D9AA5]/10 via-[#2D9AA5]/5 to-[#2D9AA5]/10 rounded-xl p-4 sm:p-6 min-w-[160px] border-2 border-transparent bg-clip-padding relative z-10 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-3">
-                      <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full shadow-lg">
+                      <div className="p-2 bg-gradient-to-br from-[#2D9AA5] to-[#2D9AA5] rounded-full shadow-lg">
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                         </svg>
                       </div>
                     </div>
-                    <div className="text-2xl sm:text-3xl font-bold mb-1 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    <div className="text-2xl sm:text-3xl font-bold mb-1 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5] bg-clip-text text-transparent">
                       {userCount?.toLocaleString() || '0'}
                     </div>
-                    <div className="text-indigo-700 text-sm font-semibold">Total Users</div>
+                    <div className="text-[#2D9AA5] text-sm font-semibold">Total Users</div>
                   </div>
                 </div>
               </div>
@@ -427,7 +421,7 @@ const AdminDashboard = () => {
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-8">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 flex items-center">
-            <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 mr-2 text-[#2D9AA5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             Quick Actions
@@ -437,7 +431,7 @@ const AdminDashboard = () => {
               { name: "Manage Clinics", icon: "🏥", color: "emerald", description: "View & approve clinics", href: "/admin/AdminClinicApproval" },
               { name: "Manage Doctors", icon: "👨‍⚕️", color: "blue", description: "Doctor verification", href: "/admin/approve-doctors" },
               { name: "Add Treatment", icon: "➕ ", color: "amber", description: "Add Treatment", href: "/admin/add-treatment" },
-              { name: "Analytics", icon: "📊", color: "indigo", description: "Analytics", href: "/admin/analytics" }
+              { name: "User Analytics", icon: "📊", color: "indigo", description: "Analytics", href: "/admin/analytics" }
             ].map((action, index) => (
               <Link key={index} href={action.href} className="block">
                 <div className="group cursor-pointer w-full">

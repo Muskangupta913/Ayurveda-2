@@ -189,7 +189,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 
           (img as HTMLImageElement).style.cursor = "pointer";
           (img as HTMLImageElement).title =
-            // "Double-click to add/edit link, Right-click for more options";
+            "Double-click to add/edit link, Right-click for more options";
         });
 
         // Handle videos
