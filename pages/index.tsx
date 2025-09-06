@@ -9,7 +9,6 @@ import {
   Clock,
   Navigation,
   Shield,
-  MessageCircle,
   X,
 } from "lucide-react";
 import React from "react";
