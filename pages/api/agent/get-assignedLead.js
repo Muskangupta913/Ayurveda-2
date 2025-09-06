@@ -1,6 +1,7 @@
 import dbConnect from '../../../lib/database';
 import Lead from '../../../models/Lead';
 import User from '../../../models/Users';
+import Treatment from '../../../models/Treatment';
 import { getUserFromReq, requireRole } from '../lead-ms/auth';   
 
 export default async function(req,res){
@@ -15,8 +16,6 @@ export default async function(req,res){
           if (!requireRole(user, ["agent"])) {
             return res.status(403).json({ message: "Access denied" });
           }
-
-
 
           const leads=await Lead.find({assignedTo: user._id})
            .populate("treatments.treatment", "name")

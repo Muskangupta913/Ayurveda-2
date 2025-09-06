@@ -91,7 +91,7 @@ export default function BlogList() {
       filtered = blogs.filter((blog) =>
         blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         blog.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        blog.postedBy.name.toLowerCase().includes(searchTerm.toLowerCase())
+        blog.postedBy?.name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -460,7 +460,7 @@ export default function BlogList() {
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                             </svg>
-                            {blog.postedBy.name}
+                            {blog.postedBy?.name || "Unknown Author"}
                           </div>
                           <span className="text-gray-500 font-medium">
                             {new Date(blog.createdAt).toLocaleDateString('en-US', {

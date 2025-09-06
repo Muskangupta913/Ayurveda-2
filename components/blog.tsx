@@ -245,7 +245,7 @@ export default function BlogList() {
 
                       <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
                         <div className="flex items-center text-xs text-gray-500 space-x-2">
-                          <span className="font-medium text-gray-700">{blog.postedBy.name}</span>
+                          <span className="font-medium text-gray-700">{blog.postedBy?.name || "Unknown Author"}</span>
                           <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                           <span>
                             {new Date(blog.createdAt).toLocaleDateString('en-US', {
