@@ -22,7 +22,8 @@ export default function ClinicForgotPassword() {
     setIsLoading(true);
     
     const actionCodeSettings = {
-      url: `https://ayurvedanearme.ae/clinic/reset-password?email=${encodeURIComponent(email)}`,
+      // url: `https://ayurvedanearme.ae/clinic/reset-password?email=${encodeURIComponent(email)}`,
+      url: `http://localhost:3000/clinic/reset-password?email=${encodeURIComponent(email)}`,
       handleCodeInApp: true,
     };
 
