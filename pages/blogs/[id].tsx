@@ -752,10 +752,10 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
               <div className="flex items-center justify-center space-x-8 text-gray-600 mb-12">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-[#2D9AA5] to-[#236b73] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                    {blog.postedBy.name.charAt(0).toUpperCase()}
+                    {(blog.postedBy?.name?.charAt(0).toUpperCase() || "A")}
                   </div>
                   <div className="text-left">
-                    <span className="font-semibold text-gray-900 text-lg">By {blog.postedBy.name}</span>
+                    <span className="font-semibold text-gray-900 text-lg">By {blog.postedBy?.name || "Author"}</span>
                     <p className="text-sm text-gray-500">Author</p>
                   </div>
                 </div>
@@ -863,7 +863,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
               const canDeleteComment =
                 user &&
                 (String(user._id) === String(c.user) ||
-                  String(user._id) === String(blog.postedBy._id));
+                  String(user._id) === String(blog.postedBy?._id));
 
               const isExpanded = expandedComments[c._id];
               const isLong = isLongComment(c.text);
@@ -936,8 +936,8 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                   {c.replies && c.replies.length > 0 && (
                     <div className="space-y-4 ml-8 border-l-4 border-[#2D9AA5] pl-6">
                       {c.replies.map((r) => {
-                        const isAuthorReply = r.user && String(r.user) === String(blog.postedBy._id);
-                        const canDeleteReply = user && (String(user._id) === String(r.user) || String(user._id) === String(blog.postedBy._id));
+                        const isAuthorReply = r.user && String(r.user) === String(blog.postedBy?._id);
+                        const canDeleteReply = user && (String(user._id) === String(r.user) || String(user._id) === String(blog.postedBy?._id));
 
                         return (
                           <div key={r._id} className={`p-6 rounded-xl ${isAuthorReply ? "bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 border-2 border-[#2D9AA5]/20" : "bg-white border border-gray-200"}`}>
@@ -974,7 +974,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                   )}
 
                   {/* Reply form for blog author remains the same */}
-                  {user && blog.postedBy.name === user.name && (
+                  {user && blog.postedBy?.name === user.name && (
                     <div className="mt-6 ml-8">
                       <div className="flex space-x-4">
                         <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center text-white font-bold text-sm">
