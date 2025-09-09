@@ -134,24 +134,42 @@ function UserChat() {
   };
 
   const deleteMessage = async (messageId: string) => {
+  if (!chat?._id) {
+    console.error("ChatId not found");
+    return;
+  }
+
+  // Optimistic update
+  const previousChat = chat;
+  setChat(prev =>
+    prev ? { ...prev, messages: prev.messages.filter(m => m._id !== messageId) } : prev
+  );
+
   try {
     const token = localStorage.getItem("token");
     const response = await axios.delete(
-      `/api/chat/delete?messageId=${messageId}&prescriptionRequestId=${requestId}`,
+      "/api/chat/delete",
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
+        data: { chatId: chat._id, messageId },
       }
     );
 
-    if (response.data.success) {
-      setChat(response.data.data.chat); // refresh chat with updated messages
-    }
+    if (!response.data.success) throw new Error(response.data.error);
+
+    // ✅ Use updated chat returned from backend
+    setChat(response.data.data.chat);
+
   } catch (error) {
-    console.error("Failed to delete message:", error);
+    console.error("Delete failed:", error);
+
+    // Rollback UI
+    setChat(previousChat);
+    alert("Failed to delete message. Please try again.");
   }
 };
+
+
 
 
   if (loading) {

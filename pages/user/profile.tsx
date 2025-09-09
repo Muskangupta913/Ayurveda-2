@@ -1,39 +1,101 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { 
-  User, 
-  Briefcase, 
-  MessageSquare, 
-  FileText, 
-  BarChart3, 
-  Settings, 
-  Search,
-  Filter,
-  Calendar,
-  MapPin,
-  DollarSign,
-  Clock,
-  Users,
-  Building,
-  Languages,
-  Award,
-  Wrench,
-  ChevronRight,
-  Bell,
-  Menu,
-  X
-} from "lucide-react";
+import NotificationBell from "../../components/NotificationBell";
 
-const AppliedJobs = () => {
-  const [appliedJobs, setAppliedJobs] = useState([]);
-  const [commentsWithReplies, setCommentsWithReplies] = useState([]);
+interface Job {
+  _id: string;
+  jobTitle: string;
+  companyName: string;
+  location: string;
+  salary: string;
+  jobType: string;
+  qualification: string;
+  department: string;
+  workingDays: string;
+  jobTiming: string;
+  establishment: string;
+  languagesPreferred: string[];
+  perks: string[];
+  skills: string[];
+  description: string;
+  isActive: boolean;
+}
+
+interface ApplicantInfo {
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+}
+
+interface AppliedJob {
+  _id: string;
+  jobId: Job | null;
+  applicantInfo?: ApplicantInfo;
+  status: string;
+  createdAt: string;
+}
+
+interface Reply {
+  _id: string;
+  user?: string | { _id: string };
+  username: string;
+  text: string;
+  createdAt: string;
+}
+
+interface CommentWithReplies {
+  blogId: string;
+  blogTitle: string;
+  blogAuthor?: { _id?: string } | string;
+  commentId: string;
+  commentText: string;
+  commentCreatedAt: string;
+  replies: Reply[];
+}
+
+interface CommentsResponse {
+  success: boolean;
+  commentsWithReplies?: CommentWithReplies[];
+  error?: string;
+}
+
+interface ChatMessage {
+  _id: string;
+  senderRole: "user" | "doctor";
+  messageType: "text" | "prescription";
+  content?: string;
+  prescription?: string;
+  timestamp: string;
+}
+
+interface PrescriptionRequest {
+  _id: string;
+  healthIssue: string;
+  status: string;
+}
+
+interface Chat {
+  _id: string;
+  doctor: { name: string };
+  prescriptionRequest?: PrescriptionRequest;
+  messages: ChatMessage[];
+}
+
+interface ChatsResponse {
+  success: boolean;
+  data: Chat[];
+}
+
+const AppliedJobs: React.FC = () => {
+  const [appliedJobs, setAppliedJobs] = useState<AppliedJob[]>([]);
+  const [commentsWithReplies, setCommentsWithReplies] = useState<CommentWithReplies[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
-  const [commentsError, setCommentsError] = useState(null);
-  const [chats, setChats] = useState([]);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+
+  const [chats, setChats] = useState<Chat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
   const [appliedJobsLoading, setAppliedJobsLoading] = useState(false);
-  const [activeSection, setActiveSection] = useState('jobs');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Fetch comments
   useEffect(() => {
@@ -47,9 +109,10 @@ const AppliedJobs = () => {
         return;
       }
       try {
-        const res = await axios.get("/api/users/comments-with-replies", {
+        const res = await axios.get<CommentsResponse>("/api/users/comments-with-replies", {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         if (res.data.success) {
           setCommentsWithReplies(res.data.commentsWithReplies || []);
         } else {
@@ -72,7 +135,7 @@ const AppliedJobs = () => {
 
       setAppliedJobsLoading(true);
       try {
-        const response = await axios.get("/api/users/applied-jobs", {
+        const response = await axios.get<AppliedJob[]>("/api/users/applied-jobs", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAppliedJobs(response.data || []);
@@ -93,11 +156,11 @@ const AppliedJobs = () => {
 
       setChatsLoading(true);
       try {
-        const response = await axios.get("/api/chat/user-chats", {
+        const response = await axios.get<ChatsResponse>("/api/chat/user-chats", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.success) {
-          setChats((response.data.data || []).filter(chat => chat.prescriptionRequest));
+          setChats((response.data.data || []).filter((chat) => chat.prescriptionRequest));
         }
       } catch (error) {
         console.error("Failed to fetch chats", error);
@@ -108,530 +171,173 @@ const AppliedJobs = () => {
     fetchChats();
   }, []);
 
-  const navigationItems = [
-    { id: 'jobs', label: 'Applied Jobs', icon: Briefcase, count: appliedJobs.length },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, count: null },
-    { id: 'prescriptions', label: 'Prescriptions', icon: FileText, count: chats.length },
-    { id: 'comments', label: 'Comments', icon: MessageSquare, count: commentsWithReplies.length },
-  ];
+  return (
+    <>
+      <div className="p-4">
+        <NotificationBell />
 
-  const renderJobsSection = () => (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Applied Jobs</h2>
-          <p className="text-gray-600 mt-1">{appliedJobs.length} job applications</p>
-        </div>
-  );
-};
-        <div className="flex gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search jobs..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            <Filter className="h-4 w-4" />
-            Filter
-          </button>
-        </div>
-      </div>
-
-      {appliedJobsLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : appliedJobs.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl">
-          <Briefcase className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No job applications yet</h3>
-          <p className="text-gray-500">Start applying to jobs to see them here</p>
-        </div>
-      ) : (
-        <div className="grid gap-6">
-          {appliedJobs.map((application) => {
+        {/* Jobs Section */}
+        <h2 className="text-xl font-bold mb-4">Jobs You've Applied To</h2>
+        {appliedJobsLoading ? (
+          <p>Loading jobs...</p>
+        ) : appliedJobs.length === 0 ? (
+          <p>No applications yet.</p>
+        ) : (
+          appliedJobs.map((application) => {
             const job = application.jobId;
             const applicant = application.applicantInfo || {};
             if (!job) return null;
-            
             return (
-              <div key={application._id} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
-                <div className="p-6">
-                  <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-3 mb-4">
-                        <div className="p-3 bg-blue-100 rounded-lg">
-                          <Building className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                            {job.jobTitle}
-                            {!job.isActive && (
-                              <span className="ml-3 text-sm text-red-600 font-normal bg-red-100 px-2 py-1 rounded-full">
-                                Job Expired
-                              </span>
-                            )}
-                          </h3>
-                          <div className="flex items-center gap-4 text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Building className="h-4 w-4" />
-                              {job.companyName}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              {job.location}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <DollarSign className="h-4 w-4 text-green-600" />
-                          <span className="text-sm">{job.salary}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm">{job.jobType}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Users className="h-4 w-4 text-purple-600" />
-                          <span className="text-sm">{job.department}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Calendar className="h-4 w-4 text-orange-600" />
-                          <span className="text-sm">{job.workingDays}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Clock className="h-4 w-4 text-indigo-600" />
-                          <span className="text-sm">{job.jobTiming}</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div>
-                          <span className="font-medium text-gray-900">Qualifications: </span>
-                          <span className="text-gray-700">{job.qualification}</span>
-                        </div>
-                        
-                        {job.languagesPreferred?.length > 0 && (
-                          <div className="flex items-start gap-2">
-                            <Languages className="h-4 w-4 text-gray-500 mt-1" />
-                            <div>
-                              <span className="font-medium text-gray-900">Languages: </span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {job.languagesPreferred.map((lang, idx) => (
-                                  <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                                    {lang}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {job.skills?.length > 0 && (
-                          <div className="flex items-start gap-2">
-                            <Wrench className="h-4 w-4 text-gray-500 mt-1" />
-                            <div>
-                              <span className="font-medium text-gray-900">Skills: </span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {job.skills.map((skill, idx) => (
-                                  <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                    {skill}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {job.perks?.length > 0 && (
-                          <div className="flex items-start gap-2">
-                            <Award className="h-4 w-4 text-gray-500 mt-1" />
-                            <div>
-                              <span className="font-medium text-gray-900">Perks: </span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {job.perks.map((perk, idx) => (
-                                  <span key={idx} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                                    {perk}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="lg:w-80">
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-gray-900">Status:</span>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            application.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            application.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                            application.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {application.status}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-900">Applied On:</span>
-                          <p className="text-gray-700">{new Date(application.createdAt).toLocaleDateString()}</p>
-                        </div>
-                        
-                        <div className="border-t pt-3 mt-3">
-                          <h4 className="font-medium text-gray-900 mb-2">Applicant Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <p><span className="font-medium">Name:</span> {applicant.name}</p>
-                            <p><span className="font-medium">Email:</span> {applicant.email}</p>
-                            <p><span className="font-medium">Phone:</span> {applicant.phone}</p>
-                            <p><span className="font-medium">Role:</span> {applicant.role}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {job.description && (
-                    <div className="mt-4 pt-4 border-t">
-                      <h4 className="font-medium text-gray-900 mb-2">Job Description</h4>
-                      <p className="text-gray-700 text-sm leading-relaxed">{job.description}</p>
-                    </div>
+              <div
+                key={application._id}
+                className="border p-4 mb-6 rounded shadow-md bg-white"
+              >
+                <h3 className="text-2xl font-semibold mb-1">
+                  {job.jobTitle}{" "}
+                  {!job.isActive && (
+                    <span className="text-sm text-red-600 font-normal">(Job Expired)</span>
                   )}
+                </h3>
+                <p className="text-gray-700 mb-2">
+                  {job.companyName} • {job.location}
+                </p>
+                {/* job details */}
+                <p className="text-sm mb-2"><strong>Salary:</strong> {job.salary}</p>
+                <p className="text-sm mb-2"><strong>Job Type:</strong> {job.jobType}</p>
+                <p className="text-sm mb-2"><strong>Qualification:</strong> {job.qualification}</p>
+                <p className="text-sm mb-2"><strong>Department:</strong> {job.department}</p>
+                <p className="text-sm mb-2"><strong>Working Days:</strong> {job.workingDays}</p>
+                <p className="text-sm mb-2"><strong>Timing:</strong> {job.jobTiming}</p>
+                <p className="text-sm mb-2"><strong>Establishment:</strong> {job.establishment}</p>
+                <p className="text-sm mb-2"><strong>Languages Preferred:</strong> {job.languagesPreferred.join(", ")}</p>
+                <p className="text-sm mb-2"><strong>Perks:</strong> {job.perks.join(", ")}</p>
+                <p className="text-sm mb-2"><strong>Skills:</strong> {job.skills.join(", ")}</p>
+                <p className="text-sm text-gray-600 mt-2"><strong>Description:</strong> {job.description}</p>
+                <div className="mt-4 bg-gray-50 p-3 rounded">
+                  <p className="text-sm"><strong>Status:</strong> {application.status}</p>
+                  <p className="text-sm"><strong>Applied On:</strong> {new Date(application.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div className="mt-4 border-t pt-3 text-sm text-gray-700">
+                  <p><strong>Applicant:</strong> {applicant.name}</p>
+                  <p><strong>Email:</strong> {applicant.email}</p>
+                  <p><strong>Phone:</strong> {applicant.phone}</p>
+                  <p><strong>Role:</strong> {applicant.role}</p>
                 </div>
               </div>
             );
-          })}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderAnalyticsSection = () => (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
-        <p className="text-gray-600 mt-1">Overview of your activity and statistics</p>
+          })
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Briefcase className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Applications</p>
-              <p className="text-2xl font-bold text-gray-900">{appliedJobs.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <FileText className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Prescriptions</p>
-              <p className="text-2xl font-bold text-gray-900">{chats.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <MessageSquare className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Comments</p>
-              <p className="text-2xl font-bold text-gray-900">{commentsWithReplies.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Activity Score</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {Math.min(100, (appliedJobs.length * 10 + chats.length * 5 + commentsWithReplies.length * 2))}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Status Distribution</h3>
-          <div className="space-y-3">
-            {['pending', 'accepted', 'rejected'].map(status => {
-              const count = appliedJobs.filter(app => app.status === status).length;
-              const percentage = appliedJobs.length > 0 ? (count / appliedJobs.length) * 100 : 0;
-              
-              return (
-                <div key={status} className="flex items-center justify-between">
-                  <span className="capitalize font-medium text-gray-700">{status}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          status === 'pending' ? 'bg-yellow-500' :
-                          status === 'accepted' ? 'bg-green-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-600">{count}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>Applied to {appliedJobs.length} jobs this month</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Received {chats.length} prescriptions</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>Made {commentsWithReplies.length} comments</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPrescriptionsSection = () => (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Medical Prescriptions</h2>
-        <p className="text-gray-600 mt-1">Your consultation history with doctors</p>
-      </div>
-
-      {chatsLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : chats.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl">
-          <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No prescriptions yet</h3>
-          <p className="text-gray-500">Your medical consultations will appear here</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {chats.map((chat) => (
-            <div key={chat._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-6">
-                <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-green-100 rounded-lg">
-                        <User className="h-6 w-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900">Dr. {chat.doctor.name}</h3>
-                        {chat.prescriptionRequest && (
-                          <div className="mt-1 space-y-1">
-                            <p className="text-sm text-gray-600">
-                              <span className="font-medium">Health Issue:</span> {chat.prescriptionRequest.healthIssue}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-600">Status:</span>
-                              <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                                chat.prescriptionRequest.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                chat.prescriptionRequest.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {chat.prescriptionRequest.status}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        Recent Messages
-                      </h4>
-                      <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {chat.messages.slice(-3).map((msg) => (
-                          <div
-                            key={msg._id}
-                            className={`p-3 rounded-lg ${
-                              msg.senderRole === "user" 
-                                ? "bg-blue-500 text-white ml-8" 
-                                : "bg-white border mr-8"
-                            }`}
-                          >
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="font-medium text-sm">
-                                {msg.senderRole === "user" ? "You" : `Dr. ${chat.doctor.name}`}
-                              </span>
-                              <span className={`text-xs opacity-75 ${
-                                msg.senderRole === "user" ? "text-blue-100" : "text-gray-500"
-                              }`}>
-                                {new Date(msg.timestamp).toLocaleTimeString()}
-                              </span>
-                            </div>
-                            {msg.messageType === "prescription" ? (
-                              <div>
-                                <div className="font-medium text-sm mb-1">📋 Prescription:</div>
-                                <div className="bg-white bg-opacity-20 p-2 rounded border text-sm">
-                                  {msg.prescription}
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-sm">{msg.content}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:w-48">
-                    <button
-                      onClick={() => window.location.href = `/user/chat/${chat.prescriptionRequest._id}`}
-                      className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
+      {/* Comments Section */}
+      <div className="max-w-3xl mx-auto py-6">
+        <h1 className="text-3xl font-bold mb-4">Your Comments and Replies</h1>
+        {loadingComments ? (
+          <p>Loading your comments...</p>
+        ) : commentsError ? (
+          <p className="text-red-600">Error: {commentsError}</p>
+        ) : commentsWithReplies.length === 0 ? (
+          <p>No comments found.</p>
+        ) : (
+          commentsWithReplies.map(({ blogId, blogTitle, blogAuthor, commentId, commentText, commentCreatedAt, replies }) => (
+            <div key={commentId} className="border p-4 mb-6 rounded shadow-sm bg-white">
+              <h2 className="text-xl font-semibold mb-1">{blogTitle}</h2>
+              <p className="text-sm text-gray-600 mb-2">Commented on: {new Date(commentCreatedAt).toLocaleString()}</p>
+              <p className="mb-3">{commentText}</p>
+              <div className="ml-4">
+                <h3 className="font-semibold mb-1">Replies:</h3>
+                {replies.length === 0 && <p className="italic text-gray-500">No replies yet.</p>}
+                {replies.map(r => {
+                  const isAuthorReply = blogAuthor && r.user && String(r.user) === String((blogAuthor as any)?._id || blogAuthor);
+                  return (
+                    <div
+                      key={r._id}
+                      className={`ml-4 p-3 mb-2 border-l-4 ${isAuthorReply ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
                     >
-                      Continue Chat
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+                      <p className={`font-semibold ${isAuthorReply ? 'text-blue-600' : ''}`}>
+                        {r.username} {isAuthorReply && <span className="text-blue-600 font-normal">(author)</span>}
+                      </p>
+                      <p>{r.text}</p>
+                      <p className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleString()}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderCommentsSection = () => (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Your Comments & Replies</h2>
-        <p className="text-gray-600 mt-1">Track your blog interactions and responses</p>
+          ))
+        )}
       </div>
 
-      {loadingComments ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : commentsError ? (
-        <div className="text-center py-12 bg-red-50 rounded-xl">
-          <MessageSquare className="mx-auto h-16 w-16 text-red-400 mb-4" />
-          <h3 className="text-lg font-medium text-red-900 mb-2">Error Loading Comments</h3>
-          <p className="text-red-600">{commentsError}</p>
-        </div>
-      ) : commentsWithReplies.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl">
-          <MessageSquare className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No comments yet</h3>
-          <p className="text-gray-500">Your blog comments and discussions will appear here</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {commentsWithReplies.map(({ blogId, blogTitle, blogAuthor, commentId, commentText, commentCreatedAt, replies }) => (
-            <div key={commentId} className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="p-6">
-                <div className="mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{blogTitle}</h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="h-4 w-4" />
-                    <span>Commented on {new Date(commentCreatedAt).toLocaleString()}</span>
+      {/* Chat History Section */}
+      <div className="max-w-3xl mx-auto py-6">
+        <h1 className="text-3xl font-bold mb-4">Your Chat History with Doctors</h1>
+        {chatsLoading ? (
+          <p>Loading chat history...</p>
+        ) : chats.length === 0 ? (
+          <p className="text-gray-500">No chat history yet.</p>
+        ) : (
+          <div className="space-y-6">
+            {chats.map((chat) => (
+              <div key={chat._id} className="border p-4 rounded shadow-sm bg-white">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-xl font-semibold mb-1">Dr. {chat.doctor.name}</h2>
+                    {chat.prescriptionRequest ? (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          Health Issue: {chat.prescriptionRequest.healthIssue}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Status: {chat.prescriptionRequest.status}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-600 text-red-600">
+                        No prescription request yet
+                      </p>
+                    )}
                   </div>
+                  <button
+                    onClick={() => window.location.href = `/user/chat/${chat.prescriptionRequest?._id}`}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Continue Chat
+                  </button>
                 </div>
-
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-                  <p className="text-gray-800">{commentText}</p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-gray-500" />
-                    <h4 className="font-semibold text-gray-900">
-                      Replies ({replies.length})
-                    </h4>
-                  </div>
-                  
-                  {replies.length === 0 ? (
-                    <p className="italic text-gray-500 ml-6">No replies yet.</p>
-                  ) : (
-                    <div className="space-y-3 ml-6">
-                      {replies.map(r => {
-                        const isAuthorReply = blogAuthor && r.user && String(r.user) === String(blogAuthor._id || blogAuthor);
-                        return (
-                          <div
-                            key={r._id}
-                            className={`p-4 rounded-lg border-l-4 ${
-                              isAuthorReply 
-                                ? 'border-purple-500 bg-purple-50' 
-                                : 'border-gray-300 bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <span className={`font-semibold ${isAuthorReply ? 'text-purple-600' : 'text-gray-900'}`}>
-                                {r.username} 
-                                {isAuthorReply && <span className="ml-2 text-purple-600 font-normal text-sm">(Author)</span>}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(r.createdAt).toLocaleString()}
-                              </span>
-                            </div>
-                            <p className="text-gray-800">{r.text}</p>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {chat.messages.slice(-3).map((msg) => (
+                    <div
+                      key={msg._id}
+                      className={`p-2 rounded ${msg.senderRole === "user" ? "bg-blue-100 ml-4" : "bg-gray-100 mr-4"}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium text-sm">
+                          {msg.senderRole === "user" ? "You" : `Dr. ${chat.doctor.name}`}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      {msg.messageType === "prescription" ? (
+                        <div className="mt-1">
+                          <div className="font-medium text-sm">Prescription:</div>
+                          <div className="bg-white p-2 rounded border text-sm">
+                            {msg.prescription}
                           </div>
-                        );
-                      })}
+                        </div>
+                      ) : (
+                        <p className="text-sm mt-1">{msg.content}</p>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
+};
 
-  const renderActiveSection = () => {
-    switch (activeSection) {
-      case 'jobs':
-        return renderJobsSection();
-      case 'analytics':
-        return renderAnalyticsSection();
-      case 'prescriptions':
-        return renderPrescriptionsSection();
-      case 'comments':
-        return renderCommentsSection();
-      default:
-        return renderJobsSection();
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50
+export default AppliedJobs;
