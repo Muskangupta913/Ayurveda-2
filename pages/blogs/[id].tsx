@@ -334,7 +334,58 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
   }
 
   if (error) return <p>Error: {error}</p>;
-  if (!blog) return <p>Loading blog…</p>;
+  if (!blog) return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+      <div className="relative mb-8">
+        {/* Animated circles */}
+        <div className="flex space-x-2">
+          <div
+            className="w-4 h-4 rounded-full animate-bounce"
+            style={{
+              backgroundColor: '#2D9AA5',
+              animationDelay: '0ms',
+              animationDuration: '1200ms'
+            }}
+          ></div>
+          <div
+            className="w-4 h-4 rounded-full animate-bounce"
+            style={{
+              backgroundColor: '#2D9AA5',
+              animationDelay: '200ms',
+              animationDuration: '1200ms'
+            }}
+          ></div>
+          <div
+            className="w-4 h-4 rounded-full animate-bounce"
+            style={{
+              backgroundColor: '#2D9AA5',
+              animationDelay: '400ms',
+              animationDuration: '1200ms'
+            }}
+          ></div>
+        </div>
+
+        {/* Pulsing ring */}
+        <div
+          className="absolute -top-2 -left-2 w-8 h-8 rounded-full animate-ping opacity-20"
+          style={{ backgroundColor: '#2D9AA5' }}
+        ></div>
+      </div>
+
+      {/* Loading text */}
+      <div className="text-center">
+        <h2
+          className="text-2xl font-bold mb-2"
+          style={{ color: '#2D9AA5' }}
+        >
+          Loading Blog
+        </h2>
+        <p className="text-slate-600 animate-pulse">
+          Getting your content ready...
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">

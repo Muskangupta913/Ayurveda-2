@@ -21,7 +21,6 @@ import Image from "next/image";
 import SearchCard from "../../components/SearchCard";
 import CalculatorGames from "../../components/CalculatorGames";
 import Blog from "../../components/blog";
-import KnowHealth from "@/components/KnowHealth";
 
 interface Doctor {
   _id: string;
@@ -1914,11 +1913,6 @@ export default function FindDoctor() {
       <div>
         <Blog />
       </div>
-      <KnowHealth />
-      {/* CSS Styles for Price Slider */}
-
-
-
 
 
       {/* CSS Styles for Slider Thumb */}

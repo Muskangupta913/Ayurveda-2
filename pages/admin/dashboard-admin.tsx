@@ -4,6 +4,7 @@ import Link from 'next/link';
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth'; 
 import type { NextPageWithLayout } from '../_app';
+import Adminstats from '../../components/Adminstats';
 
 
 interface AnalyticsData {
@@ -418,6 +419,10 @@ const AdminDashboard = () => {
           ))}
         </div>
 
+          <div className='mb-8'>
+          <Adminstats />
+          </div>
+
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-8">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 flex items-center">
@@ -431,7 +436,11 @@ const AdminDashboard = () => {
               { name: "Manage Clinics", icon: "🏥", color: "emerald", description: "View & approve clinics", href: "/admin/AdminClinicApproval" },
               { name: "Manage Doctors", icon: "👨‍⚕️", color: "blue", description: "Doctor verification", href: "/admin/approve-doctors" },
               { name: "Add Treatment", icon: "➕ ", color: "amber", description: "Add Treatment", href: "/admin/add-treatment" },
-              { name: "User Analytics", icon: "📊", color: "indigo", description: "Analytics", href: "/admin/analytics" }
+              { name: "User Analytics", icon: "📊", color: "indigo", description: "Analytics", href: "/admin/analytics" },
+              { name: "All Blogs", icon: "📝", color: "orange", description: "See all blogs", href: "/admin/all-blogs" },
+             { name: "Request Call Back", icon: "📞", color: "teal", description: "See Call Back Request", href: "/admin/get-in-touch" },
+              { name: "Manage Jobs", icon: "💼", color: "blue", description: "Manage all Jobs", href: "/admin/job-manage" },
+
             ].map((action, index) => (
               <Link key={index} href={action.href} className="block">
                 <div className="group cursor-pointer w-full">

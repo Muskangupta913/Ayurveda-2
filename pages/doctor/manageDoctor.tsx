@@ -1648,7 +1648,7 @@ function DoctorDashboard() {
                   </div>
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-black mb-2">
                     Resume
                   </label>
@@ -1669,7 +1669,7 @@ function DoctorDashboard() {
                   <p className="text-xs text-black mt-1">
                     PDF, JPG, PNG files accepted
                   </p>
-                </div>
+                </div> */}
               </div>
 
               {/* Action Buttons */}
