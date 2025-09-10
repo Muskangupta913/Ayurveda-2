@@ -72,9 +72,17 @@ export default function withDoctorAuth<P extends object>(
 
     if (isLoading) {
       return (
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="text-lg">Verifying doctor authentication...</div>
-        </div>
+        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+  <div className="text-center">
+    {/* Simple spinner */}
+    <div className="w-8 h-8 border-2 border-gray-200 border-t-[#2D9AA5] rounded-full animate-spin mx-auto mb-4"></div>
+    
+    {/* Clean text */}
+    <div className="text-lg text-gray-700 font-medium">
+      Verifying doctor authentication...
+    </div>
+  </div>
+</div>
       );
     }
 

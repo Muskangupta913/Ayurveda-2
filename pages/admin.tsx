@@ -341,7 +341,7 @@ export default function AdminLogin() {
           </div>
         </div>
       </div>
-      <style jsx>{`
+      {/* <style jsx>{`
         .animate-slide-in {
           animation: slideIn 0.3s ease-out;
         }
@@ -356,7 +356,7 @@ export default function AdminLogin() {
             opacity: 1;
           }
         }
-      `}</style>
+      `}</style> */}
     </>
   );
 }

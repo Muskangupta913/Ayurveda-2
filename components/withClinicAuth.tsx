@@ -89,10 +89,10 @@ export default function withClinicAuth<P extends Record<string, unknown> = Recor
 
     if (loading) {
       return (
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Checking access...</p>
+            <div className="w-8 h-8 border-4 border-gray-200 border-t-[#2D9AA5] rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-700 font-medium">Verifying Clinic...</p>
           </div>
         </div>
       );
