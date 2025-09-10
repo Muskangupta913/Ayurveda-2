@@ -67,6 +67,8 @@ export default async function handler(req, res) {
         status,
         customStatus,
         notes,
+        followUps,   // ✅ new
+        assignedTo,
       } = body;
 
       if (!name || !phone || !gender || !source || !treatments?.length) {
@@ -84,8 +86,8 @@ export default async function handler(req, res) {
           const tDoc = mongoose.Types.ObjectId.isValid(treatmentName)
             ? await Treatment.findById(treatmentName)
             : await Treatment.findOne({
-                name: { $regex: `^${treatmentName}$`, $options: "i" },
-              }); // case-insensitive
+              name: { $regex: `^${treatmentName}$`, $options: "i" },
+            }); // case-insensitive
 
           if (!tDoc) throw new Error(`Treatment not found: ${t.treatment}`);
 
@@ -101,7 +103,24 @@ export default async function handler(req, res) {
           return { treatment: tDoc._id, subTreatment: t.subTreatment || null };
         })
       );
+const followUpsArray = followUps && followUps.length > 0
+  ? followUps.map(f => ({ date: new Date(f.date), addedBy: me._id }))
+  : followUpDate
+  ? [{ date: new Date(followUpDate), addedBy: me._id }]
+  : [];
 
+
+      const notesArray = Array.isArray(notes)
+        ? notes.map((n) => ({
+          text: typeof n === "string" ? n : n.text,
+          addedBy: me._id,
+          createdAt: new Date(),
+        }))
+        : notes
+          ? [{ text: notes, addedBy: me._id, createdAt: new Date() }]
+          : [];
+
+      // Create lead
       const lead = await Lead.create({
         name,
         phone,
@@ -113,9 +132,16 @@ export default async function handler(req, res) {
         offerTag,
         status,
         customStatus,
-        notes,
-      });
+        notes: notesArray,
+         followUps: followUpsArray,
+     assignedTo: Array.isArray(assignedTo)
+  ? assignedTo.map((id) => ({ user: new mongoose.Types.ObjectId(id), assignedAt: new Date() }))
+  : assignedTo
+  ? [{ user: new mongoose.Types.ObjectId(assignedTo), assignedAt: new Date() }]
+  : [],
 
+
+      });
       return res.status(201).json({ success: true, lead });
     }
 
@@ -156,6 +182,8 @@ export default async function handler(req, res) {
             status,
             customStatus,
             notes,
+            followUpDate,   // ✅
+            assignedTo,
           } = row;
 
           if (!name || !phone || !gender || !source || !treatments) {
@@ -233,19 +261,32 @@ export default async function handler(req, res) {
             })
           );
 
-          return {
-            name: name.trim(),
-            phone: phone.toString().trim(),
-            gender: gender.trim(),
-            age: age ? Number(age) : undefined,
-            treatments: parsedTreatments,
-            source: source.trim(),
-            customSource: customSource?.trim() || null,
-            offerTag: offerTag?.trim() || null,
-            status: status?.trim() || "New",
-            customStatus: customStatus?.trim() || null,
-            notes: notes?.trim() || null,
-          };
+       return {
+  name: name.trim(),
+  phone: phone.toString().trim(),
+  gender: gender.trim(),
+  age: age ? Number(age) : undefined,
+  treatments: parsedTreatments,
+  source: source.trim(),
+  customSource: customSource?.trim() || null,
+  offerTag: offerTag?.trim() || null,
+  status: status?.trim() || "New",
+  customStatus: customStatus?.trim() || null,
+  notes: notes
+    ? [{ text: notes, addedBy: me._id, createdAt: new Date() }]
+    : [],
+  followUps: followUpDate
+    ? [{ date: new Date(followUpDate), addedBy: me._id }]
+    : [],
+assignedTo: Array.isArray(assignedTo)
+  ? assignedTo.map((id) => ({ user: new mongoose.Types.ObjectId(id), assignedAt: new Date() }))
+  : assignedTo
+  ? [{ user: new mongoose.Types.ObjectId(assignedTo), assignedAt: new Date() }]
+  : [],
+
+
+};
+
         })
       );
 

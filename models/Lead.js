@@ -1,65 +1,84 @@
-import mongoose from "mongoose";
+  import mongoose from "mongoose";
 
-const LeadSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    phone: { type: String, required: true, index: true },
-    gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
-    age: { type: Number },
-
-    treatments: [
+  const LeadSchema = new mongoose.Schema(
     {
-      treatment: { type: mongoose.Schema.Types.ObjectId, ref: "Treatment", required: true },
-      subTreatment: { type: String }, // store sub-treatment name
-    },
-  ],
+      name: { type: String, required: true },
+      phone: { type: String, required: true, index: true },
+      gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
+      age: { type: Number },
 
-    source: {
-      type: String,
-      enum: [
-        "Instagram",
-        "Facebook",
-        "Google",
-        "WhatsApp",
-        "Walk-in",
-        "Other",
+      treatments: [
+      {
+        treatment: { type: mongoose.Schema.Types.ObjectId, ref: "Treatment", required: true },
+        subTreatment: { type: String }, // store sub-treatment name
+      },
+    ],
+
+      source: {
+        type: String,
+        enum: [
+          "Instagram",
+          "Facebook",
+          "Google",
+          "WhatsApp",
+          "Walk-in",
+          "Other",
+        ],
+        required: true,
+        index: true,
+      },
+      customSource: { type: String }, // when source === "Other"
+
+      offerTag: { type: String, index: true },
+
+      status: {
+        type: String,
+        enum: [
+          "New",
+          "Contacted",
+          "Booked",
+          "Visited",
+          "Follow-up",
+          "Not Interested",
+          "Other",
+        ],
+        default: "New",
+        index: true,
+      },
+      customStatus: { type: String }, // when status === "Other"
+
+    notes: [
+      {
+        text: { type: String, required: true },
+        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
+
+      assignedTo: [
+        {
+          user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          assignedAt: { type: Date, default: Date.now },
+        },
       ],
-      required: true,
-      index: true,
-    },
-    customSource: { type: String }, // when source === "Other"
 
-    offerTag: { type: String, index: true },
-
-    status: {
-      type: String,
-      enum: [
-        "New",
-        "Contacted",
-        "Booked",
-        "Visited",
-        "Follow-up",
-        "Not Interested",
-        "Other",
+      // History of follow-up dates
+      followUps: [
+        {
+          date: { type: Date }, // includes both date & time
+        },
       ],
-      default: "New",
-      index: true,
+
+      // Next follow-up dates planned
+      nextFollowUps: [
+        {
+          date: { type: Date }, // includes both date & time
+        },
+      ],
+
     },
-    customStatus: { type: String }, // when status === "Other"
-
-    notes: { type: String },
-
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-      index: true,
-    },
-
-    createdAt: { type: Date, default: Date.now, index: true },
-  },
-  { timestamps: true }
-);
+    { timestamps: true }
+  );
 
 
-export default mongoose.models.Lead || mongoose.model("Lead", LeadSchema);
+  export default mongoose.models.Lead || mongoose.model("Lead", LeadSchema);
