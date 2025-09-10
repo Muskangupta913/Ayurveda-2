@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
+import {Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
 export interface Calculator {
   id: string;
   title: string;
@@ -25,6 +25,17 @@ export interface Game {
 }
 
 export const calculators: Calculator[] = [
+  {
+    id: 'pregnancyandovulation',
+    title: 'Pregnancy & Ovulation Calculator',
+    description: ' Free Pregnancy Calculator & Ovulation Calendar to track your cycle',
+    icon: Baby,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1493894473891-10fc1e5dbd22?w=400&h=200&fit=crop&auto=format'
+  },
   {
     id: 'bmi',
     title: 'BMI Calculator',
