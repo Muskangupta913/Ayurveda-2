@@ -106,7 +106,7 @@ const Header = () => {
     const baseItems: NavItem[] = [
       { name: 'Home', href: '/', icon: HomeIcon }, // Using HomeIcon here
       { name: 'Career', href: '/job-listings', icon: BriefcaseIcon }, // Using BriefcaseIcon
-      { name: 'Blog', href: '/blogs/viewBlogs', icon: PencilSquareIcon }, // Using PencilSquareIcon
+      { name: 'Blogs', href: '/blogs/viewBlogs', icon: PencilSquareIcon }, // Using PencilSquareIcon
       // Add other links here if needed
     ];
 

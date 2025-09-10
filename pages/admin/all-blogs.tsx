@@ -134,54 +134,54 @@ const AdminBlogs = () => {
     <div className="p-4 sm:p-6">
       {loading ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] relative">
-  {/* Background glow effect */}
-  <div className="absolute inset-0 flex items-center justify-center">
-    <div className="w-32 h-32 bg-[#2D9AA5] opacity-10 rounded-full blur-3xl animate-pulse"></div>
-  </div>
-  
-  {/* Main loader container */}
-  <div className="relative z-10 flex flex-col items-center gap-6">
-    
-    {/* Enhanced spinner with multiple rings */}
-    <div className="relative">
-      {/* Outer ring */}
-      <div className="w-16 h-16 border-2 border-gray-200 rounded-full animate-spin">
-        <div className="w-full h-full border-4 border-[#2D9AA5] border-t-transparent rounded-full animate-spin" style={{ animationDuration: '1s', animationDirection: 'reverse' }}></div>
-      </div>
-      
-      {/* Inner ring */}
-      <div className="absolute top-2 left-2 w-12 h-12 border-2 border-[#2D9AA5] border-t-transparent border-r-transparent rounded-full animate-spin" style={{ animationDuration: '0.8s' }}></div>
-      
-      {/* Center dot */}
-      <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-[#2D9AA5] rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
-    </div>
-    
-    {/* Brand name with enhanced styling */}
-    <div className="flex items-center gap-3">
-      <span className="text-4xl font-bold bg-gradient-to-r from-[#2D9AA5] via-[#3BB4C1] to-[#2D9AA5] bg-clip-text text-transparent animate-pulse">
-        ZEVA
-      </span>
-      <span className="text-4xl font-light text-gray-600">
-        Blogs
-      </span>
-    </div>
-    
-    {/* Loading text with animated dots */}
-    <div className="flex items-center gap-1 text-[#2D9AA5] font-medium">
-      <span>Loading</span>
-      <div className="flex gap-1">
-        <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-        <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
-        <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
-      </div>
-    </div>
-    
-    {/* Progress bar */}
-    <div className="w-48 h-1 bg-gray-200 rounded-full overflow-hidden">
-      <div className="h-full bg-gradient-to-r from-[#2D9AA5] to-[#3BB4C1] rounded-full animate-pulse"></div>
-    </div>
-  </div>
-</div>
+          {/* Background glow effect */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-32 h-32 bg-[#2D9AA5] opacity-10 rounded-full blur-3xl animate-pulse"></div>
+          </div>
+
+          {/* Main loader container */}
+          <div className="relative z-10 flex flex-col items-center gap-6">
+
+            {/* Enhanced spinner with multiple rings */}
+            <div className="relative">
+              {/* Outer ring */}
+              <div className="w-16 h-16 border-2 border-gray-200 rounded-full animate-spin">
+                <div className="w-full h-full border-4 border-[#2D9AA5] border-t-transparent rounded-full animate-spin" style={{ animationDuration: '1s', animationDirection: 'reverse' }}></div>
+              </div>
+
+              {/* Inner ring */}
+              <div className="absolute top-2 left-2 w-12 h-12 border-2 border-[#2D9AA5] border-t-transparent border-r-transparent rounded-full animate-spin" style={{ animationDuration: '0.8s' }}></div>
+
+              {/* Center dot */}
+              <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-[#2D9AA5] rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+            </div>
+
+            {/* Brand name with enhanced styling */}
+            <div className="flex items-center gap-3">
+              <span className="text-4xl font-bold bg-gradient-to-r from-[#2D9AA5] via-[#3BB4C1] to-[#2D9AA5] bg-clip-text text-transparent animate-pulse">
+                ZEVA
+              </span>
+              <span className="text-4xl font-light text-gray-600">
+                Blogs
+              </span>
+            </div>
+
+            {/* Loading text with animated dots */}
+            <div className="flex items-center gap-1 text-[#2D9AA5] font-medium">
+              <span>Loading</span>
+              <div className="flex gap-1">
+                <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-48 h-1 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#2D9AA5] to-[#3BB4C1] rounded-full animate-pulse"></div>
+            </div>
+          </div>
+        </div>
       ) : (
         <>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-black text-center sm:text-left">
@@ -334,8 +334,8 @@ const AdminBlogs = () => {
                 onClick={() => paginate(currentPage - 1)}
                 disabled={currentPage === 1}
                 className={`px-3 py-2 rounded-lg text-sm ${currentPage === 1
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-[#2D9AA5] text-white hover:bg-[#247a84]'
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-[#2D9AA5] text-white hover:bg-[#247a84]'
                   }`}
               >
                 Previous
@@ -346,8 +346,8 @@ const AdminBlogs = () => {
                   key={number}
                   onClick={() => paginate(number)}
                   className={`px-3 py-2 rounded-lg text-sm ${currentPage === number
-                      ? 'bg-[#2D9AA5] text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-[#2D9AA5] text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                 >
                   {number}
@@ -358,8 +358,8 @@ const AdminBlogs = () => {
                 onClick={() => paginate(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className={`px-3 py-2 rounded-lg text-sm ${currentPage === totalPages
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-[#2D9AA5] text-white hover:bg-[#247a84]'
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-[#2D9AA5] text-white hover:bg-[#247a84]'
                   }`}
               >
                 Next

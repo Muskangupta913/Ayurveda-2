@@ -1,13 +1,29 @@
 import { useState, useEffect } from "react";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
 
-let socket;
+interface Notification {
+  _id: string;
+  message: string;
+  isRead: boolean;
+  type?: string;
+  relatedBlog?: string;
+  relatedComment?: string;
+  relatedJob?: string;
+  createdAt: string;
+}
+
+interface DecodedToken {
+  userId: string;
+  [key: string]: any;
+}
+
+let socket: Socket | null = null;
 
 export default function NotificationBell() {
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -15,20 +31,19 @@ export default function NotificationBell() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const decoded = jwtDecode(token);
+    // Type assertion to satisfy TS
+    const decoded = jwtDecode(token) as DecodedToken;
     setUserId(decoded.userId);
 
-    // Fetch existing notifications
     fetch(`/api/push-notification/reply-notifications?userId=${decoded.userId}`)
       .then((res) => res.json())
       .then((data) => setNotifications(data.notifications || []))
       .catch((err) => console.error("Error fetching notifications:", err));
 
-    // Socket.IO connection
     socket = io({ path: "/api/push-notification/socketio" });
     socket.emit("register", decoded.userId);
 
-    socket.on("newNotification", (notif) => {
+    socket.on("newNotification", (notif: Notification) => {
       if (Notification.permission === "granted") {
         new Notification("New Reply", { body: notif.message });
       }
@@ -40,7 +55,7 @@ export default function NotificationBell() {
     }
 
     return () => {
-      if (socket) socket.disconnect();
+      socket?.disconnect();
     };
   }, []);
 
@@ -61,8 +76,7 @@ export default function NotificationBell() {
     }
   };
 
-  // Delete single notification
-  const deleteNotification = (id) => {
+  const deleteNotification = (id: string) => {
     fetch(`/api/push-notification/delete-notification?id=${id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then(() => {
@@ -71,16 +85,13 @@ export default function NotificationBell() {
       .catch((err) => console.error("Delete error:", err));
   };
 
-  // Clear all notifications
   const clearAllNotifications = () => {
     if (!userId) return;
     fetch(`/api/push-notification/clearAll-notification?userId=${userId}`, {
       method: "DELETE",
     })
       .then((res) => res.json())
-      .then(() => {
-        setNotifications([]);
-      })
+      .then(() => setNotifications([]))
       .catch((err) => console.error("Clear all error:", err));
   };
 
@@ -119,17 +130,15 @@ export default function NotificationBell() {
                   } hover:bg-gray-50`}
                 >
                   <div
-    className="flex-1 cursor-pointer"
-   onClick={() => {
-  if (n.type === "blog-reply" && n.relatedBlog) {
-    window.location.href = `/blogs/${n.relatedBlog}#${n.relatedComment}`;
-  } else if (n.type === "job-status" && n.relatedJob) {
-  window.location.href = `/job-details/${n.relatedJob}`;
-
-
-  }
-}}
-  >
+                    className="flex-1 cursor-pointer"
+                    onClick={() => {
+                      if (n.type === "blog-reply" && n.relatedBlog) {
+                        window.location.href = `/blogs/${n.relatedBlog}#${n.relatedComment}`;
+                      } else if (n.type === "job-status" && n.relatedJob) {
+                        window.location.href = `/job-details/${n.relatedJob}`;
+                      }
+                    }}
+                  >
                     <p className="text-sm">{n.message}</p>
                     <p className="text-xs text-gray-400">
                       {new Date(n.createdAt).toLocaleString()}

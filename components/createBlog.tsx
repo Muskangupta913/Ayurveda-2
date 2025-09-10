@@ -1,10 +1,41 @@
-import React, { useState, useEffect, ChangeEvent, MouseEvent, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  ChangeEvent,
+  MouseEvent,
+  useMemo,
+} from "react";
 import dynamic from "next/dynamic";
 import axios from "axios";
 import { useRouter } from "next/router";
-import { FileText, Video, Eye, Save, Send, Trash2, X, Link } from "lucide-react";
-
-
+import {
+  FileText,
+  Video,
+  Eye,
+  Save,
+  Send,
+  Trash2,
+  X,
+  Link,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  IndentIncrease,
+  IndentDecrease,
+  Quote,
+  Code,
+  Link as LinkIcon,
+  RotateCcw,
+  RotateCw,
+  Eraser,
+} from "lucide-react";
 
 // Dynamic import for ReactQuill
 const ReactQuill = dynamic(() => import("react-quill"), {
@@ -77,8 +108,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   // Video context menu state
   const [showVideoContextMenu, setShowVideoContextMenu] =
     useState<boolean>(false);
-  const [contextMenuVideo, setContextMenuVideo] =
-    useState<HTMLElement | null>(null);
+  const [contextMenuVideo, setContextMenuVideo] = useState<HTMLElement | null>(
+    null
+  );
   // Sharing moved to reusable component
   const [paramlink, setParamlink] = useState<string>("");
   const [paramlinkError, setParamlinkError] = useState<string>("");
@@ -193,7 +225,8 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
         });
 
         // Handle videos
-        const videoContainers = editorContainer.querySelectorAll(".video-container");
+        const videoContainers =
+          editorContainer.querySelectorAll(".video-container");
         console.log("Found videos:", videoContainers.length);
 
         videoContainers.forEach((container) => {
@@ -252,7 +285,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   const extractYouTubeId = (url: string): string | null => {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
     ];
 
     for (const pattern of patterns) {
@@ -266,7 +299,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     const patterns = [
       /\/file\/d\/([a-zA-Z0-9-_]+)/,
       /id=([a-zA-Z0-9-_]+)/,
-      /drive\.google\.com.*\/([a-zA-Z0-9-_]+)/
+      /drive\.google\.com.*\/([a-zA-Z0-9-_]+)/,
     ];
 
     for (const pattern of patterns) {
@@ -305,7 +338,10 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     }
   };
 
-  const validateVideoUrl = (url: string, type: "youtube" | "drive"): boolean => {
+  const validateVideoUrl = (
+    url: string,
+    type: "youtube" | "drive"
+  ): boolean => {
     if (type === "youtube") {
       return extractYouTubeId(url) !== null;
     } else {
@@ -322,9 +358,10 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     }
 
     if (!validateVideoUrl(trimmedUrl, videoType)) {
-      const message = videoType === "youtube"
-        ? "Please enter a valid YouTube URL (e.g., https://youtube.com/watch?v=... or https://youtu.be/...)"
-        : "Please enter a valid Google Drive video URL (e.g., https://drive.google.com/file/d/.../view)";
+      const message =
+        videoType === "youtube"
+          ? "Please enter a valid YouTube URL (e.g., https://youtube.com/watch?v=... or https://youtu.be/...)"
+          : "Please enter a valid Google Drive video URL (e.g., https://drive.google.com/file/d/.../view)";
       showToast(message, "error");
       return;
     }
@@ -344,7 +381,12 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     setVideoUrl("");
     setVideoType("youtube");
 
-    showToast(`${videoType === "youtube" ? "YouTube" : "Google Drive"} video added successfully!`, "success");
+    showToast(
+      `${
+        videoType === "youtube" ? "YouTube" : "Google Drive"
+      } video added successfully!`,
+      "success"
+    );
   };
 
   const ensureLinksUnderlined = (htmlContent: string) => {
@@ -489,7 +531,12 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           const iframe = container.querySelector("iframe");
           const contextIframe = contextMenuVideo.querySelector("iframe");
 
-          if (iframe && contextIframe && iframe.src === contextIframe.src && !videoRemoved) {
+          if (
+            iframe &&
+            contextIframe &&
+            iframe.src === contextIframe.src &&
+            !videoRemoved
+          ) {
             container.remove();
             videoRemoved = true;
           }
@@ -862,7 +909,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       } else {
         showToast(
           "Failed to update blog: " +
-          (err.response?.data?.message || err.message),
+            (err.response?.data?.message || err.message),
           "error"
         );
       }
@@ -906,65 +953,162 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   };
   const [value, setValue] = useState("");
 
+  // Inline toolbar state
+  const [showInlineToolbar, setShowInlineToolbar] = useState<boolean>(false);
+  const [inlineToolbarPos, setInlineToolbarPos] = useState<{
+    top: number;
+    left: number;
+  }>({ top: 0, left: 0 });
+  const quillRef = React.useRef<any>(null);
+  const lastRangeRef = React.useRef<any>(null);
+
+  // Attach native selection-change to keep latest range from Quill itself
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor?.();
+    if (!quill) return;
+    const handler = (range: any) => {
+      if (range) lastRangeRef.current = range;
+    };
+    quill.on("selection-change", handler);
+    return () => {
+      try {
+        quill.off("selection-change", handler);
+      } catch {}
+    };
+  }, []);
+
+  const formatWithQuill = (format: string, desiredValue?: any) => {
+    const quill = quillRef.current?.getEditor?.();
+    if (!quill) return;
+    const run = (fn: () => void) => setTimeout(fn, 0);
+    const restoreAnd = (fn: () => void) => {
+      const r = lastRangeRef.current || quill.getSelection();
+      if (!r || r.length === 0) return; // require selection
+      quill.focus();
+      quill.setSelection(r.index, r.length || 0, "user");
+      run(fn);
+    };
+
+    // Link handling
+    if (format === "link") {
+      const url = prompt("Enter URL (https://...)") || "";
+      if (!url) return;
+      restoreAnd(() => {
+        const r2 = quill.getSelection(true);
+        if (!r2) return;
+        if (r2.length === 0) return;
+        quill.formatText(r2.index, r2.length, { link: url });
+      });
+      return;
+    }
+
+    // Inline styles (minimal) with robust formatText
+    if (["bold", "italic", "underline"].includes(format)) {
+      restoreAnd(() => {
+        const r2 = quill.getSelection(true);
+        if (!r2) return;
+        const current = quill.getFormat(r2.index, r2.length);
+        const nextVal =
+          desiredValue === undefined ? !current?.[format] : desiredValue;
+        quill.formatText(r2.index, r2.length, { [format]: nextVal } as any);
+      });
+      return;
+    }
+  };
+
+  const handleSelectionChange = (range: any, source: any, editor: any) => {
+    try {
+      if (range && range.length > 0) {
+        const bounds = editor.getBounds(range.index, range.length);
+        const top = Math.max(0, bounds.top - 42);
+        const left = Math.max(0, bounds.left);
+        setInlineToolbarPos({ top, left });
+        setShowInlineToolbar(true);
+        lastRangeRef.current = range;
+      } else {
+        setShowInlineToolbar(false);
+      }
+    } catch {
+      setShowInlineToolbar(false);
+    }
+  };
+
   const modules = useMemo(
-  () => ({
-    toolbar: {
-      container: [
-        ["bold", "italic", "underline"],
-        ["link", "image", "video"],
-      ],
-      handlers: {
-        image: function (this: any) {
-          const input = document.createElement("input");
-          input.setAttribute("type", "file");
-          input.setAttribute("accept", "image/*");
-          input.click();
+    () => ({
+      toolbar: {
+        container: [
+          [{ font: [] }],
+          [{ size: [] }],
+          ["bold", "italic", "underline"],
+          [{ color: [] }, { background: [] }],
+          [{ align: [] }],
+          [{ indent: "-1" }, { indent: "+1" }],
+          [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
+          ["blockquote", "code-block"],
+          ["link", "image", "video"],
+          ["undo", "redo"],
+          ["clean"],
+        ],
+        handlers: {
+          image: function (this: any) {
+            const input = document.createElement("input");
+            input.setAttribute("type", "file");
+            input.setAttribute("accept", "image/*");
+            input.click();
 
-          input.onchange = () => {
-            const file = input.files?.[0];
-            if (file) {
-              // ✅ check file size (998KB ~ 1021928 bytes)
-              if (file.size > 998 * 1024) {
-                alert("Please upload an image smaller than 1 MB.");
-                return;
+            input.onchange = () => {
+              const file = input.files?.[0];
+              if (file) {
+                if (file.size > 998 * 1024) {
+                  alert("Please upload an image smaller than 1 MB.");
+                  return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const range = this.quill.getSelection();
+                  this.quill.insertEmbed(range.index, "image", reader.result);
+                  this.quill.insertText(range.index + 1, "\n");
+                  this.quill.setSelection(range.index + 2);
+                };
+                reader.readAsDataURL(file);
               }
-
-              const reader = new FileReader();
-              reader.onload = () => {
-                const range = this.quill.getSelection();
-                this.quill.insertEmbed(range.index, "image", reader.result);
-                this.quill.insertText(range.index + 1, "\n"); // 👈 new line after image
-                this.quill.setSelection(range.index + 2);
-              };
-              reader.readAsDataURL(file);
-            }
-          };
-        },
-        video: function (this: any) {
-          this.quill.blur(); // avoid addRange error
-          setShowVideoModal(true);
+            };
+          },
+          video: function (this: any) {
+            this.quill.blur();
+            setShowVideoModal(true);
+          },
+          undo: function (this: any) {
+            this.quill.history.undo();
+          },
+          redo: function (this: any) {
+            this.quill.history.redo();
+          },
         },
       },
-    },
-  }),
-  []
-);
-
-
-
-
-
-
+      history: { delay: 1000, maxStack: 100, userOnly: true },
+    }),
+    []
+  );
 
   const formats = [
+    "font",
+    "size",
     "bold",
     "italic",
     "underline",
+    "color",
+    "background",
+    "align",
+    "indent",
+    "list",
+    "blockquote",
+    "code-block",
     "link",
     "image",
     "video",
   ];
-
 
   // Utility to get base URL
   const getBaseUrl = () => {
@@ -986,12 +1130,13 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center justify-between p-4 rounded-lg shadow-lg min-w-80 transform transition-all duration-300 ease-in-out ${toast.type === "success"
-              ? "bg-green-500 text-white"
-              : toast.type === "error"
+            className={`flex items-center justify-between p-4 rounded-lg shadow-lg min-w-80 transform transition-all duration-300 ease-in-out ${
+              toast.type === "success"
+                ? "bg-green-500 text-white"
+                : toast.type === "error"
                 ? "bg-red-500 text-white"
                 : "bg-yellow-500 text-white"
-              }`}
+            }`}
           >
             <span className="text-sm font-medium">{toast.message}</span>
             <button
@@ -1007,7 +1152,6 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-
 
         {/* Main Content */}
         <div className="space-y-6">
@@ -1071,9 +1215,13 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                       }}
                       readOnly={!isParamlinkEditable}
                       maxLength={60}
-                      className={`flex-1 px-4 py-3 border ${paramlinkError ? "border-red-500" : "border-gray-300"
-                        } rounded-r-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200 ${!isParamlinkEditable ? "bg-gray-50 cursor-not-allowed" : ""
-                        }`}
+                      className={`flex-1 px-4 py-3 border ${
+                        paramlinkError ? "border-red-500" : "border-gray-300"
+                      } rounded-r-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200 ${
+                        !isParamlinkEditable
+                          ? "bg-gray-50 cursor-not-allowed"
+                          : ""
+                      }`}
                     />
                   </div>
                   <div className="flex justify-between items-center mt-2">
@@ -1092,7 +1240,6 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
             </div>
           </div>
 
-
           {/* Content Editor */}
           <div className="text-black bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="border-b border-gray-200 p-4 bg-gray-50">
@@ -1102,19 +1249,71 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
               </h3>
             </div>
             <div className="p-6">
-              <div className="h-[350px] overflow-hidden">
+              <div className="h-[350px] overflow-hidden relative">
+                {/** TS-friendly style object for custom CSS variable */}
+                {/** eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {/** Using 'any' to allow custom CSS variable key */}
+                {/** You can refactor to a CSS class if preferred */}
+                {/** @ts-ignore */}
+                {/** ignore TS for custom CSS var */}
+
                 <ReactQuill
                   theme="snow"
                   value={content}
-                  onChange={setContent}
+                  onChange={(val: string) => setContent(val)}
+                  ref={quillRef as any}
+                  onChangeSelection={handleSelectionChange as any}
                   modules={modules}
                   formats={formats}
                   placeholder="Start writing your blog content..."
                   className="h-full"
-                  style={{
-                    "--ql-primary": "#2D9AA5",
-                  }}
+                  style={{ ["--ql-primary" as any]: "#2D9AA5" } as any}
                 />
+                {showInlineToolbar && (
+                  <div
+                    className="absolute z-50 bg-white border border-gray-200 shadow-lg rounded-md px-2 py-1 flex items-center gap-1"
+                    style={{
+                      top: inlineToolbarPos.top,
+                      left: inlineToolbarPos.left,
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <button
+                      type="button"
+                      className="p-1 hover:bg-gray-100 rounded"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatWithQuill("bold")}
+                    >
+                      <Bold size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="p-1 hover:bg-gray-100 rounded italic"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatWithQuill("italic")}
+                    >
+                      <Italic size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="p-1 hover:bg-gray-100 rounded underline"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatWithQuill("underline")}
+                    >
+                      <Underline size={16} />
+                    </button>
+                    <div className="mx-1 w-px h-4 bg-gray-200" />
+                    <button
+                      type="button"
+                      className="p-1 hover:bg-gray-100 rounded"
+                      title="Link"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatWithQuill("link")}
+                    >
+                      <LinkIcon size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1139,7 +1338,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                   Save Draft
                 </button>
                 <button
-                  onClick={selectedPublished ? updatePublishedBlog : publishBlog}
+                  onClick={
+                    selectedPublished ? updatePublishedBlog : publishBlog
+                  }
                   disabled={isLoading || !title || !content}
                   className="flex items-center gap-2 px-6 py-3 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#257A83] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
                 >
@@ -1180,19 +1381,21 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setVideoType("youtube")}
-                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${videoType === "youtube"
-                      ? "bg-[#2D9AA5] text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                      videoType === "youtube"
+                        ? "bg-[#2D9AA5] text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                   >
                     YouTube
                   </button>
                   <button
                     onClick={() => setVideoType("drive")}
-                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${videoType === "drive"
-                      ? "bg-[#2D9AA5] text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                      videoType === "drive"
+                        ? "bg-[#2D9AA5] text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                   >
                     Google Drive
                   </button>
@@ -1317,7 +1520,8 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
             </div>
             <div className="p-6">
               <p className="text-gray-700 mb-6">
-                Are you sure you want to delete "{confirmAction.title}"? This action cannot be undone.
+                Are you sure you want to delete "{confirmAction.title}"? This
+                action cannot be undone.
               </p>
               <div className="flex gap-3">
                 <button
@@ -1410,7 +1614,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           border-radius: 8px 8px 0 0 !important;
           background: #f9fafb !important;
         }
-        
+
         .ql-container {
           border-left: 1px solid #e5e7eb !important;
           border-right: 1px solid #e5e7eb !important;
@@ -1418,95 +1622,93 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           border-radius: 0 0 8px 8px !important;
           height: calc(100% - 42px) !important;
         }
-        
+
         .ql-editor {
           height: 100% !important;
           overflow-y: auto !important;
           font-size: 16px !important;
           line-height: 1.6 !important;
         }
-        
+
         .ql-editor::before {
           font-style: italic !important;
           color: #9ca3af !important;
         }
-        
+
         .ql-toolbar .ql-formats {
           margin-right: 15px !important;
         }
-        
+
         .ql-toolbar button:hover,
         .ql-toolbar button:focus {
-          background: #2D9AA5 !important;
+          background: #2d9aa5 !important;
           color: white !important;
           border-radius: 4px !important;
         }
-        
+
         .ql-toolbar .ql-active {
-          background: #2D9AA5 !important;
+          background: #2d9aa5 !important;
           color: white !important;
           border-radius: 4px !important;
         }
-        
+
         .ql-snow .ql-tooltip {
           background: white !important;
           border: 1px solid #e5e7eb !important;
           border-radius: 8px !important;
           box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
         }
-        
-        .ql-snow .ql-tooltip input[type=text] {
+
+        .ql-snow .ql-tooltip input[type="text"] {
           border: 1px solid #d1d5db !important;
           border-radius: 4px !important;
           padding: 6px 8px !important;
         }
-        
+
         .ql-snow .ql-tooltip a.ql-action::after {
-          content: 'Save' !important;
-          background: #2D9AA5 !important;
+          content: "Save" !important;
+          background: #2d9aa5 !important;
           color: white !important;
           padding: 4px 8px !important;
           border-radius: 4px !important;
         }
-        
+
         .ql-snow .ql-tooltip a.ql-remove::before {
-          content: 'Remove' !important;
+          content: "Remove" !important;
           background: #ef4444 !important;
           color: white !important;
           padding: 4px 8px !important;
           border-radius: 4px !important;
         }
-          .ql-editor img {
-  width: 400px !important;
-  height: auto !important;
-  object-fit: contain !important;
-  display: block;
-  margin: 12px auto;
-}
-.ql-editor iframe,
-.ql-editor video { 
-  display: block;               
-  margin: 16px auto;            
-  border-radius: 8px;           
-  object-fit: contain !important;
-}
-  .ql-tooltip {
-  transform: translateY(-150%) !important; /* move above selection */
-  margin-bottom: 6px !important;
-}
+        .ql-editor img {
+          width: 400px !important;
+          height: auto !important;
+          object-fit: contain !important;
+          display: block;
+          margin: 12px auto;
+        }
+        .ql-editor iframe,
+        .ql-editor video {
+          display: block;
+          margin: 16px auto;
+          border-radius: 8px;
+          object-fit: contain !important;
+        }
+        .ql-tooltip {
+          transform: translateY(-150%) !important; /* move above selection */
+          margin-bottom: 6px !important;
+        }
 
-.ql-tooltip::after {
-  content: "";
-  position: absolute;
-  bottom: -6px; /* arrow pointing downwards */
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 6px;
-  border-style: solid;
-  border-color: white transparent transparent transparent; /* little arrow */
-}
-
-
+        .ql-tooltip::after {
+          content: "";
+          position: absolute;
+          bottom: -6px; /* arrow pointing downwards */
+          left: 50%;
+          transform: translateX(-50%);
+          border-width: 6px;
+          border-style: solid;
+          border-color: white transparent transparent transparent; /* little arrow */
+        }
       `}</style>
     </div>
   );
