@@ -1,6 +1,5 @@
-// /pages/lead/assign-lead.js
 import dbConnect from "../../../lib/database";
-import Lead from "../../../models/Lead";
+import User from "../../../models/Users"; // assuming your agents are in User model
 import { getUserFromReq, requireRole } from "./auth";
 
 export default async function handler(req, res) {
@@ -11,26 +10,15 @@ export default async function handler(req, res) {
     return res.status(403).json({ message: "Access denied" });
   }
 
-  if (req.method === "POST") {
+  if (req.method === "GET") {
     try {
-      const { leadId, agentId } = req.body;
+      // Fetch all agents
+      const agents = await User.find({ role: "agent" }).select("name email");
 
-      if (!leadId || !agentId) {
-        return res.status(400).json({ message: "LeadId and AgentId required" });
-      }
-
-      const lead = await Lead.findByIdAndUpdate(
-        leadId,
-        { assignedTo: agentId },
-        { new: true }
-      ).populate("assignedTo", "name email");
-
-      return res
-        .status(200)
-        .json({ success: true, message: "Lead assigned successfully", lead });
+      return res.status(200).json({ users: agents });
     } catch (err) {
-      console.error("Error assigning lead:", err);
-      return res.status(500).json({ message: "Failed to assign lead" });
+      console.error("Error fetching agents:", err);
+      return res.status(500).json({ message: "Failed to fetch agents" });
     }
   }
 
