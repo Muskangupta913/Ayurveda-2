@@ -15,10 +15,14 @@ export default async function handler(req, res) {
     const clinic = await Clinic.findByIdAndUpdate(clinicId, {
       declined: true,
       isApproved: false,
-    });
+    },
+     { new: true }
+  );
 
     res.status(200).json({ success: true, message: "Clinic declined", clinic });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 }

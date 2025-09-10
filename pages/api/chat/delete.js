@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return res.status(401).json({ message: "No token provided" });
+    return res.status(401).json({ success: false, error: "No token provided" });
   }
 
   const token = authHeader.split(" ")[1];
@@ -19,10 +19,9 @@ export default async function handler(req, res) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { role, userId } = decoded;
-    console.log("Decoded token:", decoded);
 
     if (!["user", "doctor"].includes(role)) {
-      return res.status(403).json({ message: "Unauthorized" });
+      return res.status(403).json({ success: false, error: "Unauthorized" });
     }
 
     const { chatId, messageId } = req.body;
@@ -40,7 +39,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ success: false, error: "Message not found" });
     }
 
-    // Ownership check
+    // ✅ Ownership check
     const isDoctor = chat.doctor.toString() === userId;
     const isUser = chat.user.toString() === userId;
 
@@ -48,11 +47,20 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, error: "Not authorized to delete this message" });
     }
 
-    // ✅ Delete properly
+    // ✅ Delete the message
     chat.messages.pull(messageId);
     await chat.save();
 
-    return res.status(200).json({ success: true, message: "Message deleted successfully" });
+    // ✅ Populate doctor & user if needed (so frontend has consistent data)
+    await chat.populate("user", "name");
+    await chat.populate("doctor", "name");
+
+    return res.status(200).json({
+      success: true,
+      message: "Message deleted successfully",
+      data: { chat }, // 👈 return updated chat object
+    });
+
   } catch (error) {
     console.error("Delete message error:", error);
     return res.status(500).json({ success: false, error: "Server error" });

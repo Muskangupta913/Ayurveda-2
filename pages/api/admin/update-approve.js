@@ -12,13 +12,33 @@ export default async function handler(req, res) {
   const { clinicId } = req.body;
 
   try {
-    const clinic = await Clinic.findByIdAndUpdate(clinicId, {
-      isApproved: true,
-      declined: false,
-    });
+    // ✅ Add { new: true } to return the updated document
+    const clinic = await Clinic.findByIdAndUpdate(
+      clinicId,
+      {
+        isApproved: true,
+        declined: false,
+      },
+      { new: true } // ✅ This is the key fix
+    );
 
-    res.status(200).json({ success: true, message: "Clinic approved", clinic });
+    if (!clinic) {
+      return res.status(404).json({
+        success: false,
+        message: "Clinic not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Clinic approved",
+      clinic,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
   }
 }

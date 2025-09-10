@@ -251,18 +251,22 @@ function AdminClinicApproval() {
                 {clinic.name}
               </h3>
               <p className="text-sm text-gray-600">
-                <User size={16} className="inline-block mr-1" /> {clinic.owner?.name}
+                <User size={16} className="inline-block mr-1" />{" "}
+                {clinic.owner?.name}
               </p>
               <p className="text-sm text-gray-500">
-                <Mail size={16} className="inline-block mr-1" /> {clinic.owner?.email}
+                <Mail size={16} className="inline-block mr-1" />{" "}
+                {clinic.owner?.email}
               </p>
               {clinic.owner?.phone && (
                 <p className="text-sm text-gray-500">
-                  <Phone size={16} className="inline-block mr-1" /> {clinic.owner.phone}
+                  <Phone size={16} className="inline-block mr-1" />{" "}
+                  {clinic.owner.phone}
                 </p>
               )}
               <p className="text-sm text-gray-500">
-                <MapPin size={16} className="inline-block mr-1" /> {clinic.address}
+                <MapPin size={16} className="inline-block mr-1" />{" "}
+                {clinic.address}
               </p>
             </div>
           </div>
@@ -271,7 +275,10 @@ function AdminClinicApproval() {
           <div className="mt-2 space-y-2">
             <div className="flex items-center text-sm text-blue-800">
               <MapPin size={16} className="mr-2" />
-              <span className="underline cursor-pointer" onClick={() => handleAddressClick(clinic.address)}>
+              <span
+                className="underline cursor-pointer"
+                onClick={() => handleAddressClick(clinic.address)}
+              >
                 {clinic.address}
               </span>
             </div>
@@ -300,13 +307,20 @@ function AdminClinicApproval() {
               {actions.map((action) => (
                 <button
                   key={action}
-                  onClick={() => setConfirmAction({ show: true, type: action, clinicId: clinic._id })}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${action === "approve"
-                    ? "bg-green-500 hover:bg-green-600 text-white"
-                    : action === "decline"
+                  onClick={() =>
+                    setConfirmAction({
+                      show: true,
+                      type: action,
+                      clinicId: clinic._id,
+                    })
+                  }
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    action === "approve"
+                      ? "bg-green-500 hover:bg-green-600 text-white"
+                      : action === "decline"
                       ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                       : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
+                  }`}
                 >
                   {action.charAt(0).toUpperCase() + action.slice(1)}
                 </button>
@@ -326,13 +340,23 @@ function AdminClinicApproval() {
                 <div className="relative">
                   <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
                     <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clipRule="evenodd" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
                     Available Treatments
                   </h2>
-                  <p className="text-white/90 text-sm">Our comprehensive medical services</p>
+                  <p className="text-white/90 text-sm">
+                    Our comprehensive medical services
+                  </p>
                 </div>
               </div>
 
@@ -351,11 +375,16 @@ function AdminClinicApproval() {
                         </span>
                       </div>
                       <ul className="list-disc pl-6">
-                        {treatment.subTreatments.map((subTreatment, subIndex) => (
-                          <li key={subIndex} className="text-gray-600 text-xs">
-                            {subTreatment.name}
-                          </li>
-                        ))}
+                        {treatment.subTreatments.map(
+                          (subTreatment, subIndex) => (
+                            <li
+                              key={subIndex}
+                              className="text-gray-600 text-xs"
+                            >
+                              {subTreatment.name}
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                   ))}
@@ -470,17 +499,19 @@ function AdminClinicApproval() {
                     );
                     setCurrentPage(1);
                   }}
-                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === tab.key
-                    ? `border-[#2D9AA5] text-[#2D9AA5]`
-                    : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
-                    }`}
+                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
+                    activeTab === tab.key
+                      ? `border-[#2D9AA5] text-[#2D9AA5]`
+                      : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
+                  }`}
                 >
                   {tab.label}
                   <span
-                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${activeTab === tab.key
-                      ? `bg-[#2D9AA5]/10 text-[#2D9AA5]`
-                      : "bg-gray-100 text-black"
-                      }`}
+                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${
+                      activeTab === tab.key
+                        ? `bg-[#2D9AA5]/10 text-[#2D9AA5]`
+                        : "bg-gray-100 text-black"
+                    }`}
                   >
                     {tab.count}
                   </span>
@@ -690,18 +721,19 @@ function AdminClinicApproval() {
                     }
                     setConfirmAction({ show: false, type: "", clinicId: null });
                   }}
-                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${confirmAction.type === "approve"
-                    ? "bg-[#2D9AA5] hover:bg-[#2D9AA5]/90"
-                    : confirmAction.type === "decline"
+                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${
+                    confirmAction.type === "approve"
+                      ? "bg-[#2D9AA5] hover:bg-[#2D9AA5]/90"
+                      : confirmAction.type === "decline"
                       ? "bg-yellow-500 hover:bg-yellow-600"
                       : "bg-red-500 hover:bg-red-600"
-                    }`}
+                  }`}
                 >
                   {confirmAction.type === "approve"
                     ? "Approve"
                     : confirmAction.type === "decline"
-                      ? "Decline"
-                      : "Delete"}
+                    ? "Decline"
+                    : "Delete"}
                 </button>
               </div>
             </div>
