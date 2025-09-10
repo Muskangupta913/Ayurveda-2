@@ -37,10 +37,23 @@ export default async function handler(req, res) {
         };
       }
 
-      const leads = await Lead.find(filter)
-        .populate("treatments", "name")
-        .populate("assignedTo", "name role")
-        .populate("treatments.treatment", "name");
+    const leads = await Lead.find(filter)
+  .populate({
+    path: "treatments.treatment",
+    model: "Treatment",
+    select: "name",
+  })
+  .populate({
+    path: "assignedTo.user", // populate nested user
+    model: "User",
+    select: "name role email",
+  })
+  .populate({
+    path: "notes.addedBy", // optional, to show who added the note
+    model: "User",
+    select: "name",
+  })
+  .lean();
 
       return res.status(200).json({ success: true, leads });
     } catch (err) {
