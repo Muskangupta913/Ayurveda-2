@@ -96,9 +96,16 @@ function DoctorPrescriptionRequests() {
         setShowConfirm(false);
         setDeleteId(null);
       } else {
-        alert(response.data.message || "Failed to delete");
+        // alert(response.data.message || "Failed to delete");
       }
     } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        alert("Prescription request deleted");
+        setRequests((prev) => prev.filter((req) => req._id !== deleteId));
+        setShowConfirm(false);
+        setDeleteId(null);
+        return;
+      }
       console.error("Decline error:", err);
       alert("Something went wrong");
     }

@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import CalculatorGames from '../../components/CalculatorGames'
 import { useAuth } from '../../context/AuthContext';
 import AuthModal from '../../components/AuthModal';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface DoctorProfile {
   _id: string;
@@ -162,7 +163,7 @@ export default function DoctorDetail() {
 
   const handlePrescriptionSubmit = async () => {
     if (!prescriptionForm.healthIssue.trim()) {
-      alert('Please describe your health issue');
+      toast.error('Please describe your health issue', { style: { background: '#2D9AA5', color: '#fff' } });
       return;
     }
 
@@ -180,13 +181,13 @@ export default function DoctorDetail() {
       });
 
       if (response.data.success) {
-        alert('Prescription request sent successfully!');
+        toast.success('Prescription request sent successfully!', { style: { background: '#2D9AA5', color: '#fff' } });
         setShowPrescriptionModal(false);
         setPrescriptionForm({ healthIssue: '', symptoms: '' });
       }
     } catch (error) {
       // @ts-ignore
-      alert(error?.response?.data?.message || 'Failed to send prescription request');
+      toast.error(error?.response?.data?.message || 'Failed to send prescription request', { style: { background: '#2D9AA5', color: '#fff' } });
     } finally {
       setPrescriptionLoading(false);
     }
@@ -222,11 +223,35 @@ export default function DoctorDetail() {
     };
   }, [modalReview]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+useEffect(() => {
+  if (showPrescriptionModal) {
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden"; // lock html too
+  } else {
+    document.body.style.overflow = "auto";
+    document.documentElement.style.overflow = "auto";
+  }
+
+  return () => {
+    document.body.style.overflow = "auto";
+    document.documentElement.style.overflow = "auto";
+  };
+}, [showPrescriptionModal]);
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+          style={{ borderColor: '#2D9AA5', borderTopColor: 'transparent' }}></div>
+        <p className="text-lg font-medium" style={{ color: '#2D9AA5' }}>Loading Profile</p>
+      </div>
+    </div>
+  );
   if (error || !profile) return <div className="min-h-screen flex items-center justify-center">{error || 'Not found'}</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <Toaster position="top-center" reverseOrder={false} />
       <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} onSuccess={handleAuthSuccess} initialMode={authModalMode} />
 
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
@@ -551,64 +576,120 @@ export default function DoctorDetail() {
         </div>
       )}
       {showPrescriptionModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-gray-100 flex flex-col">
-            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white p-6 flex items-center justify-between">
-              <h3 className="text-xl font-semibold">Request Prescription</h3>
-              <button 
-                onClick={() => setShowPrescriptionModal(false)} 
-                className="p-2 hover:bg-white/20 rounded-full transition"
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-gray-200/50 flex flex-col transform animate-slideUp">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-[#2D9AA5] via-[#2D9AA5] to-[#1e6b73] text-white p-6 flex items-center justify-between relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-20"></div>
+              <div className="relative z-10 flex items-center space-x-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2ZM11 6C11 5.44772 10.5523 5 10 5C9.44772 5 9 5.44772 9 6V9H6C5.44772 9 5 9.44772 5 10C5 10.5523 5.44772 11 6 11H9V14C9 14.5523 9.44772 15 10 15C10.5523 15 11 14.5523 11 14V11H14C14.5523 11 15 10.5523 15 10C15 9.44772 14.5523 9 14 9H11V6Z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Request Prescription</h3>
+                  <p className="text-white/80 text-sm">Get medical assistance from our professionals</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPrescriptionModal(false)}
+                className="relative z-10 p-2.5 hover:bg-white/20 rounded-full transition-all duration-200 group"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto">
+
+            {/* Content */}
+            <div className="p-6 overflow-y-hidden flex-1">
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Health Issue *
-                  </label>
-                  <textarea
-                    value={prescriptionForm.healthIssue}
-                    onChange={(e) => setPrescriptionForm(prev => ({ ...prev, healthIssue: e.target.value }))}
-                    placeholder="Describe your health issue in detail..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                    rows={4}
-                    required
-                  />
+                {/* Health Issue Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-[#2D9AA5] rounded-full"></div>
+                    <label className="block text-sm font-semibold text-gray-900">
+                      Health Issue
+                    </label>
+                    <span className="text-red-500 text-sm">*</span>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      value={prescriptionForm.healthIssue}
+                      onChange={(e) => setPrescriptionForm(prev => ({ ...prev, healthIssue: e.target.value }))}
+                      placeholder="Please describe your health concern in detail. Include when it started, severity, and any relevant medical history..."
+                      className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-all duration-200 resize-none text-gray-900 placeholder-gray-500 bg-gray-50/30 hover:bg-white hover:border-gray-300"
+                      rows={4}
+                      required
+                    />
+                    <div className="absolute bottom-3 right-3 text-xs text-gray-400">
+                      {prescriptionForm.healthIssue.length}/500
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Symptoms (Optional)
-                  </label>
-                  <textarea
-                    value={prescriptionForm.symptoms}
-                    onChange={(e) => setPrescriptionForm(prev => ({ ...prev, symptoms: e.target.value }))}
-                    placeholder="Describe any symptoms you're experiencing..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                    rows={3}
-                  />
+
+                {/* Symptoms Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                    <label className="block text-sm font-semibold text-gray-900">
+                      Symptoms
+                    </label>
+                    <span className="text-gray-400 text-sm">(Optional)</span>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      value={prescriptionForm.symptoms}
+                      onChange={(e) => setPrescriptionForm(prev => ({ ...prev, symptoms: e.target.value }))}
+                      placeholder="List any symptoms you're experiencing (e.g., pain level, duration, frequency, triggers)..."
+                      className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-all duration-200 resize-none text-gray-900 placeholder-gray-500 bg-gray-50/30 hover:bg-white hover:border-gray-300"
+                      rows={3}
+                    />
+                    <div className="absolute bottom-3 right-3 text-xs text-gray-400">
+                      {prescriptionForm.symptoms.length}/300
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handlePrescriptionSubmit}
-                    disabled={prescriptionLoading}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-3 px-6 rounded-lg font-medium transition-colors"
-                  >
-                    {prescriptionLoading ? 'Sending...' : 'Send Request'}
-                  </button>
-                  <button
-                    onClick={() => setShowPrescriptionModal(false)}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
+
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-gray-50/80 backdrop-blur-sm border-t border-gray-200 p-6">
+              <div className="flex gap-3">
+                <button
+                  onClick={handlePrescriptionSubmit}
+                  disabled={prescriptionLoading}
+                  className="flex-1 bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] hover:from-[#1e6b73] hover:to-[#2D9AA5] disabled:from-gray-400 disabled:to-gray-400 text-white py-3.5 px-6 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl disabled:shadow-none flex items-center justify-center space-x-2 group"
+                >
+                  {prescriptionLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Sending Request...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Send Request</span>
+                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowPrescriptionModal(false)}
+                  className="px-6 py-3.5 border-2 border-gray-300 text-gray-900 rounded-xl hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 font-semibold"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
       <CalculatorGames />
 
       {/* Modal for full review */}

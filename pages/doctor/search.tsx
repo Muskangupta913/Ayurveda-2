@@ -576,6 +576,7 @@ export default function FindDoctor() {
     }
   };
 
+
   // Update handleSearch to pass query as service
   const handleSearch = async () => {
     if (query.trim() && coords) {
@@ -1591,8 +1592,9 @@ export default function FindDoctor() {
                               src={doctor.photos[0]}
                               alt={doctor.user?.name || "Doctor Image"}
                               fill
-                              className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                              className="object-contain object-center group-hover:scale-105 transition-transform duration-300 bg-white"
                             />
+
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
                               <div className="text-center">
@@ -1611,7 +1613,7 @@ export default function FindDoctor() {
                               </div>
                             </div>
                           )}
-                          
+
                           {/* Overlay badges */}
                           <div className="absolute top-3 right-3 flex flex-col gap-2">
                             {doctor.verified && (
@@ -1634,26 +1636,26 @@ export default function FindDoctor() {
                             <Heart className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
                           </button>
                         </div>
-                         {/* Rating */}
-                          <div className="flex items-center gap-2 mb-2 mt-2 ml-1">
-                            {isLoadingReviews ? (
-                              <span className="text-xs text-gray-500">Loading...</span>
-                            ) : hasRating ? (
-                              <>
-                                <div className="flex">
-                                  {renderStars(doctorReviews[doctor._id].averageRating)}
-                                </div>
-                                <span className="text-sm font-medium text-gray-700">
-                                  {doctorReviews[doctor._id].averageRating.toFixed(1)}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  ({doctorReviews[doctor._id].totalReviews})
-                                </span>
-                              </>
-                            ) : reviewsLoaded ? (
-                              <span className="text-xs text-gray-500">No reviews yet</span>
-                            ) : null}
-                          </div>
+                        {/* Rating */}
+                        <div className="flex items-center gap-2 mb-2 mt-2 ml-1">
+                          {isLoadingReviews ? (
+                            <span className="text-xs text-gray-500">Loading...</span>
+                          ) : hasRating ? (
+                            <>
+                              <div className="flex">
+                                {renderStars(doctorReviews[doctor._id].averageRating)}
+                              </div>
+                              <span className="text-sm font-medium text-gray-700">
+                                {doctorReviews[doctor._id].averageRating.toFixed(1)}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ({doctorReviews[doctor._id].totalReviews})
+                              </span>
+                            </>
+                          ) : reviewsLoaded ? (
+                            <span className="text-xs text-gray-500">No reviews yet</span>
+                          ) : null}
+                        </div>
 
 
                         {/* Doctor Info */}
@@ -1689,7 +1691,7 @@ export default function FindDoctor() {
                             )}
                           </div>
 
-                         
+
 
                           {/* Availability */}
                           <div className="mb-3">
@@ -1778,7 +1780,7 @@ export default function FindDoctor() {
                             </div>
                           )}
 
-                          
+
                         </div>
                       </div>
                     );
@@ -1916,7 +1918,7 @@ export default function FindDoctor() {
 
 
       {/* CSS Styles for Slider Thumb */}
-      <style jsx>{`
+      {/* <style jsx>{`
         .slider-thumb::-webkit-slider-thumb {
           appearance: none;
           height: 16px;
@@ -1937,7 +1939,7 @@ export default function FindDoctor() {
           border: 2px solid #ffffff;
           box-shadow: 0 0 0 1px rgba(45, 154, 165, 0.3);
         }
-      `}</style>
+      `}</style> */}
     </div>
   );
 }
