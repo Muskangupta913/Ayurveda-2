@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import axios, { AxiosResponse } from "axios";
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Message {
   _id: string;
@@ -64,11 +65,74 @@ function UserChat() {
   const [deleteModalMessageId, setDeleteModalMessageId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<number | null>(null);
+  const isFetchingRef = useRef(false);
+  const redirectedRef = useRef(false);
+  const redirectTimeoutRef = useRef<number | null>(null);
 
   // Fetch chat on mount or requestId change
   useEffect(() => {
     if (requestId) fetchChat();
   }, [requestId]);
+
+  // Silent background refresh (no loader)
+  useEffect(() => {
+    if (!requestId) return;
+
+    const poll = async () => {
+      if (isFetchingRef.current || redirectedRef.current) return;
+      if (document.hidden) return;
+      isFetchingRef.current = true;
+      try {
+        const token = localStorage.getItem("token");
+        const response: AxiosResponse<FetchChatResponse> = await axios.get(
+          `/api/chat/get-messages?prescriptionRequestId=${requestId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (response.data.success) {
+          const nextChat = response.data.data.chat;
+          const prevLastId = chat?.messages[chat.messages.length - 1]?._id;
+          const nextLastId = nextChat?.messages[nextChat.messages.length - 1]?._id;
+          const prevLen = chat?.messages.length ?? 0;
+          const nextLen = nextChat?.messages.length ?? 0;
+          if (prevLastId !== nextLastId || prevLen !== nextLen) {
+            setChat(nextChat);
+          }
+        }
+      } catch (err: any) {
+        const status = err?.response?.status;
+        const apiMessage = err?.response?.data?.message;
+        if (!redirectedRef.current && status === 404 && apiMessage === 'Prescription request not found') {
+          redirectedRef.current = true;
+          if (pollingRef.current) window.clearInterval(pollingRef.current);
+          toast.success('Chat completed. Redirecting to dashboard...', { style: { background: '#2D9AA5', color: '#fff' } });
+          redirectTimeoutRef.current = window.setTimeout(() => {
+            router.replace('/user/profile');
+          }, 5000);
+          return;
+        }
+        // silent for other errors
+      } finally {
+        isFetchingRef.current = false;
+      }
+    };
+
+    pollingRef.current = window.setInterval(poll, 3000);
+
+    const onVisibility = () => {
+      if (!document.hidden) {
+        void poll();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (pollingRef.current) window.clearInterval(pollingRef.current);
+      pollingRef.current = null;
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (redirectTimeoutRef.current) window.clearTimeout(redirectTimeoutRef.current);
+    };
+  }, [requestId, chat?.messages.length]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -89,7 +153,17 @@ function UserChat() {
         setChat(chatData);
         setPrescriptionRequest(pr);
       }
-    } catch (err) {
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const apiMessage = err?.response?.data?.message;
+      if (!redirectedRef.current && status === 404 && apiMessage === 'Prescription request not found') {
+        redirectedRef.current = true;
+        toast.success('Chat completed. Redirecting to dashboard...', { style: { background: '#2D9AA5', color: '#fff' } });
+        redirectTimeoutRef.current = window.setTimeout(() => {
+          router.replace('/user/profile');
+        }, 5000);
+        return;
+      }
       console.error("Failed to fetch chat:", err);
     } finally {
       setLoading(false);
@@ -189,6 +263,7 @@ function UserChat() {
 
   return (
     <div className="flex h-screen bg-[#19242d] overflow-hidden">
+      <Toaster position="top-center" />
       {/* Left Sidebar */}
       <div className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative z-30 w-80 lg:w-96 bg-gradient-to-b from-[#19242d] to-[#1a2831] transition-transform duration-300 ease-in-out`}>
         {/* Mobile close button */}
@@ -337,8 +412,8 @@ function UserChat() {
                     {chat ? `Dr. ${chat.doctor?.name || "Unknown"}` : "ZEVA Chat"}
                   </h2>
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-gray-600">Online</span>
+                    {/* <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div> */}
+                    {/* <span className="text-sm text-gray-600">Online</span> */}
                   </div>
                 </div>
               </div>
@@ -498,7 +573,7 @@ function UserChat() {
 
       {/* Delete Confirmation Modal */}
       {deleteModalMessageId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl transform transition-all">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -92,6 +92,9 @@ function DoctorPrescriptionRequests() {
       );
 
       if (response.data.success) {
+        if (selectedRequestId === deleteId) {
+          setSelectedRequestId(null);
+        }
         setRequests((prev) => prev.filter((req) => req._id !== deleteId));
         setShowConfirm(false);
         setDeleteId(null);
@@ -101,6 +104,9 @@ function DoctorPrescriptionRequests() {
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         alert("Prescription request deleted");
+        if (selectedRequestId === deleteId) {
+          setSelectedRequestId(null);
+        }
         setRequests((prev) => prev.filter((req) => req._id !== deleteId));
         setShowConfirm(false);
         setDeleteId(null);

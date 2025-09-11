@@ -26,7 +26,7 @@ export interface Game {
 
 export const calculators: Calculator[] = [
   {
-    id: 'pregnancyandovulation',
+    id: 'pregnancy-and-ovulation/pregnancy&ovulation',
     title: 'Pregnancy & Ovulation Calculator',
     description: ' Free Pregnancy Calculator & Ovulation Calendar to track your cycle',
     icon: Baby,

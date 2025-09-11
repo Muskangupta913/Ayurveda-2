@@ -8,7 +8,6 @@ import {
   ChevronLeft, 
   Send, 
   Paperclip, 
-  MoreVertical, 
   FileText 
 } from 'lucide-react';
 
@@ -248,10 +247,10 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
 
   if (initialLoading) {
     return (
-      <div className={`${isEmbedded ? 'h-full' : 'min-h-screen'} flex items-center justify-center bg-[#0C1317] overflow-x-hidden`}>
+      <div className={`${isEmbedded ? 'h-full' : 'min-h-screen'} flex items-center justify-center bg-white overflow-x-hidden`}>
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-[#2D9AA5] border-t-transparent rounded-full animate-spin mb-4"></div>
-          <div className="text-white text-lg">Loading ZEVA Chat...</div>
+          <div className="w-16 h-16 border-4 border-gray-300 border-t-[#2D9AA5] rounded-full animate-spin mb-4"></div>
+          <div className="text-gray-800 text-lg">Loading ZEVA Chat...</div>
         </div>
       </div>
     );
@@ -260,7 +259,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
   // Allow new chat creation: if no chat yet, show UI with prescriptionRequest info and input
 if (!chat) {
   return (
-    <div className={`${isEmbedded ? 'h-full' : 'min-h-screen'} flex flex-col bg-gradient-to-b from-[#0B141A] to-[#1A252E] overflow-x-hidden`}>
+    <div className={`${isEmbedded ? 'h-full' : 'min-h-screen'} flex flex-col bg-gradient-to-b from-white to-gray-50 overflow-x-hidden`}>
       {/* Header - Professional Design */}
       <div className="bg-[#2D9AA5] shadow-xl border-b border-[#2D9AA5]/30">
         <div className="px-3 sm:px-4 py-2.5 sm:py-3">
@@ -300,7 +299,7 @@ if (!chat) {
 
       {/* Patient Info Banner */}
       {prescriptionRequest && (
-        <div className="bg-[#1A252E] border-b border-gray-700/40">
+        <div className="bg-white border-b border-gray-200">
           <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-4">
             <div className="bg-gradient-to-r from-[#2D9AA5]/15 to-[#2D9AA5]/10 border-l-4 border-[#2D9AA5] rounded-r-2xl px-5 py-4 backdrop-blur-sm">
               <div className="flex items-center space-x-4">
@@ -310,12 +309,12 @@ if (!chat) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center space-x-2">
                       <span className="text-gray-400 font-medium">Health Issue:</span>
-                      <span className="text-white font-medium bg-[#2D9AA5]/20 px-3 py-1 rounded-lg">{prescriptionRequest.healthIssue}</span>
+                      <span className="text-gray-900 font-medium bg-[#2D9AA5]/10 px-3 py-1 rounded-lg">{prescriptionRequest.healthIssue}</span>
                     </div>
                     {prescriptionRequest.symptoms && (
                       <div className="flex items-center space-x-2">
                         <span className="text-gray-400 font-medium">Symptoms:</span>
-                        <span className="text-white font-medium bg-[#2D9AA5]/20 px-3 py-1 rounded-lg">{prescriptionRequest.symptoms}</span>
+                        <span className="text-gray-900 font-medium bg-[#2D9AA5]/10 px-3 py-1 rounded-lg">{prescriptionRequest.symptoms}</span>
                       </div>
                     )}
                   </div>
@@ -327,7 +326,7 @@ if (!chat) {
       )}
 
       {/* Empty Chat State */}
-      <div className="flex-1 bg-gradient-to-br from-[#0B141A] via-[#1A252E] to-[#0B141A] flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="flex-1 bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center p-6 relative overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-20 left-20 w-40 h-40 bg-[#2D9AA5] rounded-full blur-3xl animate-pulse"></div>
@@ -345,8 +344,8 @@ if (!chat) {
               <span className="text-white text-xs">+</span>
             </div>
           </div>
-          <h3 className="text-3xl font-bold mb-4 text-white">Welcome to ZEVA Chat Pannel</h3>
-          <p className="text-gray-300 text-lg leading-relaxed px-6">
+          <h3 className="text-3xl font-bold mb-4 text-gray-900">Welcome to ZEVA Chat Pannel</h3>
+          <p className="text-gray-600 text-lg leading-relaxed px-6">
             Your professional medical consultation platform. Connect with patients and provide expert healthcare guidance through our secure chat system.
           </p>
           <div className="mt-8 flex items-center justify-center space-x-2 text-[#2D9AA5]">
@@ -359,17 +358,17 @@ if (!chat) {
       </div>
 
       {/* Input Area */}
-      <div className="bg-[#1A252E] px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-700/40 shadow-2xl pb-[env(safe-area-inset-bottom)]">
+      <div className="bg-white px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 shadow-2xl pb-[env(safe-area-inset-bottom)]">
         <div className="w-full max-w-6xl mx-auto">
           <div className="flex items-center space-x-2">
-            <div className="flex-1 bg-[#2A3B47] rounded-[16px] px-3 py-2 flex items-center space-x-2 shadow-xl border border-gray-600/40 backdrop-blur-sm">
+            <div className="flex-1 bg-gray-100 rounded-[16px] px-3 py-2 flex items-center space-x-2 shadow-xl border border-gray-300 backdrop-blur-sm">
               <input
                 type="text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                 placeholder="Type your message here..."
-                className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none text-sm font-medium"
+                className="flex-1 bg-transparent text-gray-900 placeholder-gray-500 focus:outline-none text-sm font-medium"
                 disabled={sending}
               />
               <button className="text-gray-400 hover:text-[#2D9AA5] transition-all duration-200">
@@ -617,7 +616,7 @@ Example:
 }
 
 return (
-  <div className={`${isEmbedded ? 'h-full' : 'min-h-screen'} flex flex-col bg-gradient-to-b from-[#0B141A] to-[#1A252E] overflow-x-hidden`}>
+  <div className={`${isEmbedded ? 'h-full' : 'min-h-screen'} flex flex-col bg-gradient-to-b from-white to-gray-50 overflow-x-hidden`}>
     {/* Header - Professional Design */}
     <div className="bg-[#2D9AA5] shadow-xl border-b border-[#2D9AA5]/30">
       <div className="px-3 sm:px-4 py-2.5 sm:py-3">
@@ -661,7 +660,7 @@ return (
     </div>
 
     {/* Messages Area */}
-    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gradient-to-br from-[#0B141A] via-[#1A252E] to-[#0B141A] relative">
+    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-white relative">
       {/* Background Elements */}
       <div className="absolute inset-0 opacity-3">
         <div className="absolute top-32 left-32 w-40 h-40 bg-[#2D9AA5] rounded-full blur-3xl animate-pulse"></div>
@@ -679,8 +678,8 @@ return (
               <div
                 className={`relative group w-fit max-w-[95vw] sm:max-w-[88%] md:max-w-sm lg:max-w-md xl:max-w-lg ${
                   msg.senderRole === "doctor"
-                    ? "bg-gradient-to-br from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-[20px] rounded-br-[8px] shadow-xl"
-                    : "bg-[#1A252E] text-gray-100 border border-gray-700/40 rounded-[20px] rounded-bl-[8px] shadow-xl backdrop-blur-sm"
+                    ? "bg-white text-gray-900 border border-gray-200 rounded-[20px] rounded-br-[8px] shadow-xl backdrop-blur-sm"
+                    : "bg-gradient-to-br from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-[20px] rounded-bl-[8px] shadow-xl"
                 } px-3 sm:px-4 py-2 sm:py-3 break-words`}
               >
                 {/* Message Content */}
@@ -698,7 +697,7 @@ return (
                       </pre>
                     </div>
                     <div className={`flex items-center justify-end space-x-2 mt-2 ${
-                      msg.senderRole === "doctor" ? "text-white/70" : "text-gray-400"
+                      msg.senderRole === "doctor" ? "text-gray-500" : "text-white/70"
                     } text-xs whitespace-nowrap`}>
                       <span className="font-semibold">{formatTime(msg.timestamp)}</span>
                       {msg.senderRole === "doctor" && (
@@ -717,7 +716,7 @@ return (
                   <div className="flex items-end gap-2">
                     <div className="text-sm leading-snug font-medium break-words">{msg.content}</div>
                     <div className={`flex items-center gap-1 ${
-                      msg.senderRole === "doctor" ? "text-white/70" : "text-gray-400"
+                      msg.senderRole === "doctor" ? "text-gray-500" : "text-white/70"
                     } text-xs whitespace-nowrap`}>
                       <span className="font-semibold">{formatTime(msg.timestamp)}</span>
                       {msg.senderRole === "doctor" && (
@@ -752,17 +751,17 @@ return (
     </div>
 
     {/* Input Area - Enhanced Design */}
-    <div className="bg-[#1A252E] px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-700/40 shadow-2xl pb-[env(safe-area-inset-bottom)]">
+    <div className="bg-white px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 shadow-2xl pb-[env(safe-area-inset-bottom)]">
       <div className="w-full max-w-6xl mx-auto">
         <div className="flex items-center space-x-2">
-          <div className="flex-1 bg-[#2A3B47] rounded-[16px] px-3 sm:px-4 py-2 sm:py-2.5 flex items-center space-x-2 sm:space-x-2.5 shadow-xl border border-gray-600/40 backdrop-blur-sm">
+          <div className="flex-1 bg-gray-100 rounded-[16px] px-3 sm:px-4 py-2 sm:py-2.5 flex items-center space-x-2 sm:space-x-2.5 shadow-xl border border-gray-300 backdrop-blur-sm">
             <input
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Type your message here..."
-              className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none text-sm sm:text-sm font-medium"
+              className="flex-1 bg-transparent text-gray-900 placeholder-gray-500 focus:outline-none text-sm sm:text-sm font-medium"
               disabled={sending}
             />
             <button
