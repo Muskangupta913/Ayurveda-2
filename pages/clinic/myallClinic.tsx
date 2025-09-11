@@ -29,6 +29,7 @@ interface Clinic {
     subTreatments: Array<{
       name: string;
       slug: string;
+      price?: number;
     }>;
   }>;
   servicesName: string[];
@@ -46,6 +47,7 @@ interface Treatment {
   subcategories: Array<{
     name: string;
     slug: string;
+    price?: number;
   }>;
 }
 
@@ -68,36 +70,36 @@ const Header = ({
   isEditing: boolean;
 }) => (
   <header className="bg-white border-b border-gray-100">
-  <div className="max-w-6xl mx-auto px-6 py-6">
-    <div className="flex items-center justify-between">
-      {/* Left side - Brand */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center">
-          <Building2 className="w-5 h-5 text-white" />
+    <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="flex items-center justify-between">
+        {/* Left side - Brand */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              Health Center Management
+            </h1>
+            <p className="text-sm text-gray-500">
+              Manage your Health Center with ease
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">
-            Health Center Management
-          </h1>
-          <p className="text-sm text-gray-500">
-            Manage your Health Center with ease
-          </p>
-        </div>
-      </div>
 
-      {/* Right side - Edit Button */}
-      {hasClinic && !isEditing && (
-        <button
-          onClick={onEditClick}
-          className="flex items-center gap-2 px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#247a83] transition-colors font-medium"
-        >
-          <Edit3 className="w-4 h-4" />
-          <span>Edit</span>
-        </button>
-      )}
+        {/* Right side - Edit Button */}
+        {hasClinic && !isEditing && (
+          <button
+            onClick={onEditClick}
+            className="flex items-center gap-2 px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#247a83] transition-colors font-medium"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Edit</span>
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-</header>
+  </header>
 );
 
 interface FormInputProps {
@@ -212,6 +214,7 @@ interface TreatmentManagerProps {
     subTreatments: Array<{
       name: string;
       slug: string;
+      price?: number;
     }>;
   }>;
   newItem: string;
@@ -241,6 +244,8 @@ const TreatmentManager = ({
   const [selectedMainTreatment, setSelectedMainTreatment] =
     useState<string>("");
   const [customSubTreatment, setCustomSubTreatment] = useState<string>("");
+  const [customSubTreatmentPrice, setCustomSubTreatmentPrice] =
+    useState<string>("");
   const [showSubTreatmentInput, setShowSubTreatmentInput] = useState<
     number | null
   >(null);
@@ -253,6 +258,7 @@ const TreatmentManager = ({
       const newSubTreatment = {
         name: customSubTreatment.trim(),
         slug: customSubTreatment.trim().toLowerCase().replace(/\s+/g, "-"),
+        price: Number(customSubTreatmentPrice) || 0,
       };
 
       // Try to save to database
@@ -287,6 +293,7 @@ const TreatmentManager = ({
 
       onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
       setCustomSubTreatment("");
+      setCustomSubTreatmentPrice("");
       setShowSubTreatmentInput(null);
       setShowCustomSubTreatmentInput(null);
     }
@@ -411,7 +418,11 @@ const TreatmentManager = ({
           (
             item: {
               mainTreatment: string;
-              subTreatments?: Array<{ name: string; slug: string }>;
+              subTreatments?: Array<{
+                name: string;
+                slug: string;
+                price?: number;
+              }>;
             },
             index: number
           ) => {
@@ -498,6 +509,22 @@ const TreatmentManager = ({
                               }
                             }}
                           />
+                          <input
+                            type="number"
+                            min="0"
+                            value={customSubTreatmentPrice}
+                            onChange={(e) => {
+                              setCustomSubTreatmentPrice(e.target.value);
+                            }}
+                            className="w-32 px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] text-sm placeholder-gray-400 transition-all duration-200"
+                            placeholder="Price"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddSubTreatment(index);
+                              }
+                            }}
+                          />
                           <button
                             onClick={() => handleAddSubTreatment(index)}
                             className="px-4 py-2 bg-[#2D9AA5] text-white rounded-lg text-sm font-medium hover:bg-[#238891] active:bg-[#1f7177] transition-all duration-200 shadow-sm"
@@ -513,6 +540,7 @@ const TreatmentManager = ({
                             setShowSubTreatmentInput(null);
                             setShowCustomSubTreatmentInput(null);
                             setCustomSubTreatment("");
+                            setCustomSubTreatmentPrice("");
                           }}
                           className="px-4 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-300 active:bg-gray-400 transition-all duration-200"
                         >
@@ -530,7 +558,28 @@ const TreatmentManager = ({
                           key={subIndex}
                           className="inline-flex items-center gap-2 px-3 py-2 bg-[#2D9AA5]/10 text-[#2D9AA5] text-sm rounded-full border border-[#2D9AA5]/20 hover:bg-[#2D9AA5]/20 transition-all duration-200"
                         >
-                          <span className="font-medium">{subTreatment.name}</span>
+                          <span className="font-medium">
+                            {subTreatment.name}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={subTreatment.price ?? 0}
+                            onChange={(e) => {
+                              const updatedSubTreatments =
+                                item.subTreatments.map((st, i) =>
+                                  i === subIndex
+                                    ? { ...st, price: Number(e.target.value) }
+                                    : st
+                                );
+                              onUpdateTreatment(index, {
+                                ...item,
+                                subTreatments: updatedSubTreatments,
+                              });
+                            }}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-xs ml-2"
+                            placeholder="Price"
+                          />
                           <button
                             onClick={() =>
                               handleRemoveSubTreatment(index, subIndex)
@@ -573,7 +622,9 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
         />
       ) : (
         <div className="w-full h-auto min-h-48 sm:min-h-56 flex items-center justify-center bg-gray-50">
-          <span className="text-gray-400 text-sm">Upload Health Center Photo</span>
+          <span className="text-gray-400 text-sm">
+            Upload Health Center Photo
+          </span>
         </div>
       )}
 
@@ -658,18 +709,29 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
                 <span className="px-2 py-1 bg-[#2D9AA5] text-white rounded text-xs font-medium">
                   {treatment.mainTreatment}
                 </span>
-                {treatment.subTreatments && treatment.subTreatments.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {treatment.subTreatments.map((subTreatment, subIdx) => (
-                      <span
-                        key={subIdx}
-                        className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
-                      >
-                        {subTreatment.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {treatment.subTreatments &&
+                  treatment.subTreatments.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {treatment.subTreatments.map((subTreatment, subIdx) => (
+                        <span
+                          key={subIdx}
+                          className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                        >
+                          {subTreatment.name}
+                          {typeof subTreatment.price === "number" &&
+                            subTreatment.price > 0 && (
+                              <>
+                                {" "}
+                                -{" "}
+                                <span className="text-[#2D9AA5] font-semibold">
+                                  ₹{subTreatment.price}
+                                </span>
+                              </>
+                            )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
               </div>
             ))}
           </div>
@@ -681,7 +743,8 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <Calendar className="w-4 h-4" />
           <span>
-            Established {new Date(clinic.createdAt).toLocaleDateString("en-US", {
+            Established{" "}
+            {new Date(clinic.createdAt).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
             })}
