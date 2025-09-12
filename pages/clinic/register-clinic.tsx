@@ -41,29 +41,37 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose }) => {
     router.push("/"); // Navigate to home (change path if needed)
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-bounce">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🎉</span>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            Registration Complete!
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Your Health Center has been successfully registered
-          </p>
-          <button
-            onClick={handleRedirect}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Home
-          </button>
+  useEffect(() => {
+  document.body.style.overflow = 'hidden';
+  return () => {
+    document.body.style.overflow = 'unset';
+  };
+}, []);
+
+return (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
+    <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all duration-500 ease-out">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transform transition-transform duration-300 hover:scale-110" style={{backgroundColor: '#2D9AA5'}}>
+          <span className="text-3xl text-white">🎉</span>
         </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2 transition-opacity duration-700">
+          Registration Complete!
+        </h3>
+        <p className="text-gray-600 mb-6 transition-opacity duration-700 delay-100">
+          Your Health Center has been registered. Pending approval from ZEVA
+        </p>
+        <button
+          onClick={handleRedirect}
+          className="text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+          style={{background: `linear-gradient(to right, #2D9AA5, #258A94)`}}
+        >
+          Continue to ZEVA
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 interface ToastProps {
@@ -171,7 +179,8 @@ const RegisterClinic: React.FC & {
     (TreatmentType | string)[]
   >([]);
 
-  const [newTreatment, setNewTreatment] = useState<string>("");
+  const [otherTreatments, setOtherTreatments] = useState<string[]>([]);
+  const [newOther, setNewOther] = useState<string>("");
   const [clinicPhoto, setClinicPhoto] = useState<File | null>(null);
   const [licenseDoc, setLicenseDoc] = useState<File | null>(null);
   const [status, setStatus] = useState<string>("");
@@ -195,8 +204,23 @@ const RegisterClinic: React.FC & {
   const validateForm = (): boolean => {
     const newErrors: Errors = {};
     if (!form.name.trim()) newErrors.name = "Clinic name is required";
-    if (selectedTreatments.length === 0)
+    {
+      const resolvedSelected = selectedTreatments.includes("other")
+        ? [
+            ...selectedTreatments.filter((t) => t !== "other"),
+            ...Array.from(
+              new Set(
+                otherTreatments
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0)
+                  .slice(0, 5)
+              )
+            ),
+          ]
+        : selectedTreatments;
+      if (resolvedSelected.length === 0)
       newErrors.treatments = "Please select at least one service";
+    }
     if (!form.address.trim()) newErrors.address = "Address is required";
     if (form.latitude === 0 && form.longitude === 0)
       newErrors.location = "Please set location on map";
@@ -332,24 +356,31 @@ const RegisterClinic: React.FC & {
     if (!isValid) return;
     setStatus("✅ All details are valid. Submitting...");
 
-    if (selectedTreatments.includes("other") && newTreatment.trim()) {
+    if (selectedTreatments.includes("other")) {
+      const uniqueCustoms = Array.from(
+        new Set(
+          otherTreatments
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0)
+            .slice(0, 5)
+        )
+      );
+      for (const custom of uniqueCustoms) {
       try {
         await axios.post("/api/clinics/treatments", {
-          treatment_name: newTreatment.trim(),
+            treatment_name: custom,
         });
-        const updatedTreatments = selectedTreatments.filter(
-          (t) => t !== "other"
-        );
-        updatedTreatments.push(newTreatment.trim());
-        setSelectedTreatments(updatedTreatments);
       } catch (error: unknown) {
-        if (axios.isAxiosError(error) && error.response?.status === 409) {
-          const updatedTreatments = selectedTreatments.filter(
-            (t) => t !== "other"
-          );
-          updatedTreatments.push(newTreatment.trim());
-          setSelectedTreatments(updatedTreatments);
+          if (!(axios.isAxiosError(error) && error.response?.status === 409)) {
+            // Ignore non-409 errors for custom additions so registration can proceed
+          }
         }
+      }
+      if (uniqueCustoms.length > 0) {
+        const updatedTreatments = selectedTreatments
+          .filter((t) => t !== "other")
+          .concat(uniqueCustoms);
+        setSelectedTreatments(updatedTreatments);
       }
     }
 
@@ -384,13 +415,22 @@ const RegisterClinic: React.FC & {
     Object.entries(form).forEach(([k, v]) => data.append(k, v.toString()));
 
     // Convert treatments to the required format with mainTreatment and mainTreatmentSlug
-    const finalTreatments =
-      selectedTreatments.includes("other") && newTreatment.trim()
-        ? [
-            ...selectedTreatments.filter((t) => t !== "other"),
-            newTreatment.trim(),
-          ]
-        : selectedTreatments;
+    const finalTreatments = (() => {
+      if (selectedTreatments.includes("other")) {
+        const customs = Array.from(
+          new Set(
+            otherTreatments
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0)
+              .slice(0, 5)
+          )
+        );
+        return customs.length > 0
+          ? [...selectedTreatments.filter((t) => t !== "other"), ...customs]
+          : selectedTreatments.filter((t) => t !== "other");
+      }
+      return selectedTreatments;
+    })();
 
     // Create treatment objects with mainTreatment and mainTreatmentSlug
     const treatmentObjects = finalTreatments.map((treatment) => {
@@ -445,6 +485,10 @@ const RegisterClinic: React.FC & {
           return true;
         })
       );
+      if (typeof treatment === "string" && treatment === "other") {
+        setOtherTreatments([]);
+        setNewOther("");
+      }
     } else {
       setSelectedTreatments((prev) => [...prev, treatment]);
     }
@@ -452,6 +496,15 @@ const RegisterClinic: React.FC & {
     // Close dropdown if "other" is selected
     if (typeof treatment === "string" && treatment === "other") {
       setIsDropdownOpen(false);
+      // start with empty input for chip adder
+      setNewOther("");
+    }
+    if (
+      (typeof treatment === "string" && treatment === "other") === false &&
+      typeof treatment === "string" &&
+      treatment !== "other"
+    ) {
+      // no-op
     }
   };
 
@@ -479,6 +532,30 @@ const RegisterClinic: React.FC & {
       }
       setLicenseDoc(file);
     }
+  };
+
+  // Optional helper to add treatments via API as per requested snippet
+  const handleAddTreatment = async () => {
+    if (selectedTreatments.length === 0) {
+      setErrors({ ...errors, treatments: "Please select at least one treatment" });
+      return;
+    }
+
+    const mainTreatments = selectedTreatments.filter(
+      (t) => typeof t === "object" && (t as TreatmentType).slug
+    ) as TreatmentType[];
+
+    const payload = {
+      treatments: mainTreatments,
+      otherTreatment: otherTreatments, // send array as requested
+      // clinicId can be added here if available in scope
+    };
+
+    await fetch("/api/clinics/add-treatment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
   };
 
   useEffect(() => {
@@ -792,12 +869,47 @@ const RegisterClinic: React.FC & {
                         </p>
                       )}
                       {selectedTreatments.includes("other") && (
-                        <input
-                          placeholder="Specify other treatment"
-                          className="text-black mt-3 w-full px-4 py-3 border-2 border-[#2D9AA5]/30 rounded-xl focus:border-[#2D9AA5] focus:outline-none"
-                          value={newTreatment}
-                          onChange={(e) => setNewTreatment(e.target.value)}
-                        />
+                        <div className="mt-3">
+                          {otherTreatments.map((t, index) => (
+                            <div key={index} className="flex items-center gap-2 mt-2">
+                              <span className="px-2 py-1 bg-[#2D9AA5]/10 text-[#2D9AA5] rounded-lg">{t}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...otherTreatments];
+                                  updated.splice(index, 1);
+                                  setOtherTreatments(updated);
+                                }}
+                                className="px-2 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          {otherTreatments.length < 5 && (
+                            <div className="flex mt-2 gap-2">
+                              <input
+                                placeholder="Add other treatment"
+                                value={newOther}
+                                onChange={(e) => setNewOther(e.target.value)}
+                                className="text-black px-4 py-2 border-2 border-[#2D9AA5]/30 rounded-xl flex-1 focus:border-[#2D9AA5] focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const trimmed = newOther.trim();
+                                  if (!trimmed) return;
+                                  if (otherTreatments.length >= 5) return;
+                                  setOtherTreatments([...otherTreatments, trimmed]);
+                                  setNewOther("");
+                                }}
+                                className="px-4 py-2 bg-[#2D9AA5] text-white rounded-xl"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
 

@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import parse from "html-react-parser";
 
 type Blog = {
   _id: string;
@@ -16,6 +15,7 @@ type Blog = {
 export default function BlogList() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
@@ -34,6 +34,16 @@ export default function BlogList() {
     if (contentImage) return { src: contentImage, isPlaceholder: false };
 
     return { src: "", isPlaceholder: true };
+  };
+
+  // Function to limit content to 20 words
+  const limitContentToWords = (htmlContent: string, wordLimit: number = 20): string => {
+    // Remove HTML tags to get plain text
+    const textContent = htmlContent.replace(/<[^>]*>/g, '');
+    // Split into words and limit
+    const words = textContent.trim().split(/\s+/);
+    const limitedWords = words.slice(0, wordLimit);
+    return limitedWords.join(' ') + (words.length > wordLimit ? '...' : '');
   };
 
   // Navigation functions
@@ -79,6 +89,8 @@ export default function BlogList() {
         }
       } catch {
         setError("Network error");
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchBlogs();
@@ -92,34 +104,49 @@ export default function BlogList() {
     );
   }
 
-  if (!blogs.length) {
+  if (isLoading) {
     return (
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-6">
-          <div className="h-8 bg-gray-200 rounded w-32 animate-pulse"></div>
-          <div className="h-10 bg-gray-200 rounded-lg w-36 animate-pulse"></div>
+      <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-5 w-5 rounded-full border-2 border-gray-300 border-t-[#2D9AA5] animate-spin"></div>
+          <p className="text-gray-700 text-sm font-medium">Loading blogs...</p>
         </div>
-        <div className="flex space-x-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+          <div className="h-6 sm:h-8 bg-gray-200 rounded w-24 sm:w-32 animate-pulse"></div>
+          <div className="h-8 sm:h-10 bg-gray-200 rounded-lg w-28 sm:w-36 animate-pulse"></div>
+        </div>
+        <div className="flex space-x-3 sm:space-x-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="min-w-[320px] bg-gray-100 rounded-xl h-[220px] animate-pulse"></div>
+            <div key={i} className="min-w-[240px] sm:min-w-[280px] bg-gray-100 rounded-xl h-[180px] sm:h-[200px] animate-pulse"></div>
           ))}
         </div>
       </div>
     );
   }
 
+  if (!blogs.length) {
+    return (
+      <div className="w-full px-2 sm:px-4 lg:px-6 py-6">
+        <div className="bg-white border border-gray-100 rounded-xl p-6 text-center shadow-sm">
+          <p className="text-gray-700 font-medium">No blogs found.</p>
+          <p className="text-gray-500 text-sm mt-1">Please check back later.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full px-4 py-6">
+    <div className="w-full px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-1">Latest Blogs</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">Latest Blogs</h2>
           <p className="text-gray-600 text-sm">Discover insights and stories from our community</p>
         </div>
         <Link href="/blogs/viewBlogs">
-          <button className="bg-[#2D9AA5] hover:bg-[#237a82] text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center space-x-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+          <button className="bg-[#2D9AA5] hover:bg-[#237a82] text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center space-x-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
             <span>View All Blogs</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -131,11 +158,11 @@ export default function BlogList() {
         {/* Left Arrow */}
         <button
           onClick={slideLeft}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 shadow-lg hover:shadow-xl rounded-full p-3 transition-all duration-300 border border-gray-200 group"
+          className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 shadow-lg hover:shadow-xl rounded-full p-2 sm:p-3 transition-all duration-300 border border-gray-200 group"
           disabled={currentSlide === 0}
         >
           <svg
-            className={`w-5 h-5 transition-colors duration-300 ${currentSlide === 0
+            className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300 ${currentSlide === 0
                 ? 'text-gray-400'
                 : 'text-gray-600 group-hover:text-[#2D9AA5]'
               }`}
@@ -150,10 +177,10 @@ export default function BlogList() {
         {/* Right Arrow */}
         <button
           onClick={slideRight}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 shadow-lg hover:shadow-xl rounded-full p-3 transition-all duration-300 border border-gray-200 group"
+          className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-gray-50 shadow-lg hover:shadow-xl rounded-full p-2 sm:p-3 transition-all duration-300 border border-gray-200 group"
         >
           <svg
-            className="w-5 h-5 text-gray-600 group-hover:text-[#2D9AA5] transition-colors duration-300"
+            className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-[#2D9AA5] transition-colors duration-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -164,7 +191,7 @@ export default function BlogList() {
 
         <div
           ref={sliderRef}
-          className="flex overflow-x-hidden space-x-6 scroll-smooth pb-6 mx-12"
+          className="flex overflow-x-hidden space-x-3 sm:space-x-6 scroll-smooth pb-6 mx-8 sm:mx-12"
           style={{ scrollSnapType: "x mandatory" }}
         >
           {blogs.map((blog, index) => {
@@ -176,14 +203,14 @@ export default function BlogList() {
             return (
               <div
                 key={blog._id}
-                className="w-[280px] sm:w-[320px] lg:w-[360px] group flex-shrink-0"
+                className="w-[240px] xs:w-[260px] sm:w-[280px] md:w-[300px] lg:w-[320px] xl:w-[340px] group flex-shrink-0"
                 style={{ scrollSnapAlign: "start" }}
               >
                 <Link href={`/blogs/${blog._id}`}>
-                  <div className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-50 group-hover:border-[#2D9AA5]/30 h-[400px] w-full flex flex-col">
+                  <div className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-50 group-hover:border-[#2D9AA5]/30 h-[320px] sm:h-[360px] w-full flex flex-col">
 
                     {/* Image section */}
-                    <div className="h-48 relative overflow-hidden flex-shrink-0">
+                    <div className="h-32 sm:h-40 relative overflow-hidden flex-shrink-0">
                       {imageInfo.isPlaceholder ? (
                         <div className="w-full h-full rounded-t-2xl shadow-lg transition-transform duration-300 group-hover:scale-105 bg-gradient-to-br from-teal-400 via-teal-500 to-teal-600 flex items-center justify-center relative overflow-hidden">
                           <div className="absolute inset-0 opacity-10">
@@ -227,34 +254,27 @@ export default function BlogList() {
                       </div>
                     </div>
 
-                    <div className="p-5 flex flex-col flex-1">
-                      <h3 className="text-base font-bold text-gray-800 leading-snug line-clamp-3 group-hover:text-[#2D9AA5] transition-colors duration-300 mb-3">
+                    <div className="p-3 sm:p-4 flex flex-col flex-1">
+                      <h3 className="text-sm sm:text-base font-bold text-gray-800 leading-snug line-clamp-2 group-hover:text-[#2D9AA5] transition-colors duration-300 mb-2">
                         {blog.title}
                       </h3>
 
-                      <div className="text-sm text-gray-600 leading-relaxed line-clamp-3 mb-4 flex-1">
-                        {parse(paragraphs, {
-                          replace: (domNode: any) => {
-                            if (domNode.type === "tag" && ["img", "video", "iframe"].includes(domNode.name)) {
-                              return <></>; // remove the node completely
-                            }
-                          },
-                        })}
+                      <div className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-2 flex-1 break-words overflow-hidden">
+                        {limitContentToWords(blog.content, 15)}
                       </div>
 
-
-                      <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-                        <div className="flex items-center text-xs text-gray-500 space-x-2">
-                          <span className="font-medium text-gray-700">{blog.postedBy?.name || "Unknown Author"}</span>
-                          <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                          <span>
+                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
+                        <div className="flex items-center text-xs text-gray-500 space-x-1 sm:space-x-2">
+                          <span className="font-medium text-gray-700 truncate max-w-[80px] sm:max-w-none">{blog.postedBy?.name || "Unknown Author"}</span>
+                          <span className="w-1 h-1 bg-gray-300 rounded-full flex-shrink-0"></span>
+                          <span className="flex-shrink-0">
                             {new Date(blog.createdAt).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric'
                             })}
                           </span>
                         </div>
-                        <div className="text-xs text-[#2D9AA5] font-semibold">
+                        <div className="text-xs text-[#2D9AA5] font-semibold flex-shrink-0">
                           Read More →
                         </div>
                       </div>
@@ -267,12 +287,12 @@ export default function BlogList() {
         </div>
 
         {/* Dynamic Slide Indicators */}
-        <div className="flex justify-center mt-6 space-x-2">
+        <div className="flex justify-center mt-4 sm:mt-6 space-x-2">
           {blogs.map((_, index) => (
             <div
               key={index}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentSlide
-                  ? 'bg-[#2D9AA5] w-6'
+                  ? 'bg-[#2D9AA5] w-4 sm:w-6'
                   : 'bg-gray-300'
                 }`}
             ></div>

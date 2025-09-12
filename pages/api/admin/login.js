@@ -34,6 +34,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: Not an admin' });
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       { id: user._id, role: user.role },

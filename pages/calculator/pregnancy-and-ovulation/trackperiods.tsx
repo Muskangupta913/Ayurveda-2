@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, FileText, Download, Upload, Settings, Plus, ChevronLeft, ChevronRight, Heart, Thermometer, Pill, Activity, Moon, Sun, Zap, User, BarChart3, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { Droplet,Calendar, FileText, Download, Upload, Settings, Plus, ChevronLeft, ChevronRight, Heart, Thermometer, Pill, Activity, Moon, Sun, Zap, User, BarChart3, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 // TypeScript Interfaces
@@ -40,6 +40,20 @@ interface ZevaAppData {
   exports: { date: string; fileName: string }[];
   createdAt: string;
 }
+
+// Toast system
+type ToastType = 'success' | 'error' | 'info' | 'warning';
+interface ToastItem {
+  id: number;
+  type: ToastType;
+  message: string;
+}
+
+interface ToastContextValue {
+  showToast: (message: string, type?: ToastType, durationMs?: number) => void;
+}
+
+const ToastContext = React.createContext<ToastContextValue | null>(null);
 
 // Storage helpers
 const STORAGE_KEY = 'zeva_app_data';
@@ -102,6 +116,15 @@ const ZevaPeriodTracker: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showFAQ, setShowFAQ] = useState<boolean>(false);
   const reportRef = useRef<HTMLDivElement>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, type: ToastType = 'info', durationMs = 3000) => {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setToasts(prev => [...prev, { id, type, message }]);
+    window.setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, durationMs);
+  };
 
   useEffect(() => {
     const loadedData = loadData();
@@ -120,6 +143,7 @@ const ZevaPeriodTracker: React.FC = () => {
 
   // Onboarding Component
   const OnboardingView: React.FC = () => {
+    const toastCtx = useContext(ToastContext);
     const [name, setName] = useState('');
     const [age, setAge] = useState('');
 
@@ -131,66 +155,147 @@ const ZevaPeriodTracker: React.FC = () => {
         if (newData) {
           setData(newData);
           setCurrentView('calendar');
+          toastCtx?.showToast(`Welcome, ${name.trim()}! Profile created.`, 'success');
         }
       }
     };
 
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-[#ed449b] rounded-full flex items-center justify-center mx-auto mb-4">
-              <Heart className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-800">ZEVA</h1>
-            <p className="text-gray-600 mt-2">Your personal periods tracker</p>
+return (
+  <div className="h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex">
+    <div className="w-full flex">
+      {/* Mobile Layout */}
+      <div className="lg:hidden bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto my-auto">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-[#ed449b] rounded-full flex items-center justify-center mx-auto mb-4">
+            <Heart className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800">ZEVA</h1>
+          <p className="text-gray-600 mt-2">Your personal periods tracker</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Your Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
+              placeholder="Enter your name"
+              required
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
-                placeholder="Enter your name"
-                required
-              />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Your Age
+            </label>
+            <input
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
+              placeholder="Enter your age"
+              min="13"
+              max="60"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-[#ed449b] text-white py-3 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors"
+          >
+            Get Started
+          </button>
+        </form>
+
+        <p className="text-xs text-gray-500 mt-6 text-center">
+          All your data stays private on your device
+        </p>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex w-full h-full">
+        {/* Left Side - Branding */}
+        <div className="w-1/2 bg-gradient-to-br from-[#ed449b] to-[#d63d8f] flex flex-col justify-center items-center text-white">
+          <div className="text-center">
+           
+            <h1 className="text-6xl font-bold mb-6">ZEVA</h1>
+            <p className="text-2xl mb-12 opacity-90">Your personal periods tracker</p>
+            <div className="space-y-6 text-left text-lg">
+              <div className="flex items-center space-x-4">
+                <div className="w-3 h-3 bg-white rounded-full"></div>
+                <span>Track your cycle with ease</span>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="w-3 h-3 bg-white rounded-full"></div>
+                <span>Get personalized insights</span>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="w-3 h-3 bg-white rounded-full"></div>
+                <span>Complete privacy guaranteed</span>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your Age
-              </label>
-              <input
-                type="number"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
-                placeholder="Enter your age"
-                min="13"
-                max="60"
-                required
-              />
-            </div>
+        {/* Right Side - Form */}
+        <div className="w-1/2 bg-white flex flex-col justify-center items-center px-16">
+          <div className="max-w-md w-full">
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">Welcome!</h2>
+            <p className="text-gray-600 mb-10 text-lg">Let's get you started on your journey</p>
 
-            <button
-              type="submit"
-              className="w-full bg-[#ed449b] text-white py-3 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors"
-            >
-              Get Started
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div>
+                <label className="block text-base font-medium text-gray-700 mb-3">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="text-gray-900 w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-lg"
+                  placeholder="Enter your name"
+                  required
+                />
+              </div>
 
-          <p className="text-xs text-gray-500 mt-6 text-center">
-            All your data stays private on your device
-          </p>
+              <div>
+                <label className="block text-base font-medium text-gray-700 mb-3">
+                  Your Age
+                </label>
+                <input
+                  type="number"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  className="text-gray-900 w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-lg"
+                  placeholder="Enter your age"
+                  min="13"
+                  max="60"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-[#ed449b] text-white py-4 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors text-lg"
+              >
+                Get Started
+              </button>
+            </form>
+
+            <p className="text-sm text-gray-500 mt-8 text-center">
+              All your data stays private on your device
+            </p>
+          </div>
         </div>
       </div>
-    );
+    </div>
+  </div>
+);
   };
 
   // Calendar View Component
@@ -269,7 +374,7 @@ const ZevaPeriodTracker: React.FC = () => {
               onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}
               className="p-2 hover:bg-gray-100 rounded-lg"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 text-black" />
             </button>
             
             <h2 className="text-xl font-semibold text-gray-800">
@@ -280,7 +385,7 @@ const ZevaPeriodTracker: React.FC = () => {
               onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}
               className="p-2 hover:bg-gray-100 rounded-lg"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5 text-black" />
             </button>
           </div>
 
@@ -327,20 +432,20 @@ const ZevaPeriodTracker: React.FC = () => {
 
           <div className="mt-6 flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-pink-200 rounded text-black"></div>
-              <span>Light flow</span>
+              <div className="w-4 h-4 bg-pink-200 rounded"></div>
+              <span className='text-black'>Light flow</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-pink-400 rounded text-black"></div>
-              <span>Medium flow</span>
+              <span className='text-black'>Medium flow</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-[#ed449b] rounded text-black"></div>
-              <span>Heavy flow</span>
+              <span className='text-black'>Heavy flow</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-green-200 rounded text-black"></div>
-              <span>Fertile window</span>
+              <span className='text-black'>Fertile window</span>
             </div>
           </div>
         </div>
@@ -352,6 +457,7 @@ const ZevaPeriodTracker: React.FC = () => {
   const LogView: React.FC = () => {
     if (!data) return null;
 
+    const toastCtx = useContext(ToastContext);
     const [flow, setFlow] = useState<'light' | 'medium' | 'heavy' | ''>('');
     const [symptoms, setSymptoms] = useState<string[]>([]);
     const [mood, setMood] = useState<string>('');
@@ -465,6 +571,7 @@ const ZevaPeriodTracker: React.FC = () => {
       }
 
       updateData(newData);
+      toastCtx?.showToast('Daily log saved', 'success');
     };
 
     return (
@@ -493,7 +600,7 @@ const ZevaPeriodTracker: React.FC = () => {
             <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => setFlow('')}
-                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors text-black ${
                   flow === '' ? 'border-[#ed449b] bg-[#ed449b] text-white' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -501,7 +608,7 @@ const ZevaPeriodTracker: React.FC = () => {
               </button>
               <button
                 onClick={() => setFlow('light')}
-                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors text-black ${
                   flow === 'light' ? 'border-pink-300 bg-pink-200 text-pink-800' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -509,7 +616,7 @@ const ZevaPeriodTracker: React.FC = () => {
               </button>
               <button
                 onClick={() => setFlow('medium')}
-                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors text-black ${
                   flow === 'medium' ? 'border-pink-400 bg-pink-400 text-white' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -517,7 +624,7 @@ const ZevaPeriodTracker: React.FC = () => {
               </button>
               <button
                 onClick={() => setFlow('heavy')}
-                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors text-black ${
                   flow === 'heavy' ? 'border-[#ed449b] bg-[#ed449b] text-white' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -534,7 +641,7 @@ const ZevaPeriodTracker: React.FC = () => {
                 <button
                   key={symptom}
                   onClick={() => toggleSymptom(symptom)}
-                  className={`p-2 rounded-lg border text-sm font-medium transition-colors ${
+                  className={`p-2 rounded-lg border text-sm font-medium transition-colors text-black ${
                     symptoms.includes(symptom) 
                       ? 'border-[#ed449b] bg-[#ed449b] text-white' 
                       : 'border-gray-200 hover:border-gray-300'
@@ -554,7 +661,7 @@ const ZevaPeriodTracker: React.FC = () => {
                 <button
                   key={moodOption}
                   onClick={() => setMood(moodOption)}
-                  className={`p-2 rounded-lg border text-sm font-medium transition-colors ${
+                  className={`p-2 rounded-lg border text-sm font-medium transition-colors text-black ${
                     mood === moodOption 
                       ? 'border-[#ed449b] bg-[#ed449b] text-white' 
                       : 'border-gray-200 hover:border-gray-300'
@@ -580,7 +687,7 @@ const ZevaPeriodTracker: React.FC = () => {
               step="0.1"
               min="95"
               max="105"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-black"
             />
           </div>
 
@@ -595,7 +702,7 @@ const ZevaPeriodTracker: React.FC = () => {
                 <button
                   key={med}
                   onClick={() => toggleMedication(med)}
-                  className={`p-2 rounded-lg border text-sm font-medium transition-colors ${
+                  className={`p-2 rounded-lg border text-sm font-medium transition-colors text-black ${
                     medication.includes(med) 
                       ? 'border-[#ed449b] bg-[#ed449b] text-white' 
                       : 'border-gray-200 hover:border-gray-300'
@@ -616,7 +723,7 @@ const ZevaPeriodTracker: React.FC = () => {
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setSexualActivity('none')}
-                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors text-black ${
                   sexualActivity === 'none' ? 'border-[#ed449b] bg-[#ed449b] text-white' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -624,7 +731,7 @@ const ZevaPeriodTracker: React.FC = () => {
               </button>
               <button
                 onClick={() => setSexualActivity('protected')}
-                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors text-black ${
                   sexualActivity === 'protected' ? 'border-[#ed449b] bg-[#ed449b] text-white' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -632,7 +739,7 @@ const ZevaPeriodTracker: React.FC = () => {
               </button>
               <button
                 onClick={() => setSexualActivity('unprotected')}
-                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors text-black ${
                   sexualActivity === 'unprotected' ? 'border-[#ed449b] bg-[#ed449b] text-white' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -702,7 +809,7 @@ const ZevaPeriodTracker: React.FC = () => {
         </div>
 
         {/* Cycle Length Chart */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 text-black">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Cycle Length Trends</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={cycleData}>
@@ -717,7 +824,7 @@ const ZevaPeriodTracker: React.FC = () => {
 
         {/* Top Symptoms */}
         {symptomData.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-white rounded-xl shadow-sm p-6 text-black">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Most Common Symptoms</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={symptomData}>
@@ -772,25 +879,132 @@ const ZevaPeriodTracker: React.FC = () => {
   const ReportView: React.FC = () => {
     if (!data) return null;
 
-    const generatePDF = async () => {
-      // Since we can't use jsPDF in this environment, we'll simulate the PDF generation
-      // In a real implementation, you would use jsPDF + html2canvas here
-      const reportElement = reportRef.current;
-      if (!reportElement) return;
-
-      // Simulate PDF generation
-      const fileName = `ZEVA_report_${data.user?.name || 'user'}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      
-      // Update exports list
-      const newData = { ...data };
-      newData.exports.push({
-        date: new Date().toISOString(),
-        fileName
+    const toastCtx = useContext(ToastContext);
+    const loadScript = (src: string): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const existing = Array.from(document.getElementsByTagName('script')).find(s => s.src === src);
+        if (existing) {
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(script);
       });
-      updateData(newData);
+    };
 
-      // Show success message (in real app, this would actually generate and download the PDF)
-      alert(`PDF report "${fileName}" would be generated and downloaded. (PDF generation requires additional libraries not available in this demo)`);
+    const ensurePdfLibs = async () => {
+      const w = window as any;
+      if (!w.jspdf || !w.jspdf.jsPDF) {
+        try { await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'); }
+        catch {
+          await loadScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
+        }
+      }
+    };
+    const generateBasicPdf = (jsPDF: any, fileName: string) => {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let y = 18;
+      const addTitle = (text: string) => {
+        doc.setFontSize(18);
+        doc.setTextColor(237, 68, 155);
+        doc.text(text, pageWidth / 2, y, { align: 'center' });
+        y += 8;
+      };
+      const addSmall = (text: string) => {
+        doc.setFontSize(12);
+        doc.setTextColor(55, 65, 81);
+        doc.text(text, pageWidth / 2, y, { align: 'center' });
+        y += 6;
+      };
+      const addKey = (k: string, v: string) => {
+        doc.setFontSize(11);
+        doc.setTextColor(31, 41, 55);
+        doc.text(`${k}: ${v}`, 15, y);
+        y += 6;
+      };
+      const addDivider = () => {
+        doc.setDrawColor(230, 230, 230);
+        doc.line(15, y, pageWidth - 15, y);
+        y += 8;
+      };
+
+      addTitle('ZEVA Periods Tracker');
+      addSmall('Certified menstrual health report');
+      addSmall('ZEVA periods tracker');
+      y += 4;
+      addKey('Generated for', `${data.user?.name} (Age: ${data.user?.age})`);
+      addKey('Report date', new Date().toLocaleDateString());
+
+      addDivider();
+      doc.setFontSize(14);
+      doc.setTextColor(31, 41, 55);
+      doc.text('Summary', 15, y);
+      y += 8;
+      const avgCycleLength = data.cycles.length > 0
+        ? Math.round(data.cycles.reduce((s, c) => s + c.length, 0) / data.cycles.length)
+        : 28;
+      addKey('Total cycles tracked', String(data.cycles.length));
+      addKey('Average cycle length', `${avgCycleLength} days`);
+
+      if (data.cycles.length > 0) {
+        addDivider();
+        doc.setFontSize(14);
+        doc.setTextColor(31, 41, 55);
+        doc.text('Recent Cycles', 15, y);
+        y += 8;
+        doc.setFontSize(11);
+        doc.setTextColor(55, 65, 81);
+        const headerY = y;
+        doc.text('Start', 15, headerY);
+        doc.text('End', 65, headerY);
+        doc.text('Length', 115, headerY);
+        doc.text('Flow Days', 150, headerY);
+        y += 5;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(15, y, pageWidth - 15, y);
+        y += 4;
+        data.cycles.slice(-5).forEach((cycle) => {
+          if (y > 270) { doc.addPage(); y = 18; }
+          doc.text(new Date(cycle.startDate).toLocaleDateString(), 15, y);
+          doc.text(new Date(cycle.endDate).toLocaleDateString(), 65, y);
+          doc.text(String(cycle.length), 115, y);
+          doc.text(String(cycle.flowByDay.length), 150, y);
+          y += 6;
+        });
+      }
+
+      y += 10;
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128);
+      doc.text('This report was generated from your personal tracking data. Certified by ZEVA.', 15, y);
+
+      doc.save(fileName);
+    };
+    const generatePDF = async () => {
+      const fileName = `ZEVA_report_${data.user?.name || 'user'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      try {
+        await ensurePdfLibs();
+        const w = window as any;
+        const jsPDF = (w.jspdf && w.jspdf.jsPDF) ? w.jspdf.jsPDF : w.jsPDF;
+        generateBasicPdf(jsPDF, fileName);
+
+        const newData = { ...data };
+        newData.exports.push({
+          date: new Date().toISOString(),
+          fileName
+        });
+        updateData(newData);
+        toastCtx?.showToast('PDF downloaded', 'success');
+      } catch (err) {
+        console.error('PDF generation failed', err);
+        toastCtx?.showToast('PDF generation failed. Check internet or install dependencies.', 'error');
+      }
     };
 
     const avgCycleLength = data.cycles.length > 0 
@@ -811,7 +1025,7 @@ const ZevaPeriodTracker: React.FC = () => {
             </button>
           </div>
 
-          <div ref={reportRef} className="space-y-6">
+          <div ref={reportRef} id="zeva-report" className="space-y-6">
             {/* Report Header */}
             <div className="text-center border-b pb-6">
               <h1 className="text-3xl font-bold text-[#ed449b] mb-2">ZEVA Periods Tracker</h1>
@@ -840,7 +1054,7 @@ const ZevaPeriodTracker: React.FC = () => {
 
             {/* Recent Cycles Table */}
             {data.cycles.length > 0 && (
-              <div>
+              <div className='text-black'>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Cycles</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse border border-gray-300">
@@ -913,52 +1127,47 @@ const ZevaPeriodTracker: React.FC = () => {
   const SettingsView: React.FC = () => {
     if (!data) return null;
 
-    const exportData = () => {
-      const dataStr = JSON.stringify(data, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `zeva_backup_${new Date().toISOString().slice(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
+    const toastCtx = useContext(ToastContext);
+    const [editName, setEditName] = useState<string>(data.user?.name || '');
+    const [editAge, setEditAge] = useState<string>(data.user?.age?.toString() || '');
+    const [preferredCycle, setPreferredCycle] = useState<string>(
+      data.settings.preferredCycleLength ? String(data.settings.preferredCycleLength) : ''
+    );
+    const [remindersEnabled, setRemindersEnabled] = useState<boolean>(
+      !!data.settings.remindersEnabled
+    );
 
-      // Update exports list
-      const newData = { ...data };
-      newData.exports.push({
-        date: new Date().toISOString(),
-        fileName: `zeva_backup_${new Date().toISOString().slice(0, 10)}.json`
-      });
-      updateData(newData);
-    };
+    const saveProfile = () => {
+      if (!editName.trim()) {
+        toastCtx?.showToast('Please enter a valid name', 'error');
+        return;
+      }
+      const ageNum = parseInt(editAge, 10);
+      if (isNaN(ageNum) || ageNum < 13 || ageNum > 60) {
+        toastCtx?.showToast('Please enter a valid age (13-60)', 'error');
+        return;
+      }
+      const cycleNum = preferredCycle ? parseInt(preferredCycle, 10) : undefined;
+      if (preferredCycle && (isNaN(cycleNum as number) || (cycleNum as number) < 20 || (cycleNum as number) > 60)) {
+        toastCtx?.showToast('Preferred cycle should be 20-60 days', 'error');
+        return;
+      }
 
-    const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importedData = JSON.parse(e.target?.result as string) as ZevaAppData;
-          if (importedData.version && importedData.user && importedData.cycles) {
-            updateData(importedData);
-            alert('Data imported successfully!');
-          } else {
-            alert('Invalid data format');
-          }
-        } catch (error) {
-          alert('Error importing data');
+      const newData: ZevaAppData = {
+        ...data,
+        user: {
+          ...(data.user as UserProfile),
+          name: editName.trim(),
+          age: ageNum
+        },
+        settings: {
+          ...data.settings,
+          remindersEnabled,
+          preferredCycleLength: cycleNum
         }
       };
-      reader.readAsText(file);
-    };
-
-    const clearAllData = () => {
-      if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-        localStorage.removeItem(STORAGE_KEY);
-        setData(null);
-        setCurrentView('onboarding');
-      }
+      updateData(newData);
+      toastCtx?.showToast('Profile updated', 'success');
     };
 
     return (
@@ -966,58 +1175,56 @@ const ZevaPeriodTracker: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-6">Settings</h2>
 
-          {/* Profile */}
+          {/* Profile - Enhanced */}
           <div className="mb-6">
             <h3 className="text-lg font-medium text-gray-800 mb-3">Profile</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Name:</span> {data.user?.name}</p>
-              <p><span className="font-medium">Age:</span> {data.user?.age}</p>
-              <p><span className="font-medium">Member since:</span> {new Date(data.user?.createdAt || '').toLocaleDateString()}</p>
-            </div>
-          </div>
-
-          {/* Data Management */}
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Data Management</h3>
-            <div className="space-y-3">
-              <button
-                onClick={exportData}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export Data (JSON)
-              </button>
-              
-              <label className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                <Upload className="w-4 h-4" />
-                Import Data (JSON)
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
                 <input
-                  type="file"
-                  accept=".json"
-                  onChange={importData}
-                  className="hidden"
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-black"
                 />
-              </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <input
+                  type="number"
+                  value={editAge}
+                  onChange={(e) => setEditAge(e.target.value)}
+                  min="13"
+                  max="60"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-black"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred cycle length (days)</label>
+                <input
+                  type="number"
+                  value={preferredCycle}
+                  onChange={(e) => setPreferredCycle(e.target.value)}
+                  min="20"
+                  max="60"
+                  placeholder="Optional"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-black"
+                />
+              </div>
               
+            </div>
+            <div className="mt-4 flex gap-3">
               <button
-                onClick={clearAllData}
-                className="w-full bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors"
+                onClick={saveProfile}
+                className="bg-[#ed449b] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors"
               >
-                Clear All Data
+                Save Changes
               </button>
+              <div className="text-sm text-gray-500 self-center">Member since: {new Date(data.user?.createdAt || '').toLocaleDateString()}</div>
             </div>
           </div>
 
-          {/* App Info */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-3">App Information</h3>
-            <div className="space-y-2 text-sm text-gray-600">
-              <p>Version: 1.0.0</p>
-              <p>Total cycles tracked: {data.cycles.length}</p>
-              <p>Total daily logs: {Object.keys(data.dailyLogs).length}</p>
-              <p>Data exports: {data.exports.length}</p>
-            </div>
-          </div>
+          
         </div>
       </div>
     );
@@ -1165,29 +1372,62 @@ const ZevaPeriodTracker: React.FC = () => {
 
   // Render main app
   if (currentView === 'onboarding') {
-    return <OnboardingView />;
+    return (
+      <ToastContext.Provider value={{ showToast }}>
+        <OnboardingView />
+        {/* Toasts */}
+        <div className="fixed inset-x-0 bottom-4 flex flex-col items-center gap-2 px-4 pointer-events-none">
+          {toasts.map(t => (
+            <div
+              key={t.id}
+              className={`pointer-events-auto max-w-md w-full rounded-lg shadow-lg px-4 py-3 text-sm text-white ${
+                t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : t.type === 'warning' ? 'bg-yellow-600' : 'bg-gray-800'
+              }`}
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      </ToastContext.Provider>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
-      
-      <main className="flex-1 overflow-y-auto">
-        {showFAQ && <FAQView />}
-        {!showFAQ && currentView === 'calendar' && <CalendarView />}
-        {!showFAQ && currentView === 'log' && <LogView />}
-        {!showFAQ && currentView === 'analytics' && <AnalyticsView />}
-        {!showFAQ && currentView === 'report' && <ReportView />}
-        {!showFAQ && currentView === 'settings' && <SettingsView />}
-      </main>
+    <ToastContext.Provider value={{ showToast }}>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        
+        <main className="flex-1 overflow-y-auto">
+          {showFAQ && <FAQView />}
+          {!showFAQ && currentView === 'calendar' && <CalendarView />}
+          {!showFAQ && currentView === 'log' && <LogView />}
+          {!showFAQ && currentView === 'analytics' && <AnalyticsView />}
+          {!showFAQ && currentView === 'report' && <ReportView />}
+          {!showFAQ && currentView === 'settings' && <SettingsView />}
+        </main>
 
-      <Navigation />
-    </div>
+        <Navigation />
+
+        {/* Toasts */}
+        <div className="fixed inset-x-0 bottom-4 flex flex-col items-center gap-2 px-4 pointer-events-none">
+          {toasts.map(t => (
+            <div
+              key={t.id}
+              className={`pointer-events-auto max-w-md w-full rounded-lg shadow-lg px-4 py-3 text-sm text-white ${
+                t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : t.type === 'warning' ? 'bg-yellow-600' : 'bg-gray-800'
+              }`}
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      </div>
+    </ToastContext.Provider>
   );
 };
 
 export default ZevaPeriodTracker;
 
-ZevaPeriodTracker.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; 
-}
+(ZevaPeriodTracker as any).getLayout = function PageLayout(page: React.ReactNode) {
+  return page;
+};
