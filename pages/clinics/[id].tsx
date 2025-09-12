@@ -157,12 +157,15 @@ export default function ClinicDetail() {
     return stars;
   };
 
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+          style={{ borderColor: '#2D9AA5', borderTopColor: 'transparent' }}></div>
+        <p className="text-lg font-medium" style={{ color: '#2D9AA5' }}>Loading Clinic</p>
       </div>
-    );
+    </div>
+  );
   if (error || !clinic)
     return (
       <div className="min-h-screen flex items-center justify-center">
