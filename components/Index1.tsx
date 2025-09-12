@@ -13,7 +13,6 @@ import {
     Scale,
     Flame,
     Target,
-    CircleDot,
     TrendingUp,
     Eye,
     Brain,
@@ -89,12 +88,6 @@ const HealthRiskComponent: React.FC = () => {
             icon: <AlertTriangle className="w-8 h-8" />,
             description: 'May trigger asthma or severe reactions.'
         },
-        // {
-        //     id: 'joints',
-        //     name: 'Joints',
-        //     icon: <CircleDot className="w-8 h-8" />,
-        //     description: 'Can limit mobility and cause chronic pain.'
-        // },
         {
             id: 'bone',
             name: 'Bone',
@@ -151,9 +144,7 @@ const HealthRiskComponent: React.FC = () => {
         },
     ];
 
-    // const selectedConditionData = healthConditions.find(condition => condition.id === selectedCondition);
-
-  const cardsPerPage = 3;
+    const cardsPerPage = 3;
     const totalPages = Math.ceil(healthConditions.length / cardsPerPage);
 
     const scrollLeft = () => {
@@ -223,16 +214,14 @@ const HealthRiskComponent: React.FC = () => {
                             <div
                                 // key={condition.id}
                                 // onClick={() => setSelectedCondition(condition.id)}
-                                className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${
-                                    selectedCondition === condition.id ? 'transform scale-105' : ''
-                                }`}
+                                className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${selectedCondition === condition.id ? 'transform scale-105' : ''
+                                    }`}
                             >
                                 <div
-                                    className={`p-6 rounded-lg text-center h-55 flex flex-col justify-between ${
-                                        selectedCondition === condition.id
+                                    className={`p-6 rounded-lg text-center h-55 flex flex-col justify-between ${selectedCondition === condition.id
                                             ? 'bg-white shadow-lg border-2'
                                             : 'bg-white hover:shadow-md'
-                                    }`}
+                                        }`}
                                     style={{
                                         borderColor:
                                             selectedCondition === condition.id ? '#2D9AA5' : 'transparent',
@@ -278,24 +267,18 @@ const HealthRiskComponent: React.FC = () => {
                                     });
                                 }
                             }}
-                            className={`w-3 h-3 rounded-full transition-colors ${
-                                i === activePage ? 'bg-orange-500' : 'bg-gray-300'
-                            }`}
+                            className={`w-3 h-3 rounded-full transition-colors ${i === activePage ? 'bg-orange-500' : 'bg-gray-300'
+                                }`}
                         />
                     ))}
                 </div>
-
-
                 <p className="text-xl font-semibold text-center text-black mt-7">
                     Your <span style={{ color: '#2D9AA5' }}>health</span> matters — avoid risks. Use <span style={{ color: '#2D9AA5' }}>ZEVA</span> to find nearby clinics and book your appointment today.
                 </p>
-               
 
-               {/* Calculator and games */}
-               
+                {/* Calculator and games */}
+
                 <CalculatorGames />
-
-
 
                 {/* ==================== WHY CHOOSE US ==================== */}
                 <div className="mt-16 mb-16">
@@ -305,176 +288,188 @@ const HealthRiskComponent: React.FC = () => {
                         </h2>
                     </div>
 
-                    {/* First Row - Original Features */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-
+                    {/* Mobile: Single column, Tablet: 2 columns, Desktop: 4 columns */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         {/* Feature 1 - Search Healthcare Services */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Find Healthcare Providers</h3>
+                                    <p className="text-sm text-gray-600">Discover qualified doctors and trusted clinics near you.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Find Healthcare Providers</h3>
-                            <p className="text-xs text-gray-600">Discover qualified doctors and trusted clinics near you.</p>
                         </div>
 
                         {/* Feature 2 - Register Healthcare Services */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Provider Registration</h3>
+                                    <p className="text-sm text-gray-600">Join our platform as a medical professional or facility.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Provider Registration</h3>
-                            <p className="text-xs text-gray-600">Join our platform as a medical professional or facility.</p>
                         </div>
 
                         {/* Feature 3 - Health Games & Calculator */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Health Tools & Games</h3>
+                                    <p className="text-sm text-gray-600">Interactive calculators for BMI, calories, and health metrics.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Health Tools & Games</h3>
-                            <p className="text-xs text-gray-600">Interactive calculators for BMI, calories, and health metrics.</p>
                         </div>
 
                         {/* Feature 4 - Nearby Search Feature */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Location-Based Search</h3>
+                                    <p className="text-sm text-gray-600">Find nearby hospitals, pharmacies, and emergency services.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Location-Based Search</h3>
-                            <p className="text-xs text-gray-600">Find nearby hospitals, pharmacies, and emergency services.</p>
                         </div>
 
-                    </div>
-
-                    {/* Second Row - Original Features Continued */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-
                         {/* Feature 5 - Job Applications */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Career Opportunities</h3>
+                                    <p className="text-sm text-gray-600">Browse medical jobs and healthcare positions nationwide.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Career Opportunities</h3>
-                            <p className="text-xs text-gray-600">Browse medical jobs and healthcare positions nationwide.</p>
                         </div>
 
                         {/* Feature 6 - Blog Reading & Writing */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Knowledge Hub & Blog</h3>
+                                    <p className="text-sm text-gray-600">Access expert health articles and contribute insights.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Knowledge Hub & Blog</h3>
-                            <p className="text-xs text-gray-600">Access expert health articles and contribute insights.</p>
                         </div>
 
                         {/* Feature 7 - Telemedicine & Virtual Consultations */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Telemedicine Consults</h3>
+                                    <p className="text-sm text-gray-600">Connect with doctors via secure video calls from home.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Telemedicine Consults</h3>
-                            <p className="text-xs text-gray-600">Connect with doctors via secure video calls from home.</p>
                         </div>
 
                         {/* Feature 8 - Health Records & Digital Prescription Management */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m-5-8h.01M9 16h.01M3 16.755V7.245a2 2 0 011.2-1.835l6-2.4a2 2 0 011.6 0l6 2.4A2 2 0 0119 7.245v9.51a2 2 0 01-1.2 1.835l-6 2.4a2 2 0 01-1.6 0l-6-2.4A2 2 0 013 16.755z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Digital Health Records</h3>
+                                    <p className="text-sm text-gray-600">Securely store medical records and manage prescriptions.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Digital Health Records</h3>
-                            <p className="text-xs text-gray-600">Securely store medical records and manage prescriptions.</p>
                         </div>
 
-                    </div>
-
-                    {/* Third Row - New User-Focused Features */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-
                         {/* Feature 9 - User Dashboard */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2v2m0 0V5a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H7" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">User Dashboard</h3>
+                                    <p className="text-sm text-gray-600">Personalized overview of your health journey and activities.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">User Dashboard</h3>
-                            <p className="text-xs text-gray-600">Personalized overview of your health journey and activities.</p>
                         </div>
 
                         {/* Feature 10 - History Tracking */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">History Tracking</h3>
+                                    <p className="text-sm text-gray-600">Track appointments, consultations, and health progress over time.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">History Tracking</h3>
-                            <p className="text-xs text-gray-600">Track appointments, consultations, and health progress over time.</p>
                         </div>
 
                         {/* Feature 11 - Doctor & Healthcare Dashboard */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Doctor & Healthcare Dashboard</h3>
+                                    <p className="text-sm text-gray-600">Monitor patient data and track blog analytics for healthcare providers.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Doctor & Healthcare Dashboard</h3>
-                            <p className="text-xs text-gray-600">Monitor patient data and track blog analytics for healthcare providers.</p>
                         </div>
 
                         {/* Feature 12 - Blog Editor */}
-                        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+                                <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center mb-4 sm:mb-0 sm:mr-4 flex-shrink-0">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
                                 </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-2 text-base">Blog Editor</h3>
+                                    <p className="text-sm text-gray-600">Create and publish health content with our intuitive editor.</p>
+                                </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 mb-2">Blog Editor</h3>
-                            <p className="text-xs text-gray-600">Create and publish health content with our intuitive editor.</p>
                         </div>
-
                     </div>
 
                     {/* Try ZEVA Button */}
@@ -487,108 +482,6 @@ const HealthRiskComponent: React.FC = () => {
                             Try ZEVA
                         </a>
                     </div>
-
-                </div>
-
-                {/* ==================== CUSTOMER TESTIMONIALS SECTION ==================== */}
-                <div className="mt-16 mb-16">
-                    {/* <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#2D9AA5' }}>
-                            What our customers are saying
-                        </h2>
-                    </div> */}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {/* Video Testimonial 1 - Pravita */}
-                        {/* <div className="relative bg-white rounded-lg shadow-lg overflow-hidden">
-                            <div className="relative aspect-video bg-gray-200">
-                                <video
-                                    className="w-full h-full object-cover"
-                                    poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='150' text-anchor='middle' dy='0.35em' font-family='Arial, sans-serif' font-size='16' fill='%236b7280'%3EPravita - Pune%3C/text%3E%3C/svg%3E"
-                                    controls
-                                >
-                                    <source src="#" type="video/mp4" />
-                                    Your browser does not support the video tag.
-                                </video>
-                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-20 transition-all duration-300">
-                                    <button className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center hover:bg-opacity-100 transition-all duration-300 transform hover:scale-110">
-                                        <svg className="w-6 h-6 ml-1" style={{ color: '#2D9AA5' }} fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-6">
-                                <h3 className="text-lg font-semibold mb-1" style={{ color: '#2D9AA5' }}>
-                                    Pravita
-                                </h3>
-                                <p className="text-gray-500 text-sm">Pune</p>
-                            </div>
-                        </div> */}
-
-                        {/* Video Testimonial 2 - Kaushalya */}
-                        {/* <div className="relative bg-white rounded-lg shadow-lg overflow-hidden">
-                            <div className="relative aspect-video bg-gray-200">
-                                <video
-                                    className="w-full h-full object-cover"
-                                    poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='150' text-anchor='middle' dy='0.35em' font-family='Arial, sans-serif' font-size='16' fill='%236b7280'%3EKaushalya - Bareilly%3C/text%3E%3C/svg%3E"
-                                    controls
-                                >
-                                    <source src="#" type="video/mp4" />
-                                    Your browser does not support the video tag.
-                                </video>
-                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-20 transition-all duration-300">
-                                    <button className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center hover:bg-opacity-100 transition-all duration-300 transform hover:scale-110">
-                                        <svg className="w-6 h-6 ml-1" style={{ color: '#2D9AA5' }} fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-6">
-                                <h3 className="text-lg font-semibold mb-1" style={{ color: '#2D9AA5' }}>
-                                    Kaushalya
-                                </h3>
-                                <p className="text-gray-500 text-sm">Bareilly</p>
-                            </div>
-                        </div> */}
-
-                        {/* Video Testimonial 3 - Kamlesh */}
-                        {/* <div className="relative bg-white rounded-lg shadow-lg overflow-hidden">
-                            <div className="relative aspect-video bg-gray-200">
-                                <video
-                                    className="w-full h-full object-cover"
-                                    poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='150' text-anchor='middle' dy='0.35em' font-family='Arial, sans-serif' font-size='16' fill='%236b7280'%3EKamlesh - Allahabad%3C/text%3E%3C/svg%3E"
-                                    controls
-                                >
-                                    <source src="#" type="video/mp4" />
-                                    Your browser does not support the video tag.
-                                </video>
-                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-20 transition-all duration-300">
-                                    <button className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center hover:bg-opacity-100 transition-all duration-300 transform hover:scale-110">
-                                        <svg className="w-6 h-6 ml-1" style={{ color: '#2D9AA5' }} fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-6">
-                                <h3 className="text-lg font-semibold mb-1" style={{ color: '#2D9AA5' }}>
-                                    Kamlesh
-                                </h3>
-                                <p className="text-gray-500 text-sm">Allahabad</p>
-                            </div>
-                        </div> */}
-                    </div>
-
-                    {/* Testimonial Navigation Dots */}
-                    {/* <div className="flex justify-center mt-8">
-                        <div className="flex space-x-3">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#2D9AA5' }}></div>
-                            <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-                            <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-                        </div>
-                    </div> */}
                 </div>
             </div>
 
@@ -604,5 +497,4 @@ const HealthRiskComponent: React.FC = () => {
         </div>
     );
 };
-
 export default HealthRiskComponent;

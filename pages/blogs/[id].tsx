@@ -6,6 +6,7 @@ import parse from "html-react-parser";
 import { useAuth } from "@/context/AuthContext";
 import AuthModal from "../../components/AuthModal";
 import SocialMediaShare from "../../components/SocialMediaShare";
+import { Toaster, toast } from "react-hot-toast";
 // Server-side only imports used in getServerSideProps
 import dbConnect from "../../lib/database";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -80,6 +81,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
   const [showReplyInput, setShowReplyInput] = useState<{
     [commentId: string]: boolean;
   }>({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Utility to get base URL
   const getBaseUrl = () => {
@@ -124,7 +126,10 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
         if (json.success) setBlog(json.blog);
         else setError(json.error || "Failed to fetch blog");
       })
-      .catch(() => setError("Network error"));
+      .catch(() => {
+        setError("Network error");
+        toast.error("Network error while fetching blog");
+      });
   }, [id, blog]);
 
   // Retry actions if user logged in after showing modal
@@ -149,6 +154,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
       setAuthModalMode("login");
       setShowAuthModal(true);
       shouldLikeAfterLogin.current = true;
+      toast("Please login to like this post", { icon: "🔐" });
       return;
     }
 
@@ -175,9 +181,15 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
           likesCount: json.likesCount,
           liked: json.liked,
         });
+        if (json.liked) {
+          toast.success("Added to likes");
+        } else {
+          toast("Removed like", { icon: "💔" });
+        }
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to update like");
     }
   }
 
@@ -190,6 +202,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
       setShowAuthModal(true);
       shouldCommentAfterLogin.current = true;
       pendingComment.current = newComment;
+      toast("Please login to comment", { icon: "🔐" });
       return;
     }
 
@@ -226,53 +239,57 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
           comments: [...blog.comments, newComment],
         });
         setNewComment("");
+        toast.success("Comment posted");
       } else {
         console.error("Failed to add comment:", json.error);
+        toast.error(json.error || "Failed to add comment");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Something went wrong while adding comment");
     }
   }
 
-  async function handleDelete(commentId: string) {
-    if (!confirm("Are you sure you want to delete this comment/reply?")) return;
-
+  async function performDelete(commentId: string) {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/blog/deleteComment", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ blogId: blog?._id, commentId }),
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        setBlog((prev) => {
-          if (!prev) return prev;
-
-          // Remove from comments or replies in state
-          return {
-            ...prev,
-            comments: prev.comments
-              .map((c) => {
-                if (c._id === commentId) return null; // top-level comment
-                return {
-                  ...c,
-                  replies: c.replies?.filter((r) => r._id !== commentId), // reply
-                };
-              })
-              .filter(Boolean) as typeof prev.comments,
-          };
-        });
-      } else {
-        alert(json.error || "Failed to delete");
-      }
+      await toast.promise(
+        fetch("/api/blog/deleteComment", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ blogId: blog?._id, commentId }),
+        }).then((res) => res.json()),
+        {
+          loading: "Deleting...",
+          success: (json) => {
+            if (!json.success) throw new Error(json.error || "Failed to delete");
+            setBlog((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                comments: prev.comments
+                  .map((c) => {
+                    if (c._id === commentId) return null;
+                    return {
+                      ...c,
+                      replies: c.replies?.filter((r) => r._id !== commentId),
+                    };
+                  })
+                  .filter(Boolean) as typeof prev.comments,
+              };
+            });
+            return "Comment deleted";
+          },
+          error: (err) => err.message || "Failed to delete",
+        }
+      );
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+    } finally {
+      setConfirmDeleteId(null);
     }
   }
 
@@ -316,10 +333,11 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
         setReplyTexts((prev) => ({ ...prev, [commentId]: "" }));
         setShowReplyInput((prev) => ({ ...prev, [commentId]: false }));
         setExpandedReplies((prev) => ({ ...prev, [commentId]: true }));
+        toast.success("Reply added");
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to add reply");
+      toast.error("Failed to add reply");
     }
   }
 
@@ -379,6 +397,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <Toaster position="top-right" gutter={8} />
       {seo && (
         <Head>
           <title>{seo.title}</title>
@@ -1047,7 +1066,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
 
                       {canDeleteComment && (
                         <button
-                          onClick={() => handleDelete(c._id)}
+                          onClick={() => setConfirmDeleteId(c._id)}
                           className="text-gray-400 hover:text-red-500 transition-all duration-200 p-2 rounded-full hover:bg-red-50"
                         >
                           <svg
@@ -1250,7 +1269,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                                   </div>
                                   {canDeleteReply && (
                                     <button
-                                      onClick={() => handleDelete(r._id)}
+                                      onClick={() => setConfirmDeleteId(r._id)}
                                       className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50"
                                     >
                                       <svg
@@ -1385,6 +1404,45 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
             />
           </svg>
         </button>
+        
+        {/* Delete Confirmation Modal */}
+        {confirmDeleteId && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            {/* Backdrop with blur and subtle light tint (not black) */}
+            <div
+              className="absolute inset-0 backdrop-blur-sm bg-white/20"
+              onClick={() => setConfirmDeleteId(null)}
+            />
+            {/* Modal panel */}
+            <div className="relative z-[101] w-full max-w-md mx-4 rounded-2xl shadow-2xl border border-gray-200 bg-white">
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v4m0 4h.01M4.93 4.93l14.14 14.14M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2zm-2 7h10l-1 9a2 2 0 01-2 2H9a2 2 0 01-2-2l-1-9z"/></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Delete comment?</h3>
+                    <p className="mt-1 text-sm text-gray-600">This action cannot be undone.</p>
+                  </div>
+                </div>
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <button
+                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    onClick={() => setConfirmDeleteId(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                    onClick={() => confirmDeleteId && performDelete(confirmDeleteId)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

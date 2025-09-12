@@ -115,9 +115,14 @@ export default async function handler(req, res) {
 
     // ✅ Optional validation: check if mainTreatment exists in DB
     for (let t of parsedTreatments) {
-      const found = await Treatment.findOne({ name: t.mainTreatment });
+      let found = await Treatment.findOne({ name: t.mainTreatment });
       if (!found) {
-        return res.status(400).json({ message: `Main treatment '${t.mainTreatment}' not found` });
+        // Add the custom treatment to the database if it doesn't exist
+        found = await Treatment.create({
+          name: t.mainTreatment,
+          slug: t.mainTreatmentSlug,
+          subTreatments: t.subTreatments
+        });
       }
     }
 

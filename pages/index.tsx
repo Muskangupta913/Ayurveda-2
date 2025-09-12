@@ -57,6 +57,7 @@ interface ErrorModalState {
 export default function Home(): React.ReactElement {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLDivElement | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [clinicsPerPage] = useState(5); // You can change this number
   const [expandedTreatments, setExpandedTreatments] = useState<
@@ -467,6 +468,16 @@ export default function Home(): React.ReactElement {
         return (a.distance ?? 0) - (b.distance ?? 0);
       });
       setClinics(clinicsWithDistance);
+      
+      // Scroll to results section when clinics are loaded
+      setTimeout(() => {
+        if (resultsRef.current && clinicsWithDistance.length > 0) {
+          resultsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
     } catch {
       // console.error("Error fetching clinics:", err);
     } finally {
@@ -871,7 +882,7 @@ export default function Home(): React.ReactElement {
 
 
       {/* Results Section */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+      <div ref={resultsRef} className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {clinics.length > 0 && (
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
             {/* Filters Sidebar */}

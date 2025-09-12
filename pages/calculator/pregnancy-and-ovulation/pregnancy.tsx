@@ -36,6 +36,15 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', age: 0 });
   const [lastPeriodDate, setLastPeriodDate] = useState('');
   const [cycleLength, setCycleLength] = useState(28);
+  // Additional calculation modes (non-breaking: defaults to LMP)
+  const [calcMode, setCalcMode] = useState<'lmp' | 'conception' | 'due' | 'ultrasound' | 'ivf'>('lmp');
+  const [conceptionDate, setConceptionDate] = useState('');
+  const [knownDueDate, setKnownDueDate] = useState('');
+  const [ultrasoundDate, setUltrasoundDate] = useState('');
+  const [ultrasoundGAWeeks, setUltrasoundGAWeeks] = useState(8);
+  const [ultrasoundGADays, setUltrasoundGADays] = useState(0);
+  const [ivfTransferDate, setIvfTransferDate] = useState('');
+  const [ivfEmbryoDay, setIvfEmbryoDay] = useState<3 | 5>(5);
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [activeTab, setActiveTab] = useState('calculator');
@@ -80,8 +89,24 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
     if (userProfile.age < 16 || userProfile.age > 50) {
       newErrors.age = 'Age must be between 16 and 50';
     }
-    if (!lastPeriodDate) {
-      newErrors.lastPeriodDate = 'Last period date is required';
+    // Validate per selected calculation mode
+    if (calcMode === 'lmp') {
+      if (!lastPeriodDate) newErrors.lastPeriodDate = 'Last period date is required';
+    }
+    if (calcMode === 'conception') {
+      if (!conceptionDate) newErrors.conceptionDate = 'Conception date is required';
+    }
+    if (calcMode === 'due') {
+      if (!knownDueDate) newErrors.knownDueDate = 'Due date is required';
+    }
+    if (calcMode === 'ultrasound') {
+      if (!ultrasoundDate) newErrors.ultrasoundDate = 'Ultrasound date is required';
+      if (ultrasoundGAWeeks < 4 || ultrasoundGAWeeks > 20) newErrors.ultrasoundGA = 'GA weeks must be 4-20';
+      if (ultrasoundGADays < 0 || ultrasoundGADays > 6) newErrors.ultrasoundGA = 'GA days must be 0-6';
+    }
+    if (calcMode === 'ivf') {
+      if (!ivfTransferDate) newErrors.ivfTransferDate = 'Transfer date is required';
+      if (![3,5].includes(ivfEmbryoDay)) newErrors.ivfEmbryoDay = 'Embryo day must be 3 or 5';
     }
     if (cycleLength < 21 || cycleLength > 35) {
       newErrors.cycleLength = 'Cycle length must be between 21 and 35 days';
@@ -125,10 +150,54 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
     };
   };
 
+  // Derive LMP from alternate modes so downstream logic stays unchanged
+  const computeLmpFromMode = (): string | null => {
+    const toISO = (d: Date) => d.toISOString().split('T')[0];
+    if (calcMode === 'lmp') {
+      return lastPeriodDate || null;
+    }
+    if (calcMode === 'conception') {
+      if (!conceptionDate) return null;
+      const c = new Date(conceptionDate);
+      const lmp = new Date(c);
+      lmp.setDate(c.getDate() - (cycleLength - 14));
+      return toISO(lmp);
+    }
+    if (calcMode === 'due') {
+      if (!knownDueDate) return null;
+      const due = new Date(knownDueDate);
+      const lmp = new Date(due);
+      lmp.setDate(due.getDate() - 280);
+      return toISO(lmp);
+    }
+    if (calcMode === 'ultrasound') {
+      if (!ultrasoundDate) return null;
+      const us = new Date(ultrasoundDate);
+      const gaDays = ultrasoundGAWeeks * 7 + ultrasoundGADays;
+      const edd = new Date(us);
+      edd.setDate(us.getDate() + (280 - gaDays));
+      const lmp = new Date(edd);
+      lmp.setDate(edd.getDate() - 280);
+      return toISO(lmp);
+    }
+    if (calcMode === 'ivf') {
+      if (!ivfTransferDate) return null;
+      const tr = new Date(ivfTransferDate);
+      const edd = new Date(tr);
+      // Standard IVF rule: EDD = transfer + (266 - embryoDay)
+      edd.setDate(tr.getDate() + (266 - ivfEmbryoDay));
+      const lmp = new Date(edd);
+      lmp.setDate(edd.getDate() - 280);
+      return toISO(lmp);
+    }
+    return null;
+  };
+
   const handleCalculate = () => {
     if (!validateForm()) return;
-
-    const calculations = calculateDates(lastPeriodDate, cycleLength);
+    const derivedLmp = computeLmpFromMode();
+    if (!derivedLmp) return;
+    const calculations = calculateDates(derivedLmp, cycleLength);
     
     const newCycle: CycleData = {
       id: Date.now().toString(),
@@ -512,6 +581,24 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                 </div>
 
                 <div className="space-y-6">
+                  {/* Mode selector */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">
+                      <Calendar className="w-4 h-4 inline mr-2 text-[#2D9AA5]" />
+                      Calculation Mode
+                    </label>
+                    <select
+                      value={calcMode}
+                      onChange={(e) => setCalcMode(e.target.value as any)}
+                      className="w-full p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                    >
+                      <option value="lmp">Last Period</option>
+                      <option value="conception">Conception Date</option>
+                      <option value="due">Due Date</option>
+                      <option value="ultrasound">Ultrasound Date</option>
+                      <option value="ivf">IVF Transfer Date</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-3">
                       <Calendar className="w-4 h-4 inline mr-2 text-[#2D9AA5]" />
@@ -572,6 +659,104 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                     
                     {errors.lastPeriodDate && <p className="text-red-500 text-sm mt-2 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{errors.lastPeriodDate}</p>}
                   </div>
+
+                  {calcMode === 'conception' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-3">
+                        <Calendar className="w-4 h-4 inline mr-2 text-[#2D9AA5]" />
+                        Conception Date
+                      </label>
+                      <input
+                        type="date"
+                        value={conceptionDate}
+                        onChange={(e) => setConceptionDate(e.target.value)}
+                        className={`w-full p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900 ${errors.conceptionDate ? 'border-red-400' : 'border-gray-200'}`}
+                      />
+                      {errors.conceptionDate && <p className="text-red-500 text-sm mt-2 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{errors.conceptionDate}</p>}
+                    </div>
+                  )}
+
+                  {calcMode === 'due' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-3">
+                        <Calendar className="w-4 h-4 inline mr-2 text-[#2D9AA5]" />
+                        Due Date
+                      </label>
+                      <input
+                        type="date"
+                        value={knownDueDate}
+                        onChange={(e) => setKnownDueDate(e.target.value)}
+                        className={`w-full p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900 ${errors.knownDueDate ? 'border-red-400' : 'border-gray-200'}`}
+                      />
+                      {errors.knownDueDate && <p className="text-red-500 text-sm mt-2 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{errors.knownDueDate}</p>}
+                    </div>
+                  )}
+
+                  {calcMode === 'ultrasound' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-3">
+                        <Calendar className="w-4 h-4 inline mr-2 text-[#2D9AA5]" />
+                        Ultrasound Date and GA
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <input
+                          type="date"
+                          value={ultrasoundDate}
+                          onChange={(e) => setUltrasoundDate(e.target.value)}
+                          className={`p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900 ${errors.ultrasoundDate ? 'border-red-400' : 'border-gray-200'}`}
+                        />
+                        <input
+                          type="number"
+                          min={4}
+                          max={20}
+                          value={ultrasoundGAWeeks}
+                          onChange={(e) => setUltrasoundGAWeeks(parseInt(e.target.value) || 8)}
+                          className={`p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900 ${errors.ultrasoundGA ? 'border-red-400' : 'border-gray-200'}`}
+                          placeholder="Weeks"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={6}
+                          value={ultrasoundGADays}
+                          onChange={(e) => setUltrasoundGADays(parseInt(e.target.value) || 0)}
+                          className={`p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900 ${errors.ultrasoundGA ? 'border-red-400' : 'border-gray-200'}`}
+                          placeholder="Days"
+                        />
+                      </div>
+                      {(errors.ultrasoundDate || errors.ultrasoundGA) && (
+                        <p className="text-red-500 text-sm mt-2 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />Provide ultrasound date and GA (weeks, days)</p>
+                      )}
+                    </div>
+                  )}
+
+                  {calcMode === 'ivf' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-3">
+                        <Calendar className="w-4 h-4 inline mr-2 text-[#2D9AA5]" />
+                        IVF Transfer Date and Embryo Day
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="date"
+                          value={ivfTransferDate}
+                          onChange={(e) => setIvfTransferDate(e.target.value)}
+                          className={`p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900 ${errors.ivfTransferDate ? 'border-red-400' : 'border-gray-200'}`}
+                        />
+                        <select
+                          value={ivfEmbryoDay}
+                          onChange={(e) => setIvfEmbryoDay(parseInt(e.target.value) as 3 | 5)}
+                          className={`p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900 ${errors.ivfEmbryoDay ? 'border-red-400' : 'border-gray-200'}`}
+                        >
+                          <option value={3}>Day 3 Embryo</option>
+                          <option value={5}>Day 5 Embryo</option>
+                        </select>
+                      </div>
+                      {(errors.ivfTransferDate || errors.ivfEmbryoDay) && (
+                        <p className="text-red-500 text-sm mt-2 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />Provide transfer date and embryo day (3 or 5)</p>
+                      )}
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-3">
@@ -1058,6 +1243,7 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
 };
 
 export default ZevaPregnancyCalculator;
+
 
 ZevaPregnancyCalculator.getLayout = function PageLayout(page: React.ReactNode) {
   return page; 
