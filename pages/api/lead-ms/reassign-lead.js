@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   await dbConnect();
 
   const user = await getUserFromReq(req);
-  if (!requireRole(user, ["lead"])) {
+  if (!requireRole(user, ["clinic"])) {
     return res.status(403).json({ message: "Access denied" });
   }
 

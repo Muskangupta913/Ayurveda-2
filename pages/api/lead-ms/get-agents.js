@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     }
 
     // Check role
-    if (!requireRole(me, ['lead'])) {
+    if (!requireRole(me, ['clinic'])) {
       return res.status(403).json({ success: false, message: 'Forbidden: Only lead admins can perform this action' });
     }
 

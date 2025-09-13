@@ -5,7 +5,7 @@ import User from "../../../models/Users";
 
 export async function getUserFromReq(req) {
   await dbConnect();
-  try {
+  try { 
     const auth = req.headers.authorization || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
     if (!token) return null;
