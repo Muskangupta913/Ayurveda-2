@@ -34,6 +34,7 @@ interface DoctorProfile {
     subTreatments: Array<{
       name: string;
       slug: string;
+      price?: number;
     }>;
   }>;
   consultationFee: string;
@@ -61,6 +62,7 @@ interface FormData {
     subTreatments: Array<{
       name: string;
       slug: string;
+      price?: number;
     }>;
   }>;
   consultationFee: string;
@@ -80,6 +82,7 @@ interface TreatmentManagerProps {
     subTreatments: Array<{
       name: string;
       slug: string;
+      price?: number;
     }>;
   }>;
   newItem: string;
@@ -108,6 +111,8 @@ const TreatmentManager = ({
   onUpdateTreatment,
 }: TreatmentManagerProps) => {
   const [customSubTreatment, setCustomSubTreatment] = useState<string>("");
+  const [customSubTreatmentPrice, setCustomSubTreatmentPrice] =
+    useState<string>("");
   const [showSubTreatmentInput, setShowSubTreatmentInput] = useState<
     number | null
   >(null);
@@ -125,6 +130,7 @@ const TreatmentManager = ({
       const newSubTreatment = {
         name: customSubTreatment.trim(),
         slug: customSubTreatment.trim().toLowerCase().replace(/\s+/g, "-"),
+        price: Number(customSubTreatmentPrice) || 0,
       };
 
       // Only update local state, don't save to database immediately
@@ -138,6 +144,7 @@ const TreatmentManager = ({
 
       onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
       setCustomSubTreatment("");
+      setCustomSubTreatmentPrice("");
       setShowSubTreatmentInput(null);
       setShowCustomSubTreatmentInput(null);
     }
@@ -168,6 +175,7 @@ const TreatmentManager = ({
     const newSubTreatment = {
       name: subTreatmentName,
       slug: subTreatmentName.toLowerCase().replace(/\s+/g, "-"),
+      price: 0, // Default price for available treatments
     };
 
     const updatedTreatment = {
@@ -209,6 +217,7 @@ const TreatmentManager = ({
     if (subTreatmentValue === "custom") {
       setShowCustomSubTreatmentInput(mainTreatmentIndex);
       setCustomSubTreatment("");
+      setCustomSubTreatmentPrice("");
       setSelectedSubTreatment(null);
     } else if (subTreatmentValue) {
       setSelectedSubTreatment({
@@ -233,7 +242,13 @@ const TreatmentManager = ({
   return (
     <div className="space-y-6">
       {/* Styled Header */}
-      <div className="rounded-xl p-6 shadow-lg relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #2D9AA5 0%, #3BAEB8 50%, #2D9AA5 100%)' }}>
+      <div
+        className="rounded-xl p-6 shadow-lg relative overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, #2D9AA5 0%, #3BAEB8 50%, #2D9AA5 100%)",
+        }}
+      >
         {/* Floating Circle Decorations */}
         <div className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full blur-sm"></div>
         <div className="absolute top-8 right-8 w-24 h-24 bg-white/5 rounded-full blur-md"></div>
@@ -246,7 +261,9 @@ const TreatmentManager = ({
             </div>
             <h2 className="text-xl font-bold text-white">{label}</h2>
           </div>
-          <p className="text-white/90 text-sm">Select and manage treatments for this case</p>
+          <p className="text-white/90 text-sm">
+            Select and manage treatments for this case
+          </p>
         </div>
       </div>
 
@@ -258,15 +275,16 @@ const TreatmentManager = ({
               onChange={(e) => handleTreatmentSelection(e.target.value)}
               className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 text-gray-900"
               style={{
-                borderColor: '#E5E7EB',
+                borderColor: "#E5E7EB",
               }}
               onFocus={(e) => {
-                (e.target as HTMLSelectElement).style.borderColor = '#2D9AA5';
-                (e.target as HTMLSelectElement).style.boxShadow = '0 0 0 3px rgba(45, 154, 165, 0.1)';
+                (e.target as HTMLSelectElement).style.borderColor = "#2D9AA5";
+                (e.target as HTMLSelectElement).style.boxShadow =
+                  "0 0 0 3px rgba(45, 154, 165, 0.1)";
               }}
               onBlur={(e) => {
-                (e.target as HTMLSelectElement).style.borderColor = '#E5E7EB';
-                (e.target as HTMLSelectElement).style.boxShadow = 'none';
+                (e.target as HTMLSelectElement).style.borderColor = "#E5E7EB";
+                (e.target as HTMLSelectElement).style.boxShadow = "none";
               }}
               value={selectedTreatmentId}
             >
@@ -283,9 +301,15 @@ const TreatmentManager = ({
                 type="button"
                 onClick={handleAddSelectedTreatment}
                 className="mt-3 px-4 py-2 text-white rounded-lg text-sm transition-all duration-300 hover:shadow-lg transform hover:scale-105"
-                style={{ backgroundColor: '#2D9AA5' }}
-                onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
-                onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
+                style={{ backgroundColor: "#2D9AA5" }}
+                onMouseEnter={(e) =>
+                  ((e.target as HTMLButtonElement).style.backgroundColor =
+                    "#21737b")
+                }
+                onMouseLeave={(e) =>
+                  ((e.target as HTMLButtonElement).style.backgroundColor =
+                    "#2D9AA5")
+                }
               >
                 Add Selected Treatment
               </button>
@@ -299,15 +323,16 @@ const TreatmentManager = ({
               onChange={(e) => setNewItem(e.target.value)}
               className="flex-1 px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 text-gray-900"
               style={{
-                borderColor: '#E5E7EB'
+                borderColor: "#E5E7EB",
               }}
               onFocus={(e) => {
-                (e.target as HTMLInputElement).style.borderColor = '#2D9AA5';
-                (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px rgba(45, 154, 165, 0.1)';
+                (e.target as HTMLInputElement).style.borderColor = "#2D9AA5";
+                (e.target as HTMLInputElement).style.boxShadow =
+                  "0 0 0 3px rgba(45, 154, 165, 0.1)";
               }}
               onBlur={(e) => {
-                (e.target as HTMLInputElement).style.borderColor = '#E5E7EB';
-                (e.target as HTMLInputElement).style.boxShadow = 'none';
+                (e.target as HTMLInputElement).style.borderColor = "#E5E7EB";
+                (e.target as HTMLInputElement).style.boxShadow = "none";
               }}
               placeholder="Enter custom treatment name"
               onKeyDown={(e) => {
@@ -321,9 +346,15 @@ const TreatmentManager = ({
               type="button"
               onClick={onAdd}
               className="px-4 py-3 text-white rounded-lg transition-all duration-300 hover:shadow-lg transform hover:scale-105"
-              style={{ backgroundColor: '#2D9AA5' }}
-              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
-              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
+              style={{ backgroundColor: "#2D9AA5" }}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLButtonElement).style.backgroundColor =
+                  "#21737b")
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLButtonElement).style.backgroundColor =
+                  "#2D9AA5")
+              }
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -347,7 +378,11 @@ const TreatmentManager = ({
           (
             item: {
               mainTreatment: string;
-              subTreatments?: Array<{ name: string; slug: string }>;
+              subTreatments?: Array<{
+                name: string;
+                slug: string;
+                price?: number;
+              }>;
             },
             index: number
           ) => {
@@ -359,10 +394,13 @@ const TreatmentManager = ({
               <div
                 key={index}
                 className="border-2 rounded-xl p-4 bg-gradient-to-br from-teal-50 to-cyan-50 transition-all duration-300 hover:shadow-lg"
-                style={{ borderColor: '#2D9AA5' }}
+                style={{ borderColor: "#2D9AA5" }}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-lg" style={{ color: '#21737b' }}>
+                  <span
+                    className="font-semibold text-lg"
+                    style={{ color: "#21737b" }}
+                  >
                     {item.mainTreatment}
                   </span>
                   <button
@@ -377,16 +415,25 @@ const TreatmentManager = ({
                 {/* Sub-treatment Selection */}
                 <div className="ml-4 space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium" style={{ color: '#21737b' }}>
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "#21737b" }}
+                    >
                       Sub-treatments:
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowSubTreatmentInput(index)}
                       className="px-3 py-1 text-white rounded-full text-xs transition-all duration-300 hover:shadow-lg transform hover:scale-105"
-                      style={{ backgroundColor: '#2D9AA5' }}
-                      onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
-                      onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
+                      style={{ backgroundColor: "#2D9AA5" }}
+                      onMouseEnter={(e) =>
+                        ((e.target as HTMLButtonElement).style.backgroundColor =
+                          "#21737b")
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.target as HTMLButtonElement).style.backgroundColor =
+                          "#2D9AA5")
+                      }
                     >
                       + Add Sub-treatment
                     </button>
@@ -394,7 +441,10 @@ const TreatmentManager = ({
 
                   {/* Sub-treatment Input */}
                   {showSubTreatmentInput === index && (
-                    <div className="bg-white/80 backdrop-blur-sm border rounded-lg p-3" style={{ borderColor: '#2D9AA5' }}>
+                    <div
+                      className="bg-white/80 backdrop-blur-sm border rounded-lg p-3"
+                      style={{ borderColor: "#2D9AA5" }}
+                    >
                       <div className="flex gap-2 items-center">
                         <select
                           onChange={(e) =>
@@ -402,16 +452,20 @@ const TreatmentManager = ({
                           }
                           className="text-black flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all duration-300"
                           style={{
-                            focusBorderColor: '#2D9AA5',
-                            focusRingColor: '#2D9AA5'
+                            focusBorderColor: "#2D9AA5",
+                            focusRingColor: "#2D9AA5",
                           }}
                           onFocus={(e) => {
-                            (e.target as HTMLSelectElement).style.borderColor = '#2D9AA5';
-                            (e.target as HTMLSelectElement).style.boxShadow = '0 0 0 2px rgba(45, 154, 165, 0.1)';
+                            (e.target as HTMLSelectElement).style.borderColor =
+                              "#2D9AA5";
+                            (e.target as HTMLSelectElement).style.boxShadow =
+                              "0 0 0 2px rgba(45, 154, 165, 0.1)";
                           }}
                           onBlur={(e) => {
-                            (e.target as HTMLSelectElement).style.borderColor = '#D1D5DB';
-                            (e.target as HTMLSelectElement).style.boxShadow = 'none';
+                            (e.target as HTMLSelectElement).style.borderColor =
+                              "#D1D5DB";
+                            (e.target as HTMLSelectElement).style.boxShadow =
+                              "none";
                           }}
                           value={
                             selectedSubTreatment?.index === index
@@ -436,9 +490,17 @@ const TreatmentManager = ({
                               type="button"
                               onClick={handleAddSelectedSubTreatment}
                               className="px-3 py-2 text-white rounded-lg text-xs transition-all duration-300 hover:shadow-lg transform hover:scale-105"
-                              style={{ backgroundColor: '#2D9AA5' }}
-                              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
-                              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
+                              style={{ backgroundColor: "#2D9AA5" }}
+                              onMouseEnter={(e) =>
+                                ((
+                                  e.target as HTMLButtonElement
+                                ).style.backgroundColor = "#21737b")
+                              }
+                              onMouseLeave={(e) =>
+                                ((
+                                  e.target as HTMLButtonElement
+                                ).style.backgroundColor = "#2D9AA5")
+                              }
                             >
                               Add
                             </button>
@@ -454,14 +516,36 @@ const TreatmentManager = ({
                               }
                               className="text-black flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all duration-300"
                               onFocus={(e) => {
-                                (e.target as HTMLInputElement).style.borderColor = '#2D9AA5';
-                                (e.target as HTMLInputElement).style.boxShadow = '0 0 0 2px rgba(45, 154, 165, 0.1)';
+                                (
+                                  e.target as HTMLInputElement
+                                ).style.borderColor = "#2D9AA5";
+                                (e.target as HTMLInputElement).style.boxShadow =
+                                  "0 0 0 2px rgba(45, 154, 165, 0.1)";
                               }}
                               onBlur={(e) => {
-                                (e.target as HTMLInputElement).style.borderColor = '#D1D5DB';
-                                (e.target as HTMLInputElement).style.boxShadow = 'none';
+                                (
+                                  e.target as HTMLInputElement
+                                ).style.borderColor = "#D1D5DB";
+                                (e.target as HTMLInputElement).style.boxShadow =
+                                  "none";
                               }}
                               placeholder="Custom sub-treatment name"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddSubTreatment(index);
+                                }
+                              }}
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              value={customSubTreatmentPrice}
+                              onChange={(e) =>
+                                setCustomSubTreatmentPrice(e.target.value)
+                              }
+                              className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm ml-2"
+                              placeholder="Price"
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   e.preventDefault();
@@ -473,9 +557,17 @@ const TreatmentManager = ({
                               type="button"
                               onClick={() => handleAddSubTreatment(index)}
                               className="px-3 py-2 text-white rounded-lg text-xs transition-all duration-300 hover:shadow-lg transform hover:scale-105"
-                              style={{ backgroundColor: '#2D9AA5' }}
-                              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#21737b'}
-                              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2D9AA5'}
+                              style={{ backgroundColor: "#2D9AA5" }}
+                              onMouseEnter={(e) =>
+                                ((
+                                  e.target as HTMLButtonElement
+                                ).style.backgroundColor = "#21737b")
+                              }
+                              onMouseLeave={(e) =>
+                                ((
+                                  e.target as HTMLButtonElement
+                                ).style.backgroundColor = "#2D9AA5")
+                              }
                             >
                               Add
                             </button>
@@ -488,6 +580,7 @@ const TreatmentManager = ({
                             setShowSubTreatmentInput(null);
                             setShowCustomSubTreatmentInput(null);
                             setCustomSubTreatment("");
+                            setCustomSubTreatmentPrice("");
                             setSelectedSubTreatment(null);
                           }}
                           className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition-all duration-300"
@@ -505,9 +598,28 @@ const TreatmentManager = ({
                         <span
                           key={subIndex}
                           className="inline-flex items-center gap-2 px-3 py-1 text-white text-sm rounded-full transition-all duration-300 hover:shadow-lg"
-                          style={{ backgroundColor: '#2D9AA5' }}
+                          style={{ backgroundColor: "#2D9AA5" }}
                         >
                           {subTreatment.name}
+                          <input
+                            type="number"
+                            min="0"
+                            value={subTreatment.price ?? 0}
+                            onChange={(e) => {
+                              const updatedSubTreatments =
+                                item.subTreatments.map((st, i) =>
+                                  i === subIndex
+                                    ? { ...st, price: Number(e.target.value) }
+                                    : st
+                                );
+                              onUpdateTreatment(index, {
+                                ...item,
+                                subTreatments: updatedSubTreatments,
+                              });
+                            }}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-xs ml-2 bg-white text-black"
+                            placeholder="Price"
+                          />
                           <button
                             type="button"
                             onClick={() =>
@@ -680,9 +792,9 @@ function DoctorDashboard() {
       updated[index].sessions[session] = (
         typeof value === "string"
           ? value
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
           : value
       ) as string[];
     } else {
@@ -1234,6 +1346,17 @@ function DoctorDashboard() {
                                           className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                                         >
                                           {subTreatment.name}
+                                          {typeof subTreatment.price ===
+                                            "number" &&
+                                            subTreatment.price > 0 && (
+                                              <>
+                                                {" "}
+                                                -{" "}
+                                                <span className="text-[#2D9AA5] font-semibold">
+                                                  ₹{subTreatment.price}
+                                                </span>
+                                              </>
+                                            )}
                                         </span>
                                       )
                                     )}
@@ -1429,10 +1552,11 @@ function DoctorDashboard() {
                         value={form[field as keyof FormData] as string}
                         onChange={handleChange}
                         disabled={field === "phone"} // ✅ Still disabled if needed
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-black bg-white ${field === "phone"
-                          ? "cursor-not-allowed bg-gray-100"
-                          : ""
-                          }`}
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-black bg-white ${
+                          field === "phone"
+                            ? "cursor-not-allowed bg-gray-100"
+                            : ""
+                        }`}
                         placeholder={`Enter ${field
                           .replace(/([A-Z])/g, " $1")
                           .toLowerCase()}`}

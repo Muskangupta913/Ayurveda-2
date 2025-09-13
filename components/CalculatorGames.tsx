@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
+import { Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
+
 export interface Calculator {
   id: string;
   title: string;
@@ -26,8 +27,8 @@ export interface Game {
 
 export const calculators: Calculator[] = [
   {
-    id: 'pregnancyandovulation',
-    title: 'Pregnancy & Ovulation Calculator',
+    id: 'pregnancy-and-ovulation/pregnancy&ovulation',
+    title: 'Pregnancy & Periods Tracker',
     description: ' Free Pregnancy Calculator & Ovulation Calendar to track your cycle',
     icon: Baby,
     color: 'from-[#2D9AA5] to-[#238a94]',
@@ -35,6 +36,17 @@ export const calculators: Calculator[] = [
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
     image: 'https://images.unsplash.com/photo-1493894473891-10fc1e5dbd22?w=400&h=200&fit=crop&auto=format'
+  },
+  {
+    id: 'depression-test',
+    title: 'Depression Test Calculator',
+    description: 'Begin a gentle test to understand depression signs',
+    icon: Brain,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
   },
   {
     id: 'bmi',
@@ -58,17 +70,7 @@ export const calculators: Calculator[] = [
     hoverColor: 'hover:shadow-lg',
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=200&fit=crop'
   },
-  {
-    id: 'depression-test',
-    title: 'Depression Test Calculator',
-    description: 'Begin a gentle test to understand depression signs',
-    icon: Brain,
-    color: 'from-[#2D9AA5] to-[#238a94]',
-    bgColor: 'bg-white',
-    borderColor: 'border-gray-200',
-    hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
-  },
+
   {
     id: 'breathhold',
     title: 'Breath Hold Calculator',
@@ -117,6 +119,17 @@ export const calculators: Calculator[] = [
 
 export const games: Game[] = [
   {
+    id: 'fitwithzeva',
+    title: 'Be Fit with Zeva',
+    description: 'Fun Exercises Boost Immunity & Strength',
+    icon: Heart,
+    color: 'from-[#FF8A65] to-[#f4795b]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=200&fit=crop'
+  },
+  {
     id: 'quiz',
     title: 'Health Quiz Challenge',
     description: 'Test your health knowledge with quizzes',
@@ -131,25 +144,12 @@ export const games: Game[] = [
     id: 'flipcards',
     title: 'FitFlip Cards',
     description: 'Match exercises, burn calories fast.',
-    icon: Dumbbell, // More fitting for fitness than Brain
-    color: 'from-[#FF6B6B] to-[#4ECDC4]', // Energetic red to refreshing teal gradient
+    icon: Dumbbell,
+    color: 'from-[#FF6B6B] to-[#4ECDC4]',
     bgColor: 'bg-white',
-    borderColor: 'border-grey-200', // Complementary border
-    hoverColor: 'hover:shadow-xl hover:scale-105 hover:border-orange-300', // More dynamic hover effect
-    image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=400&h=200&fit=crop' // Fitness/workout equipment image
-  },
-
-
-  {
-    id: 'fitwithzeva',
-    title: 'Be Fit with Zeva',
-    description: 'Build immunity and strength with fun exercises',
-    icon: Heart,
-    color: 'from-[#FF8A65] to-[#f4795b]',
-    bgColor: 'bg-white',
-    borderColor: 'border-gray-200',
-    hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=200&fit=crop'
+    borderColor: 'border-grey-200',
+    hoverColor: 'hover:shadow-xl hover:scale-105 hover:border-orange-300',
+    image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=400&h=200&fit=crop'
   },
   {
     id: 'HealthyFood',
@@ -161,29 +161,7 @@ export const games: Game[] = [
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
     image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=200&fit=crop'
-  },
-  // {
-  //   id: 'workout-timer',
-  //   title: 'Workout Timer Challenge',
-  //   description: 'Complete timed exercises and build healthy workout habits',
-  //   icon: Timer,
-  //   color: 'from-[#9C27B0] to-[#8e24aa]',
-  //   bgColor: 'bg-white',
-  //   borderColor: 'border-gray-200',
-  //   hoverColor: 'hover:shadow-lg',
-  //   image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop'
-  // },
-  // {
-  //   id: 'sleep-puzzle',
-  //   title: 'Sleep Cycle Puzzle',
-  //   description: 'Solve puzzles while learning about healthy sleep patterns',
-  //   icon: Brain,
-  //   color: 'from-[#7986CB] to-[#6a7bc2]',
-  //   bgColor: 'bg-white',
-  //   borderColor: 'border-gray-200',
-  //   hoverColor: 'hover:shadow-lg',
-  //   image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=200&fit=crop'
-  // }
+  }
 ];
 
 const HealthCalculatorApp: React.FC = () => {
@@ -232,58 +210,62 @@ const HealthCalculatorApp: React.FC = () => {
 
   const scrollLeft = (): void => {
     if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: -340, behavior: 'smooth' });
+      const scrollAmount = window.innerWidth < 768 ? 280 : 340;
+      sliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
     }
   };
 
   const scrollRight = (): void => {
     if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: 340, behavior: 'smooth' });
+      const scrollAmount = window.innerWidth < 768 ? 280 : 340;
+      sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
   const scrollGamesLeft = (): void => {
     if (gamesSliderRef.current) {
-      gamesSliderRef.current.scrollBy({ left: -340, behavior: 'smooth' });
+      const scrollAmount = window.innerWidth < 768 ? 280 : 340;
+      gamesSliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
     }
   };
 
   const scrollGamesRight = (): void => {
     if (gamesSliderRef.current) {
-      gamesSliderRef.current.scrollBy({ left: 340, behavior: 'smooth' });
+      const scrollAmount = window.innerWidth < 768 ? 280 : 340;
+      gamesSliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
   const NavigationBar: React.FC = () => (
-    <div ref={sectionRef} id="games-section" className="bg-white rounded-2xl p-6 mb-6">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Track Your Health Status</h1>
+    <div ref={sectionRef} id="games-section" className="bg-white rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
+      <div className="text-center mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Track Your Health Status</h1>
       </div>
 
       {/* Calculators Slider Container */}
-      <div className="relative mb-12 px-12">
-        {/* Left Arrow - Positioned closer to cards */}
+      <div className="relative mb-8 sm:mb-12 px-2 sm:px-6 lg:px-12">
+        {/* Left Arrow - Hidden on mobile, responsive positioning */}
         <button
           onClick={scrollLeft}
-          className="absolute -left-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          className="hidden sm:block absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-2 sm:p-3 text-white hover:bg-orange-600 transition-colors"
           aria-label="Scroll left"
         >
           <ChevronLeft size={15} />
         </button>
 
-        {/* Right Arrow - Positioned closer to cards */}
+        {/* Right Arrow - Hidden on mobile, responsive positioning */}
         <button
           onClick={scrollRight}
-          className="absolute -right-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          className="hidden sm:block absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-2 sm:p-3 text-white hover:bg-orange-600 transition-colors"
           aria-label="Scroll right"
         >
           <ChevronRight size={15} />
         </button>
 
-        {/* Scrollable Cards Container - Display exactly 3 cards */}
+        {/* Scrollable Cards Container - Responsive grid */}
         <div
           ref={sliderRef}
-          className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 scroll-smooth"
+          className="flex overflow-x-auto scrollbar-hide gap-3 sm:gap-4 lg:gap-6 pb-4 scroll-smooth"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none'
@@ -294,30 +276,26 @@ const HealthCalculatorApp: React.FC = () => {
             return (
               <div
                 key={calc.id}
-                className={`${calc.bgColor} ${calc.borderColor} ${calc.hoverColor} flex-shrink-0 border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group overflow-hidden`}
-                style={{
-                  width: 'calc((100% - 3rem) / 3)', // Exactly 3 cards with gaps
-                  minWidth: '280px' // Minimum width for responsiveness
-                }}
+                className={`${calc.bgColor} ${calc.borderColor} ${calc.hoverColor} flex-shrink-0 border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group overflow-hidden w-[260px] sm:w-[280px] md:w-[300px] lg:w-[calc((100%-3rem)/3)] min-w-[260px]`}
               >
                 {/* Image Section */}
-                <div className="relative h-32 overflow-hidden">
+                <div className="relative h-24 sm:h-28 lg:h-32 overflow-hidden">
                   <img
                     src={calc.image}
                     alt={calc.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute top-3 left-3">
-                    <div className={`bg-gradient-to-r ${calc.color} p-2 rounded-lg shadow-lg`}>
-                      <IconComponent className="text-white" size={20} />
+                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
+                    <div className={`bg-gradient-to-r ${calc.color} p-1.5 sm:p-2 rounded-lg shadow-lg`}>
+                      <IconComponent className="text-white" size={16} />
                     </div>
                   </div>
                 </div>
 
                 {/* Content Section */}
-                <div className="p-5">
-                  <h3 className="font-bold text-gray-800 mb-2 text-lg">{calc.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
+                <div className="p-3 sm:p-4 lg:p-5">
+                  <h3 className="font-bold text-gray-800 mb-2 text-sm sm:text-base lg:text-lg line-clamp-2">{calc.title}</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
                   <a
                     href={`/calculator/${calc.id}#games-section`}
                     onClick={() => {
@@ -326,10 +304,10 @@ const HealthCalculatorApp: React.FC = () => {
                       }
                       localStorage.setItem('shouldScrollToGames', 'true');
                     }}
-                    className="inline-flex items-center bg-[#2D9AA5] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#238a94] transition-colors"
+                    className="inline-flex items-center bg-[#2D9AA5] text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm hover:bg-[#238a94] transition-colors w-full sm:w-auto justify-center sm:justify-start"
                   >
                     Calculate Now
-                    <ArrowRight size={16} className="ml-2" />
+                    <ArrowRight size={14} className="ml-2" />
                   </a>
                 </div>
               </div>
@@ -338,7 +316,7 @@ const HealthCalculatorApp: React.FC = () => {
         </div>
 
         {/* View All Button */}
-        <div className="text-center mt-8">
+        <div className="text-center mt-6 sm:mt-8">
           <a
             href="/calculator/allcalc#games-section"
             onClick={() => {
@@ -347,43 +325,43 @@ const HealthCalculatorApp: React.FC = () => {
               }
               localStorage.setItem('shouldScrollToGames', 'true');
             }}
-            className="inline-flex items-center bg-orange-400 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-orange-600 transition-colors"
+            className="inline-flex items-center bg-orange-400 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg font-semibold text-base sm:text-lg hover:bg-orange-600 transition-colors"
           >
             View All Calculators
-            <ArrowRight size={20} className="ml-2" />
+            <ArrowRight size={18} className="ml-2" />
           </a>
         </div>
       </div>
 
       {/* Health Games Section */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Health & Wellness Games</h1>
+      <div className="text-center mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3" style={{ color: '#2D9AA5' }}>Health & Wellness Games</h1>
       </div>
 
       {/* Games Slider Container */}
-      <div className="relative px-12">
-        {/* Left Arrow - Positioned closer to cards */}
+      <div className="relative px-2 sm:px-6 lg:px-12">
+        {/* Left Arrow - Hidden on mobile, responsive positioning */}
         <button
           onClick={scrollGamesLeft}
-          className="absolute -left-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          className="hidden sm:block absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-2 sm:p-3 text-white hover:bg-orange-600 transition-colors"
           aria-label="Scroll games left"
         >
           <ChevronLeft size={15} />
         </button>
 
-        {/* Right Arrow - Positioned closer to cards */}
+        {/* Right Arrow - Hidden on mobile, responsive positioning */}
         <button
           onClick={scrollGamesRight}
-          className="absolute -right-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-3 text-white hover:bg-orange-600 transition-colors"
+          className="hidden sm:block absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-20 bg-orange-500 shadow-lg rounded-full p-2 sm:p-3 text-white hover:bg-orange-600 transition-colors"
           aria-label="Scroll games right"
         >
           <ChevronRight size={15} />
         </button>
 
-        {/* Scrollable Games Cards Container - Display exactly 3 cards */}
+        {/* Scrollable Games Cards Container - Responsive grid */}
         <div
           ref={gamesSliderRef}
-          className="flex overflow-x-auto scrollbar-hide gap-6 pb-4 scroll-smooth"
+          className="flex overflow-x-auto scrollbar-hide gap-3 sm:gap-4 lg:gap-6 pb-4 scroll-smooth"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none'
@@ -394,30 +372,26 @@ const HealthCalculatorApp: React.FC = () => {
             return (
               <div
                 key={game.id}
-                className={`${game.bgColor} ${game.borderColor} ${game.hoverColor} flex-shrink-0 border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group overflow-hidden`}
-                style={{
-                  width: 'calc((100% - 3rem) / 3)', // Exactly 3 cards with gaps
-                  minWidth: '280px' // Minimum width for responsiveness
-                }}
+                className={`${game.bgColor} ${game.borderColor} ${game.hoverColor} flex-shrink-0 border-2 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 group overflow-hidden w-[260px] sm:w-[280px] md:w-[300px] lg:w-[calc((100%-3rem)/3)] min-w-[260px]`}
               >
                 {/* Image Section */}
-                <div className="relative h-32 overflow-hidden">
+                <div className="relative h-24 sm:h-28 lg:h-32 overflow-hidden">
                   <img
                     src={game.image}
                     alt={game.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute top-3 left-3">
-                    <div className={`bg-gradient-to-r ${game.color} p-2 rounded-lg shadow-lg`}>
-                      <IconComponent className="text-white" size={20} />
+                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
+                    <div className={`bg-gradient-to-r ${game.color} p-1.5 sm:p-2 rounded-lg shadow-lg`}>
+                      <IconComponent className="text-white" size={16} />
                     </div>
                   </div>
                 </div>
 
                 {/* Content Section */}
-                <div className="p-5">
-                  <h3 className="font-bold text-gray-800 mb-2 text-lg">{game.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed line-clamp-2">{game.description}</p>
+                <div className="p-3 sm:p-4 lg:p-5">
+                  <h3 className="font-bold text-gray-800 mb-2 text-sm sm:text-base lg:text-lg line-clamp-2">{game.title}</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed line-clamp-2">{game.description}</p>
                   <a
                     href={`/games/${game.id}#games-section`}
                     onClick={() => {
@@ -426,10 +400,10 @@ const HealthCalculatorApp: React.FC = () => {
                       }
                       localStorage.setItem('shouldScrollToGames', 'true');
                     }}
-                    className="inline-flex items-center bg-[#FF6B6B] text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#ee5a52] transition-colors"
+                    className="inline-flex items-center bg-[#FF6B6B] text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm hover:bg-[#ee5a52] transition-colors w-full sm:w-auto justify-center sm:justify-start"
                   >
                     Play Now
-                    <Gamepad2 size={16} className="ml-2" />
+                    <Gamepad2 size={14} className="ml-2" />
                   </a>
                 </div>
               </div>
@@ -438,7 +412,7 @@ const HealthCalculatorApp: React.FC = () => {
         </div>
 
         {/* View All Games Button */}
-        <div className="text-center mt-8">
+        <div className="text-center mt-6 sm:mt-8">
           <a
             href="/games/allgames#games-section"
             onClick={() => {
@@ -447,10 +421,10 @@ const HealthCalculatorApp: React.FC = () => {
               }
               localStorage.setItem('shouldScrollToGames', 'true');
             }}
-            className="inline-flex items-center bg-purple-500 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-purple-600 transition-colors"
+            className="inline-flex items-center bg-purple-500 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg font-semibold text-base sm:text-lg hover:bg-purple-600 transition-colors"
           >
             View All Games
-            <Gamepad2 size={20} className="ml-2" />
+            <Gamepad2 size={18} className="ml-2" />
           </a>
         </div>
       </div>
@@ -458,16 +432,16 @@ const HealthCalculatorApp: React.FC = () => {
   );
 
   const SimpleCalculatorView: React.FC<{ title: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = ({ title, icon: IconComponent }) => (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
       <div className="text-center">
-        <IconComponent className="mx-auto mb-4 text-[#2D9AA5]" size={48} />
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">{title}</h2>
-        <div className="bg-[#2D9AA5]/10 p-8 rounded-lg border border-[#2D9AA5]/30">
-          <p className="text-gray-600 text-lg mb-4">
+        <IconComponent className="mx-auto mb-4 text-[#2D9AA5]" size={window.innerWidth < 640 ? 36 : 48} />
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">{title}</h2>
+        <div className="bg-[#2D9AA5]/10 p-4 sm:p-6 lg:p-8 rounded-lg border border-[#2D9AA5]/30">
+          <p className="text-gray-600 text-base sm:text-lg mb-4">
             This calculator will help you monitor your health metrics effectively.
           </p>
-          <div className="text-4xl font-bold text-[#2D9AA5] mb-2">Ready</div>
-          <div className="text-gray-700 font-medium">Calculator Interface</div>
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#2D9AA5] mb-2">Ready</div>
+          <div className="text-gray-700 font-medium text-sm sm:text-base">Calculator Interface</div>
         </div>
       </div>
     </div>
@@ -495,7 +469,7 @@ const HealthCalculatorApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#2D9AA5]/10 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#2D9AA5]/10 p-3 sm:p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
         {renderCalculator()}
       </div>

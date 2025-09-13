@@ -57,6 +57,7 @@ interface ErrorModalState {
 export default function Home(): React.ReactElement {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLDivElement | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [clinicsPerPage] = useState(5); // You can change this number
   const [expandedTreatments, setExpandedTreatments] = useState<
@@ -467,6 +468,16 @@ export default function Home(): React.ReactElement {
         return (a.distance ?? 0) - (b.distance ?? 0);
       });
       setClinics(clinicsWithDistance);
+      
+      // Scroll to results section when clinics are loaded
+      setTimeout(() => {
+        if (resultsRef.current && clinicsWithDistance.length > 0) {
+          resultsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
     } catch {
       // console.error("Error fetching clinics:", err);
     } finally {
@@ -871,7 +882,7 @@ export default function Home(): React.ReactElement {
 
 
       {/* Results Section */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+      <div ref={resultsRef} className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {clinics.length > 0 && (
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
             {/* Filters Sidebar */}
@@ -1284,7 +1295,7 @@ export default function Home(): React.ReactElement {
       {isVisible && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="cursor-pointer fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
+          className="cursor-pointer fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
           style={{ zIndex: 9999 }}
         >
           <svg

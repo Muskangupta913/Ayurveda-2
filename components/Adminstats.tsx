@@ -1,24 +1,26 @@
 'use client';
-import React, { useEffect, useState, ReactNode } from 'react';
+import React, { useEffect, useState, ReactNode, useMemo, useRef } from 'react';
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
+  Cell,
   AreaChart,
   Area,
   ComposedChart,
   Line,
+  Legend,
+  LabelList,
+  ScatterChart,
+  Scatter,
 } from "recharts";
 
-import type { TooltipProps, NameType, ValueType } from "recharts/types";
-
-import { TrendingUp, FileText, Briefcase, Activity, ChevronUp, ChevronDown } from 'lucide-react';
+import { TrendingUp, FileText, Briefcase, Activity, BarChart3, Target } from 'lucide-react';
 
 // ---------------- Types ----------------
 type SubTreatment = {
@@ -60,18 +62,12 @@ interface AdminStatsProps {
 }
 
 // ---------------- Custom Components ----------------
-type TrendDir = 'up' | 'down';
-
 interface StatCardProps {
   title: string;
   value: number | string;
   icon: React.ComponentType<{ className?: string }>;
-  color?: string;
-  trend?: TrendDir;
-  trendValue?: number | string;
+  gradient: string;
   subtitle?: string;
-  prefix?: string;
-  suffix?: string;
   loading?: boolean;
 }
 
@@ -79,20 +75,10 @@ const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
   icon: Icon,
-  color = 'bg-[#2D9AA5]',
-  trend,
-  trendValue,
+  gradient,
   subtitle,
-  prefix = '',
-  suffix = '',
   loading = false,
 }) => {
-  const getTrendColor = (t?: TrendDir): string => {
-    if (t === 'up') return 'text-emerald-500';
-    if (t === 'down') return 'text-red-500';
-    return 'text-gray-500';
-  };
-
   const formatValue = (val: number | string): string => {
     if (loading) return '---';
     if (typeof val === 'number') {
@@ -104,57 +90,33 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <div className="group bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-[#2D9AA5]/30 relative overflow-hidden">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0 opacity-[0.02]">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#2D9AA5] via-transparent to-[#2D9AA5] transform rotate-12 scale-150" />
-      </div>
-
+    <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+      {/* Background gradient */}
+      <div className={`absolute inset-0 ${gradient} opacity-[0.03]`} />
+      
       <div className="relative z-10">
-        {/* Header with icon and trend */}
-        <div className="flex items-center justify-between mb-6">
-          <div
-            className={`p-4 rounded-xl ${color} shadow-lg shadow-[#2D9AA5]/20 group-hover:shadow-[#2D9AA5]/30 transition-all duration-300 group-hover:scale-110`}
-          >
-            <Icon className="w-6 h-6 text-white" />
+        {/* Icon and value section */}
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${gradient} shadow-sm`}>
+            <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          {trend && trendValue !== undefined && trendValue !== null && (
-            <div
-              className={`flex items-center gap-1 text-sm font-semibold px-3 py-1 rounded-full bg-gray-50 ${getTrendColor(
-                trend,
-              )}`}
-            >
-              {trend === 'up' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              <span>{trendValue}%</span>
-            </div>
-          )}
-        </div>
-
-        {/* Main value */}
-        <div className="mb-3">
-          <div className="flex items-baseline gap-1">
-            {prefix && <span className="text-lg font-medium text-gray-600">{prefix}</span>}
-            <div
-              className={`text-3xl font-bold text-gray-900 transition-all duration-300 ${
-                loading ? 'animate-pulse' : 'group-hover:text-[#2D9AA5]'
-              }`}
-            >
+          <div className="text-right">
+            <div className={`text-xl sm:text-2xl font-bold text-gray-900 ${loading ? 'animate-pulse' : ''}`}>
               {formatValue(value)}
             </div>
-            {suffix && <span className="text-lg font-medium text-gray-600 ml-1">{suffix}</span>}
           </div>
         </div>
 
         {/* Title and subtitle */}
         <div>
-          <div className="text-gray-700 text-sm font-semibold uppercase tracking-wide mb-1">{title}</div>
-          {subtitle && <div className="text-gray-500 text-xs">{subtitle}</div>}
+          <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-1">{title}</h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
 
         {/* Loading indicator */}
         {loading && (
           <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-100 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[#2D9AA5] to-cyan-400 animate-pulse" />
+            <div className={`h-full ${gradient}`} />
           </div>
         )}
       </div>
@@ -164,26 +126,69 @@ const StatCard: React.FC<StatCardProps> = ({
 
 interface ChartContainerProps {
   title: string;
+  icon: React.ComponentType<{ className?: string }>;
   children: ReactNode;
   fullWidth?: boolean;
 }
 
-const ChartContainer: React.FC<ChartContainerProps> = ({ title, children, fullWidth = false }) => (
-  <div
-    className={`bg-white border border-gray-200 rounded-xl p-6 hover:border-[#2D9AA5]/30 transition-all duration-300 hover:shadow-lg ${
-      fullWidth ? 'col-span-full' : ''
-    }`}
-  >
-    <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-      <div className="w-1 h-6 bg-[#2D9AA5] rounded-full" />
-      {title}
-    </h3>
+const ChartContainer: React.FC<ChartContainerProps> = ({ 
+  title, 
+  icon: Icon, 
+  children, 
+  fullWidth = false 
+}) => (
+  <div className={`bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 ${fullWidth ? 'col-span-full' : ''}`}>
+    <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+      <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+      </div>
+      <h3 className="text-sm sm:text-lg font-semibold text-gray-900">{title}</h3>
+    </div>
     <div className="relative">{children}</div>
   </div>
 );
 
+// Custom label components for charts
+const CustomBarLabel = (props: any) => {
+  const { x, y, width, height, value } = props;
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 5}
+      fill="#374151"
+      textAnchor="middle"
+      fontSize="12"
+      fontWeight="600"
+    >
+      {value}
+    </text>
+  );
+};
+
+const CustomPieLabel = (props: any) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent, name, value } = props;
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return percent > 0.05 ? (
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      fontSize="11"
+      fontWeight="600"
+    >
+      {`${value}`}
+    </text>
+  ) : null;
+};
+
 // ---------------- Main Component ----------------
-const AdminStats: React.FC<AdminStatsProps> = ({ theme = 'dark' }) => {
+const AdminStats: React.FC<AdminStatsProps> = ({ theme = 'light' }) => {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [jobs, setJobs] = useState<JobsData>({
@@ -192,14 +197,11 @@ const AdminStats: React.FC<AdminStatsProps> = ({ theme = 'dark' }) => {
     declined: [],
   });
   const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Fetch all data function
   const fetchData = async (): Promise<void> => {
     try {
-      const isRefresh = !loading;
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+      setLoading(true);
 
       const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const headers: HeadersInit = {
@@ -228,38 +230,20 @@ const AdminStats: React.FC<AdminStatsProps> = ({ theme = 'dark' }) => {
         approved: jobsData.approved ?? [],
         declined: jobsData.declined ?? [],
       });
+
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error fetching data:', error);
-      // Optionally trigger a toast UI here
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
+  const hasFetchedRef = useRef<boolean>(false);
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     void fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ---------------- Theme Styles ----------------
-  const isLight = theme === 'light';
-  const themeStyles = {
-    rootBg: isLight ? 'bg-gray-50 text-gray-900' : 'bg-gray-900 text-white',
-    headerBg: isLight
-      ? 'bg-white border-b border-gray-200'
-      : 'bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 border-b border-gray-700',
-    container: isLight ? 'bg-white border border-gray-200' : 'bg-gray-800 border border-gray-700',
-    primaryText: isLight ? 'text-gray-900' : 'text-white',
-    secondaryText: isLight ? 'text-gray-600' : 'text-gray-400',
-    mutedText: isLight ? 'text-gray-500' : 'text-gray-500',
-    accent: 'bg-teal-500',
-    axisColor: isLight ? '#6B7280' : '#9CA3AF',
-    gridColor: isLight ? '#E5E7EB' : '#374151',
-    tooltipBg: isLight ? 'bg-white border border-gray-200' : 'bg-gray-800 border border-gray-600',
-    tooltipText: isLight ? 'text-gray-900' : 'text-white',
-  } as const;
 
   // ---------------- Calculated Statistics ----------------
   const mainTreatmentCount = treatments.length;
@@ -274,246 +258,353 @@ const AdminStats: React.FC<AdminStatsProps> = ({ theme = 'dark' }) => {
   const totalJobCount = pendingJobCount + approvedJobCount + declinedJobCount;
 
   // ---------------- Chart Data Preparation ----------------
-  const overviewBarData = [
-    { name: 'Main Treatments', value: mainTreatmentCount, fill: '#2D9AA5' },
-    { name: 'Sub Treatments', value: subTreatmentCount, fill: '#18232b' },
-    { name: 'Published Blogs', value: blogCount, fill: '#4ECDC4' },
-    { name: 'Total Jobs', value: totalJobCount, fill: '#45B7D1' },
-  ];
+  const overviewHistogramData = useMemo(() => ([
+    { 
+      name: 'Main\nTreatments', 
+      value: mainTreatmentCount, 
+      fill: '#2D9AA5',
+      percentage: mainTreatmentCount > 0 ? Math.round((mainTreatmentCount / Math.max(mainTreatmentCount, subTreatmentCount, blogCount, totalJobCount)) * 100) : 0
+    },
+    { 
+      name: 'Sub\nTreatments', 
+      value: subTreatmentCount, 
+      fill: '#10B981',
+      percentage: subTreatmentCount > 0 ? Math.round((subTreatmentCount / Math.max(mainTreatmentCount, subTreatmentCount, blogCount, totalJobCount)) * 100) : 0
+    },
+    { 
+      name: 'Published\nBlogs', 
+      value: blogCount, 
+      fill: '#F59E0B',
+      percentage: blogCount > 0 ? Math.round((blogCount / Math.max(mainTreatmentCount, subTreatmentCount, blogCount, totalJobCount)) * 100) : 0
+    },
+    { 
+      name: 'Total\nJobs', 
+      value: totalJobCount, 
+      fill: '#EF4444',
+      percentage: totalJobCount > 0 ? Math.round((totalJobCount / Math.max(mainTreatmentCount, subTreatmentCount, blogCount, totalJobCount)) * 100) : 0
+    },
+  ]), [mainTreatmentCount, subTreatmentCount, blogCount, totalJobCount]);
 
-  const jobStatusPieData = [
-    { name: 'Approved', value: approvedJobCount, fill: '#10B981' },
-    { name: 'Pending', value: pendingJobCount, fill: '#F59E0B' },
-    { name: 'Declined', value: declinedJobCount, fill: '#EF4444' },
-  ].filter((item) => item.value > 0);
+  const jobStatusPieData = useMemo(() => ([
+    { name: 'Approved', value: approvedJobCount, fill: '#10B981', label: `Approved (${approvedJobCount})` },
+    { name: 'Pending', value: pendingJobCount, fill: '#F59E0B', label: `Pending (${pendingJobCount})` },
+    { name: 'Declined', value: declinedJobCount, fill: '#EF4444', label: `Declined (${declinedJobCount})` },
+  ].filter((item) => item.value > 0)), [approvedJobCount, pendingJobCount, declinedJobCount]);
 
-  const treatmentAreaData = [
-    { name: 'Main Treatments', value: mainTreatmentCount },
-    { name: 'Sub Treatments', value: subTreatmentCount },
-  ];
+  const treatmentAreaData = useMemo(() => ([
+    { name: 'Main', value: mainTreatmentCount },
+    { name: 'Sub', value: subTreatmentCount },
+  ]), [mainTreatmentCount, subTreatmentCount]);
 
-  const contentComparisonData = [
+  const contentComparisonData = useMemo(() => ([
     {
       category: 'Treatments',
       main: mainTreatmentCount,
       secondary: subTreatmentCount,
-      total: mainTreatmentCount + subTreatmentCount,
     },
     {
       category: 'Content',
       main: blogCount,
       secondary: 0,
-      total: blogCount,
     },
     {
       category: 'Jobs',
       main: approvedJobCount,
-      secondary: pendingJobCount,
-      total: totalJobCount,
+      secondary: pendingJobCount + declinedJobCount,
     },
-  ];
+  ]), [mainTreatmentCount, subTreatmentCount, blogCount, approvedJobCount, pendingJobCount, declinedJobCount]);
 
-  // Custom tooltip component
-  const CustomTooltip: React.FC<TooltipProps<ValueType, NameType>> = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className={`${themeStyles.tooltipBg} rounded-lg p-3 shadow-xl`}>
-          <p className={`${themeStyles.tooltipText} font-medium`}>{label as ReactNode}</p>
-          {payload.map((entry, index) => (
-            <p key={index} className="text-sm" style={{ color: (entry?.color as string) || undefined }}>
-              {String(entry?.name)}: {String(entry?.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  const pieColors = useMemo(() => ['#2D9AA5', '#F59E0B', '#EF4444'], []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
+     
+
       {/* Main Content */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
         {/* Statistics Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatCard
             title="Main Treatments"
             value={mainTreatmentCount}
             icon={Activity}
-            color="bg-gradient-to-r from-teal-600 to-teal-700"
-            trend="up"
-            trendValue={12}
+            gradient="bg-gradient-to-r from-blue-500 to-blue-600"
+            subtitle="Active treatment categories"
+            loading={loading}
           />
           <StatCard
             title="Sub Treatments"
             value={subTreatmentCount}
             icon={TrendingUp}
-            color="bg-gradient-to-r from-blue-600 to-blue-700"
-            trend="up"
-            trendValue={8}
+            gradient="bg-gradient-to-r from-purple-500 to-purple-600"
+            subtitle="Specialized subcategories"
+            loading={loading}
           />
           <StatCard
             title="Published Blogs"
             value={blogCount}
             icon={FileText}
-            color="bg-gradient-to-r from-purple-600 to-purple-700"
-            trend="up"
-            trendValue={15}
+            gradient="bg-gradient-to-r from-green-500 to-green-600"
+            subtitle="Content articles"
+            loading={loading}
           />
           <StatCard
             title="Total Jobs"
             value={totalJobCount}
             icon={Briefcase}
-            color="bg-gradient-to-r from-green-600 to-green-700"
-            trend="up"
-            trendValue={5}
+            gradient="bg-gradient-to-r from-orange-500 to-orange-600"
+            subtitle="All job listings"
+            loading={loading}
           />
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          {/* Quick Bar Chart */}
-          <ChartContainer title="Quick Overview">
-  <ResponsiveContainer width="100%" height={350}>
-    <AreaChart
-      data={overviewBarData}
-      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-    >
-      <CartesianGrid strokeDasharray="3 3" stroke={themeStyles.gridColor} />
-      <XAxis
-        dataKey="name"
-        tick={{ fill: themeStyles.axisColor, fontSize: 12 }}
-        angle={-45}
-        textAnchor="end"
-        height={80}
-        interval={0}
-        axisLine={{ stroke: themeStyles.axisColor }}
-        tickLine={{ stroke: themeStyles.axisColor }}
-      />
-      <YAxis
-        tick={{ fill: themeStyles.axisColor, fontSize: 12 }}
-        axisLine={{ stroke: themeStyles.axisColor }}
-        tickLine={{ stroke: themeStyles.axisColor }}
-      />
-      <Tooltip content={<CustomTooltip />} />
-      <Area
-        type="monotone"
-        dataKey="value"
-        stroke="#2D9AA5"
-        fill="#2D9AA5"
-        fillOpacity={0.3}
-      />
-    </AreaChart>
-  </ResponsiveContainer>
-</ChartContainer>
-
-          {/* Job Status Distribution Pie Chart */}
-          <ChartContainer title="Job Status Distribution">
-            <ResponsiveContainer width="100%" height={320}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/* Job Status Distribution */}
+          <ChartContainer title="Job Status Distribution" icon={Target}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
                   data={jobStatusPieData}
                   cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  innerRadius={40}
+                  cy="40%"
+                  outerRadius={80}
+                  innerRadius={30}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   labelLine={false}
+                  label={CustomPieLabel}
+                  isAnimationActive={false}
+                >
+                  {jobStatusPieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                  ))}
+                </Pie>
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value, entry) => `${value}: ${entry.payload?.value || 0}`}
                 />
-                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </ChartContainer>
 
-          {/* Treatment Breakdown Area Chart */}
-          <ChartContainer title="Treatment Analysis">
-            <ResponsiveContainer width="100%" height={320}>
+          {/* Treatment Analysis */}
+          <ChartContainer title="Treatment Distribution" icon={Activity}>
+            <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={treatmentAreaData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                 <defs>
                   <linearGradient id="treatmentGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#2D9AA5" stopOpacity={0.8} />
-                    <stop offset="100%" stopColor="#2D9AA5" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#2D9AA5" stopOpacity={0.2} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={themeStyles.gridColor} />
-                <XAxis dataKey="name" tick={{ fill: themeStyles.axisColor, fontSize: 12 }} />
-                <YAxis tick={{ fill: themeStyles.axisColor, fontSize: 12 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="value" stroke="#2D9AA5" strokeWidth={3} fill="url(#treatmentGradient)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fill: '#6B7280', fontSize: 11 }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                />
+                <YAxis 
+                  tick={{ fill: '#6B7280', fontSize: 11 }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#2D9AA5" 
+                  strokeWidth={2}
+                  fill="url(#treatmentGradient)" 
+                  isAnimationActive={false}
+                >
+                  <LabelList 
+                    dataKey="value"
+                    position="top"
+                    style={{ fill: '#374151', fontSize: '12px', fontWeight: '600' }}
+                  />
+                </Area>
               </AreaChart>
             </ResponsiveContainer>
           </ChartContainer>
         </div>
 
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Content Comparison Chart */}
-          <div className="xl:col-span-3">
-            <ChartContainer title="Content Category Comparison">
-              <ResponsiveContainer width="100%" height={380}>
-                <ComposedChart data={contentComparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+        {/* Content Category Analysis and System Overview side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8 text-black xl:grid-cols-1">
+          <ChartContainer title="Content Category Analysis" icon={BarChart3} fullWidth>
+            <div className="w-full h-80 sm:h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={contentComparisonData}
+                  margin={{ top: 30, right: 30, left: 20, bottom: 20 }}
+                >
                   <defs>
                     <linearGradient id="primaryGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.9} />
-                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0.7} />
+                      <stop offset="5%" stopColor="#2D9AA5" stopOpacity={0.9} />
+                      <stop offset="95%" stopColor="#2D9AA5" stopOpacity={0.7} />
                     </linearGradient>
                     <linearGradient id="secondaryGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.9} />
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0.7} />
+                      <stop offset="95%" stopColor="#D97706" stopOpacity={0.7} />
                     </linearGradient>
-                    <filter id="glow">
-                      <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                      <feMerge>
-                        <feMergeNode in="coloredBlur" />
-                        <feMergeNode in="SourceGraphic" />
-                      </feMerge>
-                    </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="5 5" stroke={themeStyles.gridColor} />
+
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+
                   <XAxis
                     dataKey="category"
-                    tick={{ fill: themeStyles.axisColor, fontSize: 12, fontWeight: 500 as unknown as number }}
-                    axisLine={{ stroke: themeStyles.axisColor, strokeWidth: 2 }}
-                    tickLine={{ stroke: themeStyles.axisColor, strokeWidth: 1 }}
+                    tick={{ fill: '#6B7280', fontSize: 12, fontWeight: 500 }}
+                    axisLine={{ stroke: '#D1D5DB' }}
                   />
                   <YAxis
-                    tick={{ fill: themeStyles.axisColor, fontSize: 12, fontWeight: 500 as unknown as number }}
-                    axisLine={{ stroke: themeStyles.axisColor, strokeWidth: 2 }}
-                    tickLine={{ stroke: themeStyles.axisColor, strokeWidth: 1 }}
+                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                    axisLine={{ stroke: '#D1D5DB' }}
                   />
-                  <Tooltip
-                    content={<CustomTooltip />}
-                    cursor={{
-                      fill: 'rgba(79, 70, 229, 0.1)',
-                      stroke: '#4F46E5',
-                      strokeWidth: 2,
-                      strokeDasharray: '5 5',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
+
+                  <Bar
                     dataKey="main"
-                    stroke="#4F46E5"
                     fill="url(#primaryGradient)"
-                    strokeWidth={3}
-                    dot={{ r: 6, fill: '#4F46E5', stroke: '#fff', strokeWidth: 2, filter: 'url(#glow)' }}
-                    activeDot={{ r: 8, fill: '#4F46E5', stroke: '#fff', strokeWidth: 3 }}
-                    name="Main"
-                  />
-                  <Bar dataKey="secondary" fill="url(#secondaryGradient)" name="Secondary" radius={[8, 8, 0, 0]} />
-                  <Line
-                    type="monotone"
-                    dataKey="main"
-                    stroke="#4F46E5"
-                    strokeWidth={4}
-                    dot={{ r: 0 }}
-                    activeDot={{ r: 8, fill: '#4F46E5', stroke: '#fff', strokeWidth: 3, filter: 'url(#glow)' }}
-                    name="Main (Line)"
-                  />
-                </ComposedChart>
+                    name="Primary"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  >
+                    <LabelList
+                      dataKey="main"
+                      position="top"
+                      style={{ fill: '#374151', fontSize: '12px', fontWeight: '600' }}
+                    />
+                  </Bar>
+
+                  <Bar
+                    dataKey="secondary"
+                    fill="url(#secondaryGradient)"
+                    name="Secondary"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  >
+                    <LabelList
+                      dataKey="secondary"
+                      position="top"
+                      style={{ fill: '#374151', fontSize: '12px', fontWeight: '600' }}
+                    />
+                  </Bar>
+
+                  <Legend verticalAlign="bottom" height={36} />
+                </BarChart>
               </ResponsiveContainer>
-            </ChartContainer>
+            </div>
+          </ChartContainer>
+
+          <ChartContainer title="System Overview" icon={BarChart3}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={overviewHistogramData}
+                margin={{ top: 30, right: 30, left: 20, bottom: 40 }}
+                barCategoryGap={20}
+                barGap={8}
+              >
+                <defs>
+                  <linearGradient id="histogramGradient1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2D9AA5" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#2D9AA5" stopOpacity={0.4} />
+                  </linearGradient>
+                  <linearGradient id="histogramGradient2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.4} />
+                  </linearGradient>
+                  <linearGradient id="histogramGradient3" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.4} />
+                  </linearGradient>
+                  <linearGradient id="histogramGradient4" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#EF4444" stopOpacity={0.4} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 500 }}
+                  interval={0}
+                  tickMargin={12}
+                  angle={-15}
+                  textAnchor="end"
+                  height={60}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                  tickLine={{ stroke: '#D1D5DB' }}
+                />
+                <YAxis
+                  tick={{ fill: '#6B7280', fontSize: 11 }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                  tickLine={{ stroke: '#D1D5DB' }}
+                  domain={[0, 'dataMax + 5']}
+                />
+                <Bar 
+                  dataKey="value" 
+                  radius={[4, 4, 0, 0]} 
+                  isAnimationActive={false}
+                  shape={(props) => {
+                    const { fill, ...rest } = props;
+                    const gradientId = fill === '#2D9AA5' ? 'histogramGradient1' :
+                                     fill === '#10B981' ? 'histogramGradient2' :
+                                     fill === '#F59E0B' ? 'histogramGradient3' : 'histogramGradient4';
+                    return <rect {...rest} fill={`url(#${gradientId})`} />;
+                  }}
+                >
+                  <LabelList 
+                    dataKey="value" 
+                    position="top" 
+                    style={{ 
+                      fill: '#374151', 
+                      fontSize: 11, 
+                      fontWeight: 600,
+                      textShadow: '0 1px 2px rgba(255,255,255,0.8)'
+                    }} 
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-600">Job Approval Rate</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
+                  {totalJobCount > 0 ? Math.round((approvedJobCount / totalJobCount) * 100) : 0}%
+                </p>
+              </div>
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-600">Avg. Subcategories</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                  {mainTreatmentCount > 0 ? (subTreatmentCount / mainTreatmentCount).toFixed(1) : '0.0'}
+                </p>
+              </div>
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+                <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-600">Content Quality</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-600">Excellent</p>
+              </div>
+              <div className="p-2 sm:p-3 bg-purple-100 rounded-lg">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
