@@ -1,12 +1,12 @@
-import Clinic from '../../../models/Clinic';
-import Treatment from '../../../models/Treatment';
-import dbConnect from '../../../lib/database';
+import Clinic from "../../../models/Clinic";
+import Treatment from "../../../models/Treatment";
+import dbConnect from "../../../lib/database";
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method not allowed" });
   }
 
   const { treatments, otherTreatment, clinicId } = req.body;
@@ -20,7 +20,9 @@ export default async function handler(req, res) {
       if (t.slug === "other") continue; // skip "other"
       const exists = await Treatment.findOne({ slug: t.slug });
       if (!exists) {
-        return res.status(400).json({ message: `Main treatment '${t.name}' not found` });
+        return res
+          .status(400)
+          .json({ message: `Main treatment '${t.name}' not found` });
       }
     }
 
@@ -48,7 +50,9 @@ export default async function handler(req, res) {
     }
 
     await clinic.save();
-    return res.status(200).json({ message: "Treatments added successfully", clinic });
+    return res
+      .status(200)
+      .json({ message: "Treatments added successfully", clinic });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Failed to add treatments" });

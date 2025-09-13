@@ -15,10 +15,13 @@ export default async function handler(req, res) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       console.log("Decoded token role:", decoded.role);
-      if (decoded.role !== "doctor" && decoded.role !== "lead") {
-  return res.status(403).json({ message: "Access denied" });
-}
-
+      if (
+        decoded.role !== "doctor" &&
+        decoded.role !== "lead" &&
+        decoded.role !== "clinic"
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
     } catch (err) {
       return res.status(401).json({ message: "Invalid token" });
     }

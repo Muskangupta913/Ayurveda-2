@@ -1,13 +1,13 @@
 // @ts-nocheck
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import axios from 'axios';
-import { Calendar, X, Star, Navigation } from 'lucide-react';
-import dayjs from 'dayjs';
-import CalculatorGames from '../../components/CalculatorGames'
-import { useAuth } from '../../context/AuthContext';
-import AuthModal from '../../components/AuthModal';
-import toast, { Toaster } from 'react-hot-toast';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import axios from "axios";
+import { Calendar, X, Star, Navigation } from "lucide-react";
+import dayjs from "dayjs";
+import CalculatorGames from "../../components/CalculatorGames";
+import { useAuth } from "../../context/AuthContext";
+import AuthModal from "../../components/AuthModal";
+import toast, { Toaster } from "react-hot-toast";
 
 interface DoctorProfile {
   _id: string;
@@ -15,7 +15,10 @@ interface DoctorProfile {
   degree?: string;
   address?: string;
   photos?: string[];
-  treatments?: Array<{ mainTreatment: string; subTreatments?: Array<{ name: string }> }>;
+  treatments?: Array<{
+    mainTreatment: string;
+    subTreatments?: Array<{ name: string }>;
+  }>;
   experience?: number;
   consultationFee?: number;
   clinicContact?: string;
@@ -45,16 +48,20 @@ export default function DoctorDetail() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const { isAuthenticated } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
-  const [pendingAction, setPendingAction] = useState<null | { type: 'enquiry' | 'review' | 'prescription' }>(null);
+  const [authModalMode, setAuthModalMode] = useState<"login" | "register">(
+    "login"
+  );
+  const [pendingAction, setPendingAction] = useState<null | {
+    type: "enquiry" | "review" | "prescription";
+  }>(null);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
   const [modalReview, setModalReview] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [prescriptionForm, setPrescriptionForm] = useState({
-    healthIssue: '',
-    symptoms: ''
+    healthIssue: "",
+    symptoms: "",
   });
   const [prescriptionLoading, setPrescriptionLoading] = useState(false);
   useEffect(() => {
@@ -63,10 +70,12 @@ export default function DoctorDetail() {
       try {
         setLoading(true);
         setError(null);
-        const res = await axios.get<{ profile: DoctorProfile }>(`/api/doctor/profile/${id}`);
+        const res = await axios.get<{ profile: DoctorProfile }>(
+          `/api/doctor/profile/${id}`
+        );
         setProfile(res.data?.profile ?? null);
       } catch (err) {
-        setError('Failed to load doctor');
+        setError("Failed to load doctor");
       } finally {
         setLoading(false);
       }
@@ -79,7 +88,9 @@ export default function DoctorDetail() {
     const fetchReviews = async () => {
       setReviewsLoading(true);
       try {
-        const res = await axios.get<{ success: boolean; data: ReviewData }>(`/api/doctor/reviews/${profile._id}`);
+        const res = await axios.get<{ success: boolean; data: ReviewData }>(
+          `/api/doctor/reviews/${profile._id}`
+        );
         if (res.data?.success) {
           setReviewData(res.data.data);
         } else {
@@ -99,10 +110,20 @@ export default function DoctorDetail() {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`full-${i}`} className="w-4 h-4 fill-yellow-400 text-yellow-400" />);
+      stars.push(
+        <Star
+          key={`full-${i}`}
+          className="w-4 h-4 fill-yellow-400 text-yellow-400"
+        />
+      );
     }
     if (hasHalfStar) {
-      stars.push(<Star key="half" className="w-4 h-4 fill-yellow-400/50 text-yellow-400" />);
+      stars.push(
+        <Star
+          key="half"
+          className="w-4 h-4 fill-yellow-400/50 text-yellow-400"
+        />
+      );
     }
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
@@ -114,32 +135,39 @@ export default function DoctorDetail() {
   const handleReviewClick = () => {
     if (!profile) return;
     if (!isAuthenticated) {
-      setPendingAction({ type: 'review' });
-      setAuthModalMode('login');
+      setPendingAction({ type: "review" });
+      setAuthModalMode("login");
       setShowAuthModal(true);
       return;
     }
-    const params = new URLSearchParams({ doctorId: profile._id, doctorName: profile.user.name });
+    const params = new URLSearchParams({
+      doctorId: profile._id,
+      doctorName: profile.user.name,
+    });
     router.push(`/doctor/review-form?${params.toString()}`);
   };
 
   const handleEnquiryClick = () => {
     if (!profile) return;
     if (!isAuthenticated) {
-      setPendingAction({ type: 'enquiry' });
-      setAuthModalMode('login');
+      setPendingAction({ type: "enquiry" });
+      setAuthModalMode("login");
       setShowAuthModal(true);
       return;
     }
-    const params = new URLSearchParams({ doctorId: profile._id, doctorName: profile.user.name, specialization: profile.degree || '' });
+    const params = new URLSearchParams({
+      doctorId: profile._id,
+      doctorName: profile.user.name,
+      specialization: profile.degree || "",
+    });
     router.push(`/doctor/enquiry-form?${params.toString()}`);
   };
 
   const handlePrescriptionRequest = () => {
     if (!profile) return;
     if (!isAuthenticated) {
-      setPendingAction({ type: 'prescription' });
-      setAuthModalMode('login');
+      setPendingAction({ type: "prescription" });
+      setAuthModalMode("login");
       setShowAuthModal(true);
       return;
     }
@@ -149,13 +177,20 @@ export default function DoctorDetail() {
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
     if (!profile || !pendingAction) return;
-    if (pendingAction.type === 'enquiry') {
-      const params = new URLSearchParams({ doctorId: profile._id, doctorName: profile.user.name, specialization: profile.degree || '' });
+    if (pendingAction.type === "enquiry") {
+      const params = new URLSearchParams({
+        doctorId: profile._id,
+        doctorName: profile.user.name,
+        specialization: profile.degree || "",
+      });
       router.push(`/doctor/enquiry-form?${params.toString()}`);
-    } else if (pendingAction.type === 'review') {
-      const params = new URLSearchParams({ doctorId: profile._id, doctorName: profile.user.name });
+    } else if (pendingAction.type === "review") {
+      const params = new URLSearchParams({
+        doctorId: profile._id,
+        doctorName: profile.user.name,
+      });
       router.push(`/doctor/review-form?${params.toString()}`);
-    } else if (pendingAction.type === 'prescription') {
+    } else if (pendingAction.type === "prescription") {
       setShowPrescriptionModal(true);
     }
     setPendingAction(null);
@@ -163,31 +198,42 @@ export default function DoctorDetail() {
 
   const handlePrescriptionSubmit = async () => {
     if (!prescriptionForm.healthIssue.trim()) {
-      toast.error('Please describe your health issue', { style: { background: '#2D9AA5', color: '#fff' } });
+      toast.error("Please describe your health issue", {
+        style: { background: "#2D9AA5", color: "#fff" },
+      });
       return;
     }
 
     setPrescriptionLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/api/prescription/request', {
-        doctorId: id,
-        healthIssue: prescriptionForm.healthIssue,
-        symptoms: prescriptionForm.symptoms
-      }, {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : ''
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "/api/prescription/request",
+        {
+          doctorId: id,
+          healthIssue: prescriptionForm.healthIssue,
+          symptoms: prescriptionForm.symptoms,
+        },
+        {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
         }
-      });
+      );
 
       if (response.data.success) {
-        toast.success('Prescription request sent successfully!', { style: { background: '#2D9AA5', color: '#fff' } });
+        toast.success("Prescription request sent successfully!", {
+          style: { background: "#2D9AA5", color: "#fff" },
+        });
         setShowPrescriptionModal(false);
-        setPrescriptionForm({ healthIssue: '', symptoms: '' });
+        setPrescriptionForm({ healthIssue: "", symptoms: "" });
       }
     } catch (error) {
       // @ts-ignore
-      toast.error(error?.response?.data?.message || 'Failed to send prescription request', { style: { background: '#2D9AA5', color: '#fff' } });
+      toast.error(
+        error?.response?.data?.message || "Failed to send prescription request",
+        { style: { background: "#2D9AA5", color: "#fff" } }
+      );
     } finally {
       setPrescriptionLoading(false);
     }
@@ -200,59 +246,82 @@ export default function DoctorDetail() {
 
   const capitalizeMonth = (dateStr: string) =>
     dateStr.replace(/\b([a-z])/g, (match, p1, offset) => {
-      if (offset > 0 && dateStr[offset - 1] === ' ') return p1.toUpperCase();
+      if (offset > 0 && dateStr[offset - 1] === " ") return p1.toUpperCase();
       return match;
     });
 
   const isTodayOrFuture = (dateStr: string) => {
-    const parsed = dayjs(capitalizeMonth(dateStr) + ' ' + dayjs().year(), 'DD MMMM YYYY');
-    const today = dayjs().startOf('day');
-    return parsed.isValid() && (parsed.isSame(today, 'day') || parsed.isAfter(today, 'day'));
+    const parsed = dayjs(
+      capitalizeMonth(dateStr) + " " + dayjs().year(),
+      "DD MMMM YYYY"
+    );
+    const today = dayjs().startOf("day");
+    return (
+      parsed.isValid() &&
+      (parsed.isSame(today, "day") || parsed.isAfter(today, "day"))
+    );
   };
 
-  const futureSlots = (profile?.timeSlots || []).filter((ts) => isTodayOrFuture(ts.date));
+  const futureSlots = (profile?.timeSlots || []).filter((ts) =>
+    isTodayOrFuture(ts.date)
+  );
 
   useEffect(() => {
     if (modalReview) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [modalReview]);
 
-useEffect(() => {
-  if (showPrescriptionModal) {
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden"; // lock html too
-  } else {
-    document.body.style.overflow = "auto";
-    document.documentElement.style.overflow = "auto";
-  }
+  useEffect(() => {
+    if (showPrescriptionModal) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden"; // lock html too
+    } else {
+      document.body.style.overflow = "auto";
+      document.documentElement.style.overflow = "auto";
+    }
 
-  return () => {
-    document.body.style.overflow = "auto";
-    document.documentElement.style.overflow = "auto";
-  };
-}, [showPrescriptionModal]);
+    return () => {
+      document.body.style.overflow = "auto";
+      document.documentElement.style.overflow = "auto";
+    };
+  }, [showPrescriptionModal]);
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
-          style={{ borderColor: '#2D9AA5', borderTopColor: 'transparent' }}></div>
-        <p className="text-lg font-medium" style={{ color: '#2D9AA5' }}>Loading Profile</p>
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div
+            className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+            style={{ borderColor: "#2D9AA5", borderTopColor: "transparent" }}
+          ></div>
+          <p className="text-lg font-medium" style={{ color: "#2D9AA5" }}>
+            Loading Profile
+          </p>
+        </div>
       </div>
-    </div>
-  );
-  if (error || !profile) return <div className="min-h-screen flex items-center justify-center">{error || 'Not found'}</div>;
+    );
+  if (error || !profile)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        {error || "Not found"}
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <Toaster position="top-center" reverseOrder={false} />
-      <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} onSuccess={handleAuthSuccess} initialMode={authModalMode} />
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={handleAuthModalClose}
+        onSuccess={handleAuthSuccess}
+        initialMode={authModalMode}
+      />
 
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         {/* Header Section with Circular Photo and Info */}
@@ -277,9 +346,13 @@ useEffect(() => {
 
             {/* Doctor Info */}
             <div className="flex-1 text-center lg:text-left text-gray-800">
-              <h1 className="text-3xl sm:text-4xl font-bold mb-2">{profile.user?.name}</h1>
+              <h1 className="text-3xl sm:text-4xl font-bold mb-2">
+                {profile.user?.name}
+              </h1>
               {profile.degree && (
-                <p className="text-xl font-medium text-[#2D9AA5] mb-3">{profile.degree}</p>
+                <p className="text-xl font-medium text-[#2D9AA5] mb-3">
+                  {profile.degree}
+                </p>
               )}
               {profile.address && (
                 <p className="text-gray-600 mb-3">{profile.address}</p>
@@ -291,9 +364,15 @@ useEffect(() => {
                   <span className="text-gray-600">Loading rating...</span>
                 ) : reviewData && reviewData.totalReviews > 0 ? (
                   <>
-                    <div className="flex items-center">{renderStars(reviewData.averageRating)}</div>
-                    <span className="font-medium text-gray-800">{reviewData.averageRating.toFixed(1)}</span>
-                    <span className="text-gray-600">({reviewData.totalReviews} reviews)</span>
+                    <div className="flex items-center">
+                      {renderStars(reviewData.averageRating)}
+                    </div>
+                    <span className="font-medium text-gray-800">
+                      {reviewData.averageRating.toFixed(1)}
+                    </span>
+                    <span className="text-gray-600">
+                      ({reviewData.totalReviews} reviews)
+                    </span>
                   </>
                 ) : (
                   <span className="text-gray-600">No reviews yet</span>
@@ -327,9 +406,14 @@ useEffect(() => {
                 {/* Directions Button */}
                 {(() => {
                   const coords = profile.location?.coordinates;
-                  const mapsHref = coords && coords.length === 2
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}`
-                    : (profile.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(profile.address)}` : null);
+                  const mapsHref =
+                    coords && coords.length === 2
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}`
+                      : profile.address
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                          profile.address
+                        )}`
+                      : null;
                   return mapsHref ? (
                     <a
                       href={mapsHref}
@@ -354,22 +438,35 @@ useEffect(() => {
             <div className="lg:col-span-2 space-y-6">
               {/* Experience, Fee, Contact Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {typeof profile.experience === 'number' && (
+                {typeof profile.experience === "number" && (
                   <div className="p-4 bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 rounded-lg border border-[#2D9AA5]/20">
-                    <h3 className="font-semibold text-gray-800 mb-1">Experience</h3>
-                    <p className="text-gray-700 text-lg font-medium">{profile.experience} years</p>
+                    <h3 className="font-semibold text-gray-800 mb-1">
+                      Experience
+                    </h3>
+                    <p className="text-gray-700 text-lg font-medium">
+                      {profile.experience} years
+                    </p>
                   </div>
                 )}
-                {typeof profile.consultationFee === 'number' && (
+                {typeof profile.consultationFee === "number" && (
                   <div className="p-4 bg-gradient-to-br from-green-50 to-green-25 rounded-lg border border-green-200">
-                    <h3 className="font-semibold text-gray-800 mb-1">Consultation Fee</h3>
-                    <p className="text-gray-700 text-lg font-medium">AED {profile.consultationFee}</p>
+                    <h3 className="font-semibold text-gray-800 mb-1">
+                      Consultation Fee
+                    </h3>
+                    <p className="text-gray-700 text-lg font-medium">
+                      AED {profile.consultationFee}
+                    </p>
                   </div>
                 )}
                 {profile.clinicContact && (
                   <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-25 rounded-lg border border-blue-200">
-                    <h3 className="font-semibold text-gray-800 mb-1">Contact</h3>
-                    <a href={`tel:${profile.clinicContact}`} className="text-blue-600 hover:underline text-lg font-medium">
+                    <h3 className="font-semibold text-gray-800 mb-1">
+                      Contact
+                    </h3>
+                    <a
+                      href={`tel:${profile.clinicContact}`}
+                      className="text-blue-600 hover:underline text-lg font-medium"
+                    >
                       {profile.clinicContact}
                     </a>
                   </div>
@@ -379,10 +476,15 @@ useEffect(() => {
               {/* Treatments Section */}
               {profile.treatments && profile.treatments.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-4 text-xl">Treatments & Services</h3>
+                  <h3 className="font-semibold text-gray-800 mb-4 text-xl">
+                    Treatments & Services
+                  </h3>
                   <div className="space-y-4">
                     {profile.treatments.map((t, idx) => (
-                      <div key={idx} className="p-4 bg-gradient-to-br from-purple-50 to-purple-25 border border-purple-200 rounded-lg">
+                      <div
+                        key={idx}
+                        className="p-4 bg-gradient-to-br from-purple-50 to-purple-25 border border-purple-200 rounded-lg"
+                      >
                         <div className="mb-3">
                           <span className="px-4 py-2 rounded-full bg-purple-600 text-white text-sm font-medium inline-block">
                             {t.mainTreatment}
@@ -391,7 +493,10 @@ useEffect(() => {
                         {t.subTreatments && t.subTreatments.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {t.subTreatments.map((s, i) => (
-                              <span key={i} className="px-3 py-1 rounded-full bg-white text-purple-700 text-xs border border-purple-300 shadow-sm">
+                              <span
+                                key={i}
+                                className="px-3 py-1 rounded-full bg-white text-purple-700 text-xs border border-purple-300 shadow-sm"
+                              >
                                 {s.name}
                               </span>
                             ))}
@@ -406,12 +511,19 @@ useEffect(() => {
               {/* Available Slots Section */}
               {futureSlots.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-4 text-xl">Available Appointments</h3>
+                  <h3 className="font-semibold text-gray-800 mb-4 text-xl">
+                    Available Appointments
+                  </h3>
                   <div className="space-y-4">
                     {futureSlots.map((slot, idx) => (
-                      <div key={idx} className="border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-gray-50 to-white">
+                      <div
+                        key={idx}
+                        className="border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-gray-50 to-white"
+                      >
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-gray-900 text-lg">{slot.date}</h4>
+                          <h4 className="font-semibold text-gray-900 text-lg">
+                            {slot.date}
+                          </h4>
                           <span className="text-sm font-medium text-[#2D9AA5] bg-[#2D9AA5]/10 px-3 py-1 rounded-full border border-[#2D9AA5]/20">
                             {slot.availableSlots} slots available
                           </span>
@@ -419,10 +531,15 @@ useEffect(() => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {slot.sessions?.morning?.length > 0 && (
                             <div>
-                              <h5 className="text-sm font-medium text-gray-700 mb-2">Morning Sessions</h5>
+                              <h5 className="text-sm font-medium text-gray-700 mb-2">
+                                Morning Sessions
+                              </h5>
                               <div className="flex flex-wrap gap-2">
                                 {slot.sessions.morning.map((t, i) => (
-                                  <button key={i} className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm">
+                                  <button
+                                    key={i}
+                                    className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm"
+                                  >
                                     {t}
                                   </button>
                                 ))}
@@ -431,10 +548,15 @@ useEffect(() => {
                           )}
                           {slot.sessions?.evening?.length > 0 && (
                             <div>
-                              <h5 className="text-sm font-medium text-gray-700 mb-2">Evening Sessions</h5>
+                              <h5 className="text-sm font-medium text-gray-700 mb-2">
+                                Evening Sessions
+                              </h5>
                               <div className="flex flex-wrap gap-2">
                                 {slot.sessions.evening.map((t, i) => (
-                                  <button key={i} className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm">
+                                  <button
+                                    key={i}
+                                    className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] transition shadow-sm"
+                                  >
                                     {t}
                                   </button>
                                 ))}
@@ -450,7 +572,9 @@ useEffect(() => {
 
               {/* Reviews Section - moved below slots */}
               <div className="mt-8">
-                <h3 className="font-semibold text-gray-800 text-xl mb-4">Recent Reviews</h3>
+                <h3 className="font-semibold text-gray-800 text-xl mb-4">
+                  Recent Reviews
+                </h3>
                 {reviewsLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5] mx-auto"></div>
@@ -459,7 +583,10 @@ useEffect(() => {
                 ) : reviewData && reviewData.reviews.length > 0 ? (
                   <div className="space-y-4">
                     {reviewData.reviews.slice(0, 6).map((r, idx) => (
-                      <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                      <div
+                        key={idx}
+                        className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                      >
                         <div className="flex items-start gap-3">
                           <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center text-white text-sm font-medium">
                             {r.userId.name.charAt(0).toUpperCase()}
@@ -469,12 +596,22 @@ useEffect(() => {
                               const comment = r.comment ?? ""; // fallback if comment is null/undefined
                               const lines = comment.split(/\r?\n/);
                               const isLong = lines.length > 7;
-                              const displayText = isLong ? lines.slice(0, 7).join('\n') : comment;
+                              const displayText = isLong
+                                ? lines.slice(0, 7).join("\n")
+                                : comment;
                               return (
                                 <>
                                   <p
                                     className="text-sm text-gray-800 mb-2 leading-relaxed"
-                                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line', display: '-webkit-box', WebkitLineClamp: isLong ? 7 : 'unset', WebkitBoxOrient: 'vertical', overflow: isLong ? 'hidden' : 'visible' }}
+                                    style={{
+                                      wordBreak: "break-word",
+                                      overflowWrap: "break-word",
+                                      whiteSpace: "pre-line",
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: isLong ? 7 : "unset",
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: isLong ? "hidden" : "visible",
+                                    }}
                                   >
                                     "{displayText}"
                                   </p>
@@ -486,7 +623,9 @@ useEffect(() => {
                                       Read More
                                     </button>
                                   )}
-                                  <p className="text-xs text-gray-500 font-medium">- {r.userId.name}</p>
+                                  <p className="text-xs text-gray-500 font-medium">
+                                    - {r.userId.name}
+                                  </p>
                                 </>
                               );
                             })()}
@@ -501,7 +640,9 @@ useEffect(() => {
                       <span className="text-gray-400 text-2xl">💬</span>
                     </div>
                     <p className="text-gray-500">No reviews yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Be the first to leave a review!</p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Be the first to leave a review!
+                    </p>
                   </div>
                 )}
               </div>
@@ -529,9 +670,14 @@ useEffect(() => {
             <div className="p-6 overflow-y-auto">
               <div className="space-y-6">
                 {futureSlots.map((slot, idx) => (
-                  <div key={idx} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white shadow-sm">
+                  <div
+                    key={idx}
+                    className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white shadow-sm"
+                  >
                     <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-900 text-lg">{slot.date}</h4>
+                      <h4 className="font-semibold text-gray-900 text-lg">
+                        {slot.date}
+                      </h4>
                       <span className="text-sm font-medium text-[#2D9AA5] bg-[#2D9AA5]/10 px-4 py-2 rounded-full border border-[#2D9AA5]/20">
                         {slot.availableSlots} slots available
                       </span>
@@ -545,7 +691,10 @@ useEffect(() => {
                           </h5>
                           <div className="flex flex-wrap gap-2">
                             {slot.sessions.morning.map((t, i) => (
-                              <button key={i} className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm">
+                              <button
+                                key={i}
+                                className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm"
+                              >
                                 {t}
                               </button>
                             ))}
@@ -560,7 +709,10 @@ useEffect(() => {
                           </h5>
                           <div className="flex flex-wrap gap-2">
                             {slot.sessions.evening.map((t, i) => (
-                              <button key={i} className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm">
+                              <button
+                                key={i}
+                                className="px-4 py-2 bg-white text-gray-800 rounded-lg text-sm border border-gray-200 hover:border-[#2D9AA5] hover:text-[#2D9AA5] hover:bg-[#2D9AA5]/5 transition shadow-sm"
+                              >
                                 {t}
                               </button>
                             ))}
@@ -583,13 +735,25 @@ useEffect(() => {
               <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-20"></div>
               <div className="relative z-10 flex items-center space-x-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2ZM11 6C11 5.44772 10.5523 5 10 5C9.44772 5 9 5.44772 9 6V9H6C5.44772 9 5 9.44772 5 10C5 10.5523 5.44772 11 6 11H9V14C9 14.5523 9.44772 15 10 15C10.5523 15 11 14.5523 11 14V11H14C14.5523 11 15 10.5523 15 10C15 9.44772 14.5523 9 14 9H11V6Z" clipRule="evenodd" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2ZM11 6C11 5.44772 10.5523 5 10 5C9.44772 5 9 5.44772 9 6V9H6C5.44772 9 5 9.44772 5 10C5 10.5523 5.44772 11 6 11H9V14C9 14.5523 9.44772 15 10 15C10.5523 15 11 14.5523 11 14V11H14C14.5523 11 15 10.5523 15 10C15 9.44772 14.5523 9 14 9H11V6Z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">Request Prescription</h3>
-                  <p className="text-white/80 text-sm">Get medical assistance from our professionals</p>
+                  <h3 className="text-xl font-semibold">
+                    Request Prescription
+                  </h3>
+                  <p className="text-white/80 text-sm">
+                    Get medical assistance from our professionals
+                  </p>
                 </div>
               </div>
               <button
@@ -615,7 +779,12 @@ useEffect(() => {
                   <div className="relative">
                     <textarea
                       value={prescriptionForm.healthIssue}
-                      onChange={(e) => setPrescriptionForm(prev => ({ ...prev, healthIssue: e.target.value }))}
+                      onChange={(e) =>
+                        setPrescriptionForm((prev) => ({
+                          ...prev,
+                          healthIssue: e.target.value,
+                        }))
+                      }
                       placeholder="Please describe your health concern in detail. Include when it started, severity, and any relevant medical history..."
                       className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-all duration-200 resize-none text-gray-900 placeholder-gray-500 bg-gray-50/30 hover:bg-white hover:border-gray-300"
                       rows={4}
@@ -639,7 +808,12 @@ useEffect(() => {
                   <div className="relative">
                     <textarea
                       value={prescriptionForm.symptoms}
-                      onChange={(e) => setPrescriptionForm(prev => ({ ...prev, symptoms: e.target.value }))}
+                      onChange={(e) =>
+                        setPrescriptionForm((prev) => ({
+                          ...prev,
+                          symptoms: e.target.value,
+                        }))
+                      }
                       placeholder="List any symptoms you're experiencing (e.g., pain level, duration, frequency, triggers)..."
                       className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] transition-all duration-200 resize-none text-gray-900 placeholder-gray-500 bg-gray-50/30 hover:bg-white hover:border-gray-300"
                       rows={3}
@@ -649,7 +823,6 @@ useEffect(() => {
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
 
@@ -663,17 +836,43 @@ useEffect(() => {
                 >
                   {prescriptionLoading ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       <span>Sending Request...</span>
                     </>
                   ) : (
                     <>
                       <span>Send Request</span>
-                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      <svg
+                        className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                        />
                       </svg>
                     </>
                   )}
@@ -702,7 +901,9 @@ useEffect(() => {
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="text-gray-800 whitespace-pre-line break-words">{modalReview}</div>
+            <div className="text-gray-800 whitespace-pre-line break-words">
+              {modalReview}
+            </div>
           </div>
         </div>
       )}

@@ -265,7 +265,7 @@ const TreatmentManager = ({
       try {
         const token = localStorage.getItem("clinicToken");
         await axios.post(
-          "/api/clinics/add-custom-treatment",
+          "/api/doctor/add-custom-treatment",
           {
             mainTreatment: currentTreatment.mainTreatment,
             subTreatments: [newSubTreatment],
@@ -873,7 +873,7 @@ function ClinicManagementDashboard() {
         // Add to database if it's a custom treatment
         const token = localStorage.getItem("clinicToken");
         const response = await axios.post(
-          "/api/clinics/add-custom-treatment",
+          "/api/doctor/add-custom-treatment",
           {
             mainTreatment: trimmed,
             subTreatments: [],
