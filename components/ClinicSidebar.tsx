@@ -93,6 +93,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
   // Handle escape key to close mobile menu
   useEffect(() => {
@@ -135,9 +136,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
     setIsMobileOpen(false);
   };
 
-  const handleRegularItemClick = () => {
+  const handleRegularItemClick = (label: string) => {
     setIsMobileOpen(false);
     setOpenDropdown(null); // Close dropdown when regular items are clicked
+    setSelectedItem(label); // Mark this item as selected
   };
 
   return (
@@ -268,7 +270,11 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
             <div className="space-y-1">
               {navItems.map((item) => {
                 const isDropdownOpen = openDropdown === item.label;
-                const isActive = router.pathname === item.path;
+                // If an item is manually selected, only that item should be active
+                // Otherwise, use router pathname to determine active state
+                const isActive = selectedItem 
+                  ? selectedItem === item.label 
+                  : router.pathname === item.path;
                 const isHovered = hoveredItem === item.path;
 
                 // If item has children => Dropdown
@@ -284,9 +290,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                               !isDropdownOpen,
                           }
                         )}
-                        onClick={() =>
-                          setOpenDropdown(isDropdownOpen ? null : item.label)
-                        }
+                        onClick={() => {
+                          setOpenDropdown(isDropdownOpen ? null : item.label);
+                          setSelectedItem(item.label); // Mark this dropdown as selected
+                        }}
                       >
                         <div className="flex items-center space-x-3">
                           <div className="text-lg p-2 rounded-lg bg-gray-100 text-gray-600 group-hover:bg-[#2D9AA5]/10 group-hover:text-[#2D9AA5]">
@@ -321,7 +328,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                       {isDropdownOpen && (
                         <div className="pl-6 mt-1 space-y-1">
                           {item.children.map((child) => {
-                            const childActive = router.pathname === child.path;
+                            // Child items are active if they are selected OR if no item is selected and router matches
+                            const childActive = selectedItem 
+                              ? selectedItem === child.label 
+                              : router.pathname === child.path;
                             const childHovered = hoveredItem === child.path;
 
                             return (
@@ -341,6 +351,9 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                                     setHoveredItem(child.path!)
                                   }
                                   onMouseLeave={() => setHoveredItem(null)}
+                                  onClick={() => {
+                                    setSelectedItem(child.label); // Mark child as selected
+                                  }}
                                 // Don't close dropdown when clicking on child items within the dropdown
                                 >
                                   <div className="flex items-center space-x-2">
@@ -409,7 +422,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                       )}
                       onMouseEnter={() => setHoveredItem(item.path!)}
                       onMouseLeave={() => setHoveredItem(null)}
-                      onClick={() => setOpenDropdown(null)} // Close dropdown when regular item is clicked
+                      onClick={() => {
+                        setOpenDropdown(null); // Close dropdown when regular item is clicked
+                        setSelectedItem(item.label); // Mark this item as selected
+                      }}
                     >
                       {isActive && (
                         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
@@ -544,7 +560,11 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
 
               <div className="space-y-1">
                 {navItems.map((item) => {
-                  const isActive = router.pathname === item.path;
+                  // If an item is manually selected, only that item should be active
+                  // Otherwise, use router pathname to determine active state
+                  const isActive = selectedItem 
+                    ? selectedItem === item.label 
+                    : router.pathname === item.path;
                   const isDropdownOpen = openDropdown === item.label;
                   const hasChildren = item.children && item.children.length > 0;
 
@@ -564,6 +584,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                           )}
                           onClick={() => {
                             setOpenDropdown(isDropdownOpen ? null : item.label);
+                            setSelectedItem(item.label); // Mark this dropdown as selected
                           }}
                         >
                           <div className="flex items-center space-x-3">
@@ -624,8 +645,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                         {isDropdownOpen && (
                           <div className="pl-6 mt-1 space-y-1">
                             {item.children.map((child) => {
-                              const childActive =
-                                router.pathname === child.path;
+                              // Child items are active if they are selected OR if no item is selected and router matches
+                              const childActive = selectedItem 
+                                ? selectedItem === child.label 
+                                : router.pathname === child.path;
 
                               return (
                                 <Link key={child.path} href={child.path!}>
@@ -640,7 +663,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                                           !childActive,
                                       }
                                     )}
-                                    onClick={handleItemClick}
+                                    onClick={() => {
+                                      handleItemClick();
+                                      setSelectedItem(child.label); // Mark child as selected
+                                    }}
                                   >
                                     <div className="flex items-center space-x-2">
                                       <div
@@ -704,7 +730,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                             !isActive,
                         }
                       )}
-                      onClick={handleRegularItemClick}
+                      onClick={() => handleRegularItemClick(item.label)}
                     >
                       {isActive && (
                         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
@@ -788,30 +814,6 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
           </div>
         </aside>
       </div>
-
-      {/* <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.05);
-          border-radius: 2px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(45, 154, 165, 0.3);
-          border-radius: 2px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(45, 154, 165, 0.5);
-        }
-
-        .custom-scrollbar {
-          -webkit-overflow-scrolling: touch;
-        }
-      `}</style> */}
     </>
   );
 };
