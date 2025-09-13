@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
+import { Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
 
 export interface Calculator {
   id: string;
@@ -38,6 +38,17 @@ export const calculators: Calculator[] = [
     image: 'https://images.unsplash.com/photo-1493894473891-10fc1e5dbd22?w=400&h=200&fit=crop&auto=format'
   },
   {
+    id: 'depression-test',
+    title: 'Depression Test Calculator',
+    description: 'Begin a gentle test to understand depression signs',
+    icon: Brain,
+    color: 'from-[#2D9AA5] to-[#238a94]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
+  },
+  {
     id: 'bmi',
     title: 'BMI Calculator',
     description: 'Calculate your Body Mass Index and understand your weight category',
@@ -59,17 +70,7 @@ export const calculators: Calculator[] = [
     hoverColor: 'hover:shadow-lg',
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=200&fit=crop'
   },
-  {
-    id: 'depression-test',
-    title: 'Depression Test Calculator',
-    description: 'Begin a gentle test to understand depression signs',
-    icon: Brain,
-    color: 'from-[#2D9AA5] to-[#238a94]',
-    bgColor: 'bg-white',
-    borderColor: 'border-gray-200',
-    hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
-  },
+
   {
     id: 'breathhold',
     title: 'Breath Hold Calculator',
@@ -118,6 +119,17 @@ export const calculators: Calculator[] = [
 
 export const games: Game[] = [
   {
+    id: 'fitwithzeva',
+    title: 'Be Fit with Zeva',
+    description: 'Fun Exercises Boost Immunity & Strength',
+    icon: Heart,
+    color: 'from-[#FF8A65] to-[#f4795b]',
+    bgColor: 'bg-white',
+    borderColor: 'border-gray-200',
+    hoverColor: 'hover:shadow-lg',
+    image: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=200&fit=crop'
+  },
+  {
     id: 'quiz',
     title: 'Health Quiz Challenge',
     description: 'Test your health knowledge with quizzes',
@@ -138,17 +150,6 @@ export const games: Game[] = [
     borderColor: 'border-grey-200',
     hoverColor: 'hover:shadow-xl hover:scale-105 hover:border-orange-300',
     image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=400&h=200&fit=crop'
-  },
-  {
-    id: 'fitwithzeva',
-    title: 'Be Fit with Zeva',
-    description: 'Fun Exercises Boost Immunity & Strength',
-    icon: Heart,
-    color: 'from-[#FF8A65] to-[#f4795b]',
-    bgColor: 'bg-white',
-    borderColor: 'border-gray-200',
-    hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=200&fit=crop'
   },
   {
     id: 'HealthyFood',
