@@ -1,6 +1,8 @@
 import dbConnect from "../../../lib/database";
 import Chat from "../../../models/Chat";
-import "../../../models/PrescriptionRequest"; 
+import "../../../models/PrescriptionRequest";
+import "../../../models/DoctorProfile";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
@@ -28,14 +30,31 @@ export default async function handler(req, res) {
     }
 
     const chats = await Chat.find({ user: userId, isActive: true })
-      .populate("doctor", "name email")
+      .populate("doctor", "_id name email")
       .populate("prescriptionRequest", "healthIssue status createdAt")
       .populate("messages.sender", "name")
       .sort({ lastMessage: -1 });
 
+    // Find DoctorProfile for each doctor and add the profile ID
+    const chatsWithDoctorProfile = await Promise.all(
+      chats.map(async (chat) => {
+        const doctorProfile = await mongoose
+          .model("DoctorProfile")
+          .findOne({ user: chat.doctor._id })
+          .select("_id");
+        return {
+          ...chat.toObject(),
+          doctor: {
+            ...chat.doctor.toObject(),
+            doctorProfileId: doctorProfile?._id || null,
+          },
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
-      data: chats,
+      data: chatsWithDoctorProfile,
     });
   } catch (error) {
     console.error("Get user chats error:", error);
@@ -45,4 +64,3 @@ export default async function handler(req, res) {
     res.status(500).json({ message: "Internal server error" });
   }
 }
-
