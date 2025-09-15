@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Mail, Settings, Calendar, Clock ,MessageCircle} from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Star, Mail, Settings, Calendar, Clock, MessageCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import Stats from '../../components/Stats';
 import ClinicLayout from '../../components/ClinicLayout';
 import withClinicAuth from '../../components/withClinicAuth';
@@ -43,7 +43,7 @@ const ClinicDashboard: NextPageWithLayout = () => {
       try {
         const parsedUser = JSON.parse(clinicUserRaw);
         setClinicUser(parsedUser);
-      } catch  {
+      } catch {
         // console.error('Error parsing clinic user data:', error);
       }
     }
@@ -64,7 +64,7 @@ const ClinicDashboard: NextPageWithLayout = () => {
         } else {
           // console.error('Error:', data.message);
         }
-      } catch  {
+      } catch {
         // const err = error as { message?: string };
         // setError(err.message || 'An error occurred');
       } finally {
@@ -135,7 +135,7 @@ const ClinicDashboard: NextPageWithLayout = () => {
           <div className="absolute bottom-8 left-8 w-24 h-24 bg-white rounded-full"></div>
           <div className="absolute bottom-4 left-16 w-16 h-16 bg-white rounded-full"></div>
         </div>
-        
+
         <div className="flex flex-col items-start space-y-6 relative z-10">
           <div className="w-full">
             <h1 className="text-4xl font-bold mb-3 text-white drop-shadow-sm">
@@ -203,53 +203,47 @@ const ClinicDashboard: NextPageWithLayout = () => {
         {/* Dashboard Graph */}
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <h2 className="text-2xl font-semibold mb-6 text-gray-900">Analytics Overview</h2>
-          <div className="h-80">
+          <div className="h-96 w-full p-4 bg-white shadow rounded-lg">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{
-                  top: 20,
-                  right: 20,
-                  left: 20,
-                  bottom: 60
-                }}
-                barCategoryGap="20%"
+                margin={{ top: 30, right: 20, left: 20, bottom: 80 }}
+                barCategoryGap="25%"
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: '#374151', fontSize: 12 }}
+                  tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
                   axisLine={{ stroke: '#d1d5db' }}
                   tickLine={{ stroke: '#d1d5db' }}
                   interval={0}
                   angle={-45}
                   textAnchor="end"
-                  height={80}
+                  height={60}
                 />
+
                 <YAxis
                   tick={{ fill: '#374151', fontSize: 12 }}
                   axisLine={{ stroke: '#d1d5db' }}
                   tickLine={{ stroke: '#d1d5db' }}
                   width={50}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    fontSize: '14px'
-                  }}
-                  cursor={{ fill: 'rgba(45, 154, 165, 0.1)' }}
-                />
-                <Bar
-                  dataKey="value"
-                  radius={[4, 4, 0, 0]}
-                  fill="#2D9AA5"
-                />
+
+                {/* Remove Tooltip for mobile and always show labels */}
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="#2D9AA5">
+                  <LabelList
+                    dataKey="value"
+                    position="top"
+                    fill="#1F2937"
+                    fontSize={12}
+                    fontWeight={500}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
+
 
           {/* Chart Summary */}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -279,7 +273,7 @@ const ClinicDashboard: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
-       {/* // For clinic Dashboard */}
+      {/* // For clinic Dashboard */}
       <Stats
         role="clinic"
         config={{

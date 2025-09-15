@@ -102,18 +102,6 @@ function DoctorPrescriptionRequests() {
         // alert(response.data.message || "Failed to delete");
       }
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 404) {
-        alert("Prescription request deleted");
-        if (selectedRequestId === deleteId) {
-          setSelectedRequestId(null);
-        }
-        setRequests((prev) => prev.filter((req) => req._id !== deleteId));
-        setShowConfirm(false);
-        setDeleteId(null);
-        return;
-      }
-      console.error("Decline error:", err);
-      alert("Something went wrong");
     }
   };
 
@@ -413,9 +401,7 @@ return (
                           <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span>Created: {new Date(request.createdAt).toLocaleDateString()}</span>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          ID: #{request._id.slice(-6)}
-                        </div>
+                        
                       </div>
                     </div>
                   </div>
