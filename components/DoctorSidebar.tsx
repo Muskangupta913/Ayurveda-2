@@ -1,3 +1,4 @@
+import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { FC, useState, useEffect } from 'react';
@@ -236,6 +237,12 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                 const isDropdownOpen = openDropdown === item.label;
                 const isActive = router.pathname === item.path;
                 const isHovered = hoveredItem === item.path;
+                
+                // Check if any child is active for parent items
+                const hasActiveChild = item.children?.some(child => router.pathname === child.path);
+                
+                // For parent items, they should only be active if they have an active child
+                const shouldShowAsActive = item.children ? hasActiveChild : isActive;
 
                 // If item has children => Dropdown
                 if (item.children) {
@@ -245,21 +252,39 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                         className={clsx(
                           "group relative block rounded-lg transition-all duration-200 cursor-pointer p-3",
                           {
-                            "bg-[#2D9AA5] text-white shadow-sm": isDropdownOpen,
-                            "hover:bg-gray-50 text-gray-700 hover:text-gray-900": !isDropdownOpen,
+                            "bg-[#2D9AA5] text-white shadow-sm": shouldShowAsActive,
+                            "hover:bg-gray-50 text-gray-700 hover:text-gray-900": !shouldShowAsActive,
                           }
                         )}
                         onClick={() => setOpenDropdown(isDropdownOpen ? null : item.label)}
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="text-lg p-2 rounded-lg bg-gray-100 text-gray-600 group-hover:bg-[#2D9AA5]/10 group-hover:text-[#2D9AA5]">
+                          <div className={clsx(
+                            "text-lg p-2 rounded-lg transition-all duration-200",
+                            {
+                              "bg-white/20 text-white": shouldShowAsActive,
+                              "bg-gray-100 text-gray-600 group-hover:bg-[#2D9AA5]/10 group-hover:text-[#2D9AA5]": !shouldShowAsActive,
+                            }
+                          )}>
                             {item.icon}
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium text-sm">
+                            <div className={clsx(
+                              "font-medium text-sm",
+                              {
+                                "text-white": shouldShowAsActive,
+                                "text-gray-900": !shouldShowAsActive,
+                              }
+                            )}>
                               {item.label}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className={clsx(
+                              "text-xs",
+                              {
+                                "text-white/80": shouldShowAsActive,
+                                "text-gray-500": !shouldShowAsActive,
+                              }
+                            )}>
                               {item.description}
                             </div>
                           </div>
@@ -482,6 +507,12 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                 {navigationItems.map((item) => {
                   const isActive = router.pathname === item.path;
                   const isDropdownOpen = openDropdown === item.label;
+                  
+                  // Check if any child is active for parent items
+                  const hasActiveChild = item.children?.some(child => router.pathname === child.path);
+                  
+                  // For parent items, they should only be active if they have an active child
+                  const shouldShowAsActive = item.children ? hasActiveChild : isActive;
 
                   // If item has children => Dropdown
                   if (item.children) {
@@ -491,8 +522,8 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                           className={clsx(
                             "group relative block rounded-lg transition-all duration-200 cursor-pointer p-3 touch-manipulation active:scale-98",
                             {
-                              "bg-[#2D9AA5] text-white shadow-sm": isDropdownOpen,
-                              "hover:bg-gray-50 text-gray-700 active:bg-gray-100": !isDropdownOpen,
+                              "bg-[#2D9AA5] text-white shadow-sm": shouldShowAsActive,
+                              "hover:bg-gray-50 text-gray-700 active:bg-gray-100": !shouldShowAsActive,
                             }
                           )}
                           onClick={() => {
@@ -504,8 +535,8 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                               className={clsx(
                                 "text-lg p-2 rounded-lg transition-all duration-200 relative flex-shrink-0",
                                 {
-                                  "bg-white/20 text-white": isDropdownOpen,
-                                  "text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10": !isDropdownOpen,
+                                  "bg-white/20 text-white": shouldShowAsActive,
+                                  "text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10": !shouldShowAsActive,
                                 }
                               )}
                             >
@@ -516,8 +547,8 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                                 className={clsx(
                                   "font-medium text-sm transition-colors duration-200 truncate",
                                   {
-                                    "text-white": isDropdownOpen,
-                                    "text-gray-900": !isDropdownOpen,
+                                    "text-white": shouldShowAsActive,
+                                    "text-gray-900": !shouldShowAsActive,
                                   }
                                 )}
                               >
@@ -527,8 +558,8 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                                 className={clsx(
                                   "text-xs mt-0.5 transition-all duration-200 truncate",
                                   {
-                                    "text-white/80": isDropdownOpen,
-                                    "text-gray-500": !isDropdownOpen,
+                                    "text-white/80": shouldShowAsActive,
+                                    "text-gray-500": !shouldShowAsActive,
                                   }
                                 )}
                               >
@@ -708,30 +739,6 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
           </div>
         </aside>
       </div>
-
-      {/* <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.05);
-          border-radius: 2px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(45, 154, 165, 0.3);
-          border-radius: 2px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(45, 154, 165, 0.5);
-        }
-
-        .custom-scrollbar {
-          -webkit-overflow-scrolling: touch;
-        }
-      `}</style> */}
     </>
   );
 };

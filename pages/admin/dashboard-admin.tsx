@@ -6,7 +6,6 @@ import withAdminAuth from '../../components/withAdminAuth';
 import type { NextPageWithLayout } from '../_app';
 import Adminstats from '../../components/Adminstats';
 
-
 interface AnalyticsData {
   pendingClinicCount: number;
   pendingDoctorCount: number;
@@ -31,6 +30,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [userCount, setUserCount] = useState<number | null>(null);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const [refreshing, setRefreshing] = useState(false);
 
   // Update date and time every second
   useEffect(() => {
@@ -62,18 +62,11 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Fetch pending counts
       const pendingRes = await axios.get('/api/admin/pending-counts', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      
-      // You may need to add these API endpoints if they don't exist
-      // Fetch reviews and enquiries count
-     
-      
-     
 
       setAnalytics({
         pendingClinicCount: pendingRes.data.pendingClinicCount || 0,
@@ -88,6 +81,19 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   }, []);
+
+  // Refresh all data including Adminstats
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      await Promise.all([fetchUserCount(), fetchAnalyticsData()]);
+      // Force refresh of Adminstats component by triggering a re-render
+      window.location.reload();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchUserCount, fetchAnalyticsData]);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -106,12 +112,12 @@ const AdminDashboard = () => {
     [analytics.pendingDoctorCount, analytics.approvedDoctorCount]
   );
 
-  // Enhanced chart data with real API data (removed Total Reviews and Pending Requests)
+  // Chart data
   const chartData = useMemo((): ChartData[] => [
     {
       name: 'Total Users',
       value: userCount || 0,
-      color: '#6366F1'
+      color: '#2D9AA5'
     },
     {
       name: 'Approved Clinics',
@@ -150,87 +156,38 @@ const AdminDashboard = () => {
     return 'Good evening';
   };
 
-  // Enhanced Bar Chart Component (removed Total Records section)
-  const EnhancedBarChart = ({ data }: { data: ChartData[] }) => {
+  // Simple Bar Chart Component
+  const SimpleBarChart = ({ data }: { data: ChartData[] }) => {
     const maxValue = Math.max(...data.map(d => d.value));
     
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">Platform Overview</h3>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+          <div className="flex items-center space-x-2 text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span>Live Data</span>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Bar Chart */}
-          <div className="space-y-4">
-            {data.map((item, index) => (
-              <div key={index} className="group">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                  <span className="text-sm font-bold text-gray-900">
-                    {item.value.toLocaleString()}
-                  </span>
-                </div>
-                <div className="relative bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
-                    style={{
-                      width: `${maxValue > 0 ? (item.value / maxValue) * 100 : 0}%`,
-                      backgroundColor: item.color
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pie Chart Visualization */}
-          <div className="flex items-center justify-center">
-            <div className="relative w-48 h-48">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                {data.map((item, index) => {
-                  const total = data.reduce((sum, d) => sum + d.value, 0);
-                  const percentage = total > 0 ? (item.value / total) * 100 : 0;
-                  const strokeDasharray = `${percentage} ${100 - percentage}`;
-                  const strokeDashoffset = data.slice(0, index).reduce((sum, d) => 
-                    sum - (total > 0 ? (d.value / total) * 100 : 0), 0
-                  );
-                  
-                  return (
-                    <circle
-                      key={index}
-                      cx="50"
-                      cy="50"
-                      r="15.915"
-                      fill="transparent"
-                      stroke={item.color}
-                      strokeWidth="4"
-                      strokeDasharray={strokeDasharray}
-                      strokeDashoffset={strokeDashoffset}
-                      className="transition-all duration-1000 ease-out"
-                    />
-                  );
-                })}
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap gap-4 justify-center pt-4 border-t border-gray-200">
+        <div className="space-y-4">
           {data.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <div 
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: item.color }}
-              ></div>
-              <span className="text-sm text-gray-600">{item.name}</span>
+            <div key={index} className="p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                <span className="text-lg font-bold text-gray-900">
+                  {item.value.toLocaleString()}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${maxValue > 0 ? (item.value / maxValue) * 100 : 0}%`,
+                    backgroundColor: item.color
+                  }}
+                ></div>
+              </div>
             </div>
           ))}
         </div>
@@ -241,24 +198,30 @@ const AdminDashboard = () => {
   // Loading Component
   const LoadingSkeleton = () => (
     <div className="min-h-screen bg-gray-50">
-      <div className="h-1 bg-gray-300 animate-pulse"></div>
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-lg border border-gray-200 mb-8">
-            <div className="h-8 bg-gray-300 rounded w-64 mb-4"></div>
-            <div className="h-4 bg-gray-300 rounded w-96 mb-8"></div>
-            <div className="flex space-x-4">
-              <div className="h-24 bg-gray-300 rounded-xl w-40"></div>
-              <div className="h-24 bg-gray-300 rounded-xl w-40"></div>
-            </div>
+      <div className="h-1 bg-[#2D9AA5] animate-pulse"></div>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="animate-pulse space-y-8">
+          <div className="bg-white rounded-lg p-8 shadow border">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-96 mb-6"></div>
+            <div className="h-20 bg-gray-200 rounded w-48"></div>
           </div>
-          <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-lg border border-gray-200 mb-8">
-            <div className="h-6 bg-gray-300 rounded w-48 mb-6"></div>
+          
+          <div className="bg-white rounded-lg p-8 shadow border">
+            <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
             <div className="space-y-4">
-              {Array.from({ length: 5 }, (_, i) => (
-                <div key={i} className="h-8 bg-gray-300 rounded"></div>
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="h-12 bg-gray-200 rounded"></div>
               ))}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="bg-white rounded-lg p-6 shadow border">
+                <div className="h-16 bg-gray-200 rounded"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -269,20 +232,20 @@ const AdminDashboard = () => {
   const ErrorComponent = () => (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center border border-gray-200">
+        <div className="bg-white rounded-lg shadow p-8 text-center border">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dashboard Error</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button 
             onClick={() => {
               setError(null);
-              fetchAnalyticsData();
+              handleRefresh();
             }} 
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            className="bg-[#2D9AA5] hover:bg-[#2D9AA5]/90 text-white px-6 py-2 rounded font-medium transition-colors"
           >
             Try Again
           </button>
@@ -299,163 +262,258 @@ const AdminDashboard = () => {
     return <ErrorComponent />;
   }
 
- return (
+  return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Progress Bar */}
-      <div className="h-1 bg-gradient-to-r from-[#2D9AA5] via-[#2D9AA5] to-[#2D9AA5]"></div>
+      <div className="h-1 bg-[#2D9AA5]"></div>
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Enhanced Header Section with Waveform Design - Removed Pending Requests */}
-        <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-lg border border-gray-200 relative overflow-hidden mb-8">
-          {/* Wave Background Effect */}
-          <div className="absolute inset-0 pointer-events-none">
-            <svg className="absolute bottom-0 left-0 w-full h-full opacity-15" viewBox="0 0 1000 200" preserveAspectRatio="none">
-              <path d="M0,100 C150,200 350,0 500,100 C650,200 850,0 1000,100 L1000,200 L0,200 Z" fill="url(#wave-gradient)" />
-              <defs>
-                <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#2D9AA5" />
-                  <stop offset="50%" stopColor="#2D9AA5" />
-                  <stop offset="100%" stopColor="#2D9AA5" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-
-          {/* Floating Circle Decorations */}
-          <div className="absolute top-4 right-4 w-20 h-20 bg-[#2D9AA5]/10 rounded-full blur-sm"></div>
-          <div className="absolute top-12 right-12 w-32 h-32 bg-[#2D9AA5]/8 rounded-full blur-md"></div>
-          <div className="absolute bottom-8 left-8 w-24 h-24 bg-[#2D9AA5]/10 rounded-full blur-sm"></div>
-
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center relative z-10">
-            <div className="mb-6 lg:mb-0">
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 bg-gradient-to-r from-[#2D9AA5] via-[#2D9AA5] to-[#2D9AA5] bg-clip-text text-transparent">
-                {getGreeting()}, Admin!
-              </h1>
-              <p className="text-gray-600 text-base sm:text-lg mb-3">
-                Welcome back to your professional dashboard
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header Section */}
+        <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow border mb-6 sm:mb-8">
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-6">
+            <div className="flex-1 w-full">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+                  {getGreeting()}, Admin!
+                </h1>
+                
+                {/* Refresh Button */}
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#2D9AA5] hover:bg-[#2D9AA5]/90 text-white rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
+                >
+                  <svg 
+                    className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>
+                    {refreshing ? 'Refreshing...' : 'Refresh'}
+                  </span>
+                </button>
+              </div>
+              
+              <p className="text-gray-600 mb-4">
+                Welcome back to your dashboard. Monitor and manage your platform efficiently.
               </p>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
-                <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                  <svg className="w-4 h-4 text-[#2D9AA5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+                <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded w-full sm:w-auto">
+                  <svg className="w-4 h-4 text-[#2D9AA5] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span className="font-medium text-xs sm:text-sm">{formatDate(currentDateTime)}</span>
+                  <span className="font-medium text-gray-700 truncate">{formatDate(currentDateTime)}</span>
                 </div>
-                <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                  <svg className="w-4 h-4 text-[#2D9AA5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded w-full sm:w-auto">
+                  <svg className="w-4 h-4 text-[#2D9AA5] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="font-medium text-xs sm:text-sm">{formatTime(currentDateTime)}</span>
+                  <span className="font-medium text-gray-700">{formatTime(currentDateTime)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Only Total Users Card */}
-            <div className="w-full lg:w-auto">
-              <div className="relative group">
-                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 200 120" preserveAspectRatio="none">
-                  <path
-                    d="M10,20 Q50,5 90,20 Q130,35 170,20 Q180,25 190,30 L190,100 Q180,105 170,100 Q130,85 90,100 Q50,115 10,100 Q5,95 10,90 Z"
-                    fill="none"
-                    stroke="url(#users-gradient)"
-                    strokeWidth="2"
-                    className="opacity-60 group-hover:opacity-100 transition-opacity duration-300"
-                  />
-                </svg>
-
-                <div className="bg-gradient-to-br from-[#2D9AA5]/10 via-[#2D9AA5]/5 to-[#2D9AA5]/10 rounded-xl p-4 sm:p-6 min-w-[160px] border-2 border-transparent bg-clip-padding relative z-10 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center mb-3">
-                      <div className="p-2 bg-gradient-to-br from-[#2D9AA5] to-[#2D9AA5] rounded-full shadow-lg">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                        </svg>
-                      </div>
+            {/* User Count Card */}
+            <div className="w-full xl:w-auto xl:min-w-[200px] lg:min-w-[240px]">
+              <div className="bg-[#2D9AA5]/10 rounded-lg p-4 sm:p-6 border border-[#2D9AA5]/20">
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2 sm:mb-3">
+                    <div className="p-2 bg-[#2D9AA5] rounded text-white">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                      </svg>
                     </div>
-                    <div className="text-2xl sm:text-3xl font-bold mb-1 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5] bg-clip-text text-transparent">
-                      {userCount?.toLocaleString() || '0'}
-                    </div>
-                    <div className="text-[#2D9AA5] text-sm font-semibold">Total Users</div>
                   </div>
+                  <div className="text-2xl sm:text-3xl font-bold mb-1 text-[#2D9AA5]">
+                    {userCount?.toLocaleString() || '0'}
+                  </div>
+                  <div className="text-gray-700 font-medium text-sm sm:text-base">Total Users</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Enhanced Analytics Chart */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-8 mb-8 relative overflow-hidden">
-          {/* Subtle background pattern */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="absolute inset-0" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='0.1'%3E%3Cpath d='M0 0h40v40H0z'/%3E%3Cpath d='M20 20c0-11.046-8.954-20-20-20v20h20z'/%3E%3C/g%3E%3C/svg%3E")`,
-            }}></div>
-          </div>
-          
-          <div className="relative z-10">
-            <EnhancedBarChart data={chartData} />
-          </div>
+        {/* Analytics Chart */}
+        <div className="bg-white rounded-lg shadow border p-6 sm:p-8 mb-8">
+          <SimpleBarChart data={chartData} />
         </div>
 
-        {/* Quick Stats Grid - Made into Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {[
-            { title: "Total Clinics", value: totalClinics, icon: "🏥", color: "emerald", href: "/admin/AdminClinicApproval" },
-            { title: "Total Doctors", value: totalDoctors, icon: "👩‍⚕️", color: "blue", href: "/admin/approve-doctors" },
-            { title: "Pending Clinics", value: analytics.pendingClinicCount, icon: "🏥", color: "amber", href: "/admin/AdminClinicApproval" },
-            { title: "Pending Doctors", value: analytics.pendingDoctorCount, icon: "👨‍⚕️", color: "red", href: "/admin/approve-doctors" }
+            { 
+              title: "Total Clinics", 
+              value: totalClinics, 
+              icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              ),
+              href: "/admin/AdminClinicApproval",
+              color: "#10B981"
+            },
+            { 
+              title: "Total Doctors", 
+              value: totalDoctors, 
+              icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              ),
+              href: "/admin/approve-doctors",
+              color: "#2D9AA5"
+            },
+            { 
+              title: "Pending Clinics", 
+              value: analytics.pendingClinicCount, 
+              icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              href: "/admin/AdminClinicApproval",
+              color: "#F59E0B"
+            },
+            { 
+              title: "Pending Doctors", 
+              value: analytics.pendingDoctorCount, 
+              icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              href: "/admin/approve-doctors",
+              color: "#EF4444"
+            }
           ].map((stat, index) => (
-            <Link key={index} href={stat.href} className="block">
-              <div className="w-full bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 transform hover:scale-105 cursor-pointer">
-                <div className="flex items-center justify-between">
-                  <div className="text-left">
-                    <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value.toLocaleString()}</p>
+            <Link key={index} href={stat.href} className="block group">
+              <div className="bg-white rounded-lg p-6 shadow border hover:shadow-md transition-shadow h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div 
+                    className="p-2 rounded text-white"
+                    style={{ backgroundColor: stat.color }}
+                  >
+                    {stat.icon}
                   </div>
-                  <div className="text-2xl sm:text-3xl opacity-80">{stat.icon}</div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
+                <h3 className="text-sm font-medium text-gray-600 mb-2">{stat.title}</h3>
+                <p className="text-2xl font-bold text-gray-900">{stat.value.toLocaleString()}</p>
               </div>
             </Link>
           ))}
         </div>
 
-          <div className='mb-8'>
+        {/* Admin Stats Component */}
+        <div className='mb-8'>
           <Adminstats />
-          </div>
+        </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-8">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 flex items-center">
-            <svg className="w-5 h-5 mr-2 text-[#2D9AA5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow border p-4 sm:p-6 lg:p-8">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
+            <div className="p-2 bg-[#2D9AA5] rounded text-white">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Quick Actions</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {[
-              { name: "Manage Clinics", icon: "🏥", color: "emerald", description: "View & approve clinics", href: "/admin/AdminClinicApproval" },
-              { name: "Manage Doctors", icon: "👨‍⚕️", color: "blue", description: "Doctor verification", href: "/admin/approve-doctors" },
-              { name: "Add Treatment", icon: "➕ ", color: "amber", description: "Add Treatment", href: "/admin/add-treatment" },
-              { name: "User Analytics", icon: "📊", color: "indigo", description: "Analytics", href: "/admin/analytics" },
-              { name: "All Blogs", icon: "📝", color: "orange", description: "See all blogs", href: "/admin/all-blogs" },
-             { name: "Request Call Back", icon: "📞", color: "teal", description: "See Call Back Request", href: "/admin/get-in-touch" },
-              { name: "Manage Jobs", icon: "💼", color: "blue", description: "Manage all Jobs", href: "/admin/job-manage" },
-
+              { 
+                name: "Manage Clinics", 
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                ),
+                description: "View & approve clinics", 
+                href: "/admin/AdminClinicApproval" 
+              },
+              { 
+                name: "Manage Doctors", 
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                ),
+                description: "Doctor verification", 
+                href: "/admin/approve-doctors" 
+              },
+              { 
+                name: "Add Treatment", 
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                ),
+                description: "Add new treatments", 
+                href: "/admin/add-treatment" 
+              },
+              { 
+                name: "User Analytics", 
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                ),
+                description: "View analytics", 
+                href: "/admin/analytics" 
+              },
+              { 
+                name: "All Blogs", 
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                ),
+                description: "Manage blog posts", 
+                href: "/admin/all-blogs" 
+              },
+              { 
+                name: "Call Requests", 
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                ),
+                description: "Call back requests", 
+                href: "/admin/get-in-touch" 
+              },
+              { 
+                name: "Manage Jobs", 
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v2a2 2 0 01-2 2H10a2 2 0 01-2-2V6m8 0H8" />
+                  </svg>
+                ),
+                description: "Job postings", 
+                href: "/admin/job-manage" 
+              }
             ].map((action, index) => (
-              <Link key={index} href={action.href} className="block">
-                <div className="group cursor-pointer w-full">
-                  <div className="bg-gray-50 hover:bg-gray-100 rounded-xl p-4 sm:p-6 transition-all duration-200 border border-gray-200 hover:border-gray-300 hover:shadow-md">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform duration-200">
+              <Link key={index} href={action.href} className="block group">
+                <div className="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 sm:p-6 transition-colors border h-full">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className="text-[#2D9AA5]">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6">
                         {action.icon}
                       </div>
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-2 text-left">{action.name}</h3>
-                    <p className="text-sm text-gray-600 text-left">{action.description}</p>
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">{action.name}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">{action.description}</p>
                 </div>
               </Link>
             ))}

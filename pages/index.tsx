@@ -1295,7 +1295,7 @@ export default function Home(): React.ReactElement {
       {isVisible && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="cursor-pointer fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
+          className="cursor-pointer fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
           style={{ zIndex: 9999 }}
         >
           <svg
