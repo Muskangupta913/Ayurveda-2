@@ -5,30 +5,59 @@ import CreateOfferModal from "../../components/CreateOfferModal";
 export default function OffersPage() {
   const [offers, setOffers] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<any | null>(null);
 
+  // Fetch all offers
   useEffect(() => {
-  async function fetchOffers() {
+    async function fetchOffers() {
+      try {
+        const token = localStorage.getItem("clinicToken");
+        const res = await fetch("/api/lead-ms/get-create-offer", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        setOffers(data.offers || []);
+      } catch (err) {
+        console.error("Error fetching offers:", err);
+        setOffers([]);
+      }
+    }
+    fetchOffers();
+  }, []);
+
+  // Handle offer create/update
+  const handleOfferSaved = (offer: any, isUpdate: boolean) => {
+    if (isUpdate) {
+      setOffers((prev) =>
+        prev.map((o) => (o._id === offer._id ? offer : o))
+      );
+    } else {
+      setOffers((prev) => [offer, ...prev]);
+    }
+  };
+
+  // Handle delete
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this offer?")) return;
     try {
-      const token = localStorage.getItem("clinicToken"); // get token
-      const res = await fetch("/api/lead-ms/get-create-offer", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // send token
-        },
+      const token = localStorage.getItem("clinicToken");
+      const res = await fetch(`/api/lead-ms/delete-offer?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setOffers(data.offers || []); // extract offers array
+      if (data.success) {
+        setOffers((prev) => prev.filter((o) => o._id !== id));
+      } else {
+        alert(data.message || "Failed to delete offer");
+      }
     } catch (err) {
-      console.error("Error fetching offers:", err);
-      setOffers([]);
+      console.error("Error deleting offer:", err);
+      alert("Server error");
     }
-  }
-  fetchOffers();
-}, []);
-
-
-  const handleOfferCreated = (newOffer: any) => {
-    setOffers((prev) => [newOffer, ...prev]);
   };
 
   return (
@@ -37,7 +66,10 @@ export default function OffersPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Offers</h1>
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={() => {
+            setEditingOffer(null);
+            setModalOpen(true);
+          }}
           className="flex items-center bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md"
         >
           <PlusCircle className="mr-2 h-5 w-5" /> Create Offer
@@ -79,7 +111,9 @@ export default function OffersPage() {
                           : `₹${offer.value}`}
                       </td>
                       <td className="p-3">
-                        {new Date(offer.endsAt).toLocaleDateString()}
+                        {offer.endsAt
+                          ? new Date(offer.endsAt).toLocaleDateString()
+                          : "-"}
                       </td>
                       <td className="p-3">
                         <span
@@ -93,10 +127,19 @@ export default function OffersPage() {
                         </span>
                       </td>
                       <td className="p-3 flex gap-2">
-                        <button className="flex items-center px-2 py-1 text-sm rounded bg-blue-100 text-blue-700 hover:bg-blue-200">
+                        <button
+                          onClick={() => {
+                            setEditingOffer(offer);
+                            setModalOpen(true);
+                          }}
+                          className="flex items-center px-2 py-1 text-sm rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        >
                           <Edit className="h-4 w-4" />
                         </button>
-                        <button className="flex items-center px-2 py-1 text-sm rounded bg-red-100 text-red-700 hover:bg-red-200">
+                        <button
+                          onClick={() => handleDelete(offer._id)}
+                          className="flex items-center px-2 py-1 text-sm rounded bg-red-100 text-red-700 hover:bg-red-200"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>
@@ -109,12 +152,20 @@ export default function OffersPage() {
         </div>
       </div>
 
-      {/* Modal */}
-      <CreateOfferModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={handleOfferCreated}
-      />
+      {/* Modal (Create or Edit) */}
+ {/* Modal (Create or Edit) */}
+<CreateOfferModal
+  isOpen={modalOpen}
+  onClose={() => {
+    setModalOpen(false);
+    setEditingOffer(null); // reset after closing
+  }}
+  onCreated={(offer) => handleOfferSaved(offer, !!editingOffer)}
+  token={localStorage.getItem("clinicToken") || ""}
+  offer={editingOffer} // Pass offer if editing
+  mode={editingOffer ? "update" : "create"} // ✅ Force correct mode
+/>
+
     </div>
   );
 }

@@ -33,7 +33,19 @@ const OfferSchema = new Schema({
     enum: ["draft", "active", "paused", "expired", "archived"],
     default: "draft",
   },
+
+  // 🔹 Store selected treatments
   treatments: [{ type: Schema.Types.ObjectId, ref: "Treatment" }],
+
+  // 🔹 Store selected subtreatments as embedded docs
+  subTreatments: [
+    {
+      treatmentId: { type: Schema.Types.ObjectId, ref: "Treatment", required: true },
+      slug: { type: String, required: true }, // e.g. "root-canal-treatment"
+      name: { type: String, required: true }, // e.g. "Root Canal Treatment"
+    },
+  ],
+
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   createdAt: { type: Date, default: Date.now },

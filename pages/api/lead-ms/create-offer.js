@@ -30,23 +30,43 @@ export default async function handler(req, res) {
       }
     }
 
-    // ✅ Resolve treatment slugs to ObjectIds (JS-friendly)
+    // ✅ Resolve treatments & subtreatments
     let treatmentIds = [];
+    let subTreatments = [];
+
     if (Array.isArray(data.treatments) && data.treatments.length > 0) {
       for (const slug of data.treatments) {
         const treatment = await Treatment.findOne({
-          $or: [{ slug }, { "subcategories.slug": slug }]
+          $or: [{ slug }, { "subcategories.slug": slug }],
         });
 
         if (!treatment) {
-          return res.status(400).json({ success: false, message: `Treatment not found: ${slug}` });
+          return res
+            .status(400)
+            .json({ success: false, message: `Treatment not found: ${slug}` });
         }
 
-        treatmentIds.push(treatment._id);
+        // If slug matches parent treatment
+        if (treatment.slug === slug) {
+          treatmentIds.push(treatment._id);
+        }
+
+        // If slug matches a subcategory
+        const sub = treatment.subcategories.find((s) => s.slug === slug);
+        if (sub) {
+          treatmentIds.push(treatment._id); // still link parent
+          subTreatments.push({
+            treatmentId: treatment._id,
+            slug: sub.slug,
+            name: sub.name,
+          });
+        }
       }
 
       // Remove duplicates
-      treatmentIds = Array.from(new Set(treatmentIds.map((id) => id.toString()))).map((id) => new mongoose.Types.ObjectId(id));
+      treatmentIds = Array.from(new Set(treatmentIds.map((id) => id.toString()))).map(
+        (id) => new mongoose.Types.ObjectId(id)
+      );
     }
 
     const offer = new Offer({
@@ -68,6 +88,7 @@ export default async function handler(req, res) {
       conditions: data.conditions || {},
       status: data.status || "draft",
       treatments: treatmentIds,
+      subTreatments, // store subtreatments
       createdBy: user._id,
       updatedBy: user._id,
     });
