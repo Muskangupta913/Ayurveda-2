@@ -29,7 +29,7 @@ assignedTo: [],
   const [followUpDate, setFollowUpDate] = useState(""); // date input
   const [open, setOpen] = useState(false);
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("leadToken") : null;
+    typeof window !== "undefined" ? localStorage.getItem("clinicToken") : null;
 
   // Fetch all treatments
   useEffect(() => {

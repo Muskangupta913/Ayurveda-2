@@ -110,11 +110,18 @@ const ClinicDashboard: NextPageWithLayout = () => {
     { name: 'Total Reviews', value: stats.totalReviews }
   ];
 
-  const quickActions = [
-    { title: 'Manage Health Center', icon: Settings, color: 'from-blue-500 to-indigo-500', href: '/clinic/myallClinic' },
-    { title: 'Review', icon: Star, color: 'from-yellow-500 to-orange-500', href: '/clinic/getAllReview' },
-    { title: 'Enquiry', icon: MessageCircle, color: 'from-green-500 to-emerald-500', href: '/clinic/get-Enquiry' }
-  ];
+    const quickActions = [
+      { title: 'Manage Health Center', icon: Settings, color: 'from-blue-500 to-indigo-500', href: '/clinic/myallClinic' },
+      { title: 'Review', icon: Star, color: 'from-yellow-500 to-orange-500', href: '/clinic/getAllReview' },
+      { title: 'Enquiry', icon: MessageCircle, color: 'from-green-500 to-emerald-500', href: '/clinic/get-Enquiry' },
+      { 
+    title: 'Lead', 
+    icon: Mail, 
+    color: 'from-purple-500 to-pink-500', 
+    href: '/lead/dashboard' 
+  }
+
+    ];
 
   if (loading) {
     return (
@@ -161,27 +168,28 @@ const ClinicDashboard: NextPageWithLayout = () => {
       {/* Main Content */}
       <div className="p-4 space-y-6">
         {/* Quick Actions Section */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h2 className="text-2xl font-semibold mb-6 text-gray-900">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quickActions.map((action, index) => (
-              <Link
-                key={index}
-                href={action.href}
-                className="group bg-white hover:bg-gray-50 rounded-lg p-6 border border-gray-200 hover:border-[#2D9AA5] transition-all duration-200 hover:shadow-md"
-              >
-                <div className="flex flex-col items-center space-y-3">
-                  <div className="p-3 bg-[#2D9AA5] rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-200">
-                    <action.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-gray-800 font-medium text-lg text-center">
-                    {action.title}
-                  </span>
-                </div>
-              </Link>
-            ))}
+       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+  <h2 className="text-2xl font-semibold mb-6 text-gray-900">Quick Actions</h2>
+  <div className="flex space-x-4 overflow-x-auto pb-2">
+    {quickActions.map((action, index) => (
+      <Link
+        key={index}
+        href={action.href}
+        className="group bg-white hover:bg-gray-50 rounded-lg p-6 border border-gray-200 hover:border-[#2D9AA5] transition-all duration-200 hover:shadow-md min-w-[180px]"
+      >
+        <div className="flex flex-col items-center space-y-3">
+          <div className="p-3 bg-[#2D9AA5] rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-200">
+            <action.icon className="w-6 h-6 text-white" />
           </div>
+          <span className="text-gray-800 font-medium text-lg text-center">
+            {action.title}
+          </span>
         </div>
+      </Link>
+    ))}
+  </div>
+</div>
+
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

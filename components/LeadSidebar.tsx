@@ -15,7 +15,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: "Dashboard",
-    path: "/lead/dashabord",
+    path: "/lead/dashboard",
     icon: "🏠",
     description: "Overview & metrics",
   },
@@ -24,6 +24,18 @@ const navItems: NavItem[] = [
     path: "/lead/create-agent",
     icon: "📅",
     description: "Manage Clinic",
+  },
+  {
+    label: "Create offers",
+    path: "/lead/create-offer",
+    icon: "🤑",
+    description: "Manage Offers",
+  },
+  {
+    label: "Marketing",
+    path: "/lead/social-marketing",
+    icon: "📊",
+    description: "Manage Marketing",
   },
   {
     label: "Create Lead",

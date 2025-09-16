@@ -17,7 +17,7 @@ export default function AdminAgentsPage() {
   const [aPhone, setAPhone] = useState('');
   const [aPassword, setAPassword] = useState('');
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('leadToken') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('clinicToken') : null;
 
   // Fetch agents
   async function loadAgents() {

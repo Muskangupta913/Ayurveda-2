@@ -15,7 +15,7 @@ export default function withDoctorAuth<P extends object>(
     useEffect(() => {
       const clearStorage = () => {
         // Remove generic and doctor-specific keys from both storages
-        const keys = ['token', 'leadToken'];
+        const keys = ['token', 'clinicToken'];
         keys.forEach((k) => {
           try { localStorage.removeItem(k); } catch {}
           try { sessionStorage.removeItem(k); } catch {}
@@ -24,10 +24,10 @@ export default function withDoctorAuth<P extends object>(
 
       const checkAuth = async () => {
         const token = typeof window !== 'undefined'
-          ? (localStorage.getItem('leadToken') || sessionStorage.getItem('leadToken') || localStorage.getItem('token') || sessionStorage.getItem('token'))
+          ? (localStorage.getItem('clinicToken') || sessionStorage.getItem('clinicToken') || localStorage.getItem('token') || sessionStorage.getItem('token'))
           : null;
         const user = typeof window !== 'undefined'
-          ? (localStorage.getItem('leadToken') || sessionStorage.getItem('leadToken'))
+          ? (localStorage.getItem('clinicToken') || sessionStorage.getItem('clinicToken'))
           : null;
 
         if (!token || !user) {
