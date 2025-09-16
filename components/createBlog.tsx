@@ -91,6 +91,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     null
   );
   const [linkUrl, setLinkUrl] = useState<string>("");
+  // Text link modal state
+  const [showTextLinkModal, setShowTextLinkModal] = useState<boolean>(false);
+  const [textLinkUrl, setTextLinkUrl] = useState<string>("");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(
@@ -119,6 +122,11 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [videoType, setVideoType] = useState<"youtube" | "drive">("youtube");
+  // Open/close main editor modal
+  const [showEditor, setShowEditor] = useState<boolean>(false);
+  // Close confirmation modal for editor
+  const [showCloseConfirm, setShowCloseConfirm] = useState<boolean>(false);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem(tokenKey);
@@ -161,10 +169,45 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     };
     if (draftId) {
       loadDraft(draftId);
+      setShowEditor(true);
     } else if (blogId) {
       loadPublishedBlog(blogId);
+      setShowEditor(true);
     }
   }, [router.query]);
+
+  // Ask to save as draft when trying to close editor with content
+  const requestCloseEditor = () => {
+    if (!title && !content) {
+      setShowEditor(false);
+      return;
+    }
+    setShowCloseConfirm(true);
+  };
+
+  const saveAndCloseEditor = async () => {
+    const ok = await saveDraft();
+    if (ok) {
+      setShowCloseConfirm(false);
+      setShowEditor(false);
+    }
+  };
+
+  const discardAndCloseEditor = () => {
+    setShowCloseConfirm(false);
+    setShowEditor(false);
+  };
+
+  const resetEditorFields = () => {
+    setTitle("");
+    setContent("");
+    setParamlink("");
+    setSelectedDraft(null);
+    setSelectedPublished(null);
+    setParamlinkError("");
+    setLastSaved(null);
+    showToast("Editor has been reset", "success");
+  };
 
   // Load ReactQuill CSS after component mounts
   useEffect(() => {
@@ -175,6 +218,39 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       document.head.appendChild(link);
     }
   }, []);
+
+  // Improve Quill toolbar accessibility with titles
+  useEffect(() => {
+    try {
+      const toolbar = document.querySelector(
+        ".quill-container .ql-toolbar"
+      ) as HTMLElement | null;
+      if (!toolbar) return;
+      const setTitle = (selector: string, title: string) => {
+        const el = toolbar.querySelector(selector) as HTMLElement | null;
+        if (el && !el.getAttribute("title")) el.setAttribute("title", title);
+      };
+      setTitle("button.ql-bold", "Bold (Ctrl+B)");
+      setTitle("button.ql-italic", "Italic (Ctrl+I)");
+      setTitle("button.ql-underline", "Underline (Ctrl+U)");
+      setTitle(".ql-color .ql-picker-label", "Text color");
+      setTitle(".ql-background .ql-picker-label", "Highlight color");
+      setTitle(".ql-align .ql-picker-label", "Text alignment");
+      setTitle("button.ql-indent[value='-1']", "Decrease indent");
+      setTitle("button.ql-indent[value='+1']", "Increase indent");
+      setTitle("button.ql-list[value='ordered']", "Numbered list");
+      setTitle("button.ql-list[value='bullet']", "Bulleted list");
+      setTitle("button.ql-list[value='check']", "Task list");
+      setTitle("button.ql-blockquote", "Block quote");
+      setTitle("button.ql-code-block", "Code block");
+      setTitle("button.ql-link", "Insert link");
+      setTitle("button.ql-image", "Insert image");
+      setTitle("button.ql-video", "Insert video");
+      setTitle("button.ql-undo", "Undo");
+      setTitle("button.ql-redo", "Redo");
+      setTitle("button.ql-clean", "Clear formatting");
+    } catch {}
+  }, [showEditor, content]);
 
   // Auto-save draft every 30 seconds if there's content and not editing published blog
   useEffect(() => {
@@ -193,6 +269,20 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 
   // Add image and video click handlers after content changes
   useEffect(() => {
+    const normalizeImages = () => {
+      const editorContainer = document.querySelector(".ql-editor");
+      if (!editorContainer) return;
+      const images = editorContainer.querySelectorAll("img");
+      images.forEach((img) => {
+        const image = img as HTMLImageElement;
+        image.style.width = "100%";
+        image.style.height = "var(--ql-image-height, 300px)";
+        image.style.objectFit = "contain";
+        image.removeAttribute("width");
+        image.removeAttribute("height");
+      });
+    };
+
     const attachMediaListeners = () => {
       const editorContainer = document.querySelector(".ql-editor");
       if (editorContainer) {
@@ -243,6 +333,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           (container as HTMLElement).style.cursor = "pointer";
           (container as HTMLElement).title = "Right-click to remove video";
         });
+
+        // Normalize images every time we attach listeners
+        normalizeImages();
       }
     };
 
@@ -445,12 +538,15 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   const handleImageDoubleClick = (e: Event) => {
     e.preventDefault();
     const img = e.target as HTMLImageElement;
-    const currentLink =
-      img.parentElement?.tagName === "A"
-        ? (img.parentElement as HTMLAnchorElement).href
-        : "";
+    openImageLinkEditor(img);
+  };
 
-    setSelectedImage(img);
+  const openImageLinkEditor = (imageEl: HTMLImageElement) => {
+    const currentLink =
+      imageEl.parentElement?.tagName === "A"
+        ? (imageEl.parentElement as HTMLAnchorElement).href
+        : "";
+    setSelectedImage(imageEl);
     setLinkUrl(currentLink);
     setShowLinkModal(true);
   };
@@ -704,21 +800,26 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     }
   };
 
-  const saveDraft = async () => {
+  const saveDraft = async (): Promise<boolean> => {
+    // Require some content to save
     if (!title && !content) {
       showToast("Please enter at least a title or content", "warning");
-      return;
+      return false;
     }
-    if (!paramlink) {
-      setParamlinkError("Paramlink is required");
-      return;
+
+    // Ensure paramlink exists by auto-generating when missing
+    let effectiveParamlink = paramlink?.trim();
+    if (!effectiveParamlink) {
+      const base = (title || "untitled").toString();
+      effectiveParamlink = slugify(base).slice(0, 60) || `untitled-${Date.now()}`;
+      setParamlink(effectiveParamlink);
     }
     setParamlinkError("");
 
     const token = localStorage.getItem(tokenKey);
     if (!token) {
       showToast("Authentication required. Please login again.", "error");
-      return;
+      return false;
     }
 
     setIsLoading(true);
@@ -729,7 +830,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           {
             title: title || "Untitled Draft",
             content: ensureLinksUnderlined(content || ""),
-            paramlink,
+            paramlink: effectiveParamlink,
           },
           getAuthHeaders()
         );
@@ -741,7 +842,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           {
             title: title || "Untitled Draft",
             content: ensureLinksUnderlined(content || ""),
-            paramlink,
+            paramlink: effectiveParamlink,
           },
           getAuthHeaders()
         );
@@ -753,12 +854,13 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
         showToast("Draft created successfully!", "success");
       }
       loadDrafts();
+      return true;
     } catch (err: any) {
       if (err.response?.data?.message?.includes("Paramlink already exists")) {
         setParamlinkError("Paramlink already exists. Please choose another.");
-      } else {
-        showToast("Failed to save draft", "error");
       }
+      showToast(err?.response?.data?.message || "Failed to save draft", "error");
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -991,14 +1093,13 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 
     // Link handling
     if (format === "link") {
-      const url = prompt("Enter URL (https://...)") || "";
-      if (!url) return;
-      restoreAnd(() => {
-        const r2 = quill.getSelection(true);
-        if (!r2) return;
-        if (r2.length === 0) return;
-        quill.formatText(r2.index, r2.length, { link: url });
-      });
+      // Open popup modal instead of prompt
+      const r2 = quill.getSelection(true);
+      if (!r2 || r2.length === 0) return;
+      lastRangeRef.current = r2;
+      const currentFormats = quill.getFormat(r2.index, r2.length);
+      setTextLinkUrl((currentFormats as any)?.link || "");
+      setShowTextLinkModal(true);
       return;
     }
 
@@ -1050,6 +1151,17 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           ["clean"],
         ],
         handlers: {
+          link: function (this: any) {
+            const sel = this.quill.getSelection(true);
+            if (!sel || sel.length === 0) return;
+            try {
+              const formats = this.quill.getFormat(sel.index, sel.length);
+              setTextLinkUrl((formats as any)?.link || "");
+            } catch {}
+            lastRangeRef.current = sel;
+            this.quill.blur();
+            setShowTextLinkModal(true);
+          },
           image: function (this: any) {
             const input = document.createElement("input");
             input.setAttribute("type", "file");
@@ -1060,7 +1172,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
               const file = input.files?.[0];
               if (file) {
                 if (file.size > 998 * 1024) {
-                  alert("Please upload an image smaller than 1 MB.");
+                  showToast("Please upload an image smaller than 1 MB.", "warning");
                   return;
                 }
 
@@ -1084,6 +1196,17 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           },
           redo: function (this: any) {
             this.quill.history.redo();
+          },
+          clean: function (this: any) {
+            const sel = this.quill.getSelection(true);
+            if (!sel) return;
+            if (sel.length === 0) {
+              // Clear formats at cursor line block + inline
+              const formats = this.quill.getFormat();
+              Object.keys(formats || {}).forEach((k) => this.quill.format(k, false));
+            } else {
+              this.quill.removeFormat(sel.index, sel.length, "user");
+            }
           },
         },
       },
@@ -1110,6 +1233,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     "video",
   ];
 
+  // Use any-typed Quill to satisfy TS when module types are missing
+  const QuillAny: any = ReactQuill as any;
+
   // Utility to get base URL
   const getBaseUrl = () => {
     if (typeof window !== "undefined") {
@@ -1123,44 +1249,109 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     return "";
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Toast Notifications */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`flex items-center justify-between p-4 rounded-lg shadow-lg min-w-80 transform transition-all duration-300 ease-in-out ${
-              toast.type === "success"
-                ? "bg-green-500 text-white"
-                : toast.type === "error"
-                ? "bg-red-500 text-white"
-                : "bg-yellow-500 text-white"
-            }`}
+return (
+  <div className="min-h-screen bg-[#18232b]">
+    {/* Toast Notifications */}
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className={`flex items-center justify-between p-4 rounded-lg shadow-lg min-w-80 transform transition-all duration-300 ease-in-out ${
+            toast.type === "success"
+              ? "bg-green-500 text-white"
+              : toast.type === "error"
+              ? "bg-red-500 text-white"
+              : "bg-yellow-500 text-white"
+          }`}
+        >
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button
+            onClick={() => removeToast(toast.id)}
+            className="ml-3 text-white hover:text-gray-200 transition-colors"
           >
-            <span className="text-sm font-medium">{toast.message}</span>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="ml-3 text-white hover:text-gray-200 transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        ))}
+            <X size={16} />
+          </button>
+        </div>
+      ))}
+    </div>
+
+   {/* Landing - Write Blog CTA */}
+{!showEditor && (
+  <div className="relative w-full h-screen flex items-center justify-center px-4 overflow-hidden">
+    {/* Subtle Background */}
+    <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-800">
+      <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-500/3 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
+    </div>
+
+    {/* Main Content */}
+    <div className="relative z-10 max-w-2xl mx-auto text-center">
+      {/* Logo */}
+      <div className="mb-8">
+        <div className="inline-flex items-center justify-center w-12 h-12 bg-white/10 rounded-xl mb-4">
+          <FileText className="w-6 h-6 text-white" />
+        </div>
+        <div className="text-2xl font-bold text-white">Zeva</div>
       </div>
 
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+      {/* Headline */}
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
+          Write. Create. Publish.
+        </h1>
+        <p className="text-lg text-slate-300 leading-relaxed">
+          Create compelling blogs and stories with our intuitive writing platform.
+        </p>
+      </div>
 
-        {/* Main Content */}
-        <div className="space-y-6">
-          {/* Title and Permalink Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Features */}
+      <div className="mb-8">
+        <div className="flex justify-center gap-6 text-sm text-slate-400">
+          
+          <span className="flex items-center gap-1">
+            <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
+            Instant Publishing
+          </span>
+        </div>
+      </div>
+
+      {/* CTA Button */}
+      <div>
+        <button
+          onClick={() => setShowEditor(true)}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-lg font-semibold hover:bg-slate-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        >
+          <FileText className="w-4 h-4" />
+          Start Writing
+        </button>
+        <p className="mt-3 text-xs text-slate-500">Free to use</p>
+      </div>
+    </div>
+  </div>
+)}
+
+    {/* Compact Blog Editor Modal */}
+    {showEditor && (
+      <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50" onClick={requestCloseEditor} />
+        <div className="relative z-40 w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-xl shadow-2xl bg-white">
+          
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+            <h2 className="text-lg font-semibold text-gray-900">Zeva Blog Editor</h2>
+            <button
+              onClick={requestCloseEditor}
+              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/* Title and Permalink Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Blog Title */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Blog Title
                 </label>
                 <input
@@ -1169,549 +1360,688 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setTitle(value);
-
-                    // Auto-generate slug only if user hasn’t manually edited it
                     if (!isParamlinkEditable) {
                       const slug = value
                         .toLowerCase()
-                        .replace(/[^a-z0-9\s-]/g, "") // remove special chars
+                        .replace(/[^a-z0-9\s-]/g, "")
                         .trim()
-                        .replace(/\s+/g, "-") // spaces to dashes
-                        .slice(0, 60); // limit to 60
+                        .replace(/\s+/g, "-")
+                        .slice(0, 60);
                       setParamlink(slug);
                     }
                   }}
                   placeholder="Enter your blog title..."
-                  className="text-black w-full px-4 py-3 text-lg font-semibold border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200"
+                  className="text-black w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
                 />
               </div>
 
-              {/* Permalink Section */}
+              {/* Permalink */}
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
-                  <label className="text-sm font-semibold text-gray-700 mb-2 sm:mb-0">
-                    URL Slug (Permalink)
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    URL Slug
                   </label>
                   <button
                     onClick={() => setIsParamlinkEditable(!isParamlinkEditable)}
-                    className="text-xs text-[#2D9AA5] hover:text-[#257A83] font-medium self-start sm:self-auto"
+                    className="text-xs text-[#2D9AA5] hover:text-[#257A83] font-medium"
                   >
                     {isParamlinkEditable ? "Lock" : "Edit"}
                   </button>
                 </div>
-                <div className="text-black">
-                  <div className="flex items-stretch">
-                    <span className="text-sm text-gray-900 bg-gray-100 px-3 py-3 rounded-l-lg border border-gray-300 border-r-0 whitespace-nowrap">
-                      {getBaseUrl()}/blog/
-                    </span>
-                    <input
-                      type="text"
-                      value={paramlink}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.length <= 60) {
-                          setParamlink(value);
-                        }
+                <div className="flex">
+                  <span className="text-xs text-gray-600 bg-gray-100 px-2 py-2 rounded-l-md border border-gray-300 border-r-0">
+                    {getBaseUrl()}/blog/
+                  </span>
+                  <input
+                    type="text"
+                    value={paramlink}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 60) {
+                        setParamlink(value);
+                      }
+                    }}
+                    readOnly={!isParamlinkEditable}
+                    maxLength={60}
+                    className={`text-black flex-1 px-3 py-2 border ${
+                      paramlinkError ? "border-red-500" : "border-gray-300"
+                    } rounded-r-md focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent ${
+                      !isParamlinkEditable ? "bg-gray-50" : ""
+                    }`}
+                  />
+                </div>
+                {paramlinkError && (
+                  <p className="text-red-500 text-xs mt-1">{paramlinkError}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {paramlink.length}/60 characters
+                </p>
+              </div>
+            </div>
+
+            {/* Content Editor */}
+            <div className="text-black">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Content
+              </label>
+              <div className="border border-gray-300 rounded-md overflow-hidden">
+                <div className="relative quill-container" style={{ height: "45vh" }}>
+                  <QuillAny
+                    theme="snow"
+                    value={content}
+                    onChange={(val) => setContent(val)}
+                    ref={quillRef}
+                    onChangeSelection={handleSelectionChange}
+                    modules={modules}
+                    formats={formats}
+                    placeholder="Start writing your blog content..."
+                    className="h-full"
+                    style={{ ["--ql-primary"]: "#2D9AA5", ["--ql-image-width"]: "600px", ["--ql-image-height"]: "400px" }}
+                  />
+                  {showInlineToolbar && (
+                    <div
+                      className="absolute z-50 bg-white border border-gray-200 shadow-lg rounded-md px-2 py-1 flex items-center gap-1"
+                      style={{
+                        top: inlineToolbarPos.top,
+                        left: inlineToolbarPos.left,
                       }}
-                      readOnly={!isParamlinkEditable}
-                      maxLength={60}
-                      className={`flex-1 px-4 py-3 border ${
-                        paramlinkError ? "border-red-500" : "border-gray-300"
-                      } rounded-r-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200 ${
-                        !isParamlinkEditable
-                          ? "bg-gray-50 cursor-not-allowed"
-                          : ""
-                      }`}
-                    />
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    {paramlinkError && (
-                      <p className="text-red-500 text-sm">{paramlinkError}</p>
-                    )}
-                    <p className="text-xs text-gray-500 ml-auto">
-                      {paramlink.length}/60 characters
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Permalink should be only 60 characters long
-                  </p>
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      <button
+                        type="button"
+                        className="p-1 hover:bg-gray-100 rounded"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => formatWithQuill("bold")}
+                      >
+                        <Bold size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="p-1 hover:bg-gray-100 rounded italic"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => formatWithQuill("italic")}
+                      >
+                        <Italic size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="p-1 hover:bg-gray-100 rounded underline"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => formatWithQuill("underline")}
+                      >
+                        <Underline size={16} />
+                      </button>
+                      <div className="mx-1 w-px h-4 bg-gray-200" />
+                      <button
+                        type="button"
+                        className="p-1 hover:bg-gray-100 rounded"
+                        title="Link"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => formatWithQuill("link")}
+                      >
+                        <LinkIcon size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Content Editor */}
-          <div className="text-black bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="border-b border-gray-200 p-4 bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <FileText size={20} className="text-[#2D9AA5]" />
-                Content Editor
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="h-[350px] overflow-hidden relative">
-                {/** TS-friendly style object for custom CSS variable */}
-                {/** eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {/** Using 'any' to allow custom CSS variable key */}
-                {/** You can refactor to a CSS class if preferred */}
-                {/** @ts-ignore */}
-                {/** ignore TS for custom CSS var */}
-
-                <ReactQuill
-                  theme="snow"
-                  value={content}
-                  onChange={(val: string) => setContent(val)}
-                  ref={quillRef as any}
-                  onChangeSelection={handleSelectionChange as any}
-                  modules={modules}
-                  formats={formats}
-                  placeholder="Start writing your blog content..."
-                  className="h-full"
-                  style={{ ["--ql-primary" as any]: "#2D9AA5" } as any}
-                />
-                {showInlineToolbar && (
-                  <div
-                    className="absolute z-50 bg-white border border-gray-200 shadow-lg rounded-md px-2 py-1 flex items-center gap-1"
-                    style={{
-                      top: inlineToolbarPos.top,
-                      left: inlineToolbarPos.left,
-                    }}
-                    onMouseDown={(e) => e.preventDefault()}
-                  >
-                    <button
-                      type="button"
-                      className="p-1 hover:bg-gray-100 rounded"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => formatWithQuill("bold")}
-                    >
-                      <Bold size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="p-1 hover:bg-gray-100 rounded italic"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => formatWithQuill("italic")}
-                    >
-                      <Italic size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="p-1 hover:bg-gray-100 rounded underline"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => formatWithQuill("underline")}
-                    >
-                      <Underline size={16} />
-                    </button>
-                    <div className="mx-1 w-px h-4 bg-gray-200" />
-                    <button
-                      type="button"
-                      className="p-1 hover:bg-gray-100 rounded"
-                      title="Link"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => formatWithQuill("link")}
-                    >
-                      <LinkIcon size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-4 border-t bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sticky bottom-0 -mx-6 px-6 py-4 mt-6 shadow-md">
               <div>
                 {lastSaved && (
-                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-full">
+                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
                     Last saved: {lastSaved.toLocaleTimeString()}
                   </span>
                 )}
               </div>
               <div className="flex gap-3">
                 <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-red-50 text-red-700 rounded-md hover:bg-red-100 transition-colors"
+                >
+                  <RotateCcw size={16} />
+                  Reset Editor
+                </button>
+                <button
                   onClick={saveDraft}
                   disabled={isLoading}
-                  className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+                  className="flex items-center gap-2 px-6 py-2.5 text-sm md:text-base font-semibold bg-gray-700 text-white rounded-md hover:bg-gray-800 disabled:opacity-50 transition-colors shadow"
                 >
                   <Save size={16} />
                   Save Draft
                 </button>
                 <button
-                  onClick={
-                    selectedPublished ? updatePublishedBlog : publishBlog
-                  }
+                  onClick={selectedPublished ? updatePublishedBlog : publishBlog}
                   disabled={isLoading || !title || !content}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#257A83] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+                  className="flex items-center gap-2 px-6 py-2.5 text-sm md:text-base font-semibold bg-[#2D9AA5] text-white rounded-md hover:bg-[#257A83] disabled:opacity-50 transition-colors shadow"
                 >
                   <Send size={16} />
-                  {selectedPublished ? "Update Blog" : "Publish"}
+                  {selectedPublished ? "Update Blog" : "Publish Blog"}
                 </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+    )}
 
-      {/* Video Modal */}
-      {showVideoModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <Video size={24} className="text-[#2D9AA5]" />
-                Insert Video
-              </h3>
+    {/* All other modals remain unchanged... */}
+    {/* Text Link Modal */}
+    {showTextLinkModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Link size={24} className="text-[#2D9AA5]" />
+              Insert Link
+            </h3>
+            <button
+              onClick={() => {
+                setShowTextLinkModal(false);
+                setTextLinkUrl("");
+              }}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                URL
+              </label>
+              <input
+                type="url"
+                value={textLinkUrl}
+                onChange={(e) => setTextLinkUrl(e.target.value)}
+                placeholder="https://example.com"
+                className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200"
+              />
+              <p className="text-xs text-gray-500 mt-1">Leave empty to remove link</p>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  setShowTextLinkModal(false);
+                  setTextLinkUrl("");
+                }}
+                className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const quill = quillRef.current?.getEditor?.();
+                  if (!quill) return;
+                  const r = lastRangeRef.current || quill.getSelection(true);
+                  if (!r || r.length === 0) {
+                    setShowTextLinkModal(false);
+                    setTextLinkUrl("");
+                    return;
+                  }
+                  quill.focus();
+                  quill.setSelection(r.index, r.length, "user");
+                  const trimmed = textLinkUrl.trim();
+                  if (trimmed) {
+                    if (!/^https?:\/\//i.test(trimmed)) {
+                      showToast("Please enter a valid URL starting with http(s)://", "error");
+                      return;
+                    }
+                    quill.formatText(r.index, r.length, { link: trimmed });
+                  } else {
+                    quill.formatText(r.index, r.length, { link: false });
+                  }
+                  setShowTextLinkModal(false);
+                  setTextLinkUrl("");
+                }}
+                className="flex-1 py-2 px-4 text-sm font-medium text-white bg-[#2D9AA5] rounded-lg hover:bg-[#257A83] transition-colors"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    {/* Video Modal */}
+    {showVideoModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Video size={24} className="text-[#2D9AA5]" />
+              Insert Video
+            </h3>
+            <button
+              onClick={() => {
+                setShowVideoModal(false);
+                setVideoUrl("");
+                setVideoType("youtube");
+              }}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video Type
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setVideoType("youtube")}
+                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                    videoType === "youtube"
+                      ? "bg-[#2D9AA5] text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  YouTube
+                </button>
+                <button
+                  onClick={() => setVideoType("drive")}
+                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                    videoType === "drive"
+                      ? "bg-[#2D9AA5] text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  Google Drive
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video URL
+              </label>
+              <input
+                type="url"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder={
+                  videoType === "youtube"
+                    ? "https://youtube.com/watch?v=..."
+                    : "https://drive.google.com/file/d/.../view"
+                }
+                className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200"
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
               <button
                 onClick={() => {
                   setShowVideoModal(false);
                   setVideoUrl("");
                   setVideoType("youtube");
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                <X size={24} />
+                Cancel
               </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Video Type
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setVideoType("youtube")}
-                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
-                      videoType === "youtube"
-                        ? "bg-[#2D9AA5] text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    YouTube
-                  </button>
-                  <button
-                    onClick={() => setVideoType("drive")}
-                    className={`flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
-                      videoType === "drive"
-                        ? "bg-[#2D9AA5] text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    Google Drive
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Video URL
-                </label>
-                <input
-                  type="url"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder={
-                    videoType === "youtube"
-                      ? "https://youtube.com/watch?v=..."
-                      : "https://drive.google.com/file/d/.../view"
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowVideoModal(false);
-                    setVideoUrl("");
-                    setVideoType("youtube");
-                  }}
-                  className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleVideoInsert}
-                  disabled={!videoUrl.trim()}
-                  className="flex-1 py-2 px-4 text-sm font-medium text-white bg-[#2D9AA5] rounded-lg hover:bg-[#257A83] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Insert Video
-                </button>
-              </div>
+              <button
+                onClick={handleVideoInsert}
+                disabled={!videoUrl.trim()}
+                className="flex-1 py-2 px-4 text-sm font-medium text-white bg-[#2D9AA5] rounded-lg hover:bg-[#257A83] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Insert Video
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Link Modal */}
-      {showLinkModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <Link size={24} className="text-[#2D9AA5]" />
-                Add Image Link
-              </h3>
+    {/* Close Editor Confirm Modal */}
+    {showCloseConfirm && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900">Save draft before closing?</h3>
+            <button
+              onClick={() => setShowCloseConfirm(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="p-6">
+            <p className="text-gray-700 mb-6">You have unsaved content. Would you like to save it as a draft?</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={discardAndCloseEditor}
+                className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Don't save
+              </button>
+              <button
+                onClick={saveAndCloseEditor}
+                className="flex-1 py-2 px-4 text-sm font-medium text-white bg-[#2D9AA5] rounded-lg hover:bg-[#257A83] transition-colors"
+              >
+                Save as draft
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Reset Editor Confirm Modal */}
+    {showResetConfirm && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900">Reset editor?</h3>
+            <button
+              onClick={() => setShowResetConfirm(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="p-6">
+            <p className="text-gray-700 mb-6">Are you sure you want to reset the editor? This will clear the title, content, and slug.</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowResetConfirm(false);
+                  resetEditorFields();
+                }}
+                className="flex-1 py-2 px-4 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Yes, reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Link Modal */}
+    {showLinkModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Link size={24} className="text-[#2D9AA5]" />
+              Add Image Link
+            </h3>
+            <button
+              onClick={() => {
+                setShowLinkModal(false);
+                setSelectedImage(null);
+                setLinkUrl("");
+              }}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Link URL (optional)
+              </label>
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://example.com"
+                className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Leave empty to remove existing link
+              </p>
+            </div>
+            <div className="flex gap-3 pt-4">
               <button
                 onClick={() => {
                   setShowLinkModal(false);
                   setSelectedImage(null);
                   setLinkUrl("");
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                <X size={24} />
+                Cancel
               </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Link URL (optional)
-                </label>
-                <input
-                  type="url"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent transition-all duration-200"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Leave empty to remove existing link
-                </p>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowLinkModal(false);
-                    setSelectedImage(null);
-                    setLinkUrl("");
-                  }}
-                  className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLinkSubmit}
-                  className="flex-1 py-2 px-4 text-sm font-medium text-white bg-[#2D9AA5] rounded-lg hover:bg-[#257A83] transition-colors"
-                >
-                  Apply Link
-                </button>
-              </div>
+              <button
+                onClick={handleLinkSubmit}
+                className="flex-1 py-2 px-4 text-sm font-medium text-white bg-[#2D9AA5] rounded-lg hover:bg-[#257A83] transition-colors"
+              >
+                Apply Link
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Confirm Modal */}
-      {showConfirmModal && confirmAction && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900">
-                Confirm Action
-              </h3>
+    {/* Confirm Modal */}
+    {showConfirmModal && confirmAction && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Confirm Action
+            </h3>
+            <button
+              onClick={() => {
+                setShowConfirmModal(false);
+                setConfirmAction(null);
+              }}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="p-6">
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete "{confirmAction.title}"? This
+              action cannot be undone.
+            </p>
+            <div className="flex gap-3">
               <button
                 onClick={() => {
                   setShowConfirmModal(false);
                   setConfirmAction(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                <X size={24} />
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                className="flex-1 py-2 px-4 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Delete
               </button>
             </div>
-            <div className="p-6">
-              <p className="text-gray-700 mb-6">
-                Are you sure you want to delete "{confirmAction.title}"? This
-                action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowConfirmModal(false);
-                    setConfirmAction(null);
-                  }}
-                  className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmAction}
-                  className="flex-1 py-2 px-4 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Image Context Menu */}
-      {showImageContextMenu && contextMenuImage && (
-        <div
-          className="fixed bg-white border border-gray-300 rounded-lg shadow-lg z-50 py-2 min-w-32"
-          style={{
-            left: `${contextMenuPosition.x}px`,
-            top: `${contextMenuPosition.y}px`,
+    {/* Image Context Menu */}
+    {showImageContextMenu && contextMenuImage && (
+      <div
+        className="fixed bg-white border border-gray-300 rounded-lg shadow-lg z-50 py-2 min-w-32"
+        style={{
+          left: `${contextMenuPosition.x}px`,
+          top: `${contextMenuPosition.y}px`,
+        }}
+      >
+        <button
+          onClick={() => {
+            openImageLinkEditor(contextMenuImage);
+            setShowImageContextMenu(false);
+            setContextMenuImage(null);
           }}
+          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
         >
-          <button
-            onClick={() => {
-              handleImageDoubleClick({ target: contextMenuImage } as any);
-              setShowImageContextMenu(false);
-              setContextMenuImage(null);
-            }}
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-          >
-            <Link size={14} />
-            Edit Link
-          </button>
-          <button
-            onClick={removeImage}
-            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-          >
-            <Trash2 size={14} />
-            Remove
-          </button>
-        </div>
-      )}
-
-      {/* Video Context Menu */}
-      {showVideoContextMenu && contextMenuVideo && (
-        <div
-          className="fixed bg-white border border-gray-300 rounded-lg shadow-lg z-50 py-2 min-w-32"
-          style={{
-            left: `${contextMenuPosition.x}px`,
-            top: `${contextMenuPosition.y}px`,
-          }}
+          <Link size={14} />
+          Edit Link
+        </button>
+        <button
+          onClick={removeImage}
+          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
         >
-          <button
-            onClick={removeVideo}
-            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-          >
-            <Trash2 size={14} />
-            Remove Video
-          </button>
+          <Trash2 size={14} />
+          Remove
+        </button>
+      </div>
+    )}
+
+    {/* Video Context Menu */}
+    {showVideoContextMenu && contextMenuVideo && (
+      <div
+        className="fixed bg-white border border-gray-300 rounded-lg shadow-lg z-50 py-2 min-w-32"
+        style={{
+          left: `${contextMenuPosition.x}px`,
+          top: `${contextMenuPosition.y}px`,
+        }}
+      >
+        <button
+          onClick={removeVideo}
+          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+        >
+          <Trash2 size={14} />
+          Remove Video
+        </button>
+      </div>
+    )}
+
+    {/* Loading Overlay */}
+    {isLoading && (
+      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 flex items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5]"></div>
+          <span className="text-gray-700 font-medium">Processing...</span>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 flex items-center gap-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5]"></div>
-            <span className="text-gray-700 font-medium">Processing...</span>
-          </div>
-        </div>
-      )}
+    {/* Custom Styles for ReactQuill */}
+    <style>{`
+      .quill-container .ql-toolbar {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 10 !important;
+        border-top: 1px solid #d1d5db !important;
+        border-left: 1px solid #d1d5db !important;
+        border-right: 1px solid #d1d5db !important;
+        border-bottom: 1px solid #d1d5db !important;
+        border-radius: 6px 6px 0 0 !important;
+        background: #f9fafb !important;
+        margin: 0 !important;
+      }
 
-      {/* Custom Styles for ReactQuill */}
-      <style jsx global>{`
-        .ql-toolbar {
-          border-top: 1px solid #e5e7eb !important;
-          border-left: 1px solid #e5e7eb !important;
-          border-right: 1px solid #e5e7eb !important;
-          border-bottom: 1px solid #e5e7eb !important;
-          border-radius: 8px 8px 0 0 !important;
-          background: #f9fafb !important;
-        }
+      /* Friendlier toolbar visuals */
+      .quill-container .ql-toolbar .ql-formats {
+        background: #ffffff !important;
+        padding: 4px !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        margin-right: 12px !important;
+      }
 
-        .ql-container {
-          border-left: 1px solid #e5e7eb !important;
-          border-right: 1px solid #e5e7eb !important;
-          border-bottom: 1px solid #e5e7eb !important;
-          border-radius: 0 0 8px 8px !important;
-          height: calc(100% - 42px) !important;
-        }
+      .quill-container .ql-toolbar button {
+        border-radius: 8px !important;
+        padding: 6px !important;
+        color: #334155 !important; /* slate-700 */
+        transition: background-color 0.15s ease, color 0.15s ease,
+          transform 0.05s ease !important;
+      }
 
-        .ql-editor {
-          height: 100% !important;
-          overflow-y: auto !important;
-          font-size: 16px !important;
-          line-height: 1.6 !important;
-        }
+      .quill-container .ql-toolbar button:active {
+        transform: translateY(0.5px) !important;
+      }
 
-        .ql-editor::before {
-          font-style: italic !important;
-          color: #9ca3af !important;
-        }
+      .quill-container .ql-container {
+        border-left: 1px solid #d1d5db !important;
+        border-right: 1px solid #d1d5db !important;
+        border-bottom: 1px solid #d1d5db !important;
+        border-top: none !important;
+        border-radius: 0 0 6px 6px !important;
+        height: calc(100% - 42px) !important;
+      }
 
-        .ql-toolbar .ql-formats {
-          margin-right: 15px !important;
-        }
+      .quill-container .ql-editor {
+        height: 100% !important;
+        overflow-y: auto !important;
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+        padding: 12px 15px !important;
+      }
 
-        .ql-toolbar button:hover,
-        .ql-toolbar button:focus {
-          background: #2d9aa5 !important;
-          color: white !important;
-          border-radius: 4px !important;
-        }
+      .quill-container .ql-toolbar button:hover {
+        background: #e6f6f8 !important; /* light teal */
+        color: #2d9aa5 !important;
+        border-radius: 8px !important;
+      }
 
-        .ql-toolbar .ql-active {
-          background: #2d9aa5 !important;
-          color: white !important;
-          border-radius: 4px !important;
-        }
+      .quill-container .ql-toolbar .ql-active {
+        background: #2d9aa5 !important;
+        color: white !important;
+        border-radius: 8px !important;
+      }
 
-        .ql-snow .ql-tooltip {
-          background: white !important;
-          border: 1px solid #e5e7eb !important;
-          border-radius: 8px !important;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-        }
+      .quill-container .ql-toolbar button svg {
+        width: 18px !important;
+        height: 18px !important;
+      }
 
-        .ql-snow .ql-tooltip input[type="text"] {
-          border: 1px solid #d1d5db !important;
-          border-radius: 4px !important;
-          padding: 6px 8px !important;
-        }
+      /* Ensure Undo/Redo are clearly visible */
+      .quill-container .ql-toolbar button.ql-undo,
+      .quill-container .ql-toolbar button.ql-redo {
+        color: #000000 !important; /* text-black */
+      }
+      .quill-container .ql-toolbar button.ql-undo:hover,
+      .quill-container .ql-toolbar button.ql-redo:hover,
+      .quill-container .ql-toolbar button.ql-undo.ql-active,
+      .quill-container .ql-toolbar button.ql-redo.ql-active {
+        color: #000000 !important;
+      }
 
-        .ql-snow .ql-tooltip a.ql-action::after {
-          content: "Save" !important;
-          background: #2d9aa5 !important;
-          color: white !important;
-          padding: 4px 8px !important;
-          border-radius: 4px !important;
-        }
+      .quill-container .ql-editor img {
+        width: 100% !important;
+        height: var(--ql-image-height, 300px) !important;
+        object-fit: contain !important;
+        display: block;
+        margin: 8px auto;
+      }
 
-        .ql-snow .ql-tooltip a.ql-remove::before {
-          content: "Remove" !important;
-          background: #ef4444 !important;
-          color: white !important;
-          padding: 4px 8px !important;
-          border-radius: 4px !important;
-        }
-        .ql-editor img {
-          width: 400px !important;
-          height: auto !important;
-          object-fit: contain !important;
-          display: block;
-          margin: 12px auto;
-        }
-        .ql-editor iframe,
-        .ql-editor video {
-          display: block;
-          margin: 16px auto;
-          border-radius: 8px;
-          object-fit: contain !important;
-        }
-        .ql-tooltip {
-          transform: translateY(-150%) !important; /* move above selection */
-          margin-bottom: 6px !important;
-        }
+      .quill-container .ql-editor iframe,
+      .quill-container .ql-editor video {
+        display: block;
+        margin: 12px auto;
+        border-radius: 6px;
+        max-width: 100%;
+      }
 
-        .ql-tooltip::after {
-          content: "";
-          position: absolute;
-          bottom: -6px; /* arrow pointing downwards */
-          left: 50%;
-          transform: translateX(-50%);
-          border-width: 6px;
-          border-style: solid;
-          border-color: white transparent transparent transparent; /* little arrow */
-        }
-      `}</style>
-    </div>
-  );
+      .quill-container .ql-snow .ql-tooltip {
+        background: white !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        z-index: 1000 !important;
+      }
+
+      .quill-container .ql-toolbar .ql-formats {
+        margin-right: 12px !important;
+      }
+    `}</style>
+  </div>
+);
 };
 
 export default BlogEditor;

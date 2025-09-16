@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Zap, Brain, Heart, Timer, BookOpen } from 'lucide-react';
+import { Droplet,Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Brain, Heart, Timer, BookOpen } from 'lucide-react';
 
 export interface Calculator {
   id: string;
@@ -30,7 +30,7 @@ export const calculators: Calculator[] = [
     id: 'pregnancy-and-ovulation/pregnancy&ovulation',
     title: 'Pregnancy & Periods Tracker',
     description: ' Free Pregnancy Calculator & Ovulation Calendar to track your cycle',
-    icon: Baby,
+    icon: Droplet,
     color: 'from-[#2D9AA5] to-[#238a94]',
     bgColor: 'bg-white',
     borderColor: 'border-gray-200',
@@ -46,7 +46,7 @@ export const calculators: Calculator[] = [
     bgColor: 'bg-white',
     borderColor: 'border-gray-200',
     hoverColor: 'hover:shadow-lg',
-    image: 'https://images.unsplash.com/photo-1628563694622-5a76957fd09c?w=400&h=200&fit=crop'
+    image: "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400&h=200&fit=crop"
   },
   {
     id: 'bmi',

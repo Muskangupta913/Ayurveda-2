@@ -1,23 +1,12 @@
 import React, { useEffect, useState } from "react";
-
 import axios from "axios";
-
 import { useRouter } from "next/router";
-
-
-
 import {
-
   Bell,
-
   BellRing,
-
   Home,
-
   LogOut,
-
   Briefcase,
-
   MessageCircle,
 
   User,
@@ -42,18 +31,6 @@ import {
 
   Activity,
 } from "lucide-react";
-
-// Removed NextPageWithLayout import to avoid missing type errors
-
-// Removed duplicate import to avoid name conflict with local NotificationBell component
-
-// =============================================
-
-// TYPE DEFINITIONS
-
-// =============================================
-
-
 
 interface Job {
 
@@ -311,9 +288,9 @@ const decodeUserIdFromToken = (token: string): string | null => {
       typeof window !== "undefined"
         ? atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"))
         : Buffer.from(
-            payloadBase64.replace(/-/g, "+").replace(/_/g, "/"),
-            "base64"
-          ).toString("utf8");
+          payloadBase64.replace(/-/g, "+").replace(/_/g, "/"),
+          "base64"
+        ).toString("utf8");
     const payload = JSON.parse(payloadJson);
 
     return payload?.userId || null;
@@ -672,8 +649,7 @@ const NotificationBell = ({
 
                   key={notification._id}
 
-                  className={`p-4 border-b border-[#2D9AA5]/10 hover:bg-[#2D9AA5]/10 transition-colors cursor-pointer ${
-                    !notification.isRead ? "bg-[#2D9AA5]/5" : ""
+                  className={`p-4 border-b border-[#2D9AA5]/10 hover:bg-[#2D9AA5]/10 transition-colors cursor-pointer ${!notification.isRead ? "bg-[#2D9AA5]/5" : ""
                     }`}
 
                   onClick={() => handleNotificationClick(notification)}
@@ -683,9 +659,8 @@ const NotificationBell = ({
                   <div className="flex items-start space-x-3">
 
                     <div
-                      className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                        !notification.isRead ? "bg-[#2D9AA5]" : "bg-gray-500"
-                      }`}
+                      className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notification.isRead ? "bg-[#2D9AA5]" : "bg-gray-500"
+                        }`}
                     />
                     <div className="flex-1">
 
@@ -783,10 +758,9 @@ const TabNavigation = ({
 
           onClick={() => setActiveTab(id)}
 
-          className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${
-            activeTab === id
-              ? "bg-[#2D9AA5] text-white shadow-lg"
-              : "text-gray-400 hover:text-white hover:bg-[#2D9AA5]/20"
+          className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${activeTab === id
+            ? "bg-[#2D9AA5] text-white shadow-lg"
+            : "text-gray-400 hover:text-white hover:bg-[#2D9AA5]/20"
             }`}
 
         >
@@ -1024,7 +998,7 @@ const JobCard = ({ application }: { application: AppliedJob }) => {
 
             <p className="text-gray-400 text-sm">Phone: {applicant.phone}</p>
 
-            <p className="text-gray-400 text-sm">Role: {applicant.role}</p>
+            {/* <p className="text-gray-400 text-sm">Role: {applicant.role}</p> */}
 
           </div>
 
@@ -1099,7 +1073,7 @@ const CommentCard = ({ comment }: { comment: CommentWithReplies }) => {
                 blogAuthor &&
                 reply.user &&
                 String(reply.user) ===
-                  String((blogAuthor as any)?._id || blogAuthor);
+                String((blogAuthor as any)?._id || blogAuthor);
 
 
               return (
@@ -1108,10 +1082,9 @@ const CommentCard = ({ comment }: { comment: CommentWithReplies }) => {
 
                   key={reply._id}
 
-                  className={`p-4 rounded-lg border-l-4 ${
-                    isAuthorReply
-                      ? "border-[#2D9AA5] bg-[#2D9AA5]/10"
-                      : "border-gray-600 bg-[#18232b]/30"
+                  className={`p-4 rounded-lg border-l-4 ${isAuthorReply
+                    ? "border-[#2D9AA5] bg-[#2D9AA5]/10"
+                    : "border-gray-600 bg-[#18232b]/30"
                     }`}
 
                 >
@@ -1119,9 +1092,8 @@ const CommentCard = ({ comment }: { comment: CommentWithReplies }) => {
                   <div className="flex items-center justify-between mb-2">
 
                     <p
-                      className={`font-semibold ${
-                        isAuthorReply ? "text-[#2D9AA5]" : "text-white"
-                      }`}
+                      className={`font-semibold ${isAuthorReply ? "text-[#2D9AA5]" : "text-white"
+                        }`}
                     >
                       {reply.username}
 
@@ -1240,26 +1212,25 @@ const ChatCard = ({ chat, router }: { chat: Chat; router: any }) => (
 
 
       <div className="flex flex-col sm:flex-row gap-3">
-      <button
+        <button
 
           onClick={() =>
             router.push(`/user/chat/${chat.prescriptionRequest?._id}`)
           }
-        className="px-6 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#2D9AA5]/80 transition-colors font-medium"
+          className="px-6 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#2D9AA5]/80 transition-colors font-medium"
 
-      >
+        >
 
-        Continue Chat
+          Continue Chat
 
-      </button>
+        </button>
 
         <button
           onClick={() => router.push(`/doctor/${chat.doctor.doctorProfileId}`)}
-          className={`px-6 py-2 rounded-lg transition-colors font-medium ${
-            chat.doctor.doctorProfileId
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-gray-500 text-gray-300 cursor-not-allowed"
-          }`}
+          className={`px-6 py-2 rounded-lg transition-colors font-medium ${chat.doctor.doctorProfileId
+            ? "bg-blue-600 text-white hover:bg-blue-700"
+            : "bg-gray-500 text-gray-300 cursor-not-allowed"
+            }`}
           disabled={!chat.doctor.doctorProfileId}
         >
           {chat.doctor.doctorProfileId
@@ -1291,11 +1262,10 @@ const ChatCard = ({ chat, router }: { chat: Chat; router: any }) => (
 
             key={msg._id}
 
-            className={`p-3 rounded-lg ${
-              msg.senderRole === "user"
-                ? "bg-[#2D9AA5]/20 ml-6"
+            className={`p-3 rounded-lg ${msg.senderRole === "user"
+              ? "bg-[#2D9AA5]/20 ml-6"
 
-                : "bg-[#18232b]/50 mr-6 border border-[#2D9AA5]/10"
+              : "bg-[#18232b]/50 mr-6 border border-[#2D9AA5]/10"
 
               }`}
 
@@ -1455,28 +1425,28 @@ const useNotifications = (router: any) => {
       const uid =
         userId ||
         ((): string | null => {
-        try {
+          try {
 
-          const t = localStorage.getItem("token");
+            const t = localStorage.getItem("token");
 
-          if (!t) return null;
+            if (!t) return null;
 
-          return decodeUserIdFromToken(t);
+            return decodeUserIdFromToken(t);
 
-        } catch {
+          } catch {
 
-          return null;
+            return null;
 
-        }
+          }
 
-      })();
+        })();
 
       const response = await axios.get<any>(
         `${apiBase}/api/push-notification/reply-notifications`,
         {
-        params: { userId: uid || undefined },
+          params: { userId: uid || undefined },
 
-        headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
 
           withCredentials: true,
         }
@@ -1671,9 +1641,9 @@ const useNotifications = (router: any) => {
       await axios.delete<any>(
         `${apiBase}/api/push-notification/clearAll-notification`,
         {
-        params: { userId: uid || undefined },
+          params: { userId: uid || undefined },
 
-        headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
 
           withCredentials: true,
         }
@@ -1773,7 +1743,7 @@ const useApiData = () => {
         const response = await axios.get<AppliedJob[]>(
           "/api/users/applied-jobs",
           {
-          headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` },
 
           }
         );
@@ -1824,7 +1794,7 @@ const useApiData = () => {
         const res = await axios.get<CommentsResponse>(
           "/api/users/comments-with-replies",
           {
-          headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` },
 
           }
         );
@@ -1877,7 +1847,7 @@ const useApiData = () => {
         const response = await axios.get<ChatsResponse>(
           "/api/chat/user-chats",
           {
-          headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` },
 
           }
         );
