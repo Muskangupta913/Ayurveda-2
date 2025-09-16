@@ -13,9 +13,10 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const agents = await User.find({ role: "agent", isApproved: true }).select(
-        "_id name email"
-      );
+      const agents = await User.find({
+        role: "agent",
+        isApproved: true,
+      }).select("_id name email");
       return res.status(200).json({ success: true, agents });
     } catch (err) {
       console.error("Error fetching agents:", err);
