@@ -1927,16 +1927,6 @@ const useApiData = () => {
 
 };
 
-
-
-// =============================================
-
-// MAIN COMPONENT
-
-// =============================================
-
-
-
 const AppliedJobs = () => {
 
   const router = useRouter();
@@ -2021,30 +2011,20 @@ const AppliedJobs = () => {
     <div className="space-y-6">
 
       <div className="flex items-center space-x-3 mb-6">
-
         <Briefcase className="w-6 h-6 text-[#2D9AA5]" />
-
         <h2 className="text-2xl font-bold text-white">
           Jobs You've Applied To
         </h2>
       </div>
-
-
-
       {appliedJobsLoading ? (
-
         <LoadingSpinner text="Loading jobs..." />
 
       ) : appliedJobs.length === 0 ? (
 
         <EmptyState
-
           icon={Briefcase}
-
           title="No job applications yet."
-
           description="Start applying to see your applications here."
-
         />
 
       ) : (
@@ -2054,18 +2034,12 @@ const AppliedJobs = () => {
           {appliedJobs.map((application) => (
 
             <JobCard key={application._id} application={application} />
-
           ))}
-
         </div>
-
       )}
 
     </div>
-
   );
-
-
 
   const renderCommentsTab = () => (
 
