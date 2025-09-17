@@ -90,35 +90,53 @@ export default function CreateOfferModal({
         status: "draft",
         treatments: [],
       });
-    } else if (mode === "update" && offer) {
-      const selectedSlugs = [
-        ...(offer.treatments?.map((t: any) => t.mainTreatmentSlug) || []),
-        ...(offer.treatments?.flatMap(
-          (t: any) => t.subTreatments?.map((st: any) => st.slug) || []
-        ) || []),
-      ];
+    } else if (mode === "update" && offer?._id) {
+      const fetchOffer = async () => {
+        try {
+          const token = localStorage.getItem("doctorToken");
+          const res = await fetch(`/api/lead-ms/update-offer?id=${offer._id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          const freshOffer = data.success ? data.offer : offer;
 
-      setForm({
-        title: offer.title || "",
-        description: offer.description || "",
-        type: offer.type || "percentage",
-        value: offer.value || 0,
-        currency: offer.currency || "INR",
-        code: offer.code || "",
-        slug: offer.slug || "",
-        startsAt: offer.startsAt ? new Date(offer.startsAt).toISOString().slice(0, 16) : "",
-        endsAt: offer.endsAt ? new Date(offer.endsAt).toISOString().slice(0, 16) : "",
-        timezone: offer.timezone || "Asia/Kolkata",
-        maxUses: offer.maxUses || null,
-        usesCount: offer.usesCount || 0,
-        perUserLimit: offer.perUserLimit || 1,
-        channels: offer.channels || [],
-        utm: offer.utm || { source: "clinic", medium: "email", campaign: "" },
-        conditions: offer.conditions || {},
-        status: offer.status || "draft",
-        treatments: selectedSlugs,
-      });
-      setClinicId(offer.clinicId || null);
+          const selectedSlugs = [
+            ...(freshOffer.treatments?.map((t: any) => t.mainTreatmentSlug) || []),
+            ...(freshOffer.treatments?.flatMap(
+              (t: any) => t.subTreatments?.map((st: any) => st.slug) || []
+            ) || []),
+          ];
+
+          setForm({
+            title: freshOffer.title || "",
+            description: freshOffer.description || "",
+            type: freshOffer.type || "percentage",
+            value: freshOffer.value || 0,
+            currency: freshOffer.currency || "INR",
+            code: freshOffer.code || "",
+            slug: freshOffer.slug || "",
+            startsAt: freshOffer.startsAt
+              ? new Date(freshOffer.startsAt).toISOString().slice(0, 16)
+              : "",
+            endsAt: freshOffer.endsAt
+              ? new Date(freshOffer.endsAt).toISOString().slice(0, 16)
+              : "",
+            timezone: freshOffer.timezone || "Asia/Kolkata",
+            maxUses: freshOffer.maxUses || null,
+            usesCount: freshOffer.usesCount || 0,
+            perUserLimit: freshOffer.perUserLimit || 1,
+            channels: freshOffer.channels || [],
+            utm: freshOffer.utm || { source: "clinic", medium: "email", campaign: "" },
+            conditions: freshOffer.conditions || {},
+            status: freshOffer.status || "draft",
+            treatments: selectedSlugs,
+          });
+          setClinicId(freshOffer.clinicId || null);
+        } catch (err) {
+          console.error("Failed to fetch latest offer:", err);
+        }
+      };
+      fetchOffer();
     }
   }, [isOpen, mode, offer]);
 
@@ -201,32 +219,6 @@ export default function CreateOfferModal({
         onClose();
       } else {
         alert(data.message || `Failed to ${mode} offer`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Server error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 🔹 Handle delete offer
-  const handleDelete = async () => {
-    if (!offer?._id) return;
-    if (!confirm("Are you sure you want to delete this offer?")) return;
-
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/lead-ms/delete-offer?id=${offer._id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        onClose();
-        onCreated(null); // optional: notify parent to remove offer from list
-      } else {
-        alert(data.message || "Failed to delete offer");
       }
     } catch (err) {
       console.error(err);
@@ -362,7 +354,8 @@ export default function CreateOfferModal({
               ))}
             </div>
           </div>
-  {/* UTMs */}
+
+          {/* UTMs */}
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-medium">UTM Source</label>
@@ -454,16 +447,6 @@ export default function CreateOfferModal({
 
           {/* Footer */}
           <div className="flex justify-between mt-6">
-            {mode === "update" && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={loading}
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-              >
-                {loading ? "Deleting..." : "Delete"}
-              </button>
-            )}
             <div className="flex gap-2">
               <button
                 type="button"
