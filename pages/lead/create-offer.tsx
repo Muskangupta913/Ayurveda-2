@@ -5,35 +5,61 @@ import CreateOfferModal from "../../components/CreateOfferModal";
 export default function OffersPage() {
   const [offers, setOffers] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingOffer, setEditingOffer] = useState<any | null>(null);
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
+  const [editingOfferData, setEditingOfferData] = useState<any>(null);
+  const token = typeof window !== "undefined" ? localStorage.getItem("clinicToken") : "";
 
   // Fetch all offers
-  useEffect(() => {
-    async function fetchOffers() {
-      try {
-        const token = localStorage.getItem("clinicToken");
-        const res = await fetch("/api/lead-ms/get-create-offer", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
-        setOffers(data.offers || []);
-      } catch (err) {
-        console.error("Error fetching offers:", err);
-        setOffers([]);
-      }
+  const fetchOffers = async () => {
+    if (!token) return; // token must exist
+    try {
+         const token = localStorage.getItem("clinicToken");
+      const res = await fetch("/api/lead-ms/get-create-offer", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      setOffers(data.offers || []);
+    } catch (err) {
+      console.error("Error fetching offers:", err);
+      setOffers([]);
     }
+  };
+
+  useEffect(() => {
     fetchOffers();
-  }, []);
+  }, [token]);
+
+  // Open modal in edit mode
+  const openEditModal = async (offerId: string) => {
+    if (!token) return alert("Not authorized!");
+    setEditingOfferId(offerId);
+    setModalOpen(true);
+
+    try {
+         const token = localStorage.getItem("clinicToken");
+      const res = await fetch(`/api/lead-ms/update-offer?id=${offerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingOfferData(data.offer); // prefill modal with current offer
+      } else {
+        alert(data.message || "Failed to fetch offer");
+        setModalOpen(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setModalOpen(false);
+    }
+  };
 
   // Handle offer create/update
   const handleOfferSaved = (offer: any, isUpdate: boolean) => {
     if (isUpdate) {
-      setOffers((prev) =>
-        prev.map((o) => (o._id === offer._id ? offer : o))
-      );
+      setOffers((prev) => prev.map((o) => (o._id === offer._id ? offer : o)));
     } else {
       setOffers((prev) => [offer, ...prev]);
     }
@@ -42,9 +68,11 @@ export default function OffersPage() {
   // Handle delete
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this offer?")) return;
+    if (!token) return alert("Not authorized!");
+
     try {
-      const token = localStorage.getItem("clinicToken");
-      const res = await fetch(`/api/lead-ms/delete-offer?id=${id}`, {
+         const token = localStorage.getItem("clinicToken");
+      const res = await fetch(`/api/lead-ms/delete-create-offer?id=${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -67,7 +95,8 @@ export default function OffersPage() {
         <h1 className="text-2xl font-bold text-gray-800">Offers</h1>
         <button
           onClick={() => {
-            setEditingOffer(null);
+            setEditingOfferId(null);
+            setEditingOfferData(null);
             setModalOpen(true);
           }}
           className="flex items-center bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg shadow-md"
@@ -76,7 +105,7 @@ export default function OffersPage() {
         </button>
       </div>
 
-      {/* Offers List */}
+      {/* Offers Table */}
       <div className="bg-white shadow-md rounded-xl overflow-hidden">
         <div className="p-4 border-b">
           <h2 className="font-semibold text-gray-700">Available Offers</h2>
@@ -128,10 +157,7 @@ export default function OffersPage() {
                       </td>
                       <td className="p-3 flex gap-2">
                         <button
-                          onClick={() => {
-                            setEditingOffer(offer);
-                            setModalOpen(true);
-                          }}
+                          onClick={() => openEditModal(offer._id)}
                           className="flex items-center px-2 py-1 text-sm rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
                         >
                           <Edit className="h-4 w-4" />
@@ -152,20 +178,19 @@ export default function OffersPage() {
         </div>
       </div>
 
-      {/* Modal (Create or Edit) */}
- {/* Modal (Create or Edit) */}
-<CreateOfferModal
-  isOpen={modalOpen}
-  onClose={() => {
-    setModalOpen(false);
-    setEditingOffer(null); // reset after closing
-  }}
-  onCreated={(offer) => handleOfferSaved(offer, !!editingOffer)}
-  token={localStorage.getItem("clinicToken") || ""}
-  offer={editingOffer} // Pass offer if editing
-  mode={editingOffer ? "update" : "create"} // ✅ Force correct mode
-/>
-
+      {/* Modal */}
+      <CreateOfferModal
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingOfferId(null);
+          setEditingOfferData(null);
+        }}
+        onCreated={(offer) => handleOfferSaved(offer, !!editingOfferId)}
+        token={token || ""}
+        offer={editingOfferData}
+        mode={editingOfferId ? "update" : "create"}
+      />
     </div>
   );
 }
