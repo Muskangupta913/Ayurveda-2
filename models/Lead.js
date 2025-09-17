@@ -57,7 +57,7 @@
 
       assignedTo: [
         {
-          user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          user: { type: mongoose.Schema.Types.ObjectId, ref: "User",  required: true },
           assignedAt: { type: Date, default: Date.now },
         },
       ],

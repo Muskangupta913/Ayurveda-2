@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     try{
         const me = await getUserFromReq(req);
 
-        if(!me || !requireRole(me, ["lead"])){
+        if(!me || !requireRole(me, ["clinic"])){
             return res.status(403).json({ success: false, message: "Access denied" });
         }
 

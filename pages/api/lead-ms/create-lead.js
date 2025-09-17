@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import dbConnect from "../../../lib/database";
 import Lead from "../../../models/Lead";
 import Treatment from "../../../models/Treatment";
+import User from "../../../models/Users"; // ✅ Added
 import { getUserFromReq, requireRole } from "./auth";
 import csv from "csvtojson";
 import multer from "multer";
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
   }
 
   const me = await getUserFromReq(req);
-  if (!me || !requireRole(me, ["lead"])) {
+  if (!me || !requireRole(me, ["clinic"])) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
@@ -86,8 +87,8 @@ export default async function handler(req, res) {
           const tDoc = mongoose.Types.ObjectId.isValid(treatmentName)
             ? await Treatment.findById(treatmentName)
             : await Treatment.findOne({
-              name: { $regex: `^${treatmentName}$`, $options: "i" },
-            }); // case-insensitive
+                name: { $regex: `^${treatmentName}$`, $options: "i" },
+              }); // case-insensitive
 
           if (!tDoc) throw new Error(`Treatment not found: ${t.treatment}`);
 
@@ -103,22 +104,47 @@ export default async function handler(req, res) {
           return { treatment: tDoc._id, subTreatment: t.subTreatment || null };
         })
       );
-const followUpsArray = followUps && followUps.length > 0
-  ? followUps.map(f => ({ date: new Date(f.date), addedBy: me._id }))
-  : followUpDate
-  ? [{ date: new Date(followUpDate), addedBy: me._id }]
-  : [];
 
+      const followUpsArray = followUps && followUps.length > 0
+        ? followUps.map(f => ({ date: new Date(f.date), addedBy: me._id }))
+        : followUpDate
+        ? [{ date: new Date(followUpDate), addedBy: me._id }]
+        : [];
 
       const notesArray = Array.isArray(notes)
         ? notes.map((n) => ({
-          text: typeof n === "string" ? n : n.text,
-          addedBy: me._id,
-          createdAt: new Date(),
-        }))
+            text: typeof n === "string" ? n : n.text,
+            addedBy: me._id,
+            createdAt: new Date(),
+          }))
         : notes
-          ? [{ text: notes, addedBy: me._id, createdAt: new Date() }]
-          : [];
+        ? [{ text: notes, addedBy: me._id, createdAt: new Date() }]
+        : [];
+
+      // ✅ Resolve assignedTo (can be ObjectId(s) or names)
+      let assignedArray = [];
+      if (assignedTo) {
+        const rawAssigned = Array.isArray(assignedTo)
+          ? assignedTo
+          : [assignedTo];
+
+        assignedArray = await Promise.all(
+          rawAssigned.map(async (val) => {
+            if (mongoose.Types.ObjectId.isValid(val)) {
+              return {
+                user: new mongoose.Types.ObjectId(val),
+                assignedAt: new Date(),
+              };
+            } else {
+              const u = await User.findOne({
+                name: { $regex: `^${val}$`, $options: "i" },
+              });
+              if (!u) throw new Error(`Assigned user not found: ${val}`);
+              return { user: u._id, assignedAt: new Date() };
+            }
+          })
+        );
+      }
 
       // Create lead
       const lead = await Lead.create({
@@ -133,19 +159,12 @@ const followUpsArray = followUps && followUps.length > 0
         status,
         customStatus,
         notes: notesArray,
-         followUps: followUpsArray,
-     assignedTo: Array.isArray(assignedTo)
-  ? assignedTo.map((id) => ({ user: new mongoose.Types.ObjectId(id), assignedAt: new Date() }))
-  : assignedTo
-  ? [{ user: new mongoose.Types.ObjectId(assignedTo), assignedAt: new Date() }]
-  : [],
-
-
+        followUps: followUpsArray,
+        assignedTo: assignedArray, // ✅ updated
       });
       return res.status(201).json({ success: true, lead });
     }
 
-    // ---------------- Bulk Mode ----------------
     // ---------------- Bulk Mode ----------------
     if (mode === "bulk") {
       if (!req.file)
@@ -192,16 +211,14 @@ const followUpsArray = followUps && followUps.length > 0
             );
           }
 
-          // Clean treatments string: remove brackets, quotes, extra spaces
+          // Clean treatments string
           const cleanedTreatments = treatments
             .toString()
-            .replace(/[\[\]'"]/g, "") // remove [], '', ""
-            .split(",") // split by comma
-            .map((t) => t.trim()) // trim spaces
-            .filter(Boolean); // remove empty strings
+            .replace(/[\[\]'"]/g, "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
 
-          // Map treatments to DB ObjectIds
-          // Map treatments to DB ObjectIds
           const parsedTreatments = await Promise.all(
             cleanedTreatments.map(async (entry) => {
               const [treatmentNameRaw, subTreatmentRaw] = entry.split(":");
@@ -215,7 +232,6 @@ const followUpsArray = followUps && followUps.length > 0
               let tDoc;
 
               if (subTreatment) {
-                // Lookup by subcategory name
                 tDoc = await Treatment.findOne({
                   "subcategories.name": {
                     $regex: `^${treatmentName}$`,
@@ -223,13 +239,11 @@ const followUpsArray = followUps && followUps.length > 0
                   },
                 });
               } else {
-                // Lookup by treatment name
                 tDoc = await Treatment.findOne({
                   name: { $regex: `^${treatmentName}$`, $options: "i" },
                 });
               }
 
-              // If still not found, try subcategory fallback
               if (!tDoc) {
                 tDoc = await Treatment.findOne({
                   "subcategories.name": {
@@ -242,7 +256,6 @@ const followUpsArray = followUps && followUps.length > 0
               if (!tDoc)
                 throw new Error(`Treatment not found: ${treatmentName}`);
 
-              // Validate subTreatment exists
               if (subTreatment) {
                 const exists = tDoc.subcategories?.some(
                   (s) =>
@@ -261,32 +274,50 @@ const followUpsArray = followUps && followUps.length > 0
             })
           );
 
-       return {
-  name: name.trim(),
-  phone: phone.toString().trim(),
-  gender: gender.trim(),
-  age: age ? Number(age) : undefined,
-  treatments: parsedTreatments,
-  source: source.trim(),
-  customSource: customSource?.trim() || null,
-  offerTag: offerTag?.trim() || null,
-  status: status?.trim() || "New",
-  customStatus: customStatus?.trim() || null,
-  notes: notes
-    ? [{ text: notes, addedBy: me._id, createdAt: new Date() }]
-    : [],
-  followUps: followUpDate
-    ? [{ date: new Date(followUpDate), addedBy: me._id }]
-    : [],
-assignedTo: Array.isArray(assignedTo)
-  ? assignedTo.map((id) => ({ user: new mongoose.Types.ObjectId(id), assignedAt: new Date() }))
-  : assignedTo
-  ? [{ user: new mongoose.Types.ObjectId(assignedTo), assignedAt: new Date() }]
-  : [],
+          // ✅ Resolve assignedTo
+          let assignedArray = [];
+          if (assignedTo) {
+            const rawAssigned = Array.isArray(assignedTo)
+              ? assignedTo
+              : assignedTo.toString().split(",").map((a) => a.trim());
 
+            assignedArray = await Promise.all(
+              rawAssigned.map(async (val) => {
+                if (mongoose.Types.ObjectId.isValid(val)) {
+                  return {
+                    user: new mongoose.Types.ObjectId(val),
+                    assignedAt: new Date(),
+                  };
+                } else {
+                  const u = await User.findOne({
+                    name: { $regex: `^${val}$`, $options: "i" },
+                  });
+                  if (!u) throw new Error(`Assigned user not found: ${val}`);
+                  return { user: u._id, assignedAt: new Date() };
+                }
+              })
+            );
+          }
 
-};
-
+          return {
+            name: name.trim(),
+            phone: phone.toString().trim(),
+            gender: gender.trim(),
+            age: age ? Number(age) : undefined,
+            treatments: parsedTreatments,
+            source: source.trim(),
+            customSource: customSource?.trim() || null,
+            offerTag: offerTag?.trim() || null,
+            status: status?.trim() || "New",
+            customStatus: customStatus?.trim() || null,
+            notes: notes
+              ? [{ text: notes, addedBy: me._id, createdAt: new Date() }]
+              : [],
+            followUps: followUpDate
+              ? [{ date: new Date(followUpDate), addedBy: me._id }]
+              : [],
+            assignedTo: assignedArray, // ✅ updated
+          };
         })
       );
 

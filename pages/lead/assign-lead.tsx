@@ -18,7 +18,7 @@ export default function LeadsPage() {
   const [followUpDate, setFollowUpDate] = useState(""); // ✅ new state for datetime
 
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("leadToken") : null;
+    typeof window !== "undefined" ? localStorage.getItem("clinicToken") : null;
 
   const fetchLeads = async () => {
     try {

@@ -7,15 +7,16 @@ export default async function handler(req, res) {
   await dbConnect();
 
   const user = await getUserFromReq(req);
-  if (!requireRole(user, ["admin", "lead"])) {
+  if (!requireRole(user, ["admin", "clinic"])) {
     return res.status(403).json({ message: "Access denied" });
   }
 
   if (req.method === "GET") {
     try {
-      const agents = await User.find({ role: "agent", isApproved: true }).select(
-        "_id name email"
-      );
+      const agents = await User.find({
+        role: "agent",
+        isApproved: true,
+      }).select("_id name email");
       return res.status(200).json({ success: true, agents });
     } catch (err) {
       console.error("Error fetching agents:", err);

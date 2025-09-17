@@ -115,6 +115,7 @@ const ZevaPeriodTracker: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showFAQ, setShowFAQ] = useState<boolean>(false);
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -1123,6 +1124,113 @@ return (
     );
   };
 
+  // Enhanced Confirmation Modal Component
+  const ResetConfirmationModal: React.FC = () => {
+    if (!showResetModal) return null;
+
+    const toastCtx = useContext(ToastContext);
+
+    const handleConfirmReset = () => {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        setData(null);
+        setCurrentView('onboarding');
+        setShowResetModal(false);
+        toastCtx?.showToast('Session reset. Start fresh.', 'success');
+      } catch (err) {
+        console.error('Failed to reset session', err);
+        toastCtx?.showToast('Failed to reset session', 'error');
+      }
+    };
+
+    const handleCancel = () => {
+      setShowResetModal(false);
+    };
+
+    return (
+      <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+          {/* Modal Header */}
+          <div className="bg-red-50 px-6 py-4 rounded-t-xl border-b border-red-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Settings className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Reset Session</h3>
+                <p className="text-sm text-gray-600">This action cannot be undone</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="px-6 py-6">
+            <div className="mb-4">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-red-600 text-sm font-bold">!</span>
+                </div>
+                <div>
+                  <p className="text-gray-800 font-medium mb-2">Are you sure you want to reset your session?</p>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    This will permanently delete all your ZEVA data on this device, including:
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <ul className="text-sm text-gray-700 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                    All period cycle data
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                    Daily logs and symptoms
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                    Analytics and predictions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                    Profile settings
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                    Export history
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-yellow-800 text-sm">
+                  <strong>Note:</strong> You'll need to go through the onboarding process again to start fresh.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex gap-3">
+            <button
+              onClick={handleCancel}
+              className="flex-1 px-4 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmReset}
+              className="flex-1 px-4 py-2.5 text-white bg-red-600 rounded-lg font-medium hover:bg-red-700 transition-colors"
+            >
+              Yes, Reset Session
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Settings View Component
   const SettingsView: React.FC = () => {
     if (!data) return null;
@@ -1168,6 +1276,10 @@ return (
       };
       updateData(newData);
       toastCtx?.showToast('Profile updated', 'success');
+    };
+
+    const resetSession = () => {
+      setShowResetModal(true);
     };
 
     return (
@@ -1219,6 +1331,12 @@ return (
                 className="bg-[#ed449b] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors"
               >
                 Save Changes
+              </button>
+              <button
+                onClick={resetSession}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
+              >
+                Reset Session
               </button>
               <div className="text-sm text-gray-500 self-center">Member since: {new Date(data.user?.createdAt || '').toLocaleDateString()}</div>
             </div>
@@ -1407,6 +1525,9 @@ return (
         </main>
 
         <Navigation />
+
+        {/* Reset Confirmation Modal */}
+        <ResetConfirmationModal />
 
         {/* Toasts */}
         <div className="fixed inset-x-0 bottom-4 flex flex-col items-center gap-2 px-4 pointer-events-none">

@@ -6,7 +6,8 @@ export default async function handler(req, res) {
   await dbConnect();
 
   const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: "No token provided" });
+  if (!authHeader)
+    return res.status(401).json({ message: "No token provided" });
 
   const token = authHeader.split(" ")[1];
   try {
@@ -18,7 +19,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const blogs = await Blog.find({})
+      const blogs = await Blog.find({ status: "published" }) // ✅ Only published
         .populate("postedBy", "name email role")
         .populate("comments.user", "name email")
         .sort({ createdAt: -1 });
