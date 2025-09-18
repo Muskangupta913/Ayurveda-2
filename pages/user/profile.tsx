@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from "react";
-
 import axios from "axios";
-
 import { useRouter } from "next/router";
-
 import {
   Bell,
   BellRing,
@@ -231,9 +228,9 @@ const decodeUserIdFromToken = (token: string): string | null => {
       typeof window !== "undefined"
         ? atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"))
         : Buffer.from(
-            payloadBase64.replace(/-/g, "+").replace(/_/g, "/"),
-            "base64"
-          ).toString("utf8");
+          payloadBase64.replace(/-/g, "+").replace(/_/g, "/"),
+          "base64"
+        ).toString("utf8");
     const payload = JSON.parse(payloadJson);
 
     return payload?.userId || null;
@@ -486,9 +483,8 @@ const NotificationBell = ({
                 >
                   <div className="flex items-start space-x-3">
                     <div
-                      className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                        !notification.isRead ? "bg-[#2D9AA5]" : "bg-gray-500"
-                      }`}
+                      className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notification.isRead ? "bg-[#2D9AA5]" : "bg-gray-500"
+                        }`}
                     />
                     <div className="flex-1">
                       <h4 className="text-white font-medium text-sm">
@@ -692,7 +688,7 @@ const JobCard = ({ application }: { application: AppliedJob }) => {
         </p>
       </div>
 
-      {/* Application Info */}
+      {/* Application Info (Applicant details removed as requested) */}
 
       <div className="bg-[#18232b]/50 rounded-lg p-4 border border-[#2D9AA5]/10">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -705,18 +701,6 @@ const JobCard = ({ application }: { application: AppliedJob }) => {
             <p className="text-gray-400 text-sm">
               Status: {application.status}
             </p>
-          </div>
-
-          <div>
-            <h4 className="text-white font-medium mb-2">Applicant Info</h4>
-
-            <p className="text-gray-400 text-sm">Name: {applicant.name}</p>
-
-            <p className="text-gray-400 text-sm">Email: {applicant.email}</p>
-
-            <p className="text-gray-400 text-sm">Phone: {applicant.phone}</p>
-
-            <p className="text-gray-400 text-sm">Role: {applicant.role}</p>
           </div>
         </div>
       </div>
@@ -764,7 +748,7 @@ const CommentCard = ({ comment }: { comment: CommentWithReplies }) => {
                 blogAuthor &&
                 reply.user &&
                 String(reply.user) ===
-                  String((blogAuthor as any)?._id || blogAuthor);
+                String((blogAuthor as any)?._id || blogAuthor);
 
               return (
                 <div
@@ -777,9 +761,8 @@ const CommentCard = ({ comment }: { comment: CommentWithReplies }) => {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <p
-                      className={`font-semibold ${
-                        isAuthorReply ? "text-[#2D9AA5]" : "text-white"
-                      }`}
+                      className={`font-semibold ${isAuthorReply ? "text-[#2D9AA5]" : "text-white"
+                        }`}
                     >
                       {reply.username}
 
@@ -867,11 +850,10 @@ const ChatCard = ({ chat, router }: { chat: Chat; router: any }) => (
 
         <button
           onClick={() => router.push(`/doctor/${chat.doctor.doctorProfileId}`)}
-          className={`px-6 py-2 rounded-lg transition-colors font-medium ${
-            chat.doctor.doctorProfileId
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-gray-500 text-gray-300 cursor-not-allowed"
-          }`}
+          className={`px-6 py-2 rounded-lg transition-colors font-medium ${chat.doctor.doctorProfileId
+            ? "bg-blue-600 text-white hover:bg-blue-700"
+            : "bg-gray-500 text-gray-300 cursor-not-allowed"
+            }`}
           disabled={!chat.doctor.doctorProfileId}
         >
           {chat.doctor.doctorProfileId
@@ -1372,6 +1354,11 @@ const AppliedJobs = () => {
     router.push("/");
   };
 
+  // Pull applicant info from first available application
+  const applicantInfo: ApplicantInfo | undefined = (
+    appliedJobs.find((j) => j.applicantInfo) || {}
+  ).applicantInfo;
+
   // Render functions for each tab
 
   const renderJobsTab = () => (
@@ -1489,9 +1476,25 @@ const AppliedJobs = () => {
               <div className="text-white font-bold text-xl">
                 Zeva User Dashboard
               </div>
+              
             </div>
 
             <div className="flex items-center space-x-4">
+              {applicantInfo && (applicantInfo.name || applicantInfo.email || applicantInfo.phone) ? (
+                <div className="hidden md:flex flex-col items-end mr-2 pr-3 border-r border-white/20">
+                  {applicantInfo.name ? (
+                    <span className="text-white text-sm font-medium">{applicantInfo.name}</span>
+                  ) : null}
+                  <div className="flex items-center space-x-2 text-xs text-blue-100/90">
+                    {applicantInfo.email ? (
+                      <span>{applicantInfo.email}</span>
+                    ) : null}
+                    {applicantInfo.phone ? (
+                      <span className="before:content-['•'] before:px-2">{applicantInfo.phone}</span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
               <NotificationBell
                 notifications={notifications}
                 showNotifications={showNotifications}

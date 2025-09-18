@@ -76,25 +76,33 @@ export default function BlogList() {
     }
   };
 
-  useEffect(() => {
-    async function fetchBlogs() {
-      try {
-        const res = await fetch("/api/blog/getAllBlogs");
-        const json = await res.json();
-        if (res.ok && json.success) {
-          const allBlogs = json.blogs || json.data;
-          setBlogs(allBlogs.slice(0, 6));
-        } else {
-          setError(json.error || "Failed to fetch blogs");
-        }
-      } catch {
-        setError("Network error");
-      } finally {
-        setIsLoading(false);
+ useEffect(() => {
+  async function fetchBlogs() {
+    try {
+      const res = await fetch("/api/blog/getAllBlogs");
+      const json = await res.json();
+      if (res.ok && json.success) {
+        const allBlogs = json.blogs || json.data;
+
+        // ✅ Sort by createdAt DESC
+        const sortedBlogs = allBlogs.sort(
+          (a: Blog, b: Blog) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        // ✅ Take latest 6
+        setBlogs(sortedBlogs.slice(0, 6));
+      } else {
+        setError(json.error || "Failed to fetch blogs");
       }
+    } catch {
+      setError("Network error");
+    } finally {
+      setIsLoading(false);
     }
-    fetchBlogs();
-  }, []);
+  }
+  fetchBlogs();
+}, []);
 
   if (error) {
     return (
