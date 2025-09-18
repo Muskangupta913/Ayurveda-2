@@ -8,7 +8,9 @@ export default async function handler(req, res) {
     // ✅ Get the logged-in user from request
     const user = await getUserFromReq(req);
     if (!user) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User not authenticated" });
     }
 
     // ✅ Role check: only clinic users can fetch their treatments
@@ -41,7 +43,9 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(405).json({ success: false, message: "Method not allowed" });
+    return res
+      .status(405)
+      .json({ success: false, message: "Method not allowed" });
   } catch (err) {
     console.error("Error fetching clinic treatments:", err);
     return res.status(500).json({

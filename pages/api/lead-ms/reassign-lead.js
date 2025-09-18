@@ -1,8 +1,9 @@
-// /pages/lead/assign-lead.js
+// /pages/api/lead/reassign-lead.js
 import dbConnect from "../../../lib/database";
 import Lead from "../../../models/Lead";
-import User from '../../../models/Users';
-import Treatment from '../../../models/Treatment';
+import User from "../../../models/Users";
+import Clinic from "../../../models/Clinic"; // ✅ import Clinic
+import Treatment from "../../../models/Treatment";
 import { getUserFromReq, requireRole } from "./auth";
 
 export default async function handler(req, res) {
@@ -23,6 +24,12 @@ export default async function handler(req, res) {
 
       const agentsArray = Array.isArray(agentIds) ? agentIds : [agentIds];
 
+      // ✅ Fetch clinic for this user
+      const clinic = await Clinic.findOne({ owner: user._id }).select("_id");
+      if (!clinic) {
+        return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+      }
+
       // Build update object
       const updateData = {
         $push: {
@@ -33,19 +40,22 @@ export default async function handler(req, res) {
       };
 
       if (followUpDate) {
-        // Ensure followUps is an array and push new date
         updateData.$push.followUps = { $each: [{ date: new Date(followUpDate) }] };
       }
 
-      // Update lead and populate assignedTo users and treatments
-      const updatedLead = await Lead.findByIdAndUpdate(
-        leadId,
+      // ✅ Ensure we filter by clinicId (not user._id)
+      const updatedLead = await Lead.findOneAndUpdate(
+        { _id: leadId, clinicId: clinic._id },
         updateData,
         { new: true }
       )
         .populate("assignedTo.user", "name email")
         .populate("treatments.treatment", "name")
         .lean();
+
+      if (!updatedLead) {
+        return res.status(404).json({ success: false, message: "Lead not found for this clinic" });
+      }
 
       return res.status(200).json({
         success: true,
@@ -60,4 +70,3 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ message: "Method not allowed" });
 }
-  

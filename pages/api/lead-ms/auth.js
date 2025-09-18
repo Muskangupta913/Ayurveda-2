@@ -13,7 +13,7 @@ export async function getUserFromReq(req) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     if (!payload?.userId) return null;
 
-    const user = await User.findById(payload.userId).lean();
+    const user = await User.findById(payload.userId);
     return user || null;
   } catch (e) {
     return null;

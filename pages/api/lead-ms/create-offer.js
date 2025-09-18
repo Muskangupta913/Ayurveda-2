@@ -13,7 +13,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
-    if (!requireRole(user, ["clinic"])) {
+    if (!requireRole(user, ["clinic", "admin"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -22,12 +22,17 @@ export default async function handler(req, res) {
     }
 
     const data = req.body;
-
-    const requiredFields = ["title", "type", "value", "startsAt", "endsAt", "clinicId"];
+    const requiredFields = ["title", "type", "value", "startsAt", "endsAt"];
     for (const field of requiredFields) {
       if (!data[field]) {
         return res.status(400).json({ success: false, message: `${field} is required` });
       }
+    }
+
+    // ✅ Always resolve clinicId based on role
+    const clinicId = user.role === "clinic" ? user._id : data.clinicId;
+    if (!clinicId) {
+      return res.status(400).json({ success: false, message: "clinicId is required for admins" });
     }
 
     // ✅ Resolve treatments & subtreatments
@@ -41,20 +46,16 @@ export default async function handler(req, res) {
         });
 
         if (!treatment) {
-          return res
-            .status(400)
-            .json({ success: false, message: `Treatment not found: ${slug}` });
+          return res.status(400).json({ success: false, message: `Treatment not found: ${slug}` });
         }
 
-        // If slug matches parent treatment
         if (treatment.slug === slug) {
           treatmentIds.push(treatment._id);
         }
 
-        // If slug matches a subcategory
         const sub = treatment.subcategories.find((s) => s.slug === slug);
         if (sub) {
-          treatmentIds.push(treatment._id); // still link parent
+          treatmentIds.push(treatment._id);
           subTreatments.push({
             treatmentId: treatment._id,
             slug: sub.slug,
@@ -63,14 +64,13 @@ export default async function handler(req, res) {
         }
       }
 
-      // Remove duplicates
       treatmentIds = Array.from(new Set(treatmentIds.map((id) => id.toString()))).map(
         (id) => new mongoose.Types.ObjectId(id)
       );
     }
 
     const offer = new Offer({
-      clinicId: data.clinicId,
+      clinicId,
       title: data.title,
       description: data.description || "",
       type: data.type,
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
       conditions: data.conditions || {},
       status: data.status || "draft",
       treatments: treatmentIds,
-      subTreatments, // store subtreatments
+      subTreatments,
       createdBy: user._id,
       updatedBy: user._id,
     });

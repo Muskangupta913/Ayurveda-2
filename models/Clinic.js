@@ -33,4 +33,6 @@ ClinicSchema.index({
   "treatments.subTreatmentSlug": 1,
 });
 
+
+
 export default mongoose.models.Clinic || mongoose.model("Clinic", ClinicSchema);

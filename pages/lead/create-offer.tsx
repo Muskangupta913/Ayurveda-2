@@ -7,13 +7,14 @@ export default function OffersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [editingOfferData, setEditingOfferData] = useState<any>(null);
-  const token = typeof window !== "undefined" ? localStorage.getItem("clinicToken") : "";
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("clinicToken") : "";
 
   // Fetch all offers
   const fetchOffers = async () => {
     if (!token) return; // token must exist
     try {
-         const token = localStorage.getItem("clinicToken");
+      const token = localStorage.getItem("clinicToken");
       const res = await fetch("/api/lead-ms/get-create-offer", {
         headers: {
           "Content-Type": "application/json",
@@ -39,7 +40,7 @@ export default function OffersPage() {
     setModalOpen(true);
 
     try {
-         const token = localStorage.getItem("clinicToken");
+      const token = localStorage.getItem("clinicToken");
       const res = await fetch(`/api/lead-ms/update-offer?id=${offerId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -71,7 +72,7 @@ export default function OffersPage() {
     if (!token) return alert("Not authorized!");
 
     try {
-         const token = localStorage.getItem("clinicToken");
+      const token = localStorage.getItem("clinicToken");
       const res = await fetch(`/api/lead-ms/delete-create-offer?id=${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },

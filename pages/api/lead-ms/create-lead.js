@@ -1,8 +1,10 @@
+// create-lead.js
 import mongoose from "mongoose";
 import dbConnect from "../../../lib/database";
 import Lead from "../../../models/Lead";
 import Treatment from "../../../models/Treatment";
-import User from "../../../models/Users"; // ✅ Added
+import User from "../../../models/Users";
+import Clinic from "../../../models/Clinic"; // ✅ Added
 import { getUserFromReq, requireRole } from "./auth";
 import csv from "csvtojson";
 import multer from "multer";
@@ -36,19 +38,32 @@ export default async function handler(req, res) {
 
   let body = {};
   if (isMultipart) {
-    // Bulk mode
     await runMiddleware(req, res, upload.single("file"));
     body = req.body;
   } else {
-    // Manual mode
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     body = JSON.parse(Buffer.concat(chunks).toString() || "{}");
   }
 
   const me = await getUserFromReq(req);
-  if (!me || !requireRole(me, ["clinic"])) {
+  if (!me || !requireRole(me, ["clinic", "agent"])) {
     return res.status(403).json({ success: false, message: "Access denied" });
+  }
+
+  // ✅ Resolve clinicId correctly
+  let clinicId;
+  if (me.role === "clinic") {
+    const clinic = await Clinic.findOne({ owner: me._id });
+    if (!clinic) {
+      return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+    }
+    clinicId = clinic._id;
+  } else if (me.role === "agent") {
+    if (!me.clinicId) {
+      return res.status(400).json({ success: false, message: "Agent not tied to a clinic" });
+    }
+    clinicId = me.clinicId;
   }
 
   const mode = isMultipart ? body.mode || "bulk" : body.mode || "manual";
@@ -68,7 +83,7 @@ export default async function handler(req, res) {
         status,
         customStatus,
         notes,
-        followUps,   // ✅ new
+        followUps,
         assignedTo,
       } = body;
 
@@ -82,17 +97,16 @@ export default async function handler(req, res) {
       const validatedTreatments = await Promise.all(
         treatments.map(async (t) => {
           if (!t.treatment) throw new Error("Treatment field missing");
-          const treatmentName = t.treatment; // FIX
+          const treatmentName = t.treatment;
 
           const tDoc = mongoose.Types.ObjectId.isValid(treatmentName)
             ? await Treatment.findById(treatmentName)
             : await Treatment.findOne({
                 name: { $regex: `^${treatmentName}$`, $options: "i" },
-              }); // case-insensitive
+              });
 
           if (!tDoc) throw new Error(`Treatment not found: ${t.treatment}`);
 
-          // Validate subTreatment if provided
           if (t.subTreatment) {
             const subExists = tDoc.subcategories?.some(
               (s) => s.name === t.subTreatment
@@ -105,10 +119,8 @@ export default async function handler(req, res) {
         })
       );
 
-      const followUpsArray = followUps && followUps.length > 0
+      const followUpsArray = Array.isArray(followUps)
         ? followUps.map(f => ({ date: new Date(f.date), addedBy: me._id }))
-        : followUpDate
-        ? [{ date: new Date(followUpDate), addedBy: me._id }]
         : [];
 
       const notesArray = Array.isArray(notes)
@@ -121,7 +133,6 @@ export default async function handler(req, res) {
         ? [{ text: notes, addedBy: me._id, createdAt: new Date() }]
         : [];
 
-      // ✅ Resolve assignedTo (can be ObjectId(s) or names)
       let assignedArray = [];
       if (assignedTo) {
         const rawAssigned = Array.isArray(assignedTo)
@@ -146,8 +157,9 @@ export default async function handler(req, res) {
         );
       }
 
-      // Create lead
+      // ✅ Create lead with correct clinicId
       const lead = await Lead.create({
+        clinicId,
         name,
         phone,
         gender,
@@ -160,8 +172,9 @@ export default async function handler(req, res) {
         customStatus,
         notes: notesArray,
         followUps: followUpsArray,
-        assignedTo: assignedArray, // ✅ updated
+        assignedTo: assignedArray,
       });
+
       return res.status(201).json({ success: true, lead });
     }
 
@@ -174,7 +187,6 @@ export default async function handler(req, res) {
       const fileName = req.file.originalname.toLowerCase();
       let jsonArray = [];
 
-      // Parse file
       if (fileName.endsWith(".csv")) {
         jsonArray = await csv().fromString(fileBuffer.toString());
       } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
@@ -201,7 +213,7 @@ export default async function handler(req, res) {
             status,
             customStatus,
             notes,
-            followUpDate,   // ✅
+            followUpDate,
             assignedTo,
           } = row;
 
@@ -211,7 +223,6 @@ export default async function handler(req, res) {
             );
           }
 
-          // Clean treatments string
           const cleanedTreatments = treatments
             .toString()
             .replace(/[\[\]'"]/g, "")
@@ -230,7 +241,6 @@ export default async function handler(req, res) {
                 throw new Error(`Invalid treatment entry: ${entry}`);
 
               let tDoc;
-
               if (subTreatment) {
                 tDoc = await Treatment.findOne({
                   "subcategories.name": {
@@ -244,17 +254,7 @@ export default async function handler(req, res) {
                 });
               }
 
-              if (!tDoc) {
-                tDoc = await Treatment.findOne({
-                  "subcategories.name": {
-                    $regex: `^${treatmentName}$`,
-                    $options: "i",
-                  },
-                });
-              }
-
-              if (!tDoc)
-                throw new Error(`Treatment not found: ${treatmentName}`);
+              if (!tDoc) throw new Error(`Treatment not found: ${treatmentName}`);
 
               if (subTreatment) {
                 const exists = tDoc.subcategories?.some(
@@ -274,7 +274,6 @@ export default async function handler(req, res) {
             })
           );
 
-          // ✅ Resolve assignedTo
           let assignedArray = [];
           if (assignedTo) {
             const rawAssigned = Array.isArray(assignedTo)
@@ -300,6 +299,7 @@ export default async function handler(req, res) {
           }
 
           return {
+            clinicId, // ✅ fixed
             name: name.trim(),
             phone: phone.toString().trim(),
             gender: gender.trim(),
@@ -316,7 +316,7 @@ export default async function handler(req, res) {
             followUps: followUpDate
               ? [{ date: new Date(followUpDate), addedBy: me._id }]
               : [],
-            assignedTo: assignedArray, // ✅ updated
+            assignedTo: assignedArray,
           };
         })
       );
@@ -332,9 +332,6 @@ export default async function handler(req, res) {
     console.error("Error creating/uploading leads:", err);
     return res
       .status(500)
-      .json({
-        success: false,
-        message: err.message || "Internal Server Error",
-      });
+      .json({ success: false, message: err.message || "Internal Server Error" });
   }
 }
