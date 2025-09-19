@@ -1,6 +1,8 @@
+//pages/api/lead-ms/lead-delete.js
 import dbConnect from "../../../lib/database";
 import Lead from "../../../models/Lead";
 import { getUserFromReq, requireRole } from "./auth";
+import Clinic from "../../../models/Clinic"; 
 
 export default async function handler(req, res) {
     await dbConnect();
@@ -22,8 +24,16 @@ export default async function handler(req, res) {
             return res.status(400).json({success:false, message:"leadId is required"});
 
         }
+         const clinic = await Clinic.findOne({ owner: me._id });
+          if (!clinic) {
+            return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+          }
 
-        const deletedLead = await Lead.findByIdAndDelete(leadId);
+       const deletedLead = await Lead.findOneAndDelete({
+  _id: leadId,
+ clinicId: clinic._id, // ✅ ensure lead belongs to this clinic
+});
+
         
         if(!deletedLead){
             return res.status(404).json({success:false, message:"Lead not found"});

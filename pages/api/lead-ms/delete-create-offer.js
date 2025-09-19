@@ -1,7 +1,5 @@
-// File: /pages/api/lead-ms/delete-offer.js
 import dbConnect from "../../../lib/database";
 import Offer from "../../../models/CreateOffer";
-import  "../../../models/Users";
 import { getUserFromReq } from "./auth";
 import mongoose from "mongoose";
 
@@ -10,40 +8,52 @@ export default async function handler(req, res) {
     await dbConnect();
 
     if (req.method !== "DELETE") {
-      return res.status(405).json({ success: false, message: "Method not allowed" });
+      return res
+        .status(405)
+        .json({ success: false, message: "Method not allowed" });
     }
 
     const user = await getUserFromReq(req);
     if (!user) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User not authenticated" });
     }
 
     const { id } = req.query;
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: "Invalid or missing Offer ID" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or missing Offer ID" });
     }
 
-    // Debug logs
-    console.log("Delete Request:", { id, userClinicId: user.clinicId?.toString(), role: user.role });
+    // Build filter
+    const filter = { _id: id };
 
-    const existing = await Offer.findById(id);
-    console.log("Offer in DB:", existing?.clinicId?.toString());
-
-    // Build filter with proper ObjectId casting
-    const filter = { _id: new mongoose.Types.ObjectId(id) };
-    if (user.role === "clinic" && user.clinicId) {
-      filter.clinicId = new mongoose.Types.ObjectId(user.clinicId);
+    if (user.role === "clinic") {
+      if (!user.clinicId) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Clinic not linked to user" });
+      }
+      filter.clinicId = user.clinicId; // ✅ use user's clinicId directly
     }
 
     const offer = await Offer.findOneAndDelete(filter);
 
     if (!offer) {
-      return res.status(404).json({ success: false, message: "Offer not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Offer not found or not authorized" });
     }
 
-    return res.status(200).json({ success: true, message: "Offer deleted successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Offer deleted successfully" });
   } catch (err) {
     console.error("Error deleting offer:", err);
-    return res.status(500).json({ success: false, message: err.message || "Server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 }

@@ -93,7 +93,7 @@ export default function CreateOfferModal({
     } else if (mode === "update" && offer?._id) {
       const fetchOffer = async () => {
         try {
-          const token = localStorage.getItem("doctorToken");
+          const token = localStorage.getItem("clinicToken");
           const res = await fetch(`/api/lead-ms/update-offer?id=${offer._id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -101,7 +101,8 @@ export default function CreateOfferModal({
           const freshOffer = data.success ? data.offer : offer;
 
           const selectedSlugs = [
-            ...(freshOffer.treatments?.map((t: any) => t.mainTreatmentSlug) || []),
+            ...(freshOffer.treatments?.map((t: any) => t.mainTreatmentSlug) ||
+              []),
             ...(freshOffer.treatments?.flatMap(
               (t: any) => t.subTreatments?.map((st: any) => st.slug) || []
             ) || []),
@@ -126,7 +127,11 @@ export default function CreateOfferModal({
             usesCount: freshOffer.usesCount || 0,
             perUserLimit: freshOffer.perUserLimit || 1,
             channels: freshOffer.channels || [],
-            utm: freshOffer.utm || { source: "clinic", medium: "email", campaign: "" },
+            utm: freshOffer.utm || {
+              source: "clinic",
+              medium: "email",
+              campaign: "",
+            },
             conditions: freshOffer.conditions || {},
             status: freshOffer.status || "draft",
             treatments: selectedSlugs,
@@ -142,7 +147,9 @@ export default function CreateOfferModal({
 
   // 🔹 Handle form input changes
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     const { name, value, type, checked } = e.target;
 
@@ -169,7 +176,10 @@ export default function CreateOfferModal({
 
     if (name.startsWith("conditions.")) {
       const key = name.split(".")[1];
-      setForm((prev) => ({ ...prev, conditions: { ...prev.conditions, [key]: value } }));
+      setForm((prev) => ({
+        ...prev,
+        conditions: { ...prev.conditions, [key]: value },
+      }));
       return;
     }
 
@@ -325,7 +335,9 @@ export default function CreateOfferModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium">Per User Limit</label>
+              <label className="block text-sm font-medium">
+                Per User Limit
+              </label>
               <input
                 type="number"
                 name="perUserLimit"
@@ -408,7 +420,9 @@ export default function CreateOfferModal({
 
           {/* Treatments */}
           <div>
-            <label className="block text-sm font-medium mb-2">Select Treatments</label>
+            <label className="block text-sm font-medium mb-2">
+              Select Treatments
+            </label>
             <div className="space-y-3 max-h-60 overflow-y-auto border rounded p-3">
               {treatments.map((t: any, i: number) => (
                 <div key={i}>
