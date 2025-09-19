@@ -53,6 +53,8 @@ interface JobFormData {
 }
 
 
+type FieldKey = keyof JobFormData;
+
 interface JobPostingFormProps {
   onSubmit: (formData: JobFormData) => Promise<void>;
   isSubmitting?: boolean;
@@ -117,11 +119,11 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     }));
     setTouched(prev => ({ ...prev, [name]: true }));
     // live-validate the field
-    const fieldError = validateField(name, value);
+    const fieldError = validateField(name as FieldKey, value);
     setErrors(prev => ({ ...prev, [name]: fieldError }));
   };
 
-  const sectionFields: string[][] = useMemo(() => ([
+  const sectionFields: FieldKey[][] = useMemo(() => ([
     // Section 0: Basic Information
     ['companyName', 'establishment', 'jobTitle', 'department', 'qualification', 'jobType', 'location'],
     // Section 1: Job Details
@@ -132,7 +134,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     ['skills', 'perks', 'languagesPreferred'],
   ]), []);
 
-  const validateField = (name: string, value: string): string => {
+  const validateField = (name: FieldKey, value: string): string => {
     if (!value || value.toString().trim() === '') {
       // SalaryType should only be required if salary is entered
       if (name === "salaryType") {
@@ -171,7 +173,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
     const fields = sectionFields[step] || [];
     const sectionErrors: Record<string, string> = {};
     fields.forEach((f) => {
-      const err = validateField(f, (formData as any)[f] || '');
+      const err = validateField(f, formData[f] || '');
       if (err) sectionErrors[f] = err;
     });
 
@@ -188,7 +190,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
   const validateAll = (): Record<string, string> => {
     const allErrors: Record<string, string> = {};
     sectionFields.flat().forEach((f) => {
-      const err = validateField(f, (formData as any)[f] || '');
+      const err = validateField(f, formData[f] || '');
       if (err) allErrors[f] = err;
     });
 
@@ -238,7 +240,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
   const confirmSubmit = async () => {
     try {
       // ✅ Normalize salary before sending
-      let salaryRaw: any = formData.salary ? formData.salary.replace(/,/g, "") : "";
+      let salaryRaw: string = formData.salary ? formData.salary.replace(/,/g, "") : "";
 
       if (salaryRaw.includes("-")) {
         const [min, max] = salaryRaw
@@ -453,7 +455,7 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                 )}
                 {toast.type === 'warning' && (
                   <svg className="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 3c4.97 0 9 4.03 9 9s-4.03 9-9 9-9-4.03-9-9 4.03-9 9-9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 3c4.97 0 9 9 9 9s-4.03 9-9 9-9-4.03-9-9 4.03-9 9-9z" />
                   </svg>
                 )}
                 {toast.type === 'info' && (
@@ -785,13 +787,13 @@ const JobPostingForm: React.FC<JobPostingFormProps> = ({
                           // Allow only digits, commas, spaces, and hyphen
                           if (/^[0-9,\s-]*$/.test(rawValue)) {
                             // Remove commas before formatting
-                            let cleaned = rawValue.replace(/,/g, "");
+                            const cleaned = rawValue.replace(/,/g, "");
 
                             if (cleaned.includes("-")) {
                               // Split into range
-                              let [min, max] = cleaned.split("-").map((v) => v.trim());
-                              let formattedMin = min && !isNaN(Number(min)) ? Number(min).toLocaleString("en-IN") : "";
-                              let formattedMax = max && !isNaN(Number(max)) ? Number(max).toLocaleString("en-IN") : "";
+                              const [min, max] = cleaned.split("-").map((v) => v.trim());
+                              const formattedMin = min && !isNaN(Number(min)) ? Number(min).toLocaleString("en-IN") : "";
+                              const formattedMax = max && !isNaN(Number(max)) ? Number(max).toLocaleString("en-IN") : "";
                               rawValue =
                                 formattedMin + (cleaned.includes("-") ? " - " : "") + (formattedMax ? formattedMax : "");
                             } else {

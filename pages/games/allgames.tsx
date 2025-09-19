@@ -2,6 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import React from "react";
 import { games } from "../../components/CalculatorGames";
 
@@ -90,9 +91,11 @@ function AllGames() {
               >
                 {/* Image Container */}
                 <div className="relative overflow-hidden rounded-t-2xl">
-                  <img
+                  <Image
                     src={game.image}
                     alt={game.title}
+                    width={400}
+                    height={176}
                     className="w-full h-36 sm:h-40 md:h-44 object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { role, userId } = decoded;
+    const {role} = decoded;
     if (!["user", "doctor"].includes(role)) {
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }

@@ -1,5 +1,5 @@
 'use client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
@@ -15,7 +15,7 @@ import {
 
 function EnquiryFormPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  // const router = useRouter();
   const clinicId = searchParams.get('clinicId');
   const clinicName = searchParams.get('clinicName');
   const clinicAddress = searchParams.get('clinicAddress');

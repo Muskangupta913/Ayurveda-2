@@ -103,7 +103,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
       );
       // Refetch chat to get updated isRead status
       fetchChat(false);
-    } catch (error) {
+    } catch {
       // console.error("Failed to mark messages as read:", error);
     }
   };
@@ -135,7 +135,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
         setChat(response.data.data.chat);
         setPrescriptionRequest(response.data.data.prescriptionRequest);
       }
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch chat:", error);
     } finally {
       if (showLoader) setInitialLoading(false);
@@ -175,7 +175,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
           }
         }, 100);
       }
-    } catch (error) {
+    } catch {
       console.error("Failed to send message:", error);
     } finally {
       setSending(false);
@@ -217,7 +217,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
           }
         }, 100);
       }
-    } catch (error) {
+    } catch {
       // console.error("Failed to send prescription:", error);
     } finally {
       setSending(false);
@@ -235,7 +235,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
       if (response.data.success) {
         setChat(response.data.chat);
       }
-    } catch (error) {
+    } catch {
       // console.error("Failed to delete message:", error);
     }
   };

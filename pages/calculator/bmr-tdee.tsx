@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Calculator, Activity, User, Scale, Ruler, Calendar } from 'lucide-react';
 
 interface FormData {

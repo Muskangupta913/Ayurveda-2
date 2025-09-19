@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Droplet,Baby, Dumbbell, Scale, Activity, Wind, Apple, Calculator, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Brain, Heart, Timer, BookOpen } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Droplet, Dumbbell, Scale, Activity, Wind, Apple, ArrowRight, ChevronLeft, ChevronRight, Gamepad2, Target, Brain, Heart, BookOpen } from 'lucide-react';
 
 export interface Calculator {
   id: string;
@@ -165,7 +167,7 @@ export const games: Game[] = [
 ];
 
 const HealthCalculatorApp: React.FC = () => {
-  const [activeCalculator, setActiveCalculator] = useState<string>('home');
+  const [activeCalculator] = useState<string>('home');
   const sliderRef = useRef<HTMLDivElement>(null);
   const gamesSliderRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -280,10 +282,12 @@ const HealthCalculatorApp: React.FC = () => {
               >
                 {/* Image Section */}
                 <div className="relative h-24 sm:h-28 lg:h-32 overflow-hidden">
-                  <img
+                  <Image
                     src={calc.image}
                     alt={calc.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    className="object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
                     <div className={`bg-gradient-to-r ${calc.color} p-1.5 sm:p-2 rounded-lg shadow-lg`}>
@@ -296,7 +300,7 @@ const HealthCalculatorApp: React.FC = () => {
                 <div className="p-3 sm:p-4 lg:p-5">
                   <h3 className="font-bold text-gray-800 mb-2 text-sm sm:text-base lg:text-lg line-clamp-2">{calc.title}</h3>
                   <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed line-clamp-2">{calc.description}</p>
-                  <a
+                  <Link
                     href={`/calculator/${calc.id}#games-section`}
                     onClick={() => {
                       if (sliderRef.current) {
@@ -308,7 +312,7 @@ const HealthCalculatorApp: React.FC = () => {
                   >
                     Calculate Now
                     <ArrowRight size={14} className="ml-2" />
-                  </a>
+                  </Link>
                 </div>
               </div>
             );
@@ -317,7 +321,7 @@ const HealthCalculatorApp: React.FC = () => {
 
         {/* View All Button */}
         <div className="text-center mt-6 sm:mt-8">
-          <a
+          <Link
             href="/calculator/allcalc#games-section"
             onClick={() => {
               if (sliderRef.current) {
@@ -329,7 +333,7 @@ const HealthCalculatorApp: React.FC = () => {
           >
             View All Calculators
             <ArrowRight size={18} className="ml-2" />
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -376,10 +380,12 @@ const HealthCalculatorApp: React.FC = () => {
               >
                 {/* Image Section */}
                 <div className="relative h-24 sm:h-28 lg:h-32 overflow-hidden">
-                  <img
+                  <Image
                     src={game.image}
                     alt={game.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    className="object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
                     <div className={`bg-gradient-to-r ${game.color} p-1.5 sm:p-2 rounded-lg shadow-lg`}>
@@ -392,8 +398,9 @@ const HealthCalculatorApp: React.FC = () => {
                 <div className="p-3 sm:p-4 lg:p-5">
                   <h3 className="font-bold text-gray-800 mb-2 text-sm sm:text-base lg:text-lg line-clamp-2">{game.title}</h3>
                   <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed line-clamp-2">{game.description}</p>
-                  <a
-                    href={`/games/${game.id}#games-section`}
+                  <Link
+                    href={`/games/${game.id}#games-section`
+                    }
                     onClick={() => {
                       if (gamesSliderRef.current) {
                         localStorage.setItem('gamesSliderScroll', gamesSliderRef.current.scrollLeft.toString());
@@ -404,7 +411,7 @@ const HealthCalculatorApp: React.FC = () => {
                   >
                     Play Now
                     <Gamepad2 size={14} className="ml-2" />
-                  </a>
+                  </Link>
                 </div>
               </div>
             );
@@ -413,7 +420,7 @@ const HealthCalculatorApp: React.FC = () => {
 
         {/* View All Games Button */}
         <div className="text-center mt-6 sm:mt-8">
-          <a
+          <Link
             href="/games/allgames#games-section"
             onClick={() => {
               if (gamesSliderRef.current) {
@@ -425,7 +432,7 @@ const HealthCalculatorApp: React.FC = () => {
           >
             View All Games
             <Gamepad2 size={18} className="ml-2" />
-          </a>
+          </Link>
         </div>
       </div>
     </div>
@@ -448,8 +455,6 @@ const HealthCalculatorApp: React.FC = () => {
   );
 
   const renderCalculator = () => {
-    const currentCalc = calculators.find(calc => calc.id === activeCalculator);
-
     switch (activeCalculator) {
       case 'bmi':
         return <SimpleCalculatorView title="BMI Calculator" icon={Scale} />;

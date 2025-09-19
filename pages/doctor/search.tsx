@@ -11,7 +11,6 @@ import {
   Phone,
   Navigation,
   Shield,
-  Calendar,
   X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -82,7 +81,7 @@ export default function FindDoctor() {
   const [viewMode, setViewMode] = useState("list");
   const [starFilter, setStarFilter] = useState(0);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [selectedDoctor] = useState<Doctor | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "register">(
     "login"
@@ -97,17 +96,17 @@ export default function FindDoctor() {
   const [reviewsLoading, setReviewsLoading] = useState<{
     [key: string]: boolean;
   }>({});
-  const [showReviewsFor, setShowReviewsFor] = useState<string | null>(null);
-  const [expandedTreatments, setExpandedTreatments] = useState<
-    Record<string, boolean>
-  >({});
+  // const [showReviewsFor, setShowReviewsFor] = useState<string | null>(null);
+  // const [expandedTreatments, setExpandedTreatments] = useState<
+  //   Record<string, boolean>
+  // >({});
 
   // Add ref for results section
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Add missing state variables
   const [priceRange, setPriceRange] = useState([0, 5000]);
-  const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
+  // const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('relevance');
 
@@ -120,10 +119,7 @@ export default function FindDoctor() {
     // Don't clear search results, only reset filters
   };
 
-  const clearAllFilters = () => {
-    clearFilters();
-    clearSearch();
-  };
+ 
 
   // Add the getSortedDoctors function
   const getSortedDoctors = (doctors: Doctor[]) => {
@@ -152,7 +148,6 @@ export default function FindDoctor() {
 
   // Add state for dynamic available times
   const [dynamicAvailableTimes, setDynamicAvailableTimes] = useState<string[]>([]);
-
   // Function to extract available times from doctor time slots
   const extractAvailableTimes = (doctors: Doctor[]) => {
     const timeSet = new Set<string>();
@@ -225,33 +220,33 @@ export default function FindDoctor() {
     'Weekend Available'
   ];
 
-  const availableTreatments = [
-    'Infertility Treatments',
-    'Cosmetic Surgery',
-    'Dental Treatments',
-    'Orthopedic Surgery',
-    'Cardiac Surgery',
-    'Oncology Treatments',
-    'Bariatric / Weight-Loss Surgery',
-    'LASIK & Eye Procedures',
-    'Preventive Health Screenings',
-    'Sports Medicine & Rehabilitation',
-    'Dermatology & Skin Treatments',
-    'Hair Transplantation',
-    'Botox & Fillers',
-    'Non-invasive Energy Treatments',
-    'Lymphatic & Body Sculpting Massages',
-    'Spa-based Wellness Retreats & Detox Programs',
-    'Ayurvedic Treatments',
-    'Acupuncture & Traditional Chinese Medicine',
-    'Physiotherapy & Post-operative Rehabilitation',
-    'Hormonal / PCOS Treatment & Women\'s Wellness',
-    'Psoriasis & Autoimmune Skin Disorder Therapies',
-    'Isotretinoin',
-    'Teeth Veneers & Cosmetic Dental Whitening',
-    'Cryotherapy & Hyperbaric Oxygen Therapy',
-    'Breathwork, Yoga & Mindfulness Therapies'
-  ];
+  // const availableTreatments = [
+  //   'Infertility Treatments',
+  //   'Cosmetic Surgery',
+  //   'Dental Treatments',
+  //   'Orthopedic Surgery',
+  //   'Cardiac Surgery',
+  //   'Oncology Treatments',
+  //   'Bariatric / Weight-Loss Surgery',
+  //   'LASIK & Eye Procedures',
+  //   'Preventive Health Screenings',
+  //   'Sports Medicine & Rehabilitation',
+  //   'Dermatology & Skin Treatments',
+  //   'Hair Transplantation',
+  //   'Botox & Fillers',
+  //   'Non-invasive Energy Treatments',
+  //   'Lymphatic & Body Sculpting Massages',
+  //   'Spa-based Wellness Retreats & Detox Programs',
+  //   'Ayurvedic Treatments',
+  //   'Acupuncture & Traditional Chinese Medicine',
+  //   'Physiotherapy & Post-operative Rehabilitation',
+  //   'Hormonal / PCOS Treatment & Women\'s Wellness',
+  //   'Psoriasis & Autoimmune Skin Disorder Therapies',
+  //   'Isotretinoin',
+  //   'Teeth Veneers & Cosmetic Dental Whitening',
+  //   'Cryotherapy & Hyperbaric Oxygen Therapy',
+  //   'Breathwork, Yoga & Mindfulness Therapies'
+  // ];
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const suggestionsDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -383,21 +378,21 @@ export default function FindDoctor() {
     }
   };
 
-  const handleReviewClick = (doctor: Doctor) => {
-    if (!isAuthenticated) {
-      setPendingAction({ type: "review", doctor });
-      setAuthModalMode("login");
-      setShowAuthModal(true);
-      return;
-    }
+  // const handleReviewClick = (doctor: Doctor) => {
+  //   if (!isAuthenticated) {
+  //     setPendingAction({ type: "review", doctor });
+  //     setAuthModalMode("login");
+  //     setShowAuthModal(true);
+  //     return;
+  //   }
 
-    const params = new URLSearchParams({
-      doctorId: doctor._id,
-      doctorName: doctor.user.name,
-    });
+  //   const params = new URLSearchParams({
+  //     doctorId: doctor._id,
+  //     doctorName: doctor.user.name,
+  //   });
 
-    router.push(`/doctor/review-form?${params.toString()}`);
-  };
+  //   router.push(`/doctor/review-form?${params.toString()}`);
+  // };
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);

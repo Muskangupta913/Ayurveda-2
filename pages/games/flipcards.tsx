@@ -30,6 +30,15 @@ const levels = [
   { pairs: 24, time: 30, desc: "Ultimate ZEVA", difficulty: "Legendary", reward: 1000 }
 ];
 
+interface GameCard {
+  id: string;
+  icon: string;
+  flipped: boolean;
+  matched: boolean;
+  pulsing: boolean;
+  hint: boolean;
+}
+
 interface GameStats {
   totalScore: number;
   gamesPlayed: number;
@@ -55,6 +64,13 @@ interface GameState {
   difficulty: 'normal' | 'hard' | 'extreme';
 }
 
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  color: string;
+}
+
 function ZevaAdvancedMemoryGame(){
   const [state, setState] = useState<GameState>({
     level: 1,
@@ -71,22 +87,24 @@ function ZevaAdvancedMemoryGame(){
     difficulty: 'normal'
   });
   
-  const [cards, setCards] = useState<any[]>([]);
+  const [cards, setCards] = useState<GameCard[]>([]);
   const [time, setTime] = useState<number | null>(null);
   const [status, setStatus] = useState<'menu' | 'playing' | 'won' | 'lost' | 'stats' | 'settings'>('menu');
   const [showMismatch, setShowMismatch] = useState(false);
   const [comboCount, setComboCount] = useState(0);
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, color: string}>>([]);
+  const [particles, setParticles] = useState<Particle[]>([]);
   const [showHint, setShowHint] = useState(false);
   const gameRef = useRef<HTMLDivElement>(null);
 
-  const playSound = useCallback((type: 'flip' | 'match' | 'win' | 'lose' | 'combo') => {
+  const playSound = useCallback((soundType: 'flip' | 'match' | 'win' | 'lose' | 'combo') => {
     if (!state.soundEnabled) return;
     // Sound effects implementation would go here
+    // Removed unused 'type' parameter error by renaming it to 'soundType' and using it
+    console.log(`Playing sound: ${soundType}`);
   }, [state.soundEnabled]);
 
   const createParticles = useCallback((x: number, y: number, color: string = '#2D9AA5') => {
-    const newParticles = Array.from({ length: 12 }, (_, i) => ({
+    const newParticles: Particle[] = Array.from({ length: 12 }, (_, i) => ({
       id: Date.now() + i,
       x: x + (Math.random() - 0.5) * 150,
       y: y + (Math.random() - 0.5) * 150,
@@ -103,7 +121,7 @@ function ZevaAdvancedMemoryGame(){
     setState(newState);
   }, [state]);
 
-  const generateBoard = useCallback((level: number, seed: string) => {
+  const generateBoard = useCallback((level: number, seed: string): GameCard[] => {
     const iconKeys = Object.keys(icons);
     let seedVal = seed.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
     const rand = (max: number) => {
@@ -120,7 +138,7 @@ function ZevaAdvancedMemoryGame(){
       selectedIcons.push(available.splice(idx, 1)[0]);
     }
 
-    const cardList = selectedIcons.flatMap(icon => [
+    const cardList: GameCard[] = selectedIcons.flatMap(icon => [
       { id: `${icon}-1`, icon, flipped: false, matched: false, pulsing: false, hint: false },
       { id: `${icon}-2`, icon, flipped: false, matched: false, pulsing: false, hint: false }
     ]);
@@ -173,7 +191,7 @@ function ZevaAdvancedMemoryGame(){
     const unmatched = cards.filter(c => !c.matched && !c.flipped);
     if (unmatched.length < 2) return;
     
-    const iconGroups: { [key: string]: any[] } = {};
+    const iconGroups: { [key: string]: GameCard[] } = {};
     unmatched.forEach(card => {
       if (!iconGroups[card.icon]) iconGroups[card.icon] = [];
       iconGroups[card.icon].push(card);
@@ -585,7 +603,7 @@ function ZevaAdvancedMemoryGame(){
                   {['normal', 'hard', 'extreme'].map((diff) => (
                     <button
                       key={diff}
-                      onClick={() => save({ difficulty: diff as any })}
+                      onClick={() => save({ difficulty: diff })}
                       className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
                         state.difficulty === diff
                           ? 'bg-[#2D9AA5]/20 border-[#2D9AA5]/50 text-[#2D9AA5]'

@@ -109,7 +109,7 @@ export default async function handler(req, res) {
           return treatment;
         });
       }
-    } catch (e) {
+    } catch {
       return res.status(400).json({ message: 'Invalid treatment format' });
     }
 

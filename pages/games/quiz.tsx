@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Area, AreaChart, Tooltip} from 'recharts';
 import { CheckCircle, XCircle, Trophy, Brain, Heart, Star, MapPin, Stethoscope, Lock, Unlock, ArrowRight, Award, TrendingUp } from 'lucide-react';
 
@@ -14,24 +14,14 @@ type QuizLevel = {
 };
 
 // Fisher-Yates shuffle
-function shuffleArray<T>(array: T[]): T[] {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-// Prepare questions: shuffle + limit
-function prepareQuestions(questions: Question[], count: number): Question[] {
-  return shuffleArray(questions)
-    .slice(0, count)
-    .map(q => ({
-      ...q,
-      o: shuffleArray(q.o)
-    }));
-}
+// function shuffleArray<T>(array: T[]): T[] {
+//   const arr = [...array];
+//   for (let i = arr.length - 1; i > 0; i--) {
+//     const j = Math.floor(Math.random() * (i + 1));
+//     [arr[i], arr[j]] = [arr[j], arr[i]];
+//   }
+//   return arr;
+// }
 
 interface ChartData {
   level: string;
@@ -229,18 +219,17 @@ function HealthQuiz() {
   const [showLevelSelect, setShowLevelSelect] = useState<boolean>(true);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [timerActive, setTimerActive] = useState<boolean>(false);
-  const [questionStartTime, setQuestionStartTime] = useState<number>(0);
 
   const shuffle = (array: Question[]): Question[] => [...array].sort(() => Math.random() - 0.5);
 
   // Save progress to localStorage
-  const saveProgress = () => {
+  const saveProgress = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('zevaQuiz_currentLevel', currentLevel.toString());
       localStorage.setItem('zevaQuiz_levelScores', JSON.stringify(levelScores));
       localStorage.setItem('zevaQuiz_unlockedLevels', unlockedLevels.toString());
     }
-  };
+  }, [currentLevel, levelScores, unlockedLevels]);
 
   // Clear all progress from localStorage
   const clearProgress = () => {
@@ -251,12 +240,26 @@ function HealthQuiz() {
     }
   };
 
-  const startQuestionTimer = () => {
+  const startQuestionTimer = useCallback(() => {
     const levelData = QUIZ_DATA[currentLevel];
     setTimeLeft(levelData.questionTimeLimit);
     setTimerActive(true);
-    setQuestionStartTime(Date.now());
-  };
+  }, [currentLevel]);
+
+  const handleTimeUp = useCallback(() => {
+    setTimerActive(false);
+    // Mark as wrong since no answer was selected or time ran out
+    if (currentQ < questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+      setSelected([]);
+      // Start timer for next question
+      setTimeout(() => startQuestionTimer(), 500);
+    } else {
+      // Last question, show results
+      setLevelScores(prev => ({ ...prev, [currentLevel]: score }));
+      setShowResult(true);
+    }
+  }, [currentQ, questions.length, startQuestionTimer, currentLevel, score]);
 
   useEffect(() => {
     const levelData = QUIZ_DATA[currentLevel];
@@ -269,7 +272,7 @@ function HealthQuiz() {
     setShowResult(false);
     // Start timer for first question
     setTimeout(() => startQuestionTimer(), 100);
-  }, [currentLevel]);
+  }, [currentLevel, startQuestionTimer]);
 
   // Timer effect - per question
   useEffect(() => {
@@ -283,22 +286,7 @@ function HealthQuiz() {
       handleTimeUp();
     }
     return () => clearInterval(interval);
-  }, [timerActive, timeLeft, showResult, showLevelSelect]);
-
-  const handleTimeUp = () => {
-    setTimerActive(false);
-    // Mark as wrong since no answer was selected or time ran out
-    if (currentQ < questions.length - 1) {
-      setCurrentQ(currentQ + 1);
-      setSelected([]);
-      // Start timer for next question
-      setTimeout(() => startQuestionTimer(), 500);
-    } else {
-      // Last question, show results
-      setLevelScores({ ...levelScores, [currentLevel]: score });
-      setShowResult(true);
-    }
-  };
+  }, [timerActive, timeLeft, showResult, showLevelSelect, handleTimeUp]);
 
   const handleAnswer = (optionIndex: number): void => {
     const isMultipleChoice = questions[currentQ]?.c.length > 1;
@@ -337,11 +325,6 @@ function HealthQuiz() {
     // Questions will be reshuffled by useEffect when showResult changes
   };
 
-  // Legacy function - keeping for compatibility but redirecting to quitQuiz
-  const resetQuiz = (): void => {
-    quitQuiz();
-  };
-
   const checkAnswer = (): void => {
     setTimerActive(false); // Stop the timer
     const correct: number[] = questions[currentQ].c;
@@ -355,7 +338,7 @@ function HealthQuiz() {
       setTimeout(() => startQuestionTimer(), 500);
     } else {
       const finalScore: number = isCorrect ? score + 1 : score;
-      setLevelScores({ ...levelScores, [currentLevel]: finalScore });
+      setLevelScores(prev => ({ ...prev, [currentLevel]: finalScore }));
       setShowResult(true);
     }
   };
@@ -377,13 +360,7 @@ function HealthQuiz() {
   // Save progress whenever key state changes
   useEffect(() => {
     saveProgress();
-  }, [currentLevel, levelScores, unlockedLevels]);
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, [saveProgress]);
 
   const getChartData = (): ChartData[] => {
     return Object.entries(levelScores).map(([level, score]: [string, number]) => {
@@ -546,7 +523,7 @@ function HealthQuiz() {
               <Trophy className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-5xl font-bold text-gray-800 mb-4">Congratulations!</h1>
-            <p className="text-xl text-gray-600 mb-2">You've completed all 5 levels of the Zeva Health Quiz!</p>
+            <p className="text-xl text-gray-600 mb-2">You&apos;ve completed all 5 levels of the Zeva Health Quiz!</p>
             <div className="text-3xl font-bold text-purple-600 mb-4">Overall Score: {overallScore}%</div>
           </div>
 
@@ -590,7 +567,7 @@ function HealthQuiz() {
               <Heart className="w-12 h-12 mx-auto mb-4 text-pink-200" />
               <h2 className="text-3xl font-bold mb-2">Zeva Cares for Your Health</h2>
               <p className="text-blue-100 text-lg">
-                Great job on completing your health knowledge journey! We're here to support your wellness every step of the way.
+                Great job on completing your health knowledge journey! We&apos;re here to support your wellness every step of the way.
               </p>
             </div>
 
@@ -706,7 +683,7 @@ function HealthQuiz() {
               <p className="text-pink-100">
                 {passed
                   ? "Congratulations on expanding your health knowledge! Keep learning and growing stronger."
-                  : "Don't worry! Learning is a journey. Review the topics and try again when you're ready."
+                  : "Don&apos;t worry! Learning is a journey. Review the topics and try again when you&apos;re ready."
                 }
               </p>
 

@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const jobs = await JobPosting.find({ postedBy: userId }).sort({ createdAt: -1 });
 
     return res.status(200).json({ success: true, jobs });
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: 'Invalid token' });
   }
 }

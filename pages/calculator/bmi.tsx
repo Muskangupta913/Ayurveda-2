@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 interface BMIResult {
   bmi: number;
@@ -18,41 +18,40 @@ function BMICalculator() {
   const [result, setResult] = useState<BMIResult | null>(null);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
 
-  // Weight units (to kg conversion)
-  const weightUnits: UnitConversion = {
+  // Move units outside to prevent recreation
+  const weightUnits: UnitConversion = useMemo(() => ({
     'kg': 1,
     'g': 0.001,
     'lb': 0.453592,
     'oz': 0.0283495,
     'st': 6.35029, // stone
     'ton': 1000
-  };
+  }), []);
 
-  // Height units (to meter conversion)
-  const heightUnits: UnitConversion = {
+  const heightUnits: UnitConversion = useMemo(() => ({
     'm': 1,
     'cm': 0.01,
     'mm': 0.001,
     'ft': 0.3048,
     'in': 0.0254,
     'yd': 0.9144
-  };
+  }), []);
 
-  const getBMICategory = (bmi: number): { category: string; color: string } => {
+  const getBMICategory = useCallback((bmi: number): { category: string; color: string } => {
     if (bmi < 18.5) return { category: 'Underweight', color: '#3498db' };
     if (bmi < 25) return { category: 'Normal Weight', color: '#27ae60' };
     if (bmi < 30) return { category: 'Overweight', color: '#f39c12' };
     if (bmi < 35) return { category: 'Obese Class I', color: '#e67e22' };
     if (bmi < 40) return { category: 'Obese Class II', color: '#e74c3c' };
     return { category: 'Obese Class III', color: '#8e44ad' };
-  };
+  }, []);
 
-  const convertToBaseUnits = (value: number, unit: string, isWeight: boolean): number => {
+  const convertToBaseUnits = useCallback((value: number, unit: string, isWeight: boolean): number => {
     const conversionTable = isWeight ? weightUnits : heightUnits;
     return value * conversionTable[unit];
-  };
+  }, [weightUnits, heightUnits]);
 
-  const calculateBMI = async (): Promise<void> => {
+  const calculateBMI = useCallback(async (): Promise<void> => {
     if (!weight || !height) return;
     
     setIsCalculating(true);
@@ -70,7 +69,7 @@ function BMICalculator() {
     
     setResult({ bmi: Math.round(bmi * 10) / 10, category, color });
     setIsCalculating(false);
-  };
+  }, [weight, height, weightUnit, heightUnit, convertToBaseUnits, getBMICategory]);
 
   const resetCalculator = (): void => {
     setWeight('');
@@ -83,7 +82,7 @@ function BMICalculator() {
       const timer = setTimeout(calculateBMI, 300);
       return () => clearTimeout(timer);
     }
-  }, [weight, height, weightUnit, heightUnit]);
+  }, [calculateBMI, weight, height]);
 
   const getUnitLabel = (unit: string): string => {
     const labels: { [key: string]: string } = {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Heart, Baby, Target, ChevronRight, Sparkles, Clock, TrendingUp, Flower } from 'lucide-react';
+import { Calendar, Heart, Baby, Target, ChevronRight, Clock, TrendingUp, Flower } from 'lucide-react';
 
 const PregnancyOvulationPage = () => {
   const navigateToTrackPeriods = () => {
@@ -31,7 +31,7 @@ const PregnancyOvulationPage = () => {
                 </div>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                ZEVA Women's Health
+                ZEVA Women&apos;s Health
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600">
                   Tracking Hub
                 </span>
@@ -236,7 +236,7 @@ const PregnancyOvulationPage = () => {
               {/* CTA */}
               <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl p-4 text-center group-hover:shadow-lg transition-shadow duration-300">
                 <p className="font-semibold">Track Your Pregnancy</p>
-                <p className="text-purple-100 text-sm mt-1">Monitor baby's growth</p>
+                <p className="text-purple-100 text-sm mt-1">Monitor baby&apos;s growth</p>
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Trash2, Calculator } from 'lucide-react';
+import { Plus, Trash2, Calculator, Search, Target, TrendingUp } from 'lucide-react';
 
 interface Food {
   name: string;
@@ -16,133 +16,88 @@ function CalorieCounter() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [consumedFoods, setConsumedFoods] = useState<ConsumedFood[]>([]);
 
-  const uaeFoods: Record<string, { calories: number; emoji: string }> = {
+  const uaeFoods: Record<string, { calories: number; emoji: string; category: string }> = {
     // Traditional UAE/Middle Eastern
-    'Hummus (100g)': { calories: 166, emoji: '🧄' },
-    'Shawarma Chicken': { calories: 300, emoji: '🌯' },
-    'Shawarma Lamb': { calories: 400, emoji: '🥙' },
-    'Falafel (5 pieces)': { calories: 333, emoji: '🧆' },
-    'Kabsa (1 cup)': { calories: 350, emoji: '🍛' },
-    'Machboos (1 cup)': { calories: 380, emoji: '🍚' },
-    'Manakish Zaatar': { calories: 280, emoji: '🫓' },
-    'Luqaimat (5 pieces)': { calories: 250, emoji: '🍯' },
-    'Arabic Bread': { calories: 80, emoji: '🥖' },
-    'Khubz': { calories: 75, emoji: '🍞' },
-    'Mandi Chicken': { calories: 420, emoji: '🍗' },
-    'Ouzi (1 serving)': { calories: 480, emoji: '🍖' },
-    'Stuffed Grape Leaves': { calories: 150, emoji: '🍃' },
-    'Tabbouleh (1 cup)': { calories: 120, emoji: '🥗' },
-    'Fattoush (1 cup)': { calories: 140, emoji: '🥙' },
-    'Baba Ganoush (100g)': { calories: 130, emoji: '🍆' },
-    'Knafeh (1 piece)': { calories: 350, emoji: '🧀' },
-    'Baklava (1 piece)': { calories: 245, emoji: '🥮' },
-    'Maamoul (3 pieces)': { calories: 180, emoji: '🍪' },
+    'Hummus (100g)': { calories: 166, emoji: '🧄', category: 'Traditional' },
+    'Shawarma Chicken': { calories: 300, emoji: '🌯', category: 'Traditional' },
+    'Shawarma Lamb': { calories: 400, emoji: '🥙', category: 'Traditional' },
+    'Falafel (5 pieces)': { calories: 333, emoji: '🧆', category: 'Traditional' },
+    'Kabsa (1 cup)': { calories: 350, emoji: '🍛', category: 'Traditional' },
+    'Machboos (1 cup)': { calories: 380, emoji: '🍚', category: 'Traditional' },
+    'Manakish Zaatar': { calories: 280, emoji: '🫓', category: 'Traditional' },
+    'Luqaimat (5 pieces)': { calories: 250, emoji: '🍯', category: 'Traditional' },
+    'Arabic Bread': { calories: 80, emoji: '🥖', category: 'Traditional' },
+    'Khubz': { calories: 75, emoji: '🍞', category: 'Traditional' },
+    'Mandi Chicken': { calories: 420, emoji: '🍗', category: 'Traditional' },
+    'Ouzi (1 serving)': { calories: 480, emoji: '🍖', category: 'Traditional' },
+    'Stuffed Grape Leaves': { calories: 150, emoji: '🍃', category: 'Traditional' },
+    'Tabbouleh (1 cup)': { calories: 120, emoji: '🥗', category: 'Traditional' },
+    'Fattoush (1 cup)': { calories: 140, emoji: '🥙', category: 'Traditional' },
+    'Baba Ganoush (100g)': { calories: 130, emoji: '🍆', category: 'Traditional' },
+    'Knafeh (1 piece)': { calories: 350, emoji: '🧀', category: 'Traditional' },
+    'Baklava (1 piece)': { calories: 245, emoji: '🥮', category: 'Traditional' },
+    'Maamoul (3 pieces)': { calories: 180, emoji: '🍪', category: 'Traditional' },
     
     // Popular in UAE/Dubai
-    'Biryani (1 cup)': { calories: 400, emoji: '🍛' },
-    'Curry Chicken': { calories: 320, emoji: '🍛' },
-    'Dal (1 cup)': { calories: 230, emoji: '🟡' },
-    'Naan Bread': { calories: 260, emoji: '🫓' },
-    'Samosa (1 piece)': { calories: 91, emoji: '🥟' },
-    'Tikka Masala': { calories: 350, emoji: '🍖' },
-    'Butter Chicken': { calories: 380, emoji: '🍗' },
-    'Tandoori Chicken': { calories: 280, emoji: '🍗' },
-    'Roti (1 piece)': { calories: 120, emoji: '🫓' },
-    'Fish Curry': { calories: 290, emoji: '🐟' },
-    'Mutton Curry': { calories: 450, emoji: '🍖' },
-    'Palak Paneer': { calories: 320, emoji: '🟢' },
-    'Rajma (1 cup)': { calories: 270, emoji: '🫘' },
-    'Chole (1 cup)': { calories: 290, emoji: '🫛' },
-    'Paratha (1 piece)': { calories: 300, emoji: '🫓' },
-    'Lassi (1 glass)': { calories: 180, emoji: '🥛' },
-    
-    // Indian Popular Foods
-    'Dosa (1 piece)': { calories: 168, emoji: '🥞' },
-    'Idli (2 pieces)': { calories: 78, emoji: '⚪' },
-    'Vada (2 pieces)': { calories: 180, emoji: '🍩' },
-    'Upma (1 cup)': { calories: 200, emoji: '🌾' },
-    'Poha (1 cup)': { calories: 180, emoji: '🍚' },
-    'Aloo Gobi': { calories: 250, emoji: '🥔' },
-    'Masala Chai': { calories: 50, emoji: '☕' },
-    'Gulab Jamun (2 pieces)': { calories: 300, emoji: '🍡' },
-    'Jalebi (100g)': { calories: 150, emoji: '🌀' },
-    'Rasgulla (2 pieces)': { calories: 186, emoji: '⚪' },
-    'Pani Puri (6 pieces)': { calories: 120, emoji: '🫧' },
-    'Bhel Puri (1 cup)': { calories: 160, emoji: '🥗' },
-    'Vada Pav': { calories: 290, emoji: '🍔' },
-    'Misal Pav': { calories: 350, emoji: '🌶️' },
-    'Pav Bhaji': { calories: 400, emoji: '🍞' },
-    
-    // American Popular Foods
-    'Pizza Slice': { calories: 285, emoji: '🍕' },
-    'Burger': { calories: 540, emoji: '🍔' },
-    'Cheeseburger': { calories: 600, emoji: '🍔' },
-    'Hot Dog': { calories: 290, emoji: '🌭' },
-    'French Fries (Medium)': { calories: 365, emoji: '🍟' },
-    'Onion Rings': { calories: 410, emoji: '🧅' },
-    'Caesar Salad': { calories: 180, emoji: '🥗' },
-    'Buffalo Wings (6 pieces)': { calories: 430, emoji: '🍗' },
-    'Mac and Cheese': { calories: 320, emoji: '🧀' },
-    'Fried Chicken (1 piece)': { calories: 320, emoji: '🍗' },
-    'Pancakes (3 pieces)': { calories: 450, emoji: '🥞' },
-    'Waffles (2 pieces)': { calories: 400, emoji: '🧇' },
-    'Bagel with Cream Cheese': { calories: 360, emoji: '🥯' },
-    'Donut (1 glazed)': { calories: 260, emoji: '🍩' },
-    'Muffin (Blueberry)': { calories: 340, emoji: '🧁' },
-    'Sandwich (Turkey)': { calories: 320, emoji: '🥪' },
-    'Grilled Cheese': { calories: 290, emoji: '🧀' },
-    'Tacos (2 pieces)': { calories: 380, emoji: '🌮' },
-    'Burrito': { calories: 480, emoji: '🌯' },
-    'Nachos (1 cup)': { calories: 550, emoji: '🧀' },
-    'Steak (6oz)': { calories: 420, emoji: '🥩' },
-    'BBQ Ribs (4 pieces)': { calories: 580, emoji: '🍖' },
-    'Coleslaw (1 cup)': { calories: 150, emoji: '🥬' },
-    
-    // International Popular
-    'Pasta (1 cup)': { calories: 220, emoji: '🍝' },
-    'Spaghetti Bolognese': { calories: 350, emoji: '🍝' },
-    'Grilled Fish': { calories: 206, emoji: '🐟' },
-    'Salmon (6oz)': { calories: 350, emoji: '🍣' },
-    'Sushi Roll (8 pieces)': { calories: 300, emoji: '🍣' },
-    'Fried Rice': { calories: 380, emoji: '🍚' },
-    'Pad Thai': { calories: 400, emoji: '🍜' },
-    'Ramen (1 bowl)': { calories: 450, emoji: '🍜' },
-    'Dim Sum (4 pieces)': { calories: 280, emoji: '🥟' },
-    'Spring Rolls (2 pieces)': { calories: 150, emoji: '🌯' },
+    'Biryani (1 cup)': { calories: 400, emoji: '🍛', category: 'Popular' },
+    'Curry Chicken': { calories: 320, emoji: '🍛', category: 'Popular' },
+    'Dal (1 cup)': { calories: 230, emoji: '🟡', category: 'Popular' },
+    'Naan Bread': { calories: 260, emoji: '🫓', category: 'Popular' },
+    'Samosa (1 piece)': { calories: 91, emoji: '🥟', category: 'Popular' },
+    'Tikka Masala': { calories: 350, emoji: '🍖', category: 'Popular' },
+    'Butter Chicken': { calories: 380, emoji: '🍗', category: 'Popular' },
+    'Tandoori Chicken': { calories: 280, emoji: '🍗', category: 'Popular' },
+    'Roti (1 piece)': { calories: 120, emoji: '🫓', category: 'Popular' },
+    'Fish Curry': { calories: 290, emoji: '🐟', category: 'Popular' },
+    'Mutton Curry': { calories: 450, emoji: '🍖', category: 'Popular' },
+    'Palak Paneer': { calories: 320, emoji: '🟢', category: 'Popular' },
+    'Rajma (1 cup)': { calories: 270, emoji: '🫘', category: 'Popular' },
+    'Chole (1 cup)': { calories: 290, emoji: '🫛', category: 'Popular' },
+    'Paratha (1 piece)': { calories: 300, emoji: '🫓', category: 'Popular' },
+    'Lassi (1 glass)': { calories: 180, emoji: '🥛', category: 'Beverages' },
     
     // Beverages
-    'Arabic Coffee': { calories: 5, emoji: '☕' },
-    'Karak Tea': { calories: 120, emoji: '🍵' },
-    'Fresh Orange Juice': { calories: 110, emoji: '🍊' },
-    'Laban': { calories: 150, emoji: '🥛' },
-    'Date Milkshake': { calories: 280, emoji: '🥤' },
-    'Mango Lassi': { calories: 200, emoji: '🥭' },
-    'Coffee (Black)': { calories: 5, emoji: '☕' },
-    'Cappuccino': { calories: 120, emoji: '☕' },
-    'Latte': { calories: 190, emoji: '☕' },
-    'Coca Cola (12oz)': { calories: 140, emoji: '🥤' },
-    'Fresh Lime Soda': { calories: 80, emoji: '🍋' },
-    'Smoothie (Berry)': { calories: 180, emoji: '🫐' },
-    'Green Tea': { calories: 2, emoji: '🍵' },
-    'Iced Tea': { calories: 70, emoji: '🧊' },
+    'Arabic Coffee': { calories: 5, emoji: '☕', category: 'Beverages' },
+    'Karak Tea': { calories: 120, emoji: '🍵', category: 'Beverages' },
+    'Fresh Orange Juice': { calories: 110, emoji: '🍊', category: 'Beverages' },
+    'Laban': { calories: 150, emoji: '🥛', category: 'Beverages' },
+    'Date Milkshake': { calories: 280, emoji: '🥤', category: 'Beverages' },
+    'Mango Lassi': { calories: 200, emoji: '🥭', category: 'Beverages' },
+    'Coffee (Black)': { calories: 5, emoji: '☕', category: 'Beverages' },
+    'Cappuccino': { calories: 120, emoji: '☕', category: 'Beverages' },
+    'Latte': { calories: 190, emoji: '☕', category: 'Beverages' },
+    'Coca Cola (12oz)': { calories: 140, emoji: '🥤', category: 'Beverages' },
+    'Fresh Lime Soda': { calories: 80, emoji: '🍋', category: 'Beverages' },
+    'Smoothie (Berry)': { calories: 180, emoji: '🫐', category: 'Beverages' },
+    'Green Tea': { calories: 2, emoji: '🍵', category: 'Beverages' },
+    'Iced Tea': { calories: 70, emoji: '🧊', category: 'Beverages' },
     
     // Fruits & Snacks
-    'Dates (5 pieces)': { calories: 100, emoji: '🟫' },
-    'Banana': { calories: 105, emoji: '🍌' },
-    'Apple': { calories: 80, emoji: '🍎' },
-    'Mango': { calories: 135, emoji: '🥭' },
-    'Pomegranate': { calories: 134, emoji: '🔴' },
-    'Orange': { calories: 65, emoji: '🍊' },
-    'Grapes (1 cup)': { calories: 104, emoji: '🍇' },
-    'Watermelon (1 cup)': { calories: 46, emoji: '🍉' },
-    'Pineapple (1 cup)': { calories: 82, emoji: '🍍' },
-    'Almonds (10 pieces)': { calories: 70, emoji: '🥜' },
-    'Cashews (10 pieces)': { calories: 90, emoji: '🥜' },
-    'Pistachios (10 pieces)': { calories: 40, emoji: '🥜' },
-    'Mixed Nuts (1 oz)': { calories: 170, emoji: '🥜' },
-    'Popcorn (1 cup)': { calories: 31, emoji: '🍿' },
-    'Chips (1 oz)': { calories: 150, emoji: '🥔' },
-    'Crackers (5 pieces)': { calories: 80, emoji: '🍘' },
+    'Dates (5 pieces)': { calories: 100, emoji: '🟫', category: 'Snacks' },
+    'Banana': { calories: 105, emoji: '🍌', category: 'Snacks' },
+    'Apple': { calories: 80, emoji: '🍎', category: 'Snacks' },
+    'Mango': { calories: 135, emoji: '🥭', category: 'Snacks' },
+    'Pomegranate': { calories: 134, emoji: '🔴', category: 'Snacks' },
+    'Orange': { calories: 65, emoji: '🍊', category: 'Snacks' },
+    'Grapes (1 cup)': { calories: 104, emoji: '🍇', category: 'Snacks' },
+    'Watermelon (1 cup)': { calories: 46, emoji: '🍉', category: 'Snacks' },
+    'Pineapple (1 cup)': { calories: 82, emoji: '🍍', category: 'Snacks' },
+    'Almonds (10 pieces)': { calories: 70, emoji: '🥜', category: 'Snacks' },
+    'Cashews (10 pieces)': { calories: 90, emoji: '🥜', category: 'Snacks' },
+    'Pistachios (10 pieces)': { calories: 40, emoji: '🥜', category: 'Snacks' },
+    'Mixed Nuts (1 oz)': { calories: 170, emoji: '🥜', category: 'Snacks' },
+    'Popcorn (1 cup)': { calories: 31, emoji: '🍿', category: 'Snacks' },
+    'Chips (1 oz)': { calories: 150, emoji: '🥔', category: 'Snacks' },
+    
+    // International
+    'Pizza Slice': { calories: 285, emoji: '🍕', category: 'International' },
+    'Burger': { calories: 540, emoji: '🍔', category: 'International' },
+    'Pasta (1 cup)': { calories: 220, emoji: '🍝', category: 'International' },
+    'Sushi Roll (8 pieces)': { calories: 300, emoji: '🍣', category: 'International' },
+    'Fried Rice': { calories: 380, emoji: '🍚', category: 'International' },
+    'Pad Thai': { calories: 400, emoji: '🍜', category: 'International' },
+    'Tacos (2 pieces)': { calories: 380, emoji: '🌮', category: 'International' },
+    'French Fries (Medium)': { calories: 365, emoji: '🍟', category: 'International' },
   };
 
   const addFood = (): void => {
@@ -184,148 +139,227 @@ function CalorieCounter() {
 
   const totalCalories: number = consumedFoods.reduce((sum: number, food: ConsumedFood) => sum + food.calories, 0);
 
+  // Group foods by category for better organization
+  const groupedFoods = filteredFoods.reduce((acc, food) => {
+    const category = uaeFoods[food].category;
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(food);
+    return acc;
+  }, {} as Record<string, string[]>);
+
+  const getCalorieStatus = (calories: number) => {
+    if (calories < 500) return { status: 'Light', color: 'text-green-600', bgColor: 'bg-green-50' };
+    if (calories < 1500) return { status: 'Moderate', color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+    if (calories < 2500) return { status: 'High', color: 'text-orange-600', bgColor: 'bg-orange-50' };
+    return { status: 'Very High', color: 'text-red-600', bgColor: 'bg-red-50' };
+  };
+
+  const calorieStatus = getCalorieStatus(totalCalories);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-2 sm:p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6 lg:mb-8">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-[#2D9AA5] to-[#3db4c2] rounded-full mx-auto mb-4 flex items-center justify-center">
-            <Calculator className="text-white" size={24} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/6 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/3 right-1/6 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-600/3 rounded-full blur-3xl animate-pulse delay-2000"></div>
+      </div>
+
+      <div className="relative z-10 p-4 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-2xl mb-6 shadow-lg">
+              <Calculator className="text-white" size={32} />
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent mb-4">
+              Calorie Counter
+            </h1>
+            <p className="text-slate-400 text-lg max-w-md mx-auto">
+              Track your daily nutrition intake with precision and style
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black mb-2">Calorie Counter</h1>
-          <p className="text-black opacity-70 text-sm sm:text-base">Track your daily calories</p>
-        </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
-          
-          {/* Left Side - Food Selection */}
-          <div className="order-1 lg:order-1">
-            <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 h-fit">
-              <h2 className="text-lg sm:text-xl font-bold text-black mb-4 flex items-center gap-2">
-                🍽️ Add Foods
-              </h2>
-              
-              {/* Search Bar */}
-              <input
-                type="text"
-                placeholder="🔍 Search for foods..."
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="w-full p-3 sm:p-4 border-2 border-[#2D9AA5]/30 rounded-xl mb-4 focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] bg-white text-black font-medium shadow-sm text-sm sm:text-base"
-              />
-
-              {/* Food List */}
-              <div className="max-h-48 sm:max-h-64 lg:max-h-80 overflow-y-auto mb-4 space-y-2">
-                {filteredFoods.map((food: string) => {
-                  const isSelected = selectedFoods.find((f: Food) => f.name === food);
-                  return (
-                    <div key={food} className={`p-3 border-2 rounded-xl cursor-pointer transition-all ${
-                      isSelected 
-                        ? 'border-[#2D9AA5] bg-[#2D9AA5]/10' 
-                        : 'border-gray-200 hover:border-[#2D9AA5]/50 bg-white'
-                    }`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div 
-                          onClick={() => toggleFood(food)}
-                          className="flex-1 min-w-0"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-lg">{uaeFoods[food].emoji}</span>
-                            <div className="font-medium text-black text-sm sm:text-base truncate">{food}</div>
-                          </div>
-                          <div className="text-xs sm:text-sm text-black opacity-60 ml-7">{uaeFoods[food].calories} cal</div>
-                        </div>
-                        {isSelected && (
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={isSelected.portion}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updatePortion(food, e.target.value)}
-                            className="w-12 sm:w-16 p-1 sm:p-2 border border-[#2D9AA5]/30 rounded-lg text-center text-black font-medium text-xs sm:text-sm"
-                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-gradient-to-r from-cyan-600/10 to-cyan-400/10 backdrop-blur-xl border border-cyan-600/20 rounded-2xl p-6 text-center">
+              <Target className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-white mb-1">{totalCalories}</div>
+              <div className="text-sm text-slate-400">Total Calories</div>
+            </div>
+            <div className="bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-xl border border-slate-600/30 rounded-2xl p-6 text-center">
+              <TrendingUp className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-white mb-1">{consumedFoods.length}</div>
+              <div className="text-sm text-slate-400">Foods Logged</div>
+            </div>
+            <div className={`backdrop-blur-xl border rounded-2xl p-6 text-center ${calorieStatus.bgColor} border-opacity-20`}>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-slate-400 to-slate-300 mx-auto mb-2 flex items-center justify-center">
+                <span className="text-xs font-bold text-slate-800">%</span>
               </div>
-
-              {/* Selected Foods Summary */}
-              {selectedFoods.length > 0 && (
-                <div className="mb-4 p-3 bg-white rounded-xl border border-[#2D9AA5]/30">
-                  <div className="text-sm font-medium text-black mb-2">Selected ({selectedFoods.length}):</div>
-                  <div className="space-y-1 max-h-20 overflow-y-auto">
-                    {selectedFoods.map((food: Food) => (
-                      <div key={food.name} className="text-xs sm:text-sm text-black opacity-70 truncate">
-                        {food.name} × {food.portion}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={addFood}
-                disabled={selectedFoods.length === 0}
-                className="w-full bg-gradient-to-r from-[#2D9AA5] to-[#3db4c2] text-white p-3 sm:p-4 rounded-xl font-bold hover:from-[#257a83] hover:to-[#35a0ac] disabled:from-gray-300 disabled:to-gray-400 flex items-center justify-center gap-2 shadow-lg transform hover:scale-105 transition-all duration-200 text-sm sm:text-base"
-              >
-                <Plus size={18} />
-                Add Selected Foods ({selectedFoods.length})
-              </button>
+              <div className={`text-2xl font-bold mb-1 ${calorieStatus.color}`}>{calorieStatus.status}</div>
+              <div className="text-sm text-slate-600">Intake Level</div>
             </div>
           </div>
 
-          {/* Right Side - Results */}
-          <div className="order-2 lg:order-2">
-            <div className="space-y-4 lg:space-y-6">
-              
-              {/* Total Calories */}
-              <div className="bg-gradient-to-r from-[#2D9AA5] to-[#3db4c2] text-white p-4 sm:p-6 rounded-2xl text-center shadow-lg">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Calculator size={20} />
-                  <span className="text-base sm:text-lg font-medium">Total Calories</span>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            
+            {/* Left Side - Food Selection */}
+            <div className="space-y-6">
+              <div className="bg-cyan-600/10 backdrop-blur-xl border border-cyan-600/20 rounded-3xl p-6 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-xl flex items-center justify-center">
+                    <Plus className="text-white" size={20} />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Add Foods</h2>
                 </div>
-                <div className="text-3xl sm:text-4xl font-bold">{totalCalories}</div>
-                <div className="text-xs sm:text-sm opacity-90 mt-1">calories consumed today</div>
-              </div>
+                
+                {/* Search Bar */}
+                <div className="relative mb-6">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search foods..."
+                    value={searchTerm}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-cyan-600/30 rounded-2xl text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                  />
+                </div>
 
-              {/* Consumed Foods List */}
-              <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100">
-                {consumedFoods.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="font-bold text-black text-base sm:text-lg mb-3 flex items-center gap-2">
-                      📋 Today&apos;s Intake:
-                    </h3>
-                    <div className="max-h-64 sm:max-h-80 lg:max-h-96 overflow-y-auto space-y-2">
-                      {consumedFoods.map((food: ConsumedFood) => (
-                        <div key={food.id} className="flex items-center justify-between bg-gradient-to-r from-white to-[#2D9AA5]/5 p-3 sm:p-4 rounded-xl border border-[#2D9AA5]/20 shadow-sm hover:shadow-md transition-shadow">
-                          <div className="flex-1 min-w-0 mr-2">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">{uaeFoods[food.name].emoji}</span>
-                              <div className="font-bold text-black text-sm sm:text-base truncate">{food.name}</div>
-                            </div>
-                            <div className="text-xs sm:text-sm text-black opacity-70 ml-7">
-                              {food.portion}x portion • {food.calories} calories
+                {/* Food Categories */}
+                <div className="max-h-96 overflow-y-auto space-y-4 mb-6 scrollbar-thin scrollbar-track-slate-800 scrollbar-thumb-cyan-600/50">
+                  {Object.entries(groupedFoods).map(([category, foods]) => (
+                    <div key={category} className="space-y-2">
+                      <div className="sticky top-0 bg-slate-800/80 backdrop-blur-sm px-3 py-2 rounded-lg border-l-4 border-cyan-500">
+                        <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wide">{category}</h3>
+                      </div>
+                      {foods.map((food: string) => {
+                        const isSelected = selectedFoods.find((f: Food) => f.name === food);
+                        return (
+                          <div key={food} className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 ${
+                            isSelected 
+                              ? 'bg-gradient-to-r from-cyan-600/20 to-cyan-400/20 border-2 border-cyan-500/50 shadow-lg' 
+                              : 'bg-slate-800/30 border border-slate-700/50 hover:bg-slate-700/50 hover:border-cyan-600/30'
+                          }`}>
+                            <div className="flex items-center gap-4">
+                              <div 
+                                onClick={() => toggleFood(food)}
+                                className="flex-1 min-w-0"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="text-2xl bg-slate-700/50 w-10 h-10 rounded-xl flex items-center justify-center">
+                                    {uaeFoods[food].emoji}
+                                  </span>
+                                  <div>
+                                    <div className="font-semibold text-white text-sm truncate">{food}</div>
+                                    <div className="text-xs text-cyan-400 font-medium">{uaeFoods[food].calories} cal</div>
+                                  </div>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="flex items-center gap-2 bg-slate-800/50 rounded-xl p-2">
+                                  <span className="text-xs text-slate-400">×</span>
+                                  <input
+                                    type="number"
+                                    min="0.1"
+                                    step="0.1"
+                                    value={isSelected.portion}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updatePortion(food, e.target.value)}
+                                    className="w-16 px-2 py-1 bg-slate-700 border border-cyan-600/30 rounded-lg text-center text-white text-sm focus:ring-1 focus:ring-cyan-500"
+                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <button
-                            onClick={() => removeFood(food.id)}
-                            className="text-red-500 hover:text-red-700 p-1 sm:p-2 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Selected Foods Summary */}
+                {selectedFoods.length > 0 && (
+                  <div className="bg-slate-800/50 rounded-2xl p-4 mb-6 border border-cyan-600/30">
+                    <div className="text-sm font-semibold text-cyan-400 mb-3">
+                      Selected Foods ({selectedFoods.length})
+                    </div>
+                    <div className="space-y-2 max-h-24 overflow-y-auto">
+                      {selectedFoods.map((food: Food) => (
+                        <div key={food.name} className="flex justify-between items-center text-sm">
+                          <span className="text-white truncate flex-1">{food.name}</span>
+                          <span className="text-cyan-400 ml-2">×{food.portion}</span>
                         </div>
                       ))}
                     </div>
                   </div>
+                )}
+
+                <button
+                  onClick={addFood}
+                  disabled={selectedFoods.length === 0}
+                  className="w-full bg-gradient-to-r from-cyan-600 to-cyan-400 disabled:from-slate-600 disabled:to-slate-500 text-white py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  <Plus size={20} />
+                  Add Selected ({selectedFoods.length})
+                </button>
+              </div>
+            </div>
+
+            {/* Right Side - Consumed Foods */}
+            <div className="space-y-6">
+              {/* Total Calories Card */}
+              <div className="bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-3xl p-8 text-center shadow-xl text-white">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <Calculator size={28} />
+                  <span className="text-xl font-semibold">Daily Total</span>
+                </div>
+                <div className="text-5xl font-bold mb-2">{totalCalories}</div>
+                <div className="text-cyan-100 opacity-90">calories consumed</div>
+              </div>
+
+              {/* Consumed Foods List */}
+              <div className="bg-slate-800/30 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-slate-600 to-slate-500 rounded-xl flex items-center justify-center">
+                    <span className="text-white text-lg">📋</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Today&apos;s Intake</h3>
+                </div>
+
+                {consumedFoods.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-thin scrollbar-track-slate-800 scrollbar-thumb-cyan-600/50">
+                    {consumedFoods.map((food: ConsumedFood) => (
+                      <div key={food.id} className="group bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 hover:border-cyan-600/30 rounded-2xl p-4 transition-all duration-300">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div className="w-12 h-12 bg-slate-600/50 rounded-xl flex items-center justify-center text-xl">
+                              {uaeFoods[food.name].emoji}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-white truncate">{food.name}</div>
+                              <div className="text-sm text-slate-400">
+                                {food.portion}× portion • <span className="text-cyan-400 font-semibold">{food.calories} cal</span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFood(food.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-xl transition-all duration-300 opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="text-center text-black opacity-60 py-8 sm:py-12 bg-gradient-to-r from-[#2D9AA5]/5 to-[#3db4c2]/5 rounded-2xl border-2 border-dashed border-[#2D9AA5]/30">
-                    <div className="text-3xl sm:text-4xl mb-4">🍽️</div>
-                    <div className="font-medium text-sm sm:text-base">No foods added yet</div>
-                    <div className="text-xs sm:text-sm mt-1">Start tracking your calories!</div>
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 bg-slate-700/30 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                      <span className="text-4xl">🍽️</span>
+                    </div>
+                    <div className="text-slate-400 text-lg font-medium mb-2">No foods logged yet</div>
+                    <div className="text-slate-500 text-sm">Start adding foods to track your calories</div>
                   </div>
                 )}
               </div>
@@ -335,10 +369,10 @@ function CalorieCounter() {
       </div>
     </div>
   );
-};
+}
 
 export default CalorieCounter;
 
 CalorieCounter.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; // No layout
+  return page; 
 }

@@ -2,7 +2,7 @@
 import dbConnect from '../../../lib/database';
 import JobPosting from '../../../models/JobPosting';
 import jwt from 'jsonwebtoken';
-import User from '../../../models/Users'; // Assuming this exists
+import  '../../../models/Users'; // Assuming this exists
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });

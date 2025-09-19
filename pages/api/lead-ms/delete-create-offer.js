@@ -1,7 +1,7 @@
 // File: /pages/api/lead-ms/delete-offer.js
 import dbConnect from "../../../lib/database";
 import Offer from "../../../models/CreateOffer";
-import User from "../../../models/Users";
+import  "../../../models/Users";
 import { getUserFromReq } from "./auth";
 import mongoose from "mongoose";
 

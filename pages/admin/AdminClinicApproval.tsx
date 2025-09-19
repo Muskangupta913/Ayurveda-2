@@ -16,9 +16,7 @@ import {
   User,
   Mail,
   Phone,
-  CheckCircle,
 } from "lucide-react";
-import Image from "next/image";
 
 interface Clinic {
   _id: string;
@@ -79,7 +77,8 @@ function AdminClinicApproval() {
   const [plusCode, setPlusCode] = useState<string | null>(null);
   const [addressSummary, setAddressSummary] = useState<string | null>(null);
   const [showTreatmentsPopup, setShowTreatmentsPopup] = useState(false);
-  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
+  // Clinic state
+  const [selectedClinic] = useState<Clinic | null>(null);
 
   const itemsPerPage = 12;
 
@@ -107,30 +106,6 @@ function AdminClinicApproval() {
     }
   };
 
-  const getImagePath = (photoPath: string) => {
-    if (!photoPath) return "/placeholder.jpg";
-
-    // If it's already a full URL, return as is
-    if (photoPath.startsWith("http")) {
-      return photoPath;
-    }
-
-    // If it starts with /, it's already a relative path
-    if (photoPath.startsWith("/")) {
-      return photoPath;
-    }
-
-    // If it contains uploads/clinic/, extract the filename
-    if (photoPath.includes("uploads/clinic/")) {
-      const filenameMatch = photoPath.match(/uploads\/clinic\/[^\/]+$/);
-      if (filenameMatch) {
-        return `/${filenameMatch[0]}`;
-      }
-    }
-
-    // Default fallback
-    return `/uploads/clinic/${photoPath}`;
-  };
 
   const handleAction = async (type: string, clinicId: string) => {
     try {
@@ -235,10 +210,11 @@ function AdminClinicApproval() {
   const ClinicCard = ({ clinic }: { clinic: Clinic }) => {
     // const isExpanded = expandedCards.has(clinic._id);
     const actions = getTabActions(activeTab);
-    const [imagePopup, setImagePopup] = useState<{
-      show: boolean;
-      image: string | null;
-    }>({ show: false, image: null });
+    // Image popup state (commented out as it's not currently used)
+    // const [_, setImagePopup] = useState<{
+    //   show: boolean;
+    //   image: string | null;
+    // }>({ show: false, image: null });
     const [showTreatmentsPopup, setShowTreatmentsPopup] = useState(false);
 
     return (

@@ -21,7 +21,7 @@ const cardData: {
   label: string;
   comingSoon?: boolean;
   route: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   gradient: string;
   description: string;
   bgImage: string;

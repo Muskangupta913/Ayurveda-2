@@ -3,7 +3,7 @@ import axios from "axios";
 import { useRouter } from "next/router";
 import { useAuth } from "@/context/AuthContext";
 import AuthModal from "../../components/AuthModal";
-import { FaWhatsapp, FaShareAlt } from "react-icons/fa";
+import { FaWhatsapp} from "react-icons/fa";
 
 // Define Job type
 interface Job {

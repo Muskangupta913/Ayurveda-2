@@ -89,11 +89,25 @@ interface TreatmentManagerProps {
   setNewItem: (value: string) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  availableTreatments: any[];
+  availableTreatments: Treatment[];
   showCustomInput: boolean;
   setShowCustomInput: (value: boolean) => void;
   onAddFromDropdown: (treatmentName: string) => void;
-  onUpdateTreatment: (index: number, treatment: any) => void;
+  onUpdateTreatment: (index: number, treatment: Treatment) => void;
+}
+
+interface Treatment {
+  _id: string;
+  name: string;
+  subcategories?: Array<{
+    name: string;
+    slug: string;
+  }>;
+}
+
+interface Subcategory {
+  name: string;
+  slug: string;
 }
 
 const TreatmentManager = ({
@@ -201,7 +215,7 @@ const TreatmentManager = ({
   const handleAddSelectedTreatment = () => {
     if (selectedTreatmentId) {
       const selectedTreatment = availableTreatments.find(
-        (t: any) => t._id === selectedTreatmentId
+        (t: Treatment) => t._id === selectedTreatmentId
       );
       if (selectedTreatment) {
         onAddFromDropdown(selectedTreatment.name);
@@ -289,7 +303,7 @@ const TreatmentManager = ({
               value={selectedTreatmentId}
             >
               <option value="">Select a treatment</option>
-              {availableTreatments?.map((treatment: any) => (
+              {availableTreatments?.map((treatment: Treatment) => (
                 <option key={treatment._id} value={treatment._id}>
                   {treatment.name}
                 </option>
@@ -387,7 +401,7 @@ const TreatmentManager = ({
             index: number
           ) => {
             const selectedTreatment = availableTreatments.find(
-              (t) => t.name === item.mainTreatment
+              (t: Treatment) => t.name === item.mainTreatment
             );
 
             return (
@@ -474,11 +488,13 @@ const TreatmentManager = ({
                           }
                         >
                           <option value="">Select sub-treatment</option>
-                          {selectedTreatment?.subcategories?.map((sub: any) => (
-                            <option key={sub.slug} value={sub.name}>
-                              {sub.name}
-                            </option>
-                          ))}
+                          {selectedTreatment?.subcategories?.map(
+                            (sub: Subcategory) => (
+                              <option key={sub.slug} value={sub.name}>
+                                {sub.name}
+                              </option>
+                            )
+                          )}
                           <option value="custom">
                             + Add Custom Sub-treatment
                           </option>
@@ -661,14 +677,10 @@ function DoctorDashboard() {
     latitude: "",
     longitude: "",
   });
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [photoFiles, setPhotoFiles] = useState<FileList | null>(null);
   const [photoError, setPhotoError] = useState("");
-  const [resumeError, setResumeError] = useState("");
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [treatments, setTreatments] = useState<any[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
+  const [treatments, setTreatments] = useState<Treatment[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [geocodingStatus, setGeocodingStatus] = useState<string>("");
   const addressDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -722,11 +734,6 @@ function DoctorDashboard() {
 
         const parsedSlots = res.data.doctorProfile?.timeSlots || [];
         setTimeSlots(parsedSlots);
-
-        const treatmentArray = Array.isArray(res.data.doctorProfile?.treatments)
-          ? res.data.doctorProfile.treatments.map((t: any) => t.mainTreatment)
-          : [];
-        setSelectedTreatments(treatmentArray);
 
         setForm({
           userId: res.data.doctorProfile?.user || "",
@@ -814,21 +821,6 @@ function DoctorDashboard() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const file = e.target.files[0];
-      if (file.size > 1024 * 1024) {
-        setResumeError(
-          "File is too large and you have to upload file less than one mb only"
-        );
-        setResumeFile(null);
-      } else {
-        setResumeFile(file);
-        setResumeError("");
-      }
-    }
-  };
-
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       // Check all selected files for size
@@ -844,44 +836,6 @@ function DoctorDashboard() {
         setPhotoFiles(e.target.files);
         setPhotoError("");
       }
-    }
-  };
-
-  const handleTreatmentToggle = (treatment: string) => {
-    const updatedTreatments = selectedTreatments.includes(treatment)
-      ? selectedTreatments.filter((t) => t !== treatment)
-      : [...selectedTreatments, treatment];
-
-    setSelectedTreatments(updatedTreatments);
-    setForm({
-      ...form,
-      treatments: updatedTreatments.map((t) => ({
-        mainTreatment: t,
-        mainTreatmentSlug: t.toLowerCase().replace(/\s+/g, "-"),
-        subTreatments: [],
-      })),
-    });
-    setIsDropdownOpen(false); // Close dropdown after selection
-  };
-
-  const handleCustomTreatmentAdd = (e: React.FocusEvent<HTMLInputElement>) => {
-    const customTreatments = e.target.value
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-
-    if (customTreatments.length > 0) {
-      const updatedTreatments = [...selectedTreatments, ...customTreatments];
-      setSelectedTreatments(updatedTreatments);
-      setForm({
-        ...form,
-        treatments: updatedTreatments.map((t) => ({
-          mainTreatment: t,
-          mainTreatmentSlug: t.toLowerCase().replace(/\s+/g, "-"),
-          subTreatments: [],
-        })),
-      });
-      e.target.value = "";
     }
   };
 
@@ -930,7 +884,7 @@ function DoctorDashboard() {
     }));
   };
 
-  const handleUpdateTreatment = (index: number, updatedTreatment: any) => {
+  const handleUpdateTreatment = (index: number, updatedTreatment: Treatment) => {
     setForm((prev) => ({
       ...prev,
       treatments:
@@ -997,7 +951,7 @@ function DoctorDashboard() {
       for (const treatment of form.treatments) {
         // Check if this is a custom treatment (not in available treatments)
         const isCustomTreatment = !treatments.some(
-          (t: any) => t.name === treatment.mainTreatment
+          (t: Treatment) => t.name === treatment.mainTreatment
         );
 
         if (isCustomTreatment) {
@@ -1029,8 +983,6 @@ function DoctorDashboard() {
         formData.append(key, String(value));
       }
     });
-
-    if (resumeFile) formData.append("resume", resumeFile);
 
     if (photoFiles) {
       Array.from(photoFiles).forEach((file) => {
@@ -1075,13 +1027,13 @@ function DoctorDashboard() {
               <svg
                 className="h-6 w-6 text-red-600"
                 fill="none"
-                viewBox="0 0 24 24"
                 stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
                 />
               </svg>
@@ -1522,19 +1474,15 @@ function DoctorDashboard() {
                     "experience",
                     "consultationFee",
                     "clinicContact",
-                    "phone",
                   ].map((field) => (
-                    <div
-                      key={field}
-                      className={field === "phone" ? "hidden" : ""}
-                    >
+                    <div key={field}>
                       <label className="block text-sm font-medium text-black mb-2 capitalize">
                         {field
                           .replace(/([A-Z])/g, " $1")
                           .replace(/^./, (str) => str.toUpperCase())}
                       </label>
 
-                      {/* ✅ Add description just above clinicContact input */}
+                      {/* Add description just above clinicContact input */}
                       {field === "clinicContact" && (
                         <p className="text-xs text-gray-500 mb-1">
                           This contact will help you get in touch with patients
@@ -1551,7 +1499,6 @@ function DoctorDashboard() {
                         }
                         value={form[field as keyof FormData] as string}
                         onChange={handleChange}
-                        disabled={field === "phone"} // ✅ Still disabled if needed
                         className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-black bg-white ${
                           field === "phone"
                             ? "cursor-not-allowed bg-gray-100"
@@ -1771,29 +1718,6 @@ function DoctorDashboard() {
                     )}
                   </div>
                 </div>
-
-                {/* <div>
-                  <label className="block text-sm font-medium text-black mb-2">
-                    Resume
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      name="resume"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition duration-200 text-black file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {resumeError && (
-                      <p className="text-red-600 text-sm mt-2 font-medium">
-                        {resumeError}
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-xs text-black mt-1">
-                    PDF, JPG, PNG files accepted
-                  </p>
-                </div> */}
               </div>
 
               {/* Action Buttons */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, User, Calendar, Timer, Trophy, Heart, RefreshCw } from 'lucide-react';
+import { Play, Pause, RotateCcw,Timer, Trophy, Heart, RefreshCw } from 'lucide-react';
 
 const FitnessApp = () => {
   const [screen, setScreen] = useState('profile');
@@ -91,7 +91,7 @@ const FitnessApp = () => {
         setExercisePlan(savedExercisePlan);
         setScreen('plan');
       }
-    } catch (error) {
+    } catch  {
       console.log('No saved data found');
     }
   }, []);

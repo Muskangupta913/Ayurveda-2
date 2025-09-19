@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/router";
 import axios from "axios";
 import { ChangeEvent, FormEvent } from "react";
 import React from "react";
@@ -7,7 +6,6 @@ import type { KeyboardEvent } from "react";
 import Layout from "@/components/Layout";
 
 export default function DoctorRegister() {
-  const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
   const registrationRef = useRef<HTMLDivElement>(null);
 
@@ -32,12 +30,6 @@ export default function DoctorRegister() {
     resume: null,
   });
 
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({
-    show: false,
-    message: "",
-  });
   const [resumeFileName, setResumeFileName] = useState("");
   const [fileError, setFileError] = useState("");
   const [specializationType, setSpecializationType] = useState<"dropdown" | "other">("dropdown");
@@ -72,7 +64,8 @@ export default function DoctorRegister() {
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)
       ) {
-        setSuggestions([]);
+        // Removed unused state variable 'suggestions'
+        // setSuggestions([]);
       }
     };
 
@@ -508,7 +501,7 @@ export default function DoctorRegister() {
                     <div className="flex-shrink-0">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#2D9AA5] to-cyan-600 rounded-lg flex items-center justify-center shadow-lg">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6.294a1 1 0 01-.757.97l-2 .5a1 1 0 00-.757.97V17a2 2 0 00-2 2v1a1 1 0 00.894.447l2.105-.263A2 2 0 0018 18.118V8a2 2 0 012-2V6z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M17 20H7m10 0v-2a3 3 0 00-5.356-1.857M17 20H2v-2a3 3 0 015.356-1.857M7 20H2v-2a3 3 0 012-3v2a5 5 0 0110 0v-2a3 3 0 01-5 0v2zM7 20H2v-2a3 3 0 012-3v2a5 5 0 0110 0v-2a3 3 0 01-5 0v2z" />
                         </svg>
                       </div>
                     </div>

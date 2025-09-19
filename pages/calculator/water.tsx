@@ -159,7 +159,7 @@ function WaterIntakeCalculator(){
                   ].map((level) => (
                     <button
                       key={level.key}
-                      onClick={() => updateState({ activityLevel: level.key as any })}
+                      onClick={() => updateState({ activityLevel: level.key as 'low' | 'moderate' | 'high' })}
                       className={`p-4 rounded-xl border-2 transition-all text-left ${
                         state.activityLevel === level.key
                           ? 'border-[#2D9AA5] bg-[#2D9AA5]/5'
@@ -311,7 +311,7 @@ function WaterIntakeCalculator(){
                     <li>• Start your day with a glass of water</li>
                     <li>• Drink before, during, and after exercise</li>
                     <li>• Increase intake in hot weather</li>
-                    <li>• Listen to your body's thirst signals</li>
+                    <li>• Listen to your body&apos;s thirst signals</li>
                   </ul>
                 </div>
               </div>

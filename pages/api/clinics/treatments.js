@@ -1,6 +1,6 @@
 // File: pages/api/clinics/treatments.ts or app/api/clinics/treatments/route.ts
 
-import mongoose from 'mongoose';
+// import mongoose from 'mongoose';
 import dbConnect from '../../../lib/database';
 import Treatment from '../../../models/Treatment';
 
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       slug: t.slug,
     }));
     res.status(200).json({ success: true, treatments: formatted });
-  } catch (error) {
+  } catch {
     res.status(500).json({ success: false, message: "Error fetching treatments" });
   }
 }

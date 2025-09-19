@@ -10,12 +10,12 @@ import {
   Clock,
   Award,
   Calendar,
-  Phone,
   Users,
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext"; // ✅ make sure this path is correct
 import CalculatorGames from "../../components/CalculatorGames";
+import Image from 'next/image';
 
 interface Clinic {
   _id: string;
@@ -37,17 +37,11 @@ interface Clinic {
   location?: { coordinates: [number, number] };
 }
 
-interface ReviewData {
-  averageRating: number;
-  totalReviews: number;
-  reviews: unknown[];
-}
-
 export default function ClinicDetail() {
   const router = useRouter();
   const { id } = router.query as { id?: string };
 
-  const { isAuthenticated, user } = useAuth(); // ✅ Auth context
+  const { isAuthenticated } = useAuth(); // ✅ Auth context
 
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +61,7 @@ export default function ClinicDetail() {
         setError(null);
         const res = await axios.get(`/api/clinics/${id}`);
         setClinic(res.data?.clinic || res.data?.data || res.data);
-      } catch (err) {
+      } catch {
         setError("Failed to load clinic");
       } finally {
         setLoading(false);
@@ -192,10 +186,11 @@ export default function ClinicDetail() {
               {clinic.photos?.[0] && (
                 <div className="w-full lg:w-80 flex-shrink-0">
                   <div className="w-full h-60 sm:h-64 lg:h-72 rounded-2xl overflow-hidden shadow-lg border-4 border-white">
-                    <img
+                    <Image
                       src={clinic.photos[0]}
                       alt={clinic.name}
-                      className="w-full h-full object-contain bg-gray-50"
+                      layout="fill"
+                      objectFit="contain"
                     />
                   </div>
                 </div>

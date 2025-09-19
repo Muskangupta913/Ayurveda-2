@@ -332,7 +332,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                             const childActive = selectedItem 
                               ? selectedItem === child.label 
                               : router.pathname === child.path;
-                            const childHovered = hoveredItem === child.path;
+                            // const childHovered = hoveredItem === child.path;
 
                             return (
                               <Link key={child.path} href={child.path!}>
@@ -566,7 +566,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                     ? selectedItem === item.label 
                     : router.pathname === item.path;
                   const isDropdownOpen = openDropdown === item.label;
-                  const hasChildren = item.children && item.children.length > 0;
+                  // const hasChildren = item.children && item.children.length > 0;
 
                   // If item has children => Dropdown
                   if (item.children) {

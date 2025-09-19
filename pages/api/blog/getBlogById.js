@@ -2,7 +2,7 @@
 import dbConnect from "../../../lib/database";
 import Blog from "../../../models/Blog";
 import jwt from "jsonwebtoken";
-import User from "../../../models/Users";
+import "../../../models/Users";
 
 export default async function handler(req, res) {
   await dbConnect();

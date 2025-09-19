@@ -11,45 +11,45 @@ interface Question {
   text: string;
 }
 
+const allQuestions: Question[] = [
+  { id: 1, text: "I feel sad or down most of the time" },
+  { id: 2, text: "I have lost interest in activities I used to enjoy" },
+  { id: 3, text: "I feel tired or have little energy most days" },
+  { id: 4, text: "I have trouble sleeping or sleep too much" },
+  { id: 5, text: "I have difficulty concentrating on tasks" },
+  { id: 6, text: "I feel worthless or guilty about things" },
+  { id: 7, text: "I have changes in my appetite or weight" },
+  { id: 8, text: "I move or speak more slowly than usual" },
+  { id: 9, text: "I feel restless or agitated frequently" },
+  { id: 10, text: "I have thoughts of death or self-harm" },
+  { id: 11, text: "I find it hard to make decisions, even simple ones" },
+  { id: 12, text: "I feel hopeless about the future" },
+  { id: 13, text: "I cry more often than usual" },
+  { id: 14, text: "I avoid social situations or being around people" },
+  { id: 15, text: "I feel like a burden to others" },
+  { id: 16, text: "I have trouble getting out of bed in the morning" },
+  { id: 17, text: "I feel empty or numb inside" },
+  { id: 18, text: "I get irritated or angry easily" },
+  { id: 19, text: "I have lost my sense of humor" },
+  { id: 20, text: "I feel overwhelmed by daily responsibilities" },
+  { id: 21, text: "I have trouble enjoying things that should be fun" },
+  { id: 22, text: "I feel disconnected from my friends and family" },
+  { id: 23, text: "I worry excessively about things" },
+  { id: 24, text: "I feel physically unwell without a clear cause" },
+  { id: 25, text: "I have difficulty remembering things" },
+  { id: 26, text: "I feel like nothing I do matters" },
+  { id: 27, text: "I have lost confidence in myself" },
+  { id: 28, text: "I feel like I&apos;m letting everyone down" },
+  { id: 29, text: "I have trouble finishing tasks I start" },
+  { id: 30, text: "I feel like life has no meaning or purpose" }
+];
+
 function DepressionTest () {
   const [currentStep, setCurrentStep] = useState<'info' | 'test' | 'result'>('info');
   const [userInfo, setUserInfo] = useState<UserInfo>({ name: '', age: '' });
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
-
-  const allQuestions: Question[] = [
-    { id: 1, text: "I feel sad or down most of the time" },
-    { id: 2, text: "I have lost interest in activities I used to enjoy" },
-    { id: 3, text: "I feel tired or have little energy most days" },
-    { id: 4, text: "I have trouble sleeping or sleep too much" },
-    { id: 5, text: "I have difficulty concentrating on tasks" },
-    { id: 6, text: "I feel worthless or guilty about things" },
-    { id: 7, text: "I have changes in my appetite or weight" },
-    { id: 8, text: "I move or speak more slowly than usual" },
-    { id: 9, text: "I feel restless or agitated frequently" },
-    { id: 10, text: "I have thoughts of death or self-harm" },
-    { id: 11, text: "I find it hard to make decisions, even simple ones" },
-    { id: 12, text: "I feel hopeless about the future" },
-    { id: 13, text: "I cry more often than usual" },
-    { id: 14, text: "I avoid social situations or being around people" },
-    { id: 15, text: "I feel like a burden to others" },
-    { id: 16, text: "I have trouble getting out of bed in the morning" },
-    { id: 17, text: "I feel empty or numb inside" },
-    { id: 18, text: "I get irritated or angry easily" },
-    { id: 19, text: "I have lost my sense of humor" },
-    { id: 20, text: "I feel overwhelmed by daily responsibilities" },
-    { id: 21, text: "I have trouble enjoying things that should be fun" },
-    { id: 22, text: "I feel disconnected from my friends and family" },
-    { id: 23, text: "I worry excessively about things" },
-    { id: 24, text: "I feel physically unwell without a clear cause" },
-    { id: 25, text: "I have difficulty remembering things" },
-    { id: 26, text: "I feel like nothing I do matters" },
-    { id: 27, text: "I have lost confidence in myself" },
-    { id: 28, text: "I feel like I'm letting everyone down" },
-    { id: 29, text: "I have trouble finishing tasks I start" },
-    { id: 30, text: "I feel like life has no meaning or purpose" }
-  ];
 
   // Shuffle questions when component mounts
   useEffect(() => {
@@ -97,7 +97,7 @@ function DepressionTest () {
         type: 'moderate',
         level: 'Moderate Depression',
         title: 'Moderate Concern',
-        message: 'Your responses suggest you may be experiencing some symptoms of depression. Consider speaking with a healthcare professional about how you\'re feeling.',
+        message: 'Your responses suggest you may be experiencing some symptoms of depression. Consider speaking with a healthcare professional about how you&apos;re feeling.',
         color: 'text-orange-800 bg-orange-50',
         needsHelp: true
       };
@@ -271,7 +271,7 @@ function DepressionTest () {
 
           <div className="text-center">
             <p className="text-xs text-black">
-              Please answer honestly based on how you've been feeling over the past two weeks
+              Please answer honestly based on how you&apos;ve been feeling over the past two weeks
             </p>
           </div>
         </div>

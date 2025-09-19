@@ -4,7 +4,7 @@ import DoctorLayout from "../../components/DoctorLayout";
 import withDoctorAuth from "../../components/withDoctorAuth";
 import type { NextPageWithLayout } from "../_app";
 import { DoctorChat } from "../../pages/doctor/chat/[requestId]";
-import { Search, Filter, ChevronDown, ChevronUp, MessageSquare, X, Trash2, Calendar, User, Phone, Mail, FileText, Activity, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, ChevronDown, ChevronUp, MessageSquare, Trash2, Calendar, User, Phone, Mail, FileText, Activity, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PrescriptionRequest {
   _id: string;
@@ -61,8 +61,8 @@ function DoctorPrescriptionRequests() {
       if (response.data.success) {
         setRequests(response.data.data);
       }
-    } catch (error) {
-      console.error("Failed to fetch requests:", error);
+    } catch {
+      // Handle error if needed
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,8 @@ function DoctorPrescriptionRequests() {
       } else {
         // alert(response.data.message || "Failed to delete");
       }
-    } catch (err) {
+    } catch {
+      // Handle error if needed
     }
   };
 
@@ -112,7 +113,7 @@ function DoctorPrescriptionRequests() {
 
   // Filter and sort logic
   const filteredAndSortedRequests = useMemo(() => {
-    let filtered = requests.filter((request) => {
+    const filtered = requests.filter((request) => {
       const matchesSearch =
         request.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         request.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||

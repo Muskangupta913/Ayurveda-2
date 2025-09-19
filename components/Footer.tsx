@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // TypeScript interfaces
 interface ToastProps {
@@ -284,7 +285,7 @@ const Footer = () => {
           location: '',
           query: '',
         });
-        showToast('🎉 Query submitted successfully! We\'ll get back to you soon.', 'success');
+        showToast('🎉 Query submitted successfully! We&apos;ll get back to you soon.', 'success');
       } else {
         // Try to parse error response
         let errorMessage = 'Unknown server error occurred';
@@ -294,7 +295,8 @@ const Footer = () => {
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.error || getDetailedErrorMessage(null, response);
           errorDetails = errorData.details || errorData.errors?.join(', ') || '';
-        } catch (parseError) {
+        } catch {
+          // Removed unused parseError variable
           errorMessage = getDetailedErrorMessage(null, response);
         }
 
@@ -359,7 +361,13 @@ const Footer = () => {
                     <div className="flex items-center space-x-4 mb-8">
                       <div className="relative">
                         <div className="w-14 h-14 bg-gradient-to-r from-[#2D9AA5] to-[#48c5d2] rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300">
-                          <img src="/assets/health_treatments_logo.png" alt="Treatment Icon" className="w-8 h-8" />
+                          <Image 
+                            src="/assets/health_treatments_logo.png" 
+                            alt="Treatment Icon" 
+                            width={32}
+                            height={32}
+                            className="w-8 h-8"
+                          />
                         </div>
                         <div className="absolute -inset-1 bg-gradient-to-r from-[#2D9AA5] to-[#48c5d2] rounded-full blur opacity-25"></div>
                       </div>
@@ -394,7 +402,7 @@ const Footer = () => {
                       Quick Links
                     </h4>
                     <ul className="space-y-3">
-                      {quickLinks.map((link, index) => (
+                      {quickLinks.map((link) => (
                         <li key={link.name} className="transform hover:translate-x-2 transition-transform duration-300">
                           <Link href={link.href} legacyBehavior>
                             <a className="text-gray-300 hover:text-white transition-all duration-300 flex items-center group text-sm">
@@ -413,12 +421,18 @@ const Footer = () => {
                   <div className="space-y-6">
                     <h4 className="text-xl font-bold text-white flex items-center">
                       <div className="w-8 h-8 bg-[#2D9AA5]/20 rounded-full flex items-center justify-center mr-3">
-                        <img src="/assets/health_treatments_logo.png" alt="Treatment Icon" className="w-4 h-4" />
+                        <Image 
+                          src="/assets/health_treatments_logo.png" 
+                          alt="Treatment Icon" 
+                          width={16}
+                          height={16}
+                          className="w-4 h-4"
+                        />
                       </div>
                       Medical Specialties
                     </h4>
                     <ul className="space-y-3">
-                      {treatments.map((treatment, index) => (
+                      {treatments.map((treatment) => (
                         <li key={treatment.name} className="transform hover:translate-x-2 transition-transform duration-300">
                           <a className="text-gray-300 hover:text-white transition-all duration-300 flex items-center group cursor-pointer text-sm">
                             <div className="w-5 h-5 bg-[#2D9AA5]/20 rounded-full flex items-center justify-center mr-3 group-hover:bg-[#2D9AA5]/40 transition-colors">
@@ -440,7 +454,7 @@ const Footer = () => {
                       Our Services
                     </h4>
                     <ul className="space-y-3">
-                      {['Doctor Consultation', 'Online Booking', 'Emergency Care', 'Health Checkups', 'Lab Tests'].map((service, index) => (
+                      {['Doctor Consultation', 'Online Booking', 'Emergency Care', 'Health Checkups', 'Lab Tests'].map((service) => (
                         <li key={service} className="transform hover:translate-x-2 transition-transform duration-300">
                           <a className="text-gray-300 hover:text-white transition-all duration-300 flex items-center group cursor-pointer text-sm">
                             <div className="w-5 h-5 bg-[#2D9AA5]/20 rounded-full flex items-center justify-center mr-3 group-hover:bg-[#2D9AA5]/40 transition-colors">
@@ -463,7 +477,7 @@ const Footer = () => {
                       <span className="text-lg">📞</span>
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-2">Request Call Back</h3>
-                    <p className="text-sm text-gray-200">We'd love to hear from you</p>
+                    <p className="text-sm text-gray-200">We&apos;d love to hear from you</p>
                   </div>
 
                   <form onSubmit={handleFormSubmit} className="space-y-4">

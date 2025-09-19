@@ -1,6 +1,6 @@
 import dbConnect from "../../../lib/database";
 import Chat from "../../../models/Chat";
-import { getUserFromReq, requireRole } from "../lead-ms/auth";
+import { getUserFromReq} from "../lead-ms/auth";
 
 export default async function handler(req, res) {
   await dbConnect();

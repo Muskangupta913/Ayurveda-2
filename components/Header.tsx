@@ -14,7 +14,7 @@ import {
 interface NavItem {
   name: string;
   href: string;
-  icon: string | React.ComponentType<any>; // Updated to accept both emoji string and React component
+  icon: string | React.ComponentType<{ className?: string }>; // Updated to accept both emoji string and React component
   action?: () => void;
 }
 
@@ -92,7 +92,7 @@ const Header = () => {
   };
 
   // Helper function to render icons
-  const renderIcon = (icon: string | React.ComponentType<any>, className: string = "w-4 h-4") => {
+  const renderIcon = (icon: string | React.ComponentType<{ className?: string }>, className: string = "w-4 h-4") => {
     if (typeof icon === 'string') {
       return <span className="text-sm">{icon}</span>;
     } else {
@@ -538,7 +538,9 @@ const Header = () => {
                   <button
                     key={item.name}
                     onClick={() => {
-                      item.action && item.action();
+                      if (item.action) {
+                        item.action();
+                      }
                       setIsMenuOpen(false);
                     }}
                     className="w-full flex items-center space-x-4 px-4 py-4 rounded-xl text-gray-700 font-medium transition-all duration-300 group text-left hover:shadow-md"

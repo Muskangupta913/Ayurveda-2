@@ -27,7 +27,7 @@ const SocialMediaShare: React.FC<SocialMediaShareProps> = ({
   blogTitle,
   blogUrl,
   blogDescription = "",
-  triggerLabel = "Share",
+  // triggerLabel = "Share",
   triggerClassName,
 }) => {
   const [isOpen, setIsOpen] = useState(false);

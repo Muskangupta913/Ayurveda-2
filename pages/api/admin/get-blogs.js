@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     } else {
       return res.status(405).json({ message: "Method not allowed" });
     }
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Invalid token" });
   }
 }

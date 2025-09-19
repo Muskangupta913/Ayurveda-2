@@ -1,5 +1,5 @@
 // components/common/JobManagement.tsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 
 // Type definitions
@@ -52,6 +52,9 @@ interface JobManagementProps {
   role?: 'clinic' | 'doctor';
   config?: JobConfig;
 }
+
+type StatusFilterType = 'all' | 'active' | 'inactive' | 'pending' | 'approved' | 'declined';
+type SortByType = 'newest' | 'oldest' | 'title' | 'status';
 
 // Simple salary formatter - display as-is from API
 const formatSalary = (salary: string): string => {
@@ -122,13 +125,13 @@ const JobManagement: React.FC<JobManagementProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'pending' | 'approved' | 'declined'>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'status'>('newest');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
+  const [sortBy, setSortBy] = useState<SortByType>('newest');
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedJobType, setSelectedJobType] = useState<string>('all');
 
-  const fetchJobs = async (): Promise<void> => {
+  const fetchJobs = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       const token = localStorage.getItem(config.tokenKey);
@@ -141,11 +144,11 @@ const JobManagement: React.FC<JobManagementProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [config.tokenKey]);
 
   useEffect(() => {
     fetchJobs();
-  }, [config.tokenKey]);
+  }, [fetchJobs]);
 
   // Get unique departments and job types for filters
   const uniqueDepartments = useMemo(() => {
@@ -160,7 +163,7 @@ const JobManagement: React.FC<JobManagementProps> = ({
 
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
-    let filtered = jobs.filter(job => {
+    const filtered = jobs.filter(job => {
       const matchesSearch = job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (job.companyName && job.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (job.department && job.department.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -564,7 +567,7 @@ const JobManagement: React.FC<JobManagementProps> = ({
                       <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                       <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)}
                         className="text-black block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                       >
                         <option value="all">All Status</option>
@@ -611,7 +614,7 @@ const JobManagement: React.FC<JobManagementProps> = ({
                       <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
                       <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
+                        onChange={(e) => setSortBy(e.target.value as SortByType)}
                         className="text-black block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                       >
                         <option value="newest">Newest First</option>

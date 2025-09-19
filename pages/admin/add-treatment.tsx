@@ -452,7 +452,7 @@ const AddTreatment: NextPageWithLayout = () => {
                 </p>
                 <div className="bg-gray-50 rounded-lg p-2">
                   <p className="font-medium text-gray-800 text-sm">
-                    "{treatmentToDelete?.name}"
+                    &quot;{treatmentToDelete?.name}&quot;
                   </p>
                 </div>
               </div>

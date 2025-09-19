@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import {
     Thermometer,
     Shield,
@@ -212,8 +213,8 @@ const HealthRiskComponent: React.FC = () => {
                     >
                         {healthConditions.map((condition) => (
                             <div
-                                // key={condition.id}
-                                // onClick={() => setSelectedCondition(condition.id)}
+                                key={condition.id}
+                                onClick={() => setSelectedCondition(condition.id)}
                                 className={`flex-shrink-0 w-64 cursor-pointer transition-all duration-300 ${selectedCondition === condition.id ? 'transform scale-105' : ''
                                     }`}
                             >
@@ -474,13 +475,13 @@ const HealthRiskComponent: React.FC = () => {
 
                     {/* Try ZEVA Button */}
                     <div className="text-center mt-12">
-                        <a
+                        <Link
                             href="/"
                             className="inline-block px-8 py-3 text-white font-semibold rounded-lg transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-[0_0_20px_#2D9AA5]"
                             style={{ backgroundColor: '#2D9AA5' }}
                         >
                             Try ZEVA
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>

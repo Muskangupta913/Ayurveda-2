@@ -1,5 +1,5 @@
 import dbConnect from "../../../lib/database";
-import User from "../../../models/Users";
+import "../../../models/Users";
 import JobPosting from "../../../models/JobPosting";
 
 export default async function handler(req, res) {

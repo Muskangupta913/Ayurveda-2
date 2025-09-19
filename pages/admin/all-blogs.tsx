@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import axios from "axios";
 import { Trash2, Eye, X, Search } from "lucide-react";
 import withAdminAuth from "../../components/withAdminAuth";
@@ -8,17 +9,43 @@ import type { NextPageWithLayout } from "../_app";
 // ✅ Blog interface
 interface Blog {
   _id: string;
-  image?: string;
   title: string;
-  role?: string;
-  postedBy?: { name?: string };
-  createdAt: string;
   content?: string;
-  youtubeUrl?: string;
+  status: string;
+  paramlink: string;
+  postedBy: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  role: string;
+  likes: Array<{ _id: string; user: string }>;
+  comments: Array<{
+    _id: string;
+    user: {
+      _id: string;
+      name: string;
+      email: string;
+    };
+    username: string;
+    text: string;
+    createdAt: string;
+    replies?: Array<{
+      _id: string;
+      user: string;
+      username: string;
+      text: string;
+      createdAt: string;
+    }>;
+  }>;
   likesCount: number;
-  likes: any[];
   commentsCount: number;
-  comments: any[];
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+  image?: string;
+  youtubeUrl?: string;
 }
 
 const AdminBlogs = () => {
@@ -32,21 +59,30 @@ const AdminBlogs = () => {
   const [loading, setLoading] = useState(true); // <-- Add loading state
   const blogsPerPage = 20;
 
-  const fetchBlogs = async () => {
+  const processBlogs = (blogs: Blog[]) => {
+    return blogs.map(blog => ({
+      ...blog,
+      likesCount: blog.likes?.length || 0,
+      commentsCount: blog.comments?.length || 0
+    }));
+  };
+
+  const fetchBlogs = useCallback(async () => {
     const token = localStorage.getItem("adminToken");
-    setLoading(true); // <-- Set loading true before fetch
+    setLoading(true);
     try {
       const res = await axios.get<{ blogs: Blog[] }>("/api/admin/get-blogs", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setBlogs(res.data.blogs);
-      setFilteredBlogs(res.data.blogs);
+      const processedBlogs = processBlogs(res.data.blogs);
+      setBlogs(processedBlogs);
+      setFilteredBlogs(processedBlogs);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching blogs:", err);
     } finally {
-      setLoading(false); // <-- Set loading false after fetch
+      setLoading(false);
     }
-  };
+  }, []);
 
   // ✅ Search functionality
   const handleSearch = (term: string) => {
@@ -128,7 +164,7 @@ const AdminBlogs = () => {
 
   useEffect(() => {
     fetchBlogs();
-  }, []);
+  }, [fetchBlogs]);
 
   return (
     <div className="p-4 sm:p-6">
@@ -243,11 +279,15 @@ const AdminBlogs = () => {
                   {/* Blog Image, YouTube, or Placeholder (only one) */}
                   {blog.image || firstContentImage ? (
                     <div className="w-full h-48 overflow-hidden flex items-center justify-center bg-gray-100 ">
-                      <img
-                        src={blog.image ?? firstContentImage ?? ""}
-                        alt={blog.title}
-                        className="w-full h-48 object-cover"
-                      />
+                      <div className="relative w-full h-48">
+                        <Image
+                          src={blog.image ?? firstContentImage ?? "/placeholder-blog.jpg"}
+                          alt={blog.title}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                      </div>
                     </div>
                   ) : blog.youtubeUrl ? (
                     <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
@@ -302,7 +342,7 @@ const AdminBlogs = () => {
 
                     {/* ✅ Stats */}
                     <p className="mt-2 text-sm text-gray-600">
-                      Likes: {blog.likesCount} | Comments: {blog.commentsCount}
+                      Likes: {blog.likesCount ?? 0} | Comments: {blog.commentsCount ?? 0}
                     </p>
 
                     {/* ✅ Action Buttons */}
@@ -375,7 +415,7 @@ const AdminBlogs = () => {
                   Confirm Delete
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Are you sure you want to delete "{selectedBlog.title}"? This action cannot be undone.
+                  Are you sure you want to delete &quot;{selectedBlog.title}&quot;? This action cannot be undone.
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -418,11 +458,15 @@ const AdminBlogs = () => {
                   {(selectedBlog.image || selectedBlog.youtubeUrl) && (
                     <div className="w-full h-80 overflow-hidden rounded-lg mb-4 bg-gray-100 flex items-center justify-center">
                       {selectedBlog.image && (
-                        <img
+                        <div className="relative w-full h-full">
+                        <Image
                           src={selectedBlog.image}
                           alt={selectedBlog.title}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
+                      </div>
                       )}
                       {selectedBlog.youtubeUrl && !selectedBlog.image && (
                         <iframe
@@ -455,7 +499,7 @@ const AdminBlogs = () => {
                       {new Date(selectedBlog.createdAt).toLocaleString()}
                     </p>
                     <p className="mt-2 text-sm text-gray-600">
-                      Likes: {selectedBlog.likesCount} | Comments: {selectedBlog.commentsCount}
+                      Likes: {selectedBlog.likesCount ?? 0} | Comments: {selectedBlog.commentsCount ?? 0}
                     </p>
                   </div>
                 </div>

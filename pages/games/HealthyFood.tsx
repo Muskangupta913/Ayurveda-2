@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {Timer, RotateCcw, Zap, Target, Flame, Star } from 'lucide-react';
+import {Timer, RotateCcw, Target, Flame, Star } from 'lucide-react';
 
 interface FoodItem {
   name: string;
@@ -15,14 +15,6 @@ interface GridFood extends FoodItem {
   selected: boolean;
   nutrition: number;
   rarity: 'common' | 'rare' | 'legendary';
-}
-
-interface PowerUp {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  duration: number;
-  active: boolean;
 }
 
 type GameState = 'menu' | 'playing' | 'gameOver';
@@ -41,8 +33,6 @@ function HealthyFoodPickerGame() {
   const [maxCombo, setMaxCombo] = useState<number>(0);
   const [level, setLevel] = useState<number>(1);
   const [nutritionBonus, setNutritionBonus] = useState<number>(0);
-  const [powerUps, setPowerUps] = useState<PowerUp[]>([]);
-  const [wrongSelections, setWrongSelections] = useState<number>(0);
   const [perfectStreak, setPerfectStreak] = useState<number>(0);
 
   // Enhanced food database
@@ -169,7 +159,7 @@ function HealthyFoodPickerGame() {
       return shuffled;
     };
 
-    const selectFoodByRarity = (foods: FoodItem[], isHealthy: boolean) => {
+    const selectFoodByRarity = (foods: FoodItem[]) => {
       const rand = Math.random();
       let targetRarity: 'common' | 'rare' | 'legendary';
       
@@ -192,7 +182,7 @@ function HealthyFoodPickerGame() {
     for (let i = 0; i < settings.gridSize; i++) {
       const shouldBeHealthy = Math.random() < settings.healthyRatio;
       const foodPool = shouldBeHealthy ? foodItems.healthy : foodItems.junk;
-      const selectedFood = selectFoodByRarity(foodPool, shouldBeHealthy);
+      const selectedFood = selectFoodByRarity(foodPool);
       
       grid.push({
         id: i,
@@ -208,12 +198,12 @@ function HealthyFoodPickerGame() {
       ...item,
       id: index
     }));
-  }, [difficulty]);
+  }, [difficulty, foodItems.healthy, foodItems.junk]);
 
   // Enhanced scoring system
   const calculatePoints = (food: GridFood, isCorrect: boolean): number => {
     const settings = getDifficultySettings(difficulty);
-    let basePoints = isCorrect ? 10 : -8;
+    const basePoints = isCorrect ? 10 : -8;
     
     // Rarity multipliers
     const rarityMultiplier = food.rarity === 'legendary' ? 3 : food.rarity === 'rare' ? 2 : 1;
@@ -240,8 +230,6 @@ function HealthyFoodPickerGame() {
     setMaxCombo(0);
     setLevel(1);
     setNutritionBonus(0);
-    setPowerUps([]);
-    setWrongSelections(0);
     setPerfectStreak(0);
     setGameGrid(generateGrid());
   };
@@ -280,7 +268,6 @@ function HealthyFoodPickerGame() {
       setScore(prev => Math.max(0, prev + Math.round(points * settings.penaltyMultiplier)));
       setCombo(0);
       setHealthScore(prev => Math.max(0, prev - 15));
-      setWrongSelections(prev => prev + 1);
       setPerfectStreak(0);
       
       // Penalty: lose time on harder difficulties
@@ -330,7 +317,7 @@ function HealthyFoodPickerGame() {
     } else if (totalScore < 150) {
       return {
         title: "Health Enthusiast 💪",
-        message: "Good progress! You're starting to recognize healthy foods. Try to build longer combos!",
+        message: "Good progress! You&apos;re starting to recognize healthy foods. Try to build longer combos!",
         color: "text-orange-600",
         bgColor: "bg-orange-100",
         emoji: "🌟"
@@ -346,7 +333,7 @@ function HealthyFoodPickerGame() {
     } else if (totalScore < 500) {
       return {
         title: "Health Champion 🏆",
-        message: "Excellent! You're a master of nutrition. Dubai's restaurants would love your expertise!",
+        message: "Excellent! You&apos;re a master of nutrition. Dubai&apos;s restaurants would love your expertise!",
         color: "text-blue-600",
         bgColor: "bg-blue-100",
         emoji: "⭐"
@@ -354,7 +341,7 @@ function HealthyFoodPickerGame() {
     } else if (totalScore < 750) {
       return {
         title: "Superfood Master 👑",
-        message: "Outstanding performance! You've achieved nutritional enlightenment. You're ready to teach others!",
+        message: "Outstanding performance! You&apos;ve achieved nutritional enlightenment. You&apos;re ready to teach others!",
         color: "text-green-600",
         bgColor: "bg-green-100",
         emoji: "🔥"
@@ -362,7 +349,7 @@ function HealthyFoodPickerGame() {
     } else {
       return {
         title: "Legendary Nutritionist 🌟",
-        message: "INCREDIBLE! You've reached legendary status! Your food wisdom is unmatched across all of Dubai!",
+        message: "INCREDIBLE! You&apos;ve reached legendary status! Your food wisdom is unmatched across all of Dubai!",
         color: "text-purple-600",
         bgColor: "bg-purple-100",
         emoji: "💎"
@@ -371,8 +358,6 @@ function HealthyFoodPickerGame() {
   };
 
   const performanceData = getPerformanceMessage(score, accuracy, maxCombo, level);
-  const gridSize = getDifficultySettings(difficulty).gridSize;
-  const columns = Math.ceil(Math.sqrt(gridSize));
 
   if (gameState === 'menu') {
     return (
@@ -430,7 +415,7 @@ function HealthyFoodPickerGame() {
           <div className="mb-6 space-y-2 text-sm text-gray-700">
             <p>🌟 Build combos for bonus points</p>
             <p>💎 Find legendary superfoods</p>
-            <p>🇦🇪 Features Dubai's premium cuisine!</p>
+            <p>🇦🇪 Features Dubai&apos;s premium cuisine!</p>
           </div>
                       
           <button

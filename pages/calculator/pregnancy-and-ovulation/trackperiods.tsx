@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { Droplet,Calendar, FileText, Download, Upload, Settings, Plus, ChevronLeft, ChevronRight, Heart, Thermometer, Pill, Activity, Moon, Sun, Zap, User, BarChart3, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, FileText,Settings,ChevronLeft, ChevronRight, Heart, Thermometer, Pill, Activity, BarChart3, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 // TypeScript Interfaces
@@ -247,7 +247,7 @@ return (
         <div className="w-1/2 bg-white flex flex-col justify-center items-center px-16">
           <div className="max-w-md w-full">
             <h2 className="text-3xl font-bold text-gray-800 mb-3">Welcome!</h2>
-            <p className="text-gray-600 mb-10 text-lg">Let's get you started on your journey</p>
+            <p className="text-gray-600 mb-10 text-lg">Let&apos;s get you started on your journey</p>
 
             <form onSubmit={handleSubmit} className="space-y-8">
               <div>
@@ -456,8 +456,6 @@ return (
 
   // Daily Log View Component
   const LogView: React.FC = () => {
-    if (!data) return null;
-
     const toastCtx = useContext(ToastContext);
     const [flow, setFlow] = useState<'light' | 'medium' | 'heavy' | ''>('');
     const [symptoms, setSymptoms] = useState<string[]>([]);
@@ -465,9 +463,11 @@ return (
     const [bbt, setBbt] = useState<string>('');
     const [medication, setMedication] = useState<string[]>([]);
     const [sexualActivity, setSexualActivity] = useState<'protected' | 'unprotected' | 'none' | ''>('');
-    const [notes, setNotes] = useState<string>('');
+    const [notes] = useState<string>('');
 
     useEffect(() => {
+      if (!data) return;
+      
       const dailyLog = data.dailyLogs[selectedDate];
       if (dailyLog) {
         setSymptoms(dailyLog.symptoms || []);
@@ -475,17 +475,33 @@ return (
         setBbt(dailyLog.bbt?.toString() || '');
         setMedication(dailyLog.medication || []);
         setSexualActivity(dailyLog.sexualActivity || '');
+      } else {
+        // Reset form when switching to a date with no existing log
+        setSymptoms([]);
+        setMood('');
+        setBbt('');
+        setMedication([]);
+        setSexualActivity('');
       }
 
       // Check if this date has period flow data
+      let foundFlow = false;
       for (const cycle of data.cycles) {
         const flowDay = cycle.flowByDay.find(f => f.date === selectedDate);
         if (flowDay) {
           setFlow(flowDay.flow);
+          foundFlow = true;
           break;
         }
       }
+      
+      // Reset flow if no existing flow data found
+      if (!foundFlow) {
+        setFlow('');
+      }
     }, [selectedDate, data]);
+
+    if (!data) return null;
 
     const availableSymptoms = [
       'Cramps', 'Headache', 'Bloating', 'Breast tenderness',
@@ -878,9 +894,8 @@ return (
 
   // Report View Component
   const ReportView: React.FC = () => {
-    if (!data) return null;
-
     const toastCtx = useContext(ToastContext);
+    
     const loadScript = (src: string): Promise<void> => {
       return new Promise((resolve, reject) => {
         const existing = Array.from(document.getElementsByTagName('script')).find(s => s.src === src);
@@ -899,41 +914,44 @@ return (
     };
 
     const ensurePdfLibs = async () => {
-      const w = window as any;
-      if (!w.jspdf || !w.jspdf.jsPDF) {
+      const w = window as Record<string, unknown>;
+      if (!w.jspdf || !(w.jspdf as Record<string, unknown>).jsPDF) {
         try { await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'); }
         catch {
           await loadScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
         }
       }
     };
-    const generateBasicPdf = (jsPDF: any, fileName: string) => {
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = doc.internal.pageSize.getWidth();
+    
+    const generateBasicPdf = (jsPDF: new (...args: unknown[]) => Record<string, unknown>, fileName: string) => {
+      const doc = new jsPDF('p', 'mm', 'a4') as Record<string, unknown>;
+      const pageWidth = (doc.internal as Record<string, unknown>).pageSize.getWidth() as number;
       let y = 18;
       const addTitle = (text: string) => {
-        doc.setFontSize(18);
-        doc.setTextColor(237, 68, 155);
-        doc.text(text, pageWidth / 2, y, { align: 'center' });
+        (doc.setFontSize as (size: number) => void)(18);
+        (doc.setTextColor as (r: number, g: number, b: number) => void)(237, 68, 155);
+        (doc.text as (text: string, x: number, y: number, options?: Record<string, unknown>) => void)(text, pageWidth / 2, y, { align: 'center' });
         y += 8;
       };
       const addSmall = (text: string) => {
-        doc.setFontSize(12);
-        doc.setTextColor(55, 65, 81);
-        doc.text(text, pageWidth / 2, y, { align: 'center' });
+        (doc.setFontSize as (size: number) => void)(12);
+        (doc.setTextColor as (r: number, g: number, b: number) => void)(55, 65, 81);
+        (doc.text as (text: string, x: number, y: number, options?: Record<string, unknown>) => void)(text, pageWidth / 2, y, { align: 'center' });
         y += 6;
       };
       const addKey = (k: string, v: string) => {
-        doc.setFontSize(11);
-        doc.setTextColor(31, 41, 55);
-        doc.text(`${k}: ${v}`, 15, y);
+        (doc.setFontSize as (size: number) => void)(11);
+        (doc.setTextColor as (r: number, g: number, b: number) => void)(31, 41, 55);
+        (doc.text as (text: string, x: number, y: number, options?: Record<string, unknown>) => void)(`${k}: ${v}`, 15, y);
         y += 6;
       };
       const addDivider = () => {
-        doc.setDrawColor(230, 230, 230);
-        doc.line(15, y, pageWidth - 15, y);
+        (doc.setDrawColor as (r: number, g: number, b: number) => void)(230, 230, 230);
+        (doc.line as (x1: number, y1: number, x2: number, y2: number) => void)(15, y, pageWidth - 15, y);
         y += 8;
       };
+
+      if (!data) return;
 
       addTitle('ZEVA Periods Tracker');
       addSmall('Certified menstrual health report');
@@ -943,9 +961,9 @@ return (
       addKey('Report date', new Date().toLocaleDateString());
 
       addDivider();
-      doc.setFontSize(14);
-      doc.setTextColor(31, 41, 55);
-      doc.text('Summary', 15, y);
+      (doc.setFontSize as (size: number) => void)(14);
+      (doc.setTextColor as (r: number, g: number, b: number) => void)(31, 41, 55);
+      (doc.text as (text: string, x: number, y: number) => void)('Summary', 15, y);
       y += 8;
       const avgCycleLength = data.cycles.length > 0
         ? Math.round(data.cycles.reduce((s, c) => s + c.length, 0) / data.cycles.length)
@@ -955,44 +973,47 @@ return (
 
       if (data.cycles.length > 0) {
         addDivider();
-        doc.setFontSize(14);
-        doc.setTextColor(31, 41, 55);
-        doc.text('Recent Cycles', 15, y);
+        (doc.setFontSize as (size: number) => void)(14);
+        (doc.setTextColor as (r: number, g: number, b: number) => void)(31, 41, 55);
+        (doc.text as (text: string, x: number, y: number) => void)('Recent Cycles', 15, y);
         y += 8;
-        doc.setFontSize(11);
-        doc.setTextColor(55, 65, 81);
+        (doc.setFontSize as (size: number) => void)(11);
+        (doc.setTextColor as (r: number, g: number, b: number) => void)(55, 65, 81);
         const headerY = y;
-        doc.text('Start', 15, headerY);
-        doc.text('End', 65, headerY);
-        doc.text('Length', 115, headerY);
-        doc.text('Flow Days', 150, headerY);
+        (doc.text as (text: string, x: number, y: number) => void)('Start', 15, headerY);
+        (doc.text as (text: string, x: number, y: number) => void)('End', 65, headerY);
+        (doc.text as (text: string, x: number, y: number) => void)('Length', 115, headerY);
+        (doc.text as (text: string, x: number, y: number) => void)('Flow Days', 150, headerY);
         y += 5;
-        doc.setDrawColor(200, 200, 200);
-        doc.line(15, y, pageWidth - 15, y);
+        (doc.setDrawColor as (r: number, g: number, b: number) => void)(200, 200, 200);
+        (doc.line as (x1: number, y1: number, x2: number, y2: number) => void)(15, y, pageWidth - 15, y);
         y += 4;
         data.cycles.slice(-5).forEach((cycle) => {
-          if (y > 270) { doc.addPage(); y = 18; }
-          doc.text(new Date(cycle.startDate).toLocaleDateString(), 15, y);
-          doc.text(new Date(cycle.endDate).toLocaleDateString(), 65, y);
-          doc.text(String(cycle.length), 115, y);
-          doc.text(String(cycle.flowByDay.length), 150, y);
+          if (y > 270) { (doc.addPage as () => void)(); y = 18; }
+          (doc.text as (text: string, x: number, y: number) => void)(new Date(cycle.startDate).toLocaleDateString(), 15, y);
+          (doc.text as (text: string, x: number, y: number) => void)(new Date(cycle.endDate).toLocaleDateString(), 65, y);
+          (doc.text as (text: string, x: number, y: number) => void)(String(cycle.length), 115, y);
+          (doc.text as (text: string, x: number, y: number) => void)(String(cycle.flowByDay.length), 150, y);
           y += 6;
         });
       }
 
       y += 10;
-      doc.setFontSize(10);
-      doc.setTextColor(107, 114, 128);
-      doc.text('This report was generated from your personal tracking data. Certified by ZEVA.', 15, y);
+      (doc.setFontSize as (size: number) => void)(10);
+      (doc.setTextColor as (r: number, g: number, b: number) => void)(107, 114, 128);
+      (doc.text as (text: string, x: number, y: number) => void)('This report was generated from your personal tracking data. Certified by ZEVA.', 15, y);
 
-      doc.save(fileName);
+      (doc.save as (filename: string) => void)(fileName);
     };
+    
     const generatePDF = async () => {
+      if (!data) return;
+      
       const fileName = `ZEVA_report_${data.user?.name || 'user'}_${new Date().toISOString().slice(0, 10)}.pdf`;
       try {
         await ensurePdfLibs();
-        const w = window as any;
-        const jsPDF = (w.jspdf && w.jspdf.jsPDF) ? w.jspdf.jsPDF : w.jsPDF;
+        const w = window as Record<string, unknown>;
+        const jsPDF = ((w.jspdf as Record<string, unknown>) && (w.jspdf as Record<string, unknown>).jsPDF) ? (w.jspdf as Record<string, unknown>).jsPDF as new (...args: unknown[]) => Record<string, unknown> : w.jsPDF as new (...args: unknown[]) => Record<string, unknown>;
         generateBasicPdf(jsPDF, fileName);
 
         const newData = { ...data };
@@ -1007,6 +1028,8 @@ return (
         toastCtx?.showToast('PDF generation failed. Check internet or install dependencies.', 'error');
       }
     };
+
+    if (!data) return null;
 
     const avgCycleLength = data.cycles.length > 0 
       ? Math.round(data.cycles.reduce((sum, cycle) => sum + cycle.length, 0) / data.cycles.length)
@@ -1126,8 +1149,6 @@ return (
 
   // Enhanced Confirmation Modal Component
   const ResetConfirmationModal: React.FC = () => {
-    if (!showResetModal) return null;
-
     const toastCtx = useContext(ToastContext);
 
     const handleConfirmReset = () => {
@@ -1146,6 +1167,8 @@ return (
     const handleCancel = () => {
       setShowResetModal(false);
     };
+
+    if (!showResetModal) return null;
 
     return (
       <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1205,7 +1228,7 @@ return (
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-yellow-800 text-sm">
-                  <strong>Note:</strong> You'll need to go through the onboarding process again to start fresh.
+                  <strong>Note:</strong> You&apos;ll need to go through the onboarding process again to start fresh.
                 </p>
               </div>
             </div>
@@ -1233,17 +1256,14 @@ return (
 
   // Settings View Component
   const SettingsView: React.FC = () => {
-    if (!data) return null;
-
     const toastCtx = useContext(ToastContext);
-    const [editName, setEditName] = useState<string>(data.user?.name || '');
-    const [editAge, setEditAge] = useState<string>(data.user?.age?.toString() || '');
+    const [editName, setEditName] = useState<string>(data?.user?.name || '');
+    const [editAge, setEditAge] = useState<string>(data?.user?.age?.toString() || '');
     const [preferredCycle, setPreferredCycle] = useState<string>(
-      data.settings.preferredCycleLength ? String(data.settings.preferredCycleLength) : ''
+      data?.settings.preferredCycleLength ? String(data.settings.preferredCycleLength) : ''
     );
-    const [remindersEnabled, setRemindersEnabled] = useState<boolean>(
-      !!data.settings.remindersEnabled
-    );
+
+    if (!data) return null;
 
     const saveProfile = () => {
       if (!editName.trim()) {
@@ -1270,7 +1290,7 @@ return (
         },
         settings: {
           ...data.settings,
-          remindersEnabled,
+          remindersEnabled: data.settings.remindersEnabled,
           preferredCycleLength: cycleNum
         }
       };
@@ -1443,7 +1463,7 @@ return (
             return (
               <button
                 key={item.id}
-                onClick={() => setCurrentView(item.id as any)}
+                onClick={() => setCurrentView(item.id as 'calendar' | 'log' | 'analytics' | 'settings' | 'report')}
                 className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
                   isActive 
                     ? 'text-[#ed449b] bg-pink-50' 
@@ -1549,6 +1569,7 @@ return (
 
 export default ZevaPeriodTracker;
 
-(ZevaPeriodTracker as any).getLayout = function PageLayout(page: React.ReactNode) {
-  return page;
-};
+
+ZevaPeriodTracker.getLayout = function PageLayout(page: React.ReactNode) {
+  return page; // No layout
+}

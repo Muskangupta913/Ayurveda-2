@@ -147,7 +147,7 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
 
   // ✅ Advanced filtering and sorting logic
   const filteredAndSortedApplications = useMemo(() => {
-    let filtered = applications.filter(app => {
+    const filtered = applications.filter(app => {
       // Job type filter
       if (filter !== 'All' && app.jobId?.jobType !== filter) return false;
       

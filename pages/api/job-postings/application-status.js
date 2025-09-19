@@ -16,11 +16,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: "No token provided" });
 
   const token = authHeader.split(" ")[1];
-  let userId;
+  // let userId;
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     userId = decoded.userId;
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Invalid token" });
   }
 
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
       application: updatedApplication,
       notification,
     });
-  } catch (error) {
+  } catch {
     console.error("Status update error:", error);
     return res.status(500).json({ message: "Server error" });
   }

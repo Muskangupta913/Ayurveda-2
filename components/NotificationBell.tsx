@@ -15,7 +15,7 @@ interface Notification {
 
 interface DecodedToken {
   userId: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 let socket: Socket | null = null;

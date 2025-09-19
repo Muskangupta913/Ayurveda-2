@@ -1,7 +1,8 @@
 // components/common/JobStats.tsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, LabelList } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Label, LabelList } from 'recharts';
+
 // Type definitions (matching your existing Job interface)
 interface Job {
   _id: string;
@@ -77,9 +78,18 @@ interface BlogPost {
   postedBy?: { name?: string };
 }
 
+interface BlogFromAPI {
+  _id: string;
+  title: string;
+  likes?: unknown[];
+  comments?: unknown[];
+  createdAt?: string;
+  postedBy?: { _id?: string; name?: string };
+}
+
 interface PublishedBlogsResponse {
   success: boolean;
-  blogs?: Array<BlogPost & { likes?: unknown[]; comments?: unknown[]; postedBy?: { _id?: string; name?: string } }>;
+  blogs?: BlogFromAPI[];
   message?: string;
 }
 
@@ -116,7 +126,6 @@ const useBreakpoints = () => {
 };
 
 const JobStats: React.FC<JobStatsProps> = ({ 
-  role = 'clinic',
   config = {
     tokenKey: 'clinicToken',
     primaryColor: '#2D9AA5',
@@ -133,7 +142,7 @@ const JobStats: React.FC<JobStatsProps> = ({
   const [applicationsError, setApplicationsError] = useState<string>('');
   const [applicationsLoading, setApplicationsLoading] = useState<boolean>(true);
 
-  const fetchJobs = async (): Promise<void> => {
+  const fetchJobs = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError('');
@@ -155,9 +164,9 @@ const JobStats: React.FC<JobStatsProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [config.tokenKey]);
 
-  const fetchBlogs = async (): Promise<void> => {
+  const fetchBlogs = useCallback(async (): Promise<void> => {
     try {
       setBlogLoading(true);
       setBlogError('');
@@ -174,7 +183,7 @@ const JobStats: React.FC<JobStatsProps> = ({
       });
 
       const raw = res.data.blogs || [];
-      const normalized = raw.map((b: any) => ({
+      const normalized = raw.map((b: BlogFromAPI) => ({
         _id: b._id,
         title: b.title,
         likesCount: Array.isArray(b.likes) ? b.likes.length : 0,
@@ -183,7 +192,10 @@ const JobStats: React.FC<JobStatsProps> = ({
         postedBy: b.postedBy,
       })) as BlogPost[];
 
-      const mine = normalized.filter((b: any) => b?.postedBy && (b.postedBy as any)._id === userId);
+      const mine = normalized.filter((b: BlogPost) => {
+        const postedBy = b.postedBy as { _id?: string };
+        return postedBy && postedBy._id === userId;
+      });
       setBlogs(mine);
     } catch (error) {
       console.error('Error fetching blogs:', error);
@@ -192,9 +204,9 @@ const JobStats: React.FC<JobStatsProps> = ({
     } finally {
       setBlogLoading(false);
     }
-  };
+  }, [config.tokenKey]);
 
-  const fetchApplications = async (): Promise<void> => {
+  const fetchApplications = useCallback(async (): Promise<void> => {
     try {
       setApplicationsLoading(true);
       setApplicationsError('');
@@ -215,13 +227,13 @@ const JobStats: React.FC<JobStatsProps> = ({
     } finally {
       setApplicationsLoading(false);
     }
-  };
+  }, [config.tokenKey]);
 
   useEffect(() => {
     fetchJobs();
     fetchBlogs();
     fetchApplications();
-  }, [config.tokenKey]);
+  }, [fetchJobs, fetchBlogs, fetchApplications]);
 
   // Calculate statistics
   const stats: StatsData = useMemo(() => {
@@ -266,7 +278,7 @@ const JobStats: React.FC<JobStatsProps> = ({
   }, [blogs]);
 
   // Breakpoints for responsive charts/text
-  const { isXs, isSm, isMd } = useBreakpoints();
+  const {isSm, isMd } = useBreakpoints();
   const nameMaxLen = isMd ? 25 : 15;
   const xAxisFontSize = isSm || isMd ? 12 : 10;
   const yAxisFontSize = xAxisFontSize;
@@ -286,7 +298,7 @@ const JobStats: React.FC<JobStatsProps> = ({
   const topAppliedJobs = useMemo(() => {
     const counts = new Map<string, { jobId: string; jobTitle: string; count: number }>();
     for (const app of applications) {
-      const jobObj = app.jobId as any;
+      const jobObj = app.jobId;
       const jobId = (typeof jobObj === 'string') ? jobObj : (jobObj?._id || '');
       if (!jobId) continue;
       const title = (typeof jobObj === 'string') ? (jobs.find(j => j._id === jobObj)?.jobTitle || 'Untitled') : (jobObj?.jobTitle || 'Untitled');
@@ -469,7 +481,7 @@ return (
                   </linearGradient>
                 </defs>
                 <Pie
-                  data={sortedJobTypes.map(([jobType, count], index) => ({
+                  data={sortedJobTypes.map(([jobType, count],) => ({
                     name: jobType,
                     value: count,
                     percentage: stats.totalJobs > 0 ? Math.round((count / stats.totalJobs) * 100) : 0
@@ -477,7 +489,7 @@ return (
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percentage, value }) => {
+                  label={({ name, percentage}) => {
                     if (window.innerWidth < 640) return `${percentage}%`;
                     if (window.innerWidth < 768) return `${name.length > 8 ? name.substring(0, 8) + '...' : name} (${percentage}%)`;
                     return `${name} (${percentage}%)`;
@@ -659,7 +671,7 @@ return (
                       innerRadius={window.innerWidth < 640 ? 40 : window.innerWidth < 768 ? 50 : isMd ? 70 : 60}
                       outerRadius={window.innerWidth < 640 ? 70 : window.innerWidth < 768 ? 80 : isMd ? 100 : 85}
                       labelLine={false}
-                      label={({ value, name }) => {
+                      label={({ value}) => {
                         const percentage = Math.round(((value as number) / Math.max(totalTopApplications, 1)) * 100);
                         if (window.innerWidth < 640) return `${percentage}%`;
                         return `${percentage}% (${value})`;

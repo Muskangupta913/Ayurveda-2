@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     await job.save();
 
     return res.status(200).json({ success: true, job });
-  } catch (error) {
+  } catch  {
     return res.status(401).json({ message: 'Invalid token' });
   }
 }

@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
-    } catch (err) {
+    } catch  {
       return res.status(401).json({ message: "Invalid token" });
     }
 

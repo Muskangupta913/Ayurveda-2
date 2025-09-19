@@ -14,10 +14,12 @@ type Blog = {
   role: string;
   createdAt: string;
   image?: string;
+  likes?: string[];       // ✅ needed for your includes check
   likesCount?: number;
   commentsCount?: number;
   liked?: boolean;
 };
+
 
 export default function BlogList() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -31,7 +33,7 @@ export default function BlogList() {
   const blogsPerPage = 15;
 
   // Popup state for thumb up
-  const [showThumbPopup, setShowThumbPopup] = useState<{ [key: string]: boolean }>({});
+  const [setShowThumbPopup] = useState<{ [key: string]: boolean }>({});
 
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
@@ -62,13 +64,14 @@ export default function BlogList() {
           let blogData = json.blogs || json.data;
 
           if (isAuthenticated && user?._id) {
-            blogData = blogData.map((b: any) => ({
+            blogData = blogData.map((b: Blog): Blog => ({
               ...b,
-              liked: b.likes?.includes(user._id), // ✅ check with context user id
+              liked: b.likes?.includes(user._id) ?? false,
             }));
           } else {
-            blogData = blogData.map((b: any) => ({ ...b, liked: false }));
+            blogData = blogData.map((b: Blog): Blog => ({ ...b, liked: false }));
           }
+
 
           setBlogs(blogData);
           setFilteredBlogs(blogData);
@@ -282,7 +285,7 @@ export default function BlogList() {
     return cleanContent;
   };
 
-return (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-10">
         {/* Main Heading - Responsive text sizes */}
@@ -293,7 +296,7 @@ return (
         {searchTerm && (
           <div className="text-center mb-6 sm:mb-8 px-2">
             <span className="text-lg sm:text-xl text-gray-600 font-medium">
-              for "<span className="text-teal-700 font-semibold">{searchTerm}</span>"
+              for <span className="text-teal-700 font-semibold">{searchTerm}</span>
             </span>
           </div>
         )}
@@ -389,7 +392,7 @@ return (
           <div className="text-center py-12 sm:py-20 bg-white/60 rounded-xl sm:rounded-2xl mx-auto max-w-2xl">
             <div className="text-4xl sm:text-6xl mb-4 sm:mb-6">📝</div>
             <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">No articles found</h3>
-            <p className="text-gray-600 mb-4 sm:mb-6 text-base sm:text-lg px-4">We couldn't find any articles matching your search criteria.</p>
+            <p className="text-gray-600 mb-4 sm:mb-6 text-base sm:text-lg px-4">No articles were found that match your search terms.</p>
             <button
               onClick={handleClearSearch}
               className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 text-sm sm:text-base"
@@ -439,7 +442,7 @@ return (
                                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                               }}></div>
                             </div>
-                            
+
                             {/* Content */}
                             <div className="text-center z-10">
                               <div className="mb-2 sm:mb-3">

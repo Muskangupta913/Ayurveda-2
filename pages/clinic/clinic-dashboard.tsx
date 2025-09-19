@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Mail, Settings, Calendar, Clock, MessageCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList } from 'recharts';
 import Stats from '../../components/Stats';
 import ClinicLayout from '../../components/ClinicLayout';
 import withClinicAuth from '../../components/withClinicAuth';

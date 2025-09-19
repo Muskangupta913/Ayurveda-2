@@ -12,12 +12,8 @@ import {
   Cell,
   AreaChart,
   Area,
-  ComposedChart,
-  Line,
   Legend,
   LabelList,
-  ScatterChart,
-  Scatter,
 } from "recharts";
 
 import { TrendingUp, FileText, Briefcase, Activity, BarChart3, Target } from 'lucide-react';
@@ -149,24 +145,24 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
 );
 
 // Custom label components for charts
-const CustomBarLabel = (props: any) => {
-  const { x, y, width, height, value } = props;
-  return (
-    <text
-      x={x + width / 2}
-      y={y - 5}
-      fill="#374151"
-      textAnchor="middle"
-      fontSize="12"
-      fontWeight="600"
-    >
-      {value}
-    </text>
-  );
-};
+// const CustomBarLabel = (props: any) => {
+//   const { x, y, width, height, value } = props;
+//   return (
+//     <text
+//       x={x + width / 2}
+//       y={y - 5}
+//       fill="#374151"
+//       textAnchor="middle"
+//       fontSize="12"
+//       fontWeight="600"
+//     >
+//       {value}
+//     </text>
+//   );
+// };
 
-const CustomPieLabel = (props: any) => {
-  const { cx, cy, midAngle, innerRadius, outerRadius, percent, name, value } = props;
+const CustomPieLabel = (props) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent,value } = props;
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -188,7 +184,7 @@ const CustomPieLabel = (props: any) => {
 };
 
 // ---------------- Main Component ----------------
-const AdminStats: React.FC<AdminStatsProps> = ({ theme = 'light' }) => {
+const AdminStats: React.FC<AdminStatsProps> = ({}) => {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [jobs, setJobs] = useState<JobsData>({

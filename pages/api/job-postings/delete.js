@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     userId = decoded.userId;
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Invalid token" });
   }
 

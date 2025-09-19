@@ -902,18 +902,16 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                 {/* Like Button */}
                 <button
                   onClick={toggleLike}
-                  className={`group relative flex items-center space-x-3 px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
-                    blog.liked
+                  className={`group relative flex items-center space-x-3 px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${blog.liked
                       ? "bg-gradient-to-r from-red-50 to-pink-50 text-red-600 border-2 border-red-200 hover:from-red-100 hover:to-pink-100"
                       : "bg-white text-gray-600 border-2 border-gray-200 hover:border-red-200 hover:text-red-600"
-                  }`}
+                    }`}
                 >
                   <svg
-                    className={`w-6 h-6 transition-all duration-200 hover:scale-110 ${
-                      blog.liked
+                    className={`w-6 h-6 transition-all duration-200 hover:scale-110 ${blog.liked
                         ? "text-red-500"
                         : "text-gray-400 hover:text-red-400"
-                    }`}
+                      }`}
                     fill={blog.liked ? "currentColor" : "none"}
                     stroke="currentColor"
                     strokeWidth="2"
@@ -1206,7 +1204,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                                 handleReplySubmit(c._id);
                               }
                             }}
-                            className="flex-1 border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-[#2D9AA5]/20 focus:border-[#2D9AA5] transition-all duration-200"
+                            className="mb-8 flex-1 border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-[#2D9AA5]/20 focus:border-[#2D9AA5] transition-all duration-200"
                           />
                         </div>
                       </div>
@@ -1224,34 +1222,31 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                               user &&
                               (String(user._id) === String(r.user) ||
                                 String(user._id) ===
-                                  String(blog.postedBy?._id));
+                                String(blog.postedBy?._id));
                             return (
                               <div
                                 key={r._id}
-                                className={`p-6 rounded-xl ${
-                                  isAuthorReply
+                                className={`p-6 rounded-xl ${isAuthorReply
                                     ? "bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 border-2 border-[#2D9AA5]/20"
                                     : "bg-white border border-gray-200"
-                                }`}
+                                  }`}
                               >
                                 <div className="flex justify-between items-start mb-3">
                                   <div className="flex items-center space-x-3">
                                     <div
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                                        isAuthorReply
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${isAuthorReply
                                           ? "bg-gradient-to-br from-[#2D9AA5] to-[#236b73]"
                                           : "bg-gradient-to-br from-gray-400 to-gray-500"
-                                      }`}
+                                        }`}
                                     >
                                       {r.username.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
                                       <p
-                                        className={`font-bold text-sm flex items-center ${
-                                          isAuthorReply
+                                        className={`font-bold text-sm flex items-center ${isAuthorReply
                                             ? "text-[#2D9AA5]"
                                             : "text-gray-700"
-                                        }`}
+                                          }`}
                                       >
                                         {r.username}
                                         {isAuthorReply && (
@@ -1322,7 +1317,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                 Share Your Thoughts
               </h3>
               <p className="text-gray-600">
-                We'd love to hear your perspective on this article
+                Share your thoughts on this article with us
               </p>
             </div>
             <div className="space-y-6">
@@ -1404,7 +1399,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
             />
           </svg>
         </button>
-        
+
         {/* Delete Confirmation Modal */}
         {confirmDeleteId && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -1418,7 +1413,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
               <div className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v4m0 4h.01M4.93 4.93l14.14 14.14M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2zm-2 7h10l-1 9a2 2 0 01-2 2H9a2 2 0 01-2-2l-1-9z"/></svg>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v4m0 4h.01M4.93 4.93l14.14 14.14M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2zm-2 7h10l-1 9a2 2 0 01-2 2H9a2 2 0 01-2-2l-1-9z" /></svg>
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Delete comment?</h3>
@@ -1476,7 +1471,7 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
   try {
     const { id } = params as { id: string };
     await dbConnect();
-    // @ts-ignore
+
     const blogDoc = await BlogModel.findById(id)
       .populate("postedBy", "name _id")
       .lean();
@@ -1506,32 +1501,34 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
       createdAt: blogDoc.createdAt
         ? new Date(blogDoc.createdAt).toISOString()
         : new Date().toISOString(),
+      image: blogDoc.image || undefined,
       likesCount: Array.isArray(blogDoc.likes) ? blogDoc.likes.length : 0,
-      liked: Boolean(liked), // ✅ real value now
+      liked: Boolean(liked),
       comments: Array.isArray(blogDoc.comments)
-        ? blogDoc.comments.map((c: any) => ({
-            _id: String(c._id || ""),
-            username: c.username || "Anonymous",
-            text: c.text || "",
-            createdAt: c.createdAt
-              ? new Date(c.createdAt).toISOString()
-              : new Date().toISOString(),
-            user: c.user ? String(c.user) : null,
-            replies: Array.isArray(c.replies)
-              ? c.replies.map((r: any) => ({
-                  _id: String(r._id || ""),
-                  username: r.username || "Anonymous",
-                  text: r.text || "",
-                  createdAt: r.createdAt
-                    ? new Date(r.createdAt).toISOString()
-                    : new Date().toISOString(),
-                  user: r.user ? String(r.user) : null,
-                }))
-              : [],
-          }))
+        ? blogDoc.comments.map((c): BlogComment => ({
+          _id: String(c._id || ""),
+          username: c.username || "Anonymous",
+          text: c.text || "",
+          createdAt: c.createdAt
+            ? new Date(c.createdAt).toISOString()
+            : new Date().toISOString(),
+          user: c.user ? String(c.user) : null,
+          replies: Array.isArray(c.replies)
+            ? c.replies.map((r): BlogReply => ({
+              _id: String(r._id || ""),
+              username: r.username || "Anonymous",
+              text: r.text || "",
+              createdAt: r.createdAt
+                ? new Date(r.createdAt).toISOString()
+                : new Date().toISOString(),
+              user: r.user ? String(r.user) : null,
+            }))
+            : [],
+        }))
         : [],
       paramlink: blogDoc.paramlink || null,
     };
+
 
     // Only add image property if it exists (not null/undefined)
     const finalImage = blogDoc.image || imageFromContent;

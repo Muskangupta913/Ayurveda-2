@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState} from "react";
 import {
   Search,
   Star,
@@ -59,9 +59,6 @@ function DoctorReviews() {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
-  // Show More logic (using 400 chars as proxy for 34 lines)
-  const COMMENT_LIMIT = 400;
-
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -119,7 +116,6 @@ function DoctorReviews() {
     setFilteredReviews(filtered);
   }, [reviews, searchTerm, selectedRating]);
 
-
   const getRatingStats = (): RatingStats => {
     const stats: RatingStats = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     reviews.forEach((review) => {
@@ -167,16 +163,16 @@ function DoctorReviews() {
 
   const stats = getRatingStats();
 
- if (loading) {
-  return (
-    <div className="w-full p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-8 h-8 border-3 border-gray-200 rounded-full animate-spin mx-auto" style={{ borderTopColor: '#2D9AA5' }}></div>
-        <p className="text-gray-500 mt-3 animate-pulse">Loading reviews...</p>
+  if (loading) {
+    return (
+      <div className="w-full p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-3 border-gray-200 rounded-full animate-spin mx-auto" style={{ borderTopColor: '#2D9AA5' }}></div>
+          <p className="text-gray-500 mt-3 animate-pulse">Loading reviews...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className="w-full max-w-full space-y-6 overflow-x-auto bg-gradient-to-br from-slate-50 to-white min-h-screen">

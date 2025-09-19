@@ -14,9 +14,9 @@ interface Message {
   isRead: boolean;
 }
 
-interface User {
-  name: string;
-}
+// interface User {
+//   name: string;
+// }
 
 interface Chat {
   _id: string;
@@ -58,7 +58,7 @@ function UserChat() {
   const router = useRouter();
   const { requestId } = router.query as { requestId?: string };
   const [chat, setChat] = useState<Chat | null>(null);
-  const [prescriptionRequest, setPrescriptionRequest] = useState<PrescriptionRequestLite | null>(null);
+  const [setPrescriptionRequest] = useState<PrescriptionRequestLite | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -164,7 +164,7 @@ function UserChat() {
         }, 5000);
         return;
       }
-      console.error("Failed to fetch chat:", err);
+      // console.error("Failed to fetch chat:", err);
     } finally {
       setLoading(false);
     }
@@ -185,8 +185,8 @@ function UserChat() {
         setChat(response.data.data.chat);
         setMessage("");
       }
-    } catch (err) {
-      console.error("Failed to send message:", err);
+    } catch {
+      // console.error("Failed to send message:", err);
     } finally {
       setSending(false);
     }
@@ -219,10 +219,10 @@ function UserChat() {
       if (response.data.data?.chat) {
         setChat(response.data.data.chat);
       } else {
-        console.warn("Delete API did not return chat, keeping optimistic update.");
+        // console.warn("Delete API did not return chat, keeping optimistic update.");
       }
-    } catch (err) {
-      console.error("Delete failed:", err);
+    } catch {
+      // console.error("Delete failed:", err);
       setChat(previousChat); // rollback
       alert("Failed to delete message. Please try again.");
     } finally {

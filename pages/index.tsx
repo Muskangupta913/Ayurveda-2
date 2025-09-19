@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import React from "react";
-import { useAuth } from "../context/AuthContext";
+// import { useAuth } from "../context/AuthContext";
 import AuthModal from "../components/AuthModal";
 import Image from "next/image";
 import SearchCard from "../components/SearchCard";
@@ -49,20 +49,20 @@ interface ReviewData {
   totalReviews: number;
   reviews: unknown[];
 }
-interface ErrorModalState {
-  show: boolean;
-  message: string;
-}
+// interface ErrorModalState {
+//   show: boolean;
+//   message: string;
+// }
 
 export default function Home(): React.ReactElement {
   const [query, setQuery] = useState("");
-  const searchRef = useRef<HTMLDivElement | null>(null);
+  // const searchRef = useRef<HTMLDivElement | null>(null);
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [clinicsPerPage] = useState(5); // You can change this number
-  const [expandedTreatments, setExpandedTreatments] = useState<
-    Record<string, boolean>
-  >({});
+  // const [clinicsPerPage] = useState(5); // You can change this number
+  // const [setExpandedTreatments] = useState<
+  //   Record<string, boolean>
+  // >({});
   const [suggestions, setSuggestions] = useState<
     { type: string; value: string }[]
   >([]);
@@ -77,7 +77,7 @@ export default function Home(): React.ReactElement {
 
   // Auth Modal states
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<"login" | "register">(
+  const [authModalMode] = useState<"login" | "register">(
     "login"
   );
   const [pendingAction, setPendingAction] = useState<{
@@ -86,7 +86,7 @@ export default function Home(): React.ReactElement {
   } | null>(null);
 
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  // const { isAuthenticated} = useAuth();
 
 
 
@@ -292,42 +292,42 @@ export default function Home(): React.ReactElement {
 
   // Distance Badge
 
-  const handleEnquiryClick = (clinic: Clinic) => {
-    if (!isAuthenticated) {
-      // Store the pending action and show auth modal
-      setPendingAction({ type: "enquiry", clinic });
-      setAuthModalMode("login");
-      setShowAuthModal(true);
-      return;
-    }
+  // const handleEnquiryClick = (clinic: Clinic) => {
+  //   if (!isAuthenticated) {
+  //     // Store the pending action and show auth modal
+  //     setPendingAction({ type: "enquiry", clinic });
+  //     setAuthModalMode("login");
+  //     setShowAuthModal(true);
+  //     return;
+  //   }
 
-    // User is authenticated, proceed with enquiry
-    const params = new URLSearchParams({
-      clinicId: clinic._id,
-      clinicName: clinic.name,
-      clinicAddress: clinic.address,
-    });
+  //   // User is authenticated, proceed with enquiry
+  //   const params = new URLSearchParams({
+  //     clinicId: clinic._id,
+  //     clinicName: clinic.name,
+  //     clinicAddress: clinic.address,
+  //   });
 
-    router.push(`/clinic/enquiry-form?${params.toString()}`);
-  };
+  //   router.push(`/clinic/enquiry-form?${params.toString()}`);
+  // };
 
-  const handleReviewClick = (clinic: Clinic) => {
-    if (!isAuthenticated) {
-      // Store the pending action and show auth modal
-      setPendingAction({ type: "review", clinic });
-      setAuthModalMode("login");
-      setShowAuthModal(true);
-      return;
-    }
+  // const handleReviewClick = (clinic: Clinic) => {
+  //   if (!isAuthenticated) {
+  //     // Store the pending action and show auth modal
+  //     setPendingAction({ type: "review", clinic });
+  //     setAuthModalMode("login");
+  //     setShowAuthModal(true);
+  //     return;
+  //   }
 
-    // User is authenticated, proceed with review
-    const params = new URLSearchParams({
-      clinicId: clinic._id,
-      clinicName: clinic.name,
-    });
+  //   // User is authenticated, proceed with review
+  //   const params = new URLSearchParams({
+  //     clinicId: clinic._id,
+  //     clinicName: clinic.name,
+  //   });
 
-    router.push(`/clinic/review-form?${params.toString()}`);
-  };
+  //   router.push(`/clinic/review-form?${params.toString()}`);
+  // };
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
@@ -605,30 +605,6 @@ export default function Home(): React.ReactElement {
     };
     fetchReviews();
   }, [clinics]);
-
-
-
-  // Helper functions to add
-  const totalPages = Math.ceil(getFilteredClinics().length / clinicsPerPage);
-
-  const getPaginatedClinics = (): Clinic[] => {
-    const filteredClinics = getFilteredClinics();
-    const startIndex = (currentPage - 1) * clinicsPerPage;
-    const endIndex = startIndex + clinicsPerPage;
-    return filteredClinics.slice(startIndex, endIndex);
-  };
-
-  const toggleTreatments = (clinicId: string) => {
-    setExpandedTreatments((prev) => ({
-      ...prev,
-      [clinicId]: !prev[clinicId],
-    }));
-  };
-
-
-
-
-
 
 
   return (

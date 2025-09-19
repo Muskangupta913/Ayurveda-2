@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Calendar, Heart, Baby, Download, User, Stethoscope, Home, Plus, Trash2, AlertCircle, Clock, Target, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface JSPDF {
+  save: (filename: string) => void;
+  text: (text: string, x: number, y: number) => void;
+  setFontSize: (size: number) => void;
+  setTextColor: (r: number, g: number, b: number) => void;
+  setFont: (font: string, style: string) => void;
+  addPage: () => void;
+  line: (x1: number, y1: number, x2: number, y2: number) => void;
+  setDrawColor: (r: number, g: number, b: number) => void;
+  setLineWidth: (width: number) => void;
+}
+
 // Remove problematic NextPage import and define our own type that allows getLayout
 interface PageWithLayout extends React.FC {
   getLayout?: (page: React.ReactNode) => React.ReactNode;
@@ -255,7 +269,7 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
   const generatePDFReport = async () => {
     try {
       const jsPdfModule = await import('jspdf');
-      const { jsPDF } = jsPdfModule as unknown as { jsPDF: any };
+      const { jsPDF } = jsPdfModule as unknown as { jsPDF: new () => JSPDF };
       const doc = new jsPDF();
 
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -350,7 +364,8 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
 
       const filename = `ZEVA-Pregnancy-Report-${userProfile.name || 'User'}.pdf`;
       doc.save(filename);
-    } catch (err) {
+    } catch (error) {
+      console.error('Error generating PDF:', error);
       // Fallback to JSON download if jsPDF is not available
       const reportData = {
         userProfile,
@@ -589,7 +604,7 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                     </label>
                     <select
                       value={calcMode}
-                      onChange={(e) => setCalcMode(e.target.value as any)}
+                      onChange={(e) => setCalcMode(e.target.value as 'lmp' | 'conception' | 'due' | 'ultrasound' | 'ivf')}
                       className="w-full p-4 border-2 rounded-xl focus:outline-none focus:border-[#2D9AA5] transition-all bg-white/50 backdrop-blur-sm text-gray-900"
                     >
                       <option value="lmp">Last Period</option>
@@ -802,7 +817,7 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                     <Baby className="w-8 h-8 text-white" />
                   </div>
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Your Beautiful Results</h2>
-                  <p className="text-gray-700">Here's your personalized pregnancy and fertility information</p>
+                  <p className="text-gray-700">Here&apos;s your personalized pregnancy and fertility information</p>
                 </div>
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -862,15 +877,15 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                     <span>Download Report</span>
                   </button>
                   
-                  <a href="/doctor/search" className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-rose-600 hover:to-rose-600 transition-all flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105">
+                  <Link href="/doctor/search" className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-rose-600 hover:to-rose-600 transition-all flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105">
                     <Stethoscope className="w-5 h-5" />
                     <span>Consult Doctor</span>
-                  </a>
+                  </Link>
                   
-                  <a href="/" className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-indigo-600 hover:to-indigo-600 transition-all flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105">
+                  <Link href="/" className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-4 rounded-xl font-semibold hover:from-indigo-600 hover:to-indigo-600 transition-all flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105">
                     <Home className="w-5 h-5" />
                     <span>Healthcare</span>
-                  </a>
+                  </Link>
                 </div>
               </div>
             )}
@@ -1009,7 +1024,7 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                       <Baby className="w-10 h-10 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Pregnancy Stages</h3>
-                    <p className="text-gray-700 text-sm">Track your baby's development week by week</p>
+                    <p className="text-gray-700 text-sm">Track your baby&apos;s development week by week</p>
                   </div>
                 </div>
                 
@@ -1163,7 +1178,7 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                         <h4 className="text-xl font-bold text-gray-900 mb-2">Second Trimester</h4>
                         <p className="text-gray-700 font-medium">Weeks 13-26</p>
                       </div>
-                      <p className="text-gray-700 text-sm text-center">Often called the "golden period" - most comfortable phase with visible baby bump and first movements.</p>
+                      <p className="text-gray-700 text-sm text-center">Often called the &quot;golden period&quot; - most comfortable phase with visible baby bump and first movements.</p>
                     </div>
                     
                     <div className="bg-gradient-to-br from-teal-100 to-cyan-100 rounded-2xl p-6 border-2 border-teal-200 transform hover:scale-105 transition-all">
@@ -1229,7 +1244,7 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-4">Medical Disclaimer</h3>
                     <p className="text-gray-800 leading-relaxed max-w-3xl mx-auto">
-                      This calculator is designed for informational and educational purposes only and should never replace professional medical advice, diagnosis, or treatment. The results are estimates based on average cycle lengths and may not reflect your individual situation. Every woman's body is unique, and cycles can vary significantly. Always consult with a qualified healthcare provider, gynecologist, or fertility specialist for personalized medical advice, especially if you're trying to conceive, have irregular cycles, or any health concerns. ZEVA and its affiliates are not responsible for any decisions made based on the information provided by this calculator.
+                      This calculator is designed for informational and educational purposes only and should never replace professional medical advice, diagnosis, or treatment. The results are estimates based on average cycle lengths and may not reflect your individual situation. Every woman&apos;s body is unique, and cycles can vary significantly. Always consult with a qualified healthcare provider, gynecologist, or fertility specialist for personalized medical advice, especially if you&apos;re trying to conceive, have irregular cycles, or any health concerns. ZEVA and its affiliates are not responsible for any decisions made based on the information provided by this calculator.
                     </p>
                   </div>
                 </div>

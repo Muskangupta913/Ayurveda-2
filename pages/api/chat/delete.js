@@ -41,7 +41,7 @@ export default async function handler(req, res) {
 
     // ✅ Ownership check
     const isDoctor = chat.doctor.toString() === userId;
-    const isUser = chat.user.toString() === userId;
+    // const isUser = chat.user.toString() === userId;
 
     if (message.sender.toString() !== userId && !isDoctor) {
       return res.status(403).json({ success: false, error: "Not authorized to delete this message" });

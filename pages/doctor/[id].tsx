@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
@@ -56,7 +56,7 @@ export default function DoctorDetail() {
   }>(null);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [showReviews, setShowReviews] = useState(false);
+  // const [showReviews, setShowReviews] = useState(false);
   const [modalReview, setModalReview] = useState<string | null>(null);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [prescriptionForm, setPrescriptionForm] = useState({
@@ -74,7 +74,7 @@ export default function DoctorDetail() {
           `/api/doctor/profile/${id}`
         );
         setProfile(res.data?.profile ?? null);
-      } catch (err) {
+      } catch {
         setError("Failed to load doctor");
       } finally {
         setLoading(false);
@@ -147,21 +147,21 @@ export default function DoctorDetail() {
     router.push(`/doctor/review-form?${params.toString()}`);
   };
 
-  const handleEnquiryClick = () => {
-    if (!profile) return;
-    if (!isAuthenticated) {
-      setPendingAction({ type: "enquiry" });
-      setAuthModalMode("login");
-      setShowAuthModal(true);
-      return;
-    }
-    const params = new URLSearchParams({
-      doctorId: profile._id,
-      doctorName: profile.user.name,
-      specialization: profile.degree || "",
-    });
-    router.push(`/doctor/enquiry-form?${params.toString()}`);
-  };
+  // const handleEnquiryClick = () => {
+  //   if (!profile) return;
+  //   if (!isAuthenticated) {
+  //     setPendingAction({ type: "enquiry" });
+  //     setAuthModalMode("login");
+  //     setShowAuthModal(true);
+  //     return;
+  //   }
+  //   const params = new URLSearchParams({
+  //     doctorId: profile._id,
+  //     doctorName: profile.user.name,
+  //     specialization: profile.degree || "",
+  //   });
+  //   router.push(`/doctor/enquiry-form?${params.toString()}`);
+  // };
 
   const handlePrescriptionRequest = () => {
     if (!profile) return;
@@ -229,7 +229,6 @@ export default function DoctorDetail() {
         setPrescriptionForm({ healthIssue: "", symptoms: "" });
       }
     } catch (error) {
-      // @ts-ignore
       toast.error(
         error?.response?.data?.message || "Failed to send prescription request",
         { style: { background: "#2D9AA5", color: "#fff" } }
@@ -613,7 +612,7 @@ export default function DoctorDetail() {
                                       overflow: isLong ? "hidden" : "visible",
                                     }}
                                   >
-                                    "{displayText}"
+                                    {displayText}
                                   </p>
                                   {isLong && (
                                     <button

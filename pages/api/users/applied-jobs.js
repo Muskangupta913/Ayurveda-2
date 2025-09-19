@@ -1,6 +1,6 @@
 import dbConnect from "../../../lib/database";
 import JobApplication from "../../../models/JobApplication";
-import JobPosting from "../../../models/JobPosting";
+import  "../../../models/JobPosting";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     userId = decoded.userId;
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: "Invalid token" });
   }
 
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     const validApplications = applications.filter(app => app.jobId !== null);
 
     return res.status(200).json(validApplications);
-  } catch (error) {
+  } catch {
     console.error("Error fetching applied jobs:", error);
     return res.status(500).json({ message: "Server error" });
   }

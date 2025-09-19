@@ -202,9 +202,9 @@ export default function BlogList() {
           className="flex overflow-x-hidden space-x-3 sm:space-x-6 scroll-smooth pb-6 mx-8 sm:mx-12"
           style={{ scrollSnapType: "x mandatory" }}
         >
-          {blogs.map((blog, index) => {
-            const paragraphs =
-              blog.content.split("</p>").slice(0, 2).join("</p>") + "</p>";
+          {blogs.map((blog) => {
+            // const paragraphs =
+            //   blog.content.split("</p>").slice(0, 2).join("</p>") + "</p>";
 
             const imageInfo = getDisplayImage(blog);
 

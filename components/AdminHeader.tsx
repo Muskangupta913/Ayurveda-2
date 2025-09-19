@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+// import React, { useState, useEffect } from 'react';
 
 const AdminHeader: React.FC = () => {
-  const [screenWidth, setScreenWidth] = useState<number | null>(null);
-
+  
   const storedUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
   const email = storedUser.email;
 
@@ -12,14 +11,7 @@ const AdminHeader: React.FC = () => {
     window.location.href = '/admin';
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setScreenWidth(window.innerWidth);
-      const handleResize = () => setScreenWidth(window.innerWidth);
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, []);
+  
 
   const getInitials = (name: string) => {
     return name

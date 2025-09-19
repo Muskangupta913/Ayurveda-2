@@ -1,7 +1,7 @@
 import dbConnect from '../../../lib/database';
 import JobPosting from '../../../models/JobPosting';
 import jwt from 'jsonwebtoken';
-import User from '../../../models/Users'; // Assuming user model exists
+import '../../../models/Users'; // Assuming user model exists
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

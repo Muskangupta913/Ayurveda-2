@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { Search, Edit2, ExternalLink, Trash2, FileText, BookOpen, ChevronLeft, ChevronRight, X, Edit3, Link, Save, AlertCircle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
@@ -37,10 +37,10 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{id: string, type: 'published' | 'drafts', title: string} | null>(null);
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
     const token = localStorage.getItem(tokenKey);
     return { headers: { Authorization: `Bearer ${token}` } };
-  };
+  }, [tokenKey]);
 
   const getBaseUrl = () => {
     if (typeof window !== "undefined") {
@@ -61,14 +61,18 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
 
         setDrafts(draftRes.data?.drafts || draftRes.data || []);
         setPublished(pubRes.data?.blogs || pubRes.data || []);
-      } catch (e: any) {
-        setError(e?.message || "Failed to load blogs");
+      } catch (e: unknown) {
+        if (axios.isAxiosError(e)) {
+          setError(e.message || "Failed to load blogs");
+        } else {
+          setError("Failed to load blogs");
+        }
       } finally {
         setLoading(false);
       }
     }
     loadAll();
-  }, [tokenKey]);
+  }, [tokenKey, getAuthHeaders]);
 
   const filteredBlogs = useMemo(() => {
     const filterBlogs = (blogs: Blog[]) =>
@@ -135,8 +139,8 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
         )
       );
       handleCancel();
-    } catch (err: any) {
-      if (err.response?.data?.message?.includes("Paramlink already exists")) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data?.message?.includes("Paramlink already exists")) {
         setEditError("Paramlink already exists. Please choose another.");
       } else {
         setEditError("Failed to update blog");
@@ -626,7 +630,7 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
                   Are you sure you want to delete this {deleteTarget.type === 'published' ? 'published blog' : 'draft'}?
                 </p>
                 <p className="text-gray-600 mb-4">
-                  "<span className="font-medium">{deleteTarget.title}</span>"
+                  &quot;<span className="font-medium">{deleteTarget.title}</span>&quot;
                 </p>
                 <p className="text-sm text-gray-500">
                   This action cannot be undone and the blog will be permanently removed.

@@ -225,7 +225,15 @@ interface TreatmentManagerProps {
   showCustomInput: boolean;
   setShowCustomInput: (value: boolean) => void;
   onAddFromDropdown: (treatmentName: string) => void;
-  onUpdateTreatment: (index: number, treatment: any) => void;
+  onUpdateTreatment: (index: number, treatment: {
+    mainTreatment: string;
+    mainTreatmentSlug: string;
+    subTreatments: Array<{
+      name: string;
+      slug: string;
+      price?: number;
+    }>;
+  }) => void;
 }
 const TreatmentManager = ({
   label,
@@ -241,8 +249,8 @@ const TreatmentManager = ({
   onAddFromDropdown,
   onUpdateTreatment,
 }: TreatmentManagerProps) => {
-  const [selectedMainTreatment, setSelectedMainTreatment] =
-    useState<string>("");
+  // const [selectedMainTreatment, setSelectedMainTreatment] =
+  //   useState<string>("");
   const [customSubTreatment, setCustomSubTreatment] = useState<string>("");
   const [customSubTreatmentPrice, setCustomSubTreatmentPrice] =
     useState<string>("");
@@ -949,7 +957,18 @@ function ClinicManagementDashboard() {
     }));
   };
 
-  const handleUpdateTreatment = (index: number, updatedTreatment: any) => {
+  const handleUpdateTreatment = (
+    index: number,
+    updatedTreatment: {
+      mainTreatment: string;
+      mainTreatmentSlug: string;
+      subTreatments: Array<{
+        name: string;
+        slug: string;
+        price?: number;
+      }>;
+    }
+  ) => {
     setEditForm((prev) => ({
       ...prev,
       treatments:

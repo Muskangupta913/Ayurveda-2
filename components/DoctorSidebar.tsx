@@ -310,7 +310,7 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
                         <div className="pl-6 mt-1 space-y-1">
                           {item.children.map((child) => {
                             const childActive = router.pathname === child.path;
-                            const childHovered = hoveredItem === child.path;
+                            // const childHovered = hoveredItem === child.path;
 
                             return (
                               <Link key={child.path} href={child.path!}>

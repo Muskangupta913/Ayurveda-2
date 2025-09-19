@@ -1,6 +1,7 @@
 // pages/allcalc.tsx
 import React from 'react';
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import { calculators } from '../../components/CalculatorGames';
 
 function AllCalculators(){
@@ -79,11 +80,15 @@ function AllCalculators(){
               >
                 {/* Image Container */}
                 <div className="relative overflow-hidden rounded-t-2xl">
-                  <img 
-                    src={calc.image} 
-                    alt={calc.title} 
-                    className="w-full h-36 sm:h-40 md:h-44 object-cover transition-transform duration-700 group-hover:scale-110" 
-                  />
+                  <div className="w-full h-36 sm:h-40 md:h-44 relative overflow-hidden">
+                    <Image 
+                      src={calc.image} 
+                      alt={calc.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   
                   {/* Floating Icon */}

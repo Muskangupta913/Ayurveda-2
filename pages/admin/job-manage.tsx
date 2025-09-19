@@ -812,17 +812,17 @@ function AdminJobs() {
                       <p className="text-base text-gray-600 text-center leading-relaxed">
                         {confirmationModal.type === 'approve' && (
                           <>
-                            You're about to approve <span className="font-medium text-gray-800">"{confirmationModal.jobTitle}"</span>. This will notify the applicant and move the job forward in the process.
+                            You&apos;re about to approve <span className="font-medium text-gray-800">&quot;{confirmationModal.jobTitle}&quot;</span>. This will notify the applicant and move the job forward in the process.
                           </>
                         )}
                         {confirmationModal.type === 'decline' && (
                           <>
-                            You're about to decline <span className="font-medium text-gray-800">"{confirmationModal.jobTitle}"</span>. The applicant will be notified of this decision.
+                            You&apos;re about to decline <span className="font-medium text-gray-800">&quot;{confirmationModal.jobTitle}&quot;</span>. The applicant will be notified of this decision.
                           </>
                         )}
                         {confirmationModal.type === 'delete' && (
                           <>
-                            You're about to permanently delete <span className="font-medium text-gray-800">"{confirmationModal.jobTitle}"</span>.
+                            You&apos;re about to permanently delete <span className="font-medium text-gray-800">&quot;{confirmationModal.jobTitle}&quot;</span>.
                             <span className="block mt-2 text-sm text-red-600 font-medium">This action cannot be undone and all associated data will be lost.</span>
                           </>
                         )}
