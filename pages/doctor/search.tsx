@@ -83,7 +83,7 @@ export default function FindDoctor() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [selectedDoctor] = useState<Doctor | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<"login" | "register">(
+  const [authModalMode] = useState<"login" | "register">(
     "login"
   );
   const [pendingAction, setPendingAction] = useState<{
@@ -116,12 +116,8 @@ export default function FindDoctor() {
     setSelectedTimes([]);
     setStarFilter(0);
     setSortBy('relevance');
-    // Don't clear search results, only reset filters
   };
 
- 
-
-  // Add the getSortedDoctors function
   const getSortedDoctors = (doctors: Doctor[]) => {
     const sorted = [...doctors];
 
@@ -144,7 +140,7 @@ export default function FindDoctor() {
   };
 
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  // const { isAuthenticated, user } = useAuth();
 
   // Add state for dynamic available times
   const [dynamicAvailableTimes, setDynamicAvailableTimes] = useState<string[]>([]);
@@ -219,34 +215,6 @@ export default function FindDoctor() {
     'Available Tomorrow',
     'Weekend Available'
   ];
-
-  // const availableTreatments = [
-  //   'Infertility Treatments',
-  //   'Cosmetic Surgery',
-  //   'Dental Treatments',
-  //   'Orthopedic Surgery',
-  //   'Cardiac Surgery',
-  //   'Oncology Treatments',
-  //   'Bariatric / Weight-Loss Surgery',
-  //   'LASIK & Eye Procedures',
-  //   'Preventive Health Screenings',
-  //   'Sports Medicine & Rehabilitation',
-  //   'Dermatology & Skin Treatments',
-  //   'Hair Transplantation',
-  //   'Botox & Fillers',
-  //   'Non-invasive Energy Treatments',
-  //   'Lymphatic & Body Sculpting Massages',
-  //   'Spa-based Wellness Retreats & Detox Programs',
-  //   'Ayurvedic Treatments',
-  //   'Acupuncture & Traditional Chinese Medicine',
-  //   'Physiotherapy & Post-operative Rehabilitation',
-  //   'Hormonal / PCOS Treatment & Women\'s Wellness',
-  //   'Psoriasis & Autoimmune Skin Disorder Therapies',
-  //   'Isotretinoin',
-  //   'Teeth Veneers & Cosmetic Dental Whitening',
-  //   'Cryotherapy & Hyperbaric Oxygen Therapy',
-  //   'Breathwork, Yoga & Mindfulness Therapies'
-  // ];
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const suggestionsDropdownRef = useRef<HTMLDivElement | null>(null);

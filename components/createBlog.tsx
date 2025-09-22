@@ -1329,26 +1329,57 @@ return (
   </div>
 )}
 
-    {/* Compact Blog Editor Modal */}
+    {/* Full-Screen Blog Editor Modal */}
     {showEditor && (
-      <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-40 flex items-start justify-center p-0 overflow-y-auto">
         <div className="absolute inset-0 bg-black/50" onClick={requestCloseEditor} />
-        <div className="relative z-40 w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-xl shadow-2xl bg-white">
+        <div className="relative z-40 w-full h-full min-h-screen overflow-hidden bg-white flex flex-col">
           
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-            <h2 className="text-lg font-semibold text-gray-900">Zeva Blog Editor</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-b bg-gray-50 flex-shrink-0 gap-3 sm:gap-0">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Zeva Blog Editor</h2>
+              <div className="flex items-center gap-1 sm:gap-2 ml-auto sm:ml-0">
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(true)}
+                  className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-md hover:bg-red-100 transition-colors"
+                  title="Reset Editor"
+                >
+                  <RotateCcw size={14} />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+                <button
+                  onClick={saveDraft}
+                  disabled={isLoading}
+                  className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold bg-gray-700 text-white rounded-md hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  title="Save Draft"
+                >
+                  <Save size={14} />
+                  <span className="hidden sm:inline">Save Draft</span>
+                </button>
+                <button
+                  onClick={selectedPublished ? updatePublishedBlog : publishBlog}
+                  disabled={isLoading || !title || !content}
+                  className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold bg-[#2D9AA5] text-white rounded-md hover:bg-[#257A83] disabled:opacity-50 transition-colors"
+                  title={selectedPublished ? "Update Blog" : "Publish Blog"}
+                >
+                  <Send size={14} />
+                  <span className="hidden sm:inline">{selectedPublished ? "Update" : "Publish"}</span>
+                </button>
+              </div>
+            </div>
             <button
               onClick={requestCloseEditor}
-              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded self-end sm:self-auto"
             >
               <X size={18} />
             </button>
           </div>
 
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 flex-1 overflow-y-auto">
             {/* Title and Permalink Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Blog Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1371,7 +1402,7 @@ return (
                     }
                   }}
                   placeholder="Enter your blog title..."
-                  className="text-black w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                  className="text-black w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent text-sm sm:text-base"
                 />
               </div>
 
@@ -1407,7 +1438,7 @@ return (
                       paramlinkError ? "border-red-500" : "border-gray-300"
                     } rounded-r-md focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent ${
                       !isParamlinkEditable ? "bg-gray-50" : ""
-                    }`}
+                    } text-sm sm:text-base`}
                   />
                 </div>
                 {paramlinkError && (
@@ -1425,7 +1456,7 @@ return (
                 Content
               </label>
               <div className="border border-gray-300 rounded-md overflow-hidden">
-                <div className="relative quill-container" style={{ height: "45vh" }}>
+                <div className="relative quill-container h-[60vh] sm:h-[65vh] lg:h-[70vh] xl:h-[75vh]">
                   <QuillAny
                     theme="snow"
                     value={content}
@@ -1487,42 +1518,14 @@ return (
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sticky bottom-0 -mx-6 px-6 py-4 mt-6 shadow-md">
-              <div>
-                {lastSaved && (
-                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
-                    Last saved: {lastSaved.toLocaleTimeString()}
-                  </span>
-                )}
+            {/* Last Saved Indicator */}
+            {lastSaved && (
+              <div className="pt-4 border-t bg-gray-50 -mx-6 px-6 py-3">
+                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
+                  Last saved: {lastSaved.toLocaleTimeString()}
+                </span>
               </div>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowResetConfirm(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-red-50 text-red-700 rounded-md hover:bg-red-100 transition-colors"
-                >
-                  <RotateCcw size={16} />
-                  Reset Editor
-                </button>
-                <button
-                  onClick={saveDraft}
-                  disabled={isLoading}
-                  className="flex items-center gap-2 px-6 py-2.5 text-sm md:text-base font-semibold bg-gray-700 text-white rounded-md hover:bg-gray-800 disabled:opacity-50 transition-colors shadow"
-                >
-                  <Save size={16} />
-                  Save Draft
-                </button>
-                <button
-                  onClick={selectedPublished ? updatePublishedBlog : publishBlog}
-                  disabled={isLoading || !title || !content}
-                  className="flex items-center gap-2 px-6 py-2.5 text-sm md:text-base font-semibold bg-[#2D9AA5] text-white rounded-md hover:bg-[#257A83] disabled:opacity-50 transition-colors shadow"
-                >
-                  <Send size={16} />
-                  {selectedPublished ? "Update Blog" : "Publish Blog"}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

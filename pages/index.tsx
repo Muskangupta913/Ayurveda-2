@@ -18,6 +18,7 @@ import Image from "next/image";
 import SearchCard from "../components/SearchCard";
 import Index1 from "../components/Index1";
 import Blog from "../components/blog";
+import LatestJobs from "@/components/LatestJobs";
 
 // Types
 interface Clinic {
@@ -468,13 +469,13 @@ export default function Home(): React.ReactElement {
         return (a.distance ?? 0) - (b.distance ?? 0);
       });
       setClinics(clinicsWithDistance);
-      
+
       // Scroll to results section when clinics are loaded
       setTimeout(() => {
         if (resultsRef.current && clinicsWithDistance.length > 0) {
-          resultsRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+          resultsRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
           });
         }
       }, 100);
@@ -1311,9 +1312,9 @@ export default function Home(): React.ReactElement {
         }
       `}</style>
       <Index1 />
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Blog />
-        </div>
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Blog />
+      </div>
     </div>
 
   );
