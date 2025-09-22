@@ -15,7 +15,6 @@ import {
   Calendar,
   MoreVertical,
   X,
-  Download,
   SortAsc,
   SortDesc,
   Clock,
@@ -24,21 +23,21 @@ import {
 } from "lucide-react";
 import parse from "html-react-parser";
 
-type CommentReply = {
-  _id: string;
-  user?: string;
-  username: string;
-  text: string;
-  createdAt: string;
-};
+// type CommentReply = {
+//   _id: string;
+//   user?: string;
+//   username: string;
+//   text: string;
+//   createdAt: string;
+// };
 
-type Comment = {
-  _id: string;
-  username: string;
-  text: string;
-  createdAt: string;
-  replies?: CommentReply[];
-};
+// type Comment = {
+//   _id: string;
+//   username: string;
+//   text: string;
+//   createdAt: string;
+//   replies?: CommentReply[];
+// };
 
 interface Blog {
   _id: string;
@@ -673,7 +672,7 @@ const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
 const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [filteredBlogs, setFilteredBlogs] = useState<Blog[]>([]);
-  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
+  // const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -684,12 +683,11 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
   const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [setIsExporting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsBlog, setDetailsBlog] = useState(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-
+  const [setDetailsLoading] = useState(false);
   const blogsPerPage = 12;
 
   useEffect(() => {
@@ -804,62 +802,62 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
     setCurrentPage(1);
   };
 
-  const exportData = async () => {
-    setIsExporting(true);
-    try {
-      const data = {
-        exportDate: new Date().toISOString(),
-        summary: {
-          totalBlogs: blogs.length,
-          totalLikes: blogs.reduce((sum, blog) => sum + blog.likesCount, 0),
-          totalComments: blogs.reduce(
-            (sum, blog) => sum + blog.commentsCount,
-            0
-          ),
-          avgEngagement:
-            blogs.length > 0
-              ? (
-                blogs.reduce(
-                  (sum, blog) => sum + blog.likesCount + blog.commentsCount,
-                  0
-                ) / blogs.length
-              ).toFixed(2)
-              : 0,
-        },
-        blogs: blogs.map((blog) => ({
-          title: blog.title,
-          createdAt: blog.createdAt,
-          likesCount: blog.likesCount,
-          commentsCount: blog.commentsCount,
-          totalEngagement: blog.likesCount + blog.commentsCount,
-          comments: blog.comments.map((comment) => ({
-            username: comment.username,
-            text: comment.text,
-            createdAt: comment.createdAt,
-            repliesCount: comment.replies?.length || 0,
-          })),
-        })),
-      };
+  // const exportData = async () => {
+  //   setIsExporting(true);
+  //   try {
+  //     const data = {
+  //       exportDate: new Date().toISOString(),
+  //       summary: {
+  //         totalBlogs: blogs.length,
+  //         totalLikes: blogs.reduce((sum, blog) => sum + blog.likesCount, 0),
+  //         totalComments: blogs.reduce(
+  //           (sum, blog) => sum + blog.commentsCount,
+  //           0
+  //         ),
+  //         avgEngagement:
+  //           blogs.length > 0
+  //             ? (
+  //               blogs.reduce(
+  //                 (sum, blog) => sum + blog.likesCount + blog.commentsCount,
+  //                 0
+  //               ) / blogs.length
+  //             ).toFixed(2)
+  //             : 0,
+  //       },
+  //       blogs: blogs.map((blog) => ({
+  //         title: blog.title,
+  //         createdAt: blog.createdAt,
+  //         likesCount: blog.likesCount,
+  //         commentsCount: blog.commentsCount,
+  //         totalEngagement: blog.likesCount + blog.commentsCount,
+  //         comments: blog.comments.map((comment) => ({
+  //           username: comment.username,
+  //           text: comment.text,
+  //           createdAt: comment.createdAt,
+  //           repliesCount: comment.replies?.length || 0,
+  //         })),
+  //       })),
+  //     };
 
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `blog-analytics-${new Date().toISOString().split("T")[0]
-        }.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Export failed:", error);
-      setError("Failed to export data");
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  //     const blob = new Blob([JSON.stringify(data, null, 2)], {
+  //       type: "application/json",
+  //     });
+  //     const url = URL.createObjectURL(blob);
+  //     const a = document.createElement("a");
+  //     a.href = url;
+  //     a.download = `blog-analytics-${new Date().toISOString().split("T")[0]
+  //       }.json`;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     document.body.removeChild(a);
+  //     URL.revokeObjectURL(url);
+  //   } catch (error) {
+  //     console.error("Export failed:", error);
+  //     setError("Failed to export data");
+  //   } finally {
+  //     setIsExporting(false);
+  //   }
+  // };
 
   const submitReply = async (
     blogId: string,

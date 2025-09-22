@@ -1,8 +1,6 @@
 import React, {
   useState,
   useEffect,
-  ChangeEvent,
-  MouseEvent,
   useMemo,
 } from "react";
 import dynamic from "next/dynamic";
@@ -11,7 +9,6 @@ import { useRouter } from "next/router";
 import {
   FileText,
   Video,
-  Eye,
   Save,
   Send,
   Trash2,
@@ -20,21 +17,8 @@ import {
   Bold,
   Italic,
   Underline,
-  Strikethrough,
-  List,
-  ListOrdered,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
-  IndentIncrease,
-  IndentDecrease,
-  Quote,
-  Code,
   Link as LinkIcon,
   RotateCcw,
-  RotateCw,
-  Eraser,
 } from "lucide-react";
 
 // Dynamic import for ReactQuill
@@ -76,15 +60,15 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   const [isParamlinkEditable, setIsParamlinkEditable] = useState(false);
   const [content, setContent] = useState<string>("");
   // lists moved to /clinic/published-blogs page
-  const [drafts, setDrafts] = useState<Blog[]>([]);
-  const [publishedBlogs, setPublishedBlogs] = useState<Blog[]>([]);
+  const [setDrafts] = useState<Blog[]>([]);
+  const [setPublishedBlogs] = useState<Blog[]>([]);
   const [selectedDraft, setSelectedDraft] = useState<string | null>(null);
   const [selectedPublished, setSelectedPublished] = useState<string | null>(
     null
   );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   // tabs removed
-  const [activeTab, setActiveTab] = useState<"drafts" | "published">("drafts");
+  const [setActiveTab] = useState<"drafts" | "published">("drafts");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showLinkModal, setShowLinkModal] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(
@@ -1053,7 +1037,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       showToast("Failed to delete published blog", "error");
     }
   };
-  const [value, setValue] = useState("");
+  // const [value, setValue] = useState("");
 
   // Inline toolbar state
   const [showInlineToolbar, setShowInlineToolbar] = useState<boolean>(false);
@@ -1718,7 +1702,7 @@ return (
                 onClick={discardAndCloseEditor}
                 className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Don't save
+                Exit without saving
               </button>
               <button
                 onClick={saveAndCloseEditor}
@@ -1849,7 +1833,7 @@ return (
           </div>
           <div className="p-6">
             <p className="text-gray-700 mb-6">
-              Are you sure you want to delete "{confirmAction.title}"? This
+              Are you sure you want to delete {confirmAction.title}? This
               action cannot be undone.
             </p>
             <div className="flex gap-3">
