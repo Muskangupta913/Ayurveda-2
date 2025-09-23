@@ -22,7 +22,7 @@ const BlogSchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
   status: { type: String, enum: ["draft", "published"], default: "draft" },
-  paramlink: { type: String, required: true, unique: true },
+  paramlink: { type: String, required: true },
   postedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -34,6 +34,12 @@ const BlogSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
+
+// Ensure paramlink is unique only for published blogs
+BlogSchema.index(
+  { paramlink: 1 },
+  { unique: true, partialFilterExpression: { status: "published" } }
+);
 
 delete mongoose.models.Blog;
 export default mongoose.models.Blog || mongoose.model("Blog", BlogSchema);

@@ -127,8 +127,8 @@ export default async function handler(req, res) {
             });
           }
 
-          // Check for unique paramlink
-          const existing = await Blog.findOne({ paramlink });
+          // Allow same paramlink for drafts; only block if a published blog already uses it
+          const existing = await Blog.findOne({ paramlink, status: "published" });
           if (existing) {
             return res
               .status(409)
@@ -206,11 +206,11 @@ export default async function handler(req, res) {
             });
           }
 
-          // If paramlink is being updated, check for uniqueness
+          // If paramlink is being updated, only conflict with published blogs
           if (paramlink) {
             const existing = await Blog.findOne({
               paramlink,
-              _id: { $ne: id },
+              status: "published",
             });
             if (existing) {
               return res

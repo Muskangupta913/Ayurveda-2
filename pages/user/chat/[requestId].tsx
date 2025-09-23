@@ -451,7 +451,7 @@ function UserChat() {
               </div>
               <h3 className="text-xl font-semibold text-[#19242d] mb-2">No messages yet</h3>
               <p className="text-gray-600 mb-6 max-w-md">
-                Start the conversation or wait for the doctor's response.
+                Start the conversation or wait for the doctor to respond.
               </p>
             </div>
           ) : (

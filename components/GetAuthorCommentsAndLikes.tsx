@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ThumbsUp,
   MessageCircle,
@@ -23,21 +24,21 @@ import {
 } from "lucide-react";
 import parse from "html-react-parser";
 
-// type CommentReply = {
-//   _id: string;
-//   user?: string;
-//   username: string;
-//   text: string;
-//   createdAt: string;
-// };
+type CommentReply = {
+  _id: string;
+  user?: string;
+  username: string;
+  text: string;
+  createdAt: string;
+};
 
-// type Comment = {
-//   _id: string;
-//   username: string;
-//   text: string;
-//   createdAt: string;
-//   replies?: CommentReply[];
-// };
+type Comment = {
+  _id: string;
+  username: string;
+  text: string;
+  createdAt: string;
+  replies?: CommentReply[];
+};
 
 interface Blog {
   _id: string;
@@ -48,9 +49,9 @@ interface Blog {
   content?: string;
   youtubeUrl?: string;
   likesCount: number;
-  likes: any[];
+  likes: string[];
   commentsCount: number;
-  comments: any[]; // or a better type for comments
+  comments: Comment[];
 }
 
 interface Props {
@@ -683,31 +684,14 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
   const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [setIsExporting] = useState(false);
+  // export state removed (unused)
   const [refreshing, setRefreshing] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [detailsBlog, setDetailsBlog] = useState(null);
-  const [setDetailsLoading] = useState(false);
+  const [detailsBlog, setDetailsBlog] = useState<Blog | null>(null);
+  const [, setDetailsLoading] = useState(false);
   const blogsPerPage = 12;
 
-  useEffect(() => {
-    fetchBlogs();
-  }, [tokenKey]);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [blogs, searchTerm, filterOption, sortOption]);
-
-  // Update popupBlog after add/delete comment/reply
-  useEffect(() => {
-    if (popupBlog) {
-      // Find the latest version of the popupBlog from blogs
-      const updated = blogs.find((b) => b._id === popupBlog._id);
-      if (updated) setPopupBlog(updated);
-    }
-  }, [blogs]);
-
-  const fetchBlogs = async () => {
+  const fetchBlogs = useCallback(async () => {
     setLoading(true);
     setError(null);
     const token = localStorage.getItem(tokenKey);
@@ -734,15 +718,13 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tokenKey]);
 
-  const refreshData = async () => {
-    setRefreshing(true);
-    await fetchBlogs();
-    setRefreshing(false);
-  };
+  useEffect(() => {
+    fetchBlogs();
+  }, [fetchBlogs]);
 
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = blogs.filter((blog) =>
       blog.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -800,7 +782,30 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
 
     setFilteredBlogs(filtered);
     setCurrentPage(1);
+  }, [blogs, searchTerm, filterOption, sortOption]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
+
+  // Update popupBlog after add/delete comment/reply
+  useEffect(() => {
+    if (popupBlog) {
+      // Find the latest version of the popupBlog from blogs
+      const updated = blogs.find((b) => b._id === popupBlog._id);
+      if (updated) setPopupBlog(updated);
+    }
+  }, [blogs, popupBlog]);
+
+  // fetchBlogs moved above and memoized with useCallback
+
+  const refreshData = async () => {
+    setRefreshing(true);
+    await fetchBlogs();
+    setRefreshing(false);
   };
+
+  // duplicate applyFiltersAndSort removed; memoized version is defined above
 
   // const exportData = async () => {
   //   setIsExporting(true);
@@ -953,10 +958,9 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
     (sum, blog) => sum + blog.commentsCount,
     0
   );
-  const avgEngagement =
-    blogs.length > 0
-      ? ((totalLikes + totalComments) / blogs.length).toFixed(1)
-      : "0";
+  const avgEngagementNumber =
+    blogs.length > 0 ? (totalLikes + totalComments) / blogs.length : 0;
+  const avgEngagement = avgEngagementNumber.toFixed(1);
 
   const indexOfLastBlog = currentPage * blogsPerPage;
   const indexOfFirstBlog = indexOfLastBlog - blogsPerPage;
@@ -1301,13 +1305,13 @@ hover:bg-[#23747D] transition-colors disabled:opacity-50
 
                   {/* Performance Indicator */}
                   <div className="flex items-center">
-                    {blog.likesCount + blog.commentsCount > avgEngagement ? (
+                    {blog.likesCount + blog.commentsCount > avgEngagementNumber ? (
                       <div className="flex items-center text-green-600">
                         <TrendingUp size={14} className="mr-1" />
                         <span className="text-xs font-medium">High</span>
                       </div>
                     ) : blog.likesCount + blog.commentsCount >
-                      avgEngagement / 2 ? (
+                      avgEngagementNumber / 2 ? (
                       <div className="flex items-center text-yellow-600">
                         <TrendingUp size={14} className="mr-1" />
                         <span className="text-xs font-medium">Medium</span>

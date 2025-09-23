@@ -27,9 +27,9 @@ interface UserProfile {
   phone?: string;
 }
 
-type Props = {
-  userProfile?: UserProfile;
-};
+// type Props = {
+//   userProfile?: UserProfile;
+// };
 
 
 
