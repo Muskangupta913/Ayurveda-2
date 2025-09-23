@@ -16,10 +16,11 @@ import {
   Link,
   RotateCcw,
 } from "lucide-react";
-import { RangeStatic, StringMap } from "quill";
+import { RangeStatic} from "quill";
 
-type InlineFormat = "bold" | "italic" | "underline" | "link";
-type DesiredValue = boolean | string | undefined;
+
+// type InlineFormat = "bold" | "italic" | "underline" | "link";
+// type DesiredValue = boolean | string | undefined;
 
 // Dynamic import for ReactQuill
 const ReactQuill = dynamic(() => import("react-quill"), {
@@ -1028,44 +1029,44 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     };
   }, []);
 
-  const formatWithQuill = (format: InlineFormat, desiredValue?: DesiredValue) => {
-    const quill = quillRef.current?.getEditor?.();
-    if (!quill) return;
+  // const formatWithQuill = (format: InlineFormat, desiredValue?: DesiredValue) => {
+  //   const quill = quillRef.current?.getEditor?.();
+  //   if (!quill) return;
 
-    const run = (fn: () => void) => setTimeout(fn, 0);
+  //   const run = (fn: () => void) => setTimeout(fn, 0);
 
-    const restoreAnd = (fn: () => void) => {
-      const r: RangeStatic | null = lastRangeRef.current || quill.getSelection();
-      if (!r || r.length === 0) return; // require selection
-      quill.focus();
-      quill.setSelection(r.index, r.length || 0, "user");
-      run(fn);
-    };
+  //   const restoreAnd = (fn: () => void) => {
+  //     const r: RangeStatic | null = lastRangeRef.current || quill.getSelection();
+  //     if (!r || r.length === 0) return; // require selection
+  //     quill.focus();
+  //     quill.setSelection(r.index, r.length || 0, "user");
+  //     run(fn);
+  //   };
 
-    // Link handling
-    if (format === "link") {
-      const r2: RangeStatic | null = quill.getSelection(true);
-      if (!r2 || r2.length === 0) return;
-      lastRangeRef.current = r2;
-      const currentFormats: StringMap = quill.getFormat(r2.index, r2.length);
-      setTextLinkUrl((currentFormats?.link as string) || "");
-      setShowTextLinkModal(true);
-      return;
-    }
+  //   // Link handling
+  //   if (format === "link") {
+  //     const r2: RangeStatic | null = quill.getSelection(true);
+  //     if (!r2 || r2.length === 0) return;
+  //     lastRangeRef.current = r2;
+  //     const currentFormats: StringMap = quill.getFormat(r2.index, r2.length);
+  //     setTextLinkUrl((currentFormats?.link as string) || "");
+  //     setShowTextLinkModal(true);
+  //     return;
+  //   }
 
-    // Inline styles (minimal) with robust formatText
-    if (["bold", "italic", "underline"].includes(format)) {
-      restoreAnd(() => {
-        const r2: RangeStatic | null = quill.getSelection(true);
-        if (!r2) return;
-        const current: StringMap = quill.getFormat(r2.index, r2.length);
-        const nextVal =
-          desiredValue === undefined ? !current?.[format] : desiredValue;
-        quill.formatText(r2.index, r2.length, { [format]: nextVal });
-      });
-      return;
-    }
-  };
+  //   // Inline styles (minimal) with robust formatText
+  //   if (["bold", "italic", "underline"].includes(format)) {
+  //     restoreAnd(() => {
+  //       const r2: RangeStatic | null = quill.getSelection(true);
+  //       if (!r2) return;
+  //       const current: StringMap = quill.getFormat(r2.index, r2.length);
+  //       const nextVal =
+  //         desiredValue === undefined ? !current?.[format] : desiredValue;
+  //       quill.formatText(r2.index, r2.length, { [format]: nextVal });
+  //     });
+  //     return;
+  //   }
+  // };
 
   const handleSelectionChange = (range: Range, source: string, editor: Quill) => {
     try {
