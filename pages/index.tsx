@@ -18,7 +18,7 @@ import Image from "next/image";
 import SearchCard from "../components/SearchCard";
 import Index1 from "../components/Index1";
 import Blog from "../components/blog";
-import LatestJobs from "@/components/LatestJobs";
+// import LatestJobs from "@/components/LatestJobs";
 
 // Types
 interface Clinic {

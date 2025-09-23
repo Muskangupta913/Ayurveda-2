@@ -77,7 +77,7 @@ const AdminBlogs = () => {
       const processedBlogs = processBlogs(res.data.blogs);
       setBlogs(processedBlogs);
       setFilteredBlogs(processedBlogs);
-    } catch (err) {
+    } catch {
       // console.error("Error fetching blogs:", err);
     } finally {
       setLoading(false);
@@ -116,7 +116,7 @@ const AdminBlogs = () => {
 
       setShowDeleteModal(false);
       setSelectedBlog(null);
-    } catch (err) {
+    } catch  {
       // console.error(err);
     }
   };

@@ -14,7 +14,6 @@ import {
   Trash2,
   X,
   Link,
-  Link as LinkIcon,
   RotateCcw,
 } from "lucide-react";
 import { RangeStatic, StringMap } from "quill";
