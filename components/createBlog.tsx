@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { RangeStatic, StringMap } from "quill";
 
+
 type InlineFormat = "bold" | "italic" | "underline" | "link";
 type DesiredValue = boolean | string | undefined;
 
