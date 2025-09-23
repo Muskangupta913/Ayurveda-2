@@ -57,6 +57,51 @@
 //   theme?: 'light' | 'dark';
 // }
 
+// // Types for chart components
+// interface CustomPieLabelProps {
+//   cx: number;
+//   cy: number;
+//   midAngle: number;
+//   innerRadius: number;
+//   outerRadius: number;
+//   percent: number;
+//   value: number;
+// }
+
+// interface ChartDataItem {
+//   name: string;
+//   value: number;
+//   fill: string;
+//   percentage?: number;
+// }
+
+// interface JobStatusDataItem {
+//   name: string;
+//   value: number;
+//   fill: string;
+//   label: string;
+// }
+
+// interface TreatmentAreaDataItem {
+//   name: string;
+//   value: number;
+// }
+
+// interface ContentComparisonDataItem {
+//   category: string;
+//   main: number;
+//   secondary: number;
+// }
+
+// // Custom shape props for Bar component
+// interface CustomBarShapeProps {
+//   fill: string;
+//   x?: number;
+//   y?: number;
+//   width?: number;
+//   height?: number;
+// }
+
 // // ---------------- Custom Components ----------------
 // interface StatCardProps {
 //   title: string;
@@ -145,46 +190,30 @@
 // );
 
 // // Custom label components for charts
-// // const CustomBarLabel = (props: any) => {
-// //   const { x, y, width, height, value } = props;
-// //   return (
+// // const CustomPieLabel: React.FC<CustomPieLabelProps> = (props) => {
+// //   const { cx, cy, midAngle, innerRadius, outerRadius, percent, value } = props;
+// //   const RADIAN = Math.PI / 180;
+// //   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+// //   const x = cx + radius * Math.cos(-midAngle * RADIAN);
+// //   const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+// //   return percent > 0.05 ? (
 // //     <text
-// //       x={x + width / 2}
-// //       y={y - 5}
-// //       fill="#374151"
-// //       textAnchor="middle"
-// //       fontSize="12"
+// //       x={x}
+// //       y={y}
+// //       fill="white"
+// //       textAnchor={x > cx ? 'start' : 'end'}
+// //       dominantBaseline="central"
+// //       fontSize="11"
 // //       fontWeight="600"
 // //     >
-// //       {value}
+// //       {`${value}`}
 // //     </text>
-// //   );
+// //   ) : null;
 // // };
 
-// const CustomPieLabel = (props) => {
-//   const { cx, cy, midAngle, innerRadius, outerRadius, percent,value } = props;
-//   const RADIAN = Math.PI / 180;
-//   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-//   const x = cx + radius * Math.cos(-midAngle * RADIAN);
-//   const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-//   return percent > 0.05 ? (
-//     <text
-//       x={x}
-//       y={y}
-//       fill="white"
-//       textAnchor={x > cx ? 'start' : 'end'}
-//       dominantBaseline="central"
-//       fontSize="11"
-//       fontWeight="600"
-//     >
-//       {`${value}`}
-//     </text>
-//   ) : null;
-// };
-
 // // ---------------- Main Component ----------------
-// const AdminStats: React.FC<AdminStatsProps> = ({}) => {
+// const AdminStats: React.FC<AdminStatsProps> = () => {
 //   const [treatments, setTreatments] = useState<Treatment[]>([]);
 //   const [blogs, setBlogs] = useState<Blog[]>([]);
 //   const [jobs, setJobs] = useState<JobsData>({
@@ -254,7 +283,7 @@
 //   const totalJobCount = pendingJobCount + approvedJobCount + declinedJobCount;
 
 //   // ---------------- Chart Data Preparation ----------------
-//   const overviewHistogramData = useMemo(() => ([
+//   const overviewHistogramData = useMemo((): ChartDataItem[] => ([
 //     { 
 //       name: 'Main\nTreatments', 
 //       value: mainTreatmentCount, 
@@ -281,18 +310,18 @@
 //     },
 //   ]), [mainTreatmentCount, subTreatmentCount, blogCount, totalJobCount]);
 
-//   const jobStatusPieData = useMemo(() => ([
+//   const jobStatusPieData = useMemo((): JobStatusDataItem[] => ([
 //     { name: 'Approved', value: approvedJobCount, fill: '#10B981', label: `Approved (${approvedJobCount})` },
 //     { name: 'Pending', value: pendingJobCount, fill: '#F59E0B', label: `Pending (${pendingJobCount})` },
 //     { name: 'Declined', value: declinedJobCount, fill: '#EF4444', label: `Declined (${declinedJobCount})` },
 //   ].filter((item) => item.value > 0)), [approvedJobCount, pendingJobCount, declinedJobCount]);
 
-//   const treatmentAreaData = useMemo(() => ([
+//   const treatmentAreaData = useMemo((): TreatmentAreaDataItem[] => ([
 //     { name: 'Main', value: mainTreatmentCount },
 //     { name: 'Sub', value: subTreatmentCount },
 //   ]), [mainTreatmentCount, subTreatmentCount]);
 
-//   const contentComparisonData = useMemo(() => ([
+//   const contentComparisonData = useMemo((): ContentComparisonDataItem[] => ([
 //     {
 //       category: 'Treatments',
 //       main: mainTreatmentCount,
@@ -312,10 +341,17 @@
 
 //   const pieColors = useMemo(() => ['#2D9AA5', '#F59E0B', '#EF4444'], []);
 
+//   // Custom shape component for bars
+// //   const CustomBarShape: React.FC<CustomBarShapeProps> = (props) => {
+// //     const { fill, x = 0, y = 0, width = 0, height = 0 } = props;
+// //     const gradientId = fill === '#2D9AA5' ? 'histogramGradient1' :
+// //                      fill === '#10B981' ? 'histogramGradient2' :
+// //                      fill === '#F59E0B' ? 'histogramGradient3' : 'histogramGradient4';
+// //     return <rect x={x} y={y} width={width} height={height} fill={`url(#${gradientId})`} rx={4} ry={4} />;
+// //   };
+
 //   return (
 //     <div className="min-h-screen bg-gray-50">
-     
-
 //       {/* Main Content */}
 //       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
 //         {/* Statistics Cards Grid */}
@@ -368,7 +404,7 @@
 //                   innerRadius={30}
 //                   dataKey="value"
 //                   labelLine={false}
-//                   label={CustomPieLabel}
+//                 //   label={CustomPieLabel}
 //                   isAnimationActive={false}
 //                 >
 //                   {jobStatusPieData.map((entry, index) => (
@@ -378,7 +414,10 @@
 //                 <Legend 
 //                   verticalAlign="bottom" 
 //                   height={36}
-//                   formatter={(value, entry) => `${value}: ${entry.payload?.value || 0}`}
+//                   formatter={(value: string, entry: unknown) => {
+//                     const payloadValue = (entry as { payload?: { value?: number } })?.payload?.value ?? 0;
+//                     return `${value}: ${payloadValue}`;
+//                   }}
 //                 />
 //               </PieChart>
 //             </ResponsiveContainer>
@@ -537,13 +576,7 @@
 //                   dataKey="value" 
 //                   radius={[4, 4, 0, 0]} 
 //                   isAnimationActive={false}
-//                   shape={(props) => {
-//                     const { fill, ...rest } = props;
-//                     const gradientId = fill === '#2D9AA5' ? 'histogramGradient1' :
-//                                      fill === '#10B981' ? 'histogramGradient2' :
-//                                      fill === '#F59E0B' ? 'histogramGradient3' : 'histogramGradient4';
-//                     return <rect {...rest} fill={`url(#${gradientId})`} />;
-//                   }}
+//                 //   shape={CustomBarShape}
 //                 >
 //                   <LabelList 
 //                     dataKey="value" 
