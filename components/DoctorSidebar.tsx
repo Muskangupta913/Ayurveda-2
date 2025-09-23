@@ -1,8 +1,7 @@
-import React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { FC, useState, useEffect } from 'react';
-import clsx from 'clsx';
+import React, { useState, useEffect, FC } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import clsx from "clsx";
 
 interface NavItem {
   label: string;
@@ -15,66 +14,42 @@ interface NavItem {
 
 const navigationItems: NavItem[] = [
   {
-    label: 'Dashboard',
-    path: '/doctor/doctor-dashboard',
-    icon: '🏠',
-    description: 'Overview & metrics',
+    label: "Dashboard",
+    path: "/doctor/doctor-dashboard",
+    icon: "🏠",
+    description: "Overview & metrics",
   },
   {
-    label: 'Manage Profile',
-    path: '/doctor/manageDoctor',
-    icon: '👤',
-    description: 'Manage Profile',
+    label: "Manage Profile",
+    path: "/doctor/manageDoctor",
+    icon: "👤",
+    description: "Manage Profile",
   },
   {
-    label: 'All users Review',
-    path: '/doctor/getReview',
-    icon: '📅',
-    description: 'See All Users Reviews',
+    label: "All users Review",
+    path: "/doctor/getReview",
+    icon: "📅",
+    description: "See All Users Reviews",
   },
   {
-    label: 'Blogs',
-    icon: '📄',
-    description: 'Blog Management',
+    label: "Blogs",
+    icon: "📄",
+    description: "Blog Management",
     children: [
-      {
-        label: 'Write Article',
-        path: '/doctor/BlogForm',
-        icon: '📝',
-      },
-      {
-        label: 'Published Blogs',
-        path: '/doctor/published-blogs',
-        icon: '📄',
-      },
-      {
-        label: 'Blog Analytics',
-        path: '/doctor/getAuthorCommentsAndLikes',
-        icon: '📊',
-      }
-    ]
+      { label: "Write Article", path: "/doctor/BlogForm", icon: "📝" },
+      { label: "Published Blogs", path: "/doctor/published-blogs", icon: "📄" },
+      { label: "Blog Analytics", path: "/doctor/getAuthorCommentsAndLikes", icon: "📊" },
+    ],
   },
   {
-    label: 'Jobs',
-    icon: '💼',
-    description: 'Job Management',
+    label: "Jobs",
+    icon: "💼",
+    description: "Job Management",
     children: [
-      {
-        label: 'Post Job',
-        path: '/doctor/create-job',
-        icon: '📢',
-      },
-      {
-        label: 'See Jobs',
-        path: '/doctor/my-jobs',
-        icon: '💼',
-      },
-      {
-        label: 'Job Applicants',
-        path: '/doctor/job-applicants',
-        icon: '👥',
-      }
-    ]
+      { label: "Post Job", path: "/doctor/create-job", icon: "📢" },
+      { label: "See Jobs", path: "/doctor/my-jobs", icon: "💼" },
+      { label: "Job Applicants", path: "/doctor/job-applicants", icon: "👥" },
+    ],
   },
   {
     label: "Prescription Requests",
@@ -84,62 +59,42 @@ const navigationItems: NavItem[] = [
   },
 ];
 
-interface DoctorSidebarProps {
-  className?: string;
-}
-
-const DoctorSidebar: FC<DoctorSidebarProps> = ({ className }) => {
+const DoctorSidebar: FC = () => {
   const router = useRouter();
   const [isDesktopHidden, setIsDesktopHidden] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  // Handle escape key to close mobile menu
+  // Close mobile sidebar with ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isMobileOpen) {
+      if (e.key === "Escape" && isMobileOpen) {
         setIsMobileOpen(false);
       }
     };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [isMobileOpen]);
 
-  // Prevent body scroll when mobile menu is open
+  // Prevent background scroll when mobile sidebar is open
   useEffect(() => {
-    if (isMobileOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
+    document.body.style.overflow = isMobileOpen ? "hidden" : "unset";
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [isMobileOpen]);
 
-  const handleToggleDesktop = () => {
-    setIsDesktopHidden(!isDesktopHidden);
-  };
-
-  const handleToggleMobile = () => {
-    setIsMobileOpen(!isMobileOpen);
-  };
-
-  const handleCloseMobile = () => {
-    setIsMobileOpen(false);
-  };
-
-  const handleItemClick = () => {
-    setIsMobileOpen(false);
-  };
-
+  // Handlers
+  const handleToggleDesktop = () => setIsDesktopHidden(!isDesktopHidden);
+  const handleToggleMobile = () => setIsMobileOpen(!isMobileOpen);
+  const handleCloseMobile = () => setIsMobileOpen(false);
+  const handleItemClick = () => setIsMobileOpen(false);
   const handleRegularItemClick = () => {
     setIsMobileOpen(false);
     setOpenDropdown(null);
   };
+
 
   return (
     <>
