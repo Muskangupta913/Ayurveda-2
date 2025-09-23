@@ -1932,5 +1932,3 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 };
 
 export default BlogEditor;
-
-
