@@ -14,11 +14,13 @@ import {
   Trash2,
   X,
   Link,
+  Bold,
+  Italic,
+  Underline,
   Link as LinkIcon,
   RotateCcw,
 } from "lucide-react";
 import { RangeStatic, StringMap } from "quill";
-
 
 type InlineFormat = "bold" | "italic" | "underline" | "link";
 type DesiredValue = boolean | string | undefined;
@@ -1002,8 +1004,11 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   // const [value, setValue] = useState("");
 
   // Inline toolbar state
-  // const [showInlineToolbar, setShowInlineToolbar] = useState<boolean>(false);
-  // const [inlineToolbarPos, setInlineToolbarPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [showInlineToolbar, setShowInlineToolbar] = useState<boolean>(false);
+  const [inlineToolbarPos, setInlineToolbarPos] = useState<{
+    top: number;
+    left: number;
+  }>({ top: 0, left: 0 });
   const quillRef = React.useRef(null);
   const lastRangeRef = React.useRef(null);
 
@@ -1063,6 +1068,23 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
         quill.formatText(r2.index, r2.length, { [format]: nextVal });
       });
       return;
+    }
+  };
+
+  const handleSelectionChange = (range: Range, source: string, editor: Quill) => {
+    try {
+      if (range && range.length > 0) {
+        const bounds = editor.getBounds(range.index, range.length);
+        const top = Math.max(0, bounds.top - 42);
+        const left = Math.max(0, bounds.left);
+        setInlineToolbarPos({ top, left });
+        setShowInlineToolbar(true);
+        lastRangeRef.current = range;
+      } else {
+        setShowInlineToolbar(false);
+      }
+    } catch {
+      setShowInlineToolbar(false);
     }
   };
 
@@ -1169,7 +1191,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     "video",
   ];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Use any-typed Quill to satisfy TS when module types are missing
   const QuillAny: any = ReactQuill as any;
 
   // Utility to get base URL
@@ -1395,12 +1417,58 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                       value={content}
                       onChange={(val) => setContent(val)}
                       ref={quillRef}
+                      onChangeSelection={handleSelectionChange}
                       modules={modules}
                       formats={formats}
                       placeholder="Start writing your blog content..."
                       className="h-full"
                       style={{ ["--ql-primary"]: "#2D9AA5", ["--ql-image-width"]: "600px", ["--ql-image-height"]: "400px" }}
                     />
+                    {showInlineToolbar && (
+                      <div
+                        className="absolute z-50 bg-white border border-gray-200 shadow-lg rounded-md px-2 py-1 flex items-center gap-1"
+                        style={{
+                          top: inlineToolbarPos.top,
+                          left: inlineToolbarPos.left,
+                        }}
+                        onMouseDown={(e) => e.preventDefault()}
+                      >
+                        <button
+                          type="button"
+                          className="p-1 hover:bg-gray-100 rounded"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => formatWithQuill("bold")}
+                        >
+                          <Bold size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="p-1 hover:bg-gray-100 rounded italic"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => formatWithQuill("italic")}
+                        >
+                          <Italic size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="p-1 hover:bg-gray-100 rounded underline"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => formatWithQuill("underline")}
+                        >
+                          <Underline size={16} />
+                        </button>
+                        <div className="mx-1 w-px h-4 bg-gray-200" />
+                        <button
+                          type="button"
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Link"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => formatWithQuill("link")}
+                        >
+                          <LinkIcon size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
