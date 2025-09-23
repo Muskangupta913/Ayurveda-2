@@ -923,7 +923,7 @@ interface UserProfile {
             return;
           }
           setUserProfile(undefined);
-        } catch (e) {
+        } catch {
           setError("Failed to load user profile");
           setUserProfile(undefined);
         } finally {

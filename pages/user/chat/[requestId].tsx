@@ -99,7 +99,7 @@ function UserChat() {
             setChat(nextChat);
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         const status = err?.response?.status;
         const apiMessage = err?.response?.data?.message;
         if (!redirectedRef.current && status === 404 && apiMessage === 'Prescription request not found') {
@@ -153,7 +153,7 @@ function UserChat() {
         setChat(chatData);
         setPrescriptionRequest(pr);
       }
-    } catch (err: any) {
+    } catch (err) {
       const status = err?.response?.status;
       const apiMessage = err?.response?.data?.message;
       if (!redirectedRef.current && status === 404 && apiMessage === 'Prescription request not found') {
