@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth';
 import type { NextPageWithLayout } from '../_app';
+
 // Add Lead interface
 interface Lead {
     name: string;
@@ -14,14 +15,17 @@ interface Lead {
     createdAt: string;
 }
 
+// Add type for sortable fields
+type SortField = keyof Lead;
+
 function LeadsPage() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [dateFilter, setDateFilter] = useState("");
     const [locationFilter, setLocationFilter] = useState("");
-    const [sortField, setSortField] = useState("createdAt");
-    const [sortDirection, setSortDirection] = useState("desc");
+    const [sortField, setSortField] = useState<SortField>("createdAt");
+    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const [currentPage, setCurrentPage] = useState(1);
     const [showFilters, setShowFilters] = useState(false);
     const itemsPerPage = 25;
@@ -61,7 +65,7 @@ function LeadsPage() {
         }
 
         // Month-wise aggregation for the last 12 months
-        const monthWiseCounts = {};
+        const monthWiseCounts: Record<string, number> = {};
         for (let i = 11; i >= 0; i--) {
             const date = new Date();
             date.setMonth(date.getMonth() - i);
@@ -78,7 +82,7 @@ function LeadsPage() {
         const monthWiseData = Object.entries(monthWiseCounts).map(([month, count]) => ({ month, count }));
 
         // Top locations
-        const locationCounts = {};
+        const locationCounts: Record<string, number> = {};
         leads.forEach(lead => {
             if (lead.location) {
                 locationCounts[lead.location] = (locationCounts[lead.location] || 0) + 1;
@@ -90,7 +94,7 @@ function LeadsPage() {
             .map(([location, count]) => ({ location, count }));
 
         // Hourly distribution (for pie chart)
-        const hourlyData = {};
+        const hourlyData: Record<string, number> = {};
         leads.forEach(lead => {
             const hour = new Date(lead.createdAt).getHours();
             const timeSlot = hour < 6 ? 'Night' :
@@ -149,10 +153,10 @@ function LeadsPage() {
             return matchesSearch && matchesDate && matchesLocation;
         });
 
-        // Sort
+        // Sort - Fixed TypeScript errors
         filtered.sort((a, b) => {
-            let aVal = a[sortField];
-            let bVal = b[sortField];
+            let aVal: string | Date = a[sortField];
+            let bVal: string | Date = b[sortField];
 
             if (sortField === "createdAt") {
                 aVal = new Date(aVal);
@@ -204,7 +208,7 @@ function LeadsPage() {
         setCurrentPage(1);
     };
 
-    const handleSort = (field) => {
+    const handleSort = (field: SortField) => {
         if (sortField === field) {
             setSortDirection(sortDirection === "asc" ? "desc" : "asc");
         } else {
@@ -214,7 +218,7 @@ function LeadsPage() {
         setCurrentPage(1);
     };
 
-    const SortIcon = ({ field }) => {
+    const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return <SortAsc className="w-4 h-4 opacity-30" />;
         return sortDirection === "asc" ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />;
     };
@@ -410,11 +414,11 @@ function LeadsPage() {
                                     <thead>
                                         <tr className="bg-gray-50 border-b border-gray-200">
                                             {[
-                                                { key: "name", label: "Name" },
-                                                { key: "phone", label: "Phone" },
-                                                { key: "location", label: "Location" },
-                                                { key: "query", label: "Query" },
-                                                { key: "createdAt", label: "Date" }
+                                                { key: "name" as SortField, label: "Name" },
+                                                { key: "phone" as SortField, label: "Phone" },
+                                                { key: "location" as SortField, label: "Location" },
+                                                { key: "query" as SortField, label: "Query" },
+                                                { key: "createdAt" as SortField, label: "Date" }
                                             ].map(({ key, label }) => (
                                                 <th
                                                     key={key}
@@ -554,6 +558,7 @@ function LeadsPage() {
         </div>
     );
 }
+
 LeadsPage.getLayout = function PageLayout(page: React.ReactNode) {
     return <AdminLayout>{page}</AdminLayout>;
 };

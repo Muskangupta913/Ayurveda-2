@@ -4,6 +4,8 @@ import ClinicLayout from "../../components/ClinicLayout";
 import withClinicAuth from "../../components/withClinicAuth";
 import type { NextPageWithLayout } from "../_app";
 
+
+
 function ClinicGetAuthorCommentsAndLikes() {
   return <GetAuthorCommentsAndLikes tokenKey="clinicToken" />;
 }

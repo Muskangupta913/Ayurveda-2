@@ -1,15 +1,14 @@
 "use client";
 import { useState } from "react";
-import axios from "axios";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import type { AxiosError } from "axios";
 
 export default function ClinicLogin() {
   interface ClinicLoginForm {
     email: string;
     password: string;
   }
+
   const [form, setForm] = useState<ClinicLoginForm>({
     email: "",
     password: "",
@@ -40,38 +39,42 @@ export default function ClinicLogin() {
     }
 
     try {
-      const res = await axios.post("/api/clinics/clinic-login", {
-        email: form.email,
-        password: form.password,
+      const res = await fetch("/api/clinics/clinic-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
       });
 
-      // ✅ 1. Store token
-      localStorage.setItem("clinicToken", res.data.token);
+      const data = await res.json();
 
-      // ✅ 2. Store user info (as string)
-      localStorage.setItem("clinicUser", JSON.stringify(res.data.user));
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
+      }
 
-      // ✅ 3. Retrieve user info
-      const clinicUserRaw = localStorage.getItem("clinicUser");
-      // ✅ 4. Log for debugging
-      console.log("clinicUser", clinicUserRaw);
+      // Store token and user info
+      localStorage.setItem("clinicToken", data.token);
+      localStorage.setItem("clinicUser", JSON.stringify(data.user));
+
+      console.log("clinicUser", localStorage.getItem("clinicUser"));
       console.log("clinicToken", localStorage.getItem("clinicToken"));
+      console.log("Login successful:", data);
 
-      // Optional: Log the response for debugging
-      console.log("Login successful:", res.data);
-
-      // ✅ Show success toast
-      setToastMessage(res.data.message || "Login successful!");
+      // Show success toast
+      setToastMessage(data.message || "Login successful!");
       setShowToast(true);
 
-      // ✅ Hide toast and redirect
       setTimeout(() => {
         setShowToast(false);
         router.push("/clinic/clinic-dashboard");
       }, 2000);
     } catch (error: unknown) {
-      const axiosError = error as AxiosError<{ message?: string }>;
-      setErr(axiosError.response?.data?.message || "Login failed");
+      const fetchError = error as Error;
+      setErr(fetchError.message);
     } finally {
       setLoading(false);
     }
@@ -106,7 +109,6 @@ export default function ClinicLogin() {
             background: `linear-gradient(to bottom right, #2D9AA5, #238B96, #1A7A82)`,
           }}
         >
-          {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-10 left-10 w-20 h-20 border-2 border-white rounded-full"></div>
             <div className="absolute top-32 right-20 w-16 h-16 border-2 border-white rounded-full"></div>
@@ -114,7 +116,6 @@ export default function ClinicLogin() {
             <div className="absolute bottom-40 right-10 w-12 h-12 border-2 border-white rounded-full"></div>
           </div>
 
-          {/* Content */}
           <div className="flex flex-col justify-center items-start p-12 text-white relative z-10">
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-6">
@@ -181,7 +182,6 @@ export default function ClinicLogin() {
             </div>
           </div>
 
-          {/* Decorative Elements */}
           <div
             className="absolute bottom-0 right-0 w-32 h-32 rounded-tl-full opacity-20"
             style={{
@@ -252,9 +252,7 @@ export default function ClinicLogin() {
                       />
                     </svg>
                   </div>
-                  <span className="text-red-700 text-sm font-medium">
-                    {err}
-                  </span>
+                  <span className="text-red-700 text-sm font-medium">{err}</span>
                 </div>
               )}
 
@@ -346,7 +344,6 @@ export default function ClinicLogin() {
                   </div>
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -354,7 +351,7 @@ export default function ClinicLogin() {
                   style={{
                     background: `linear-gradient(to right, #2D9AA5, #238B96)`,
                     boxShadow:
-                      "0 10px 15px -3px rgba(45, 154, 165, 0.3), 0 4px 6px -2px rgba(45, 154, 165, 0.05)",
+                      "0 10px 15px -3px rgba(45, 154, 165, 0.3), 0 4px 6px -2 rgba(45, 154, 165, 0.05)",
                   }}
                 >
                   {loading ? (
@@ -368,7 +365,6 @@ export default function ClinicLogin() {
                 </button>
               </form>
 
-              {/* Footer Links */}
               <div className="mt-8 text-center">
                 <p className="text-sm text-right mt-1">
                   <button
@@ -381,7 +377,6 @@ export default function ClinicLogin() {
               </div>
             </div>
 
-            {/* Additional Links */}
             <div className="mt-6 text-center text-sm text-gray-500">
               <Link
                 href="/"
@@ -389,22 +384,15 @@ export default function ClinicLogin() {
               >
                 Back to Website
               </Link>
-              {/* <span>•</span>
-              <a
-                href="#"
-                className="hover:text-blue-600 transition duration-200 ml-4"
-              >
-                Privacy Policy
-              </a> */}
             </div>
           </div>
         </div>
       </div>
-      <style jsx>{`
+
+      {/* <style jsx>{`
         .animate-slide-in {
           animation: slideIn 0.3s ease-out;
         }
-
         @keyframes slideIn {
           from {
             transform: translateX(100%);
@@ -415,7 +403,7 @@ export default function ClinicLogin() {
             opacity: 1;
           }
         }
-      `}</style>
+      `}</style> */}
     </>
   );
 }

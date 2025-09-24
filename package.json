@@ -12,7 +12,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@react-google-maps/api": "^2.20.7",
-    "axios": "^1.10.0",
+    "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "csvtojson": "^2.0.10",

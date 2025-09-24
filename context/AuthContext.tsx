@@ -1,6 +1,6 @@
 // context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { useRouter } from 'next/router';
 
 interface User {
@@ -34,6 +34,11 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// ✅ Custom type guard — no Axios types needed
+function isAxiosError(error: unknown): error is { response?: { data?: { message?: string } } } {
+  return typeof error === 'object' && error !== null && 'isAxiosError' in error;
+}
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,12 +56,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const verifyToken = async (token: string) => {
     try {
       const response = await axios.get<{ user: User }>('/api/auth/verify', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setUser(response.data.user);
-    } catch (error) {
-      const err = error as AxiosError<{ message?: string }>;
-      console.error(err.response?.data?.message || 'Token verification failed');
+    } catch (error: unknown) {
+      if (isAxiosError(error)) {
+        console.error(error.response?.data?.message || 'Token verification failed');
+      } else {
+        console.error('Unexpected error verifying token', error);
+      }
       localStorage.removeItem('token');
     } finally {
       setLoading(false);
@@ -65,14 +73,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post<{ user: User; token: string }>('/api/auth/login', { email, password });
-      const { user, token } = response.data;
+      const response = await axios.post<{ user: User; token: string }>('/api/auth/login', {
+        email,
+        password,
+      });
 
+      const { user, token } = response.data;
       localStorage.setItem('token', token);
       setUser(user);
-    } catch (error) {
-      const err = error as AxiosError<{ message?: string }>;
-      throw new Error(err.response?.data?.message || 'Login failed');
+    } catch (error: unknown) {
+      if (isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Login failed');
+      }
+      throw new Error('Unexpected login error');
     }
   };
 
@@ -82,14 +95,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name,
         email,
         password,
-        phone
+        phone,
       });
 
       // Auto login after successful registration
       await login(email, password);
-    } catch (error) {
-      const err = error as AxiosError<{ message?: string }>;
-      throw new Error(err.response?.data?.message || 'Registration failed');
+    } catch (error: unknown) {
+      if (isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Registration failed');
+      }
+      throw new Error('Unexpected registration error');
     }
   };
 
@@ -105,7 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     isAuthenticated: !!user,
-    loading
+    loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

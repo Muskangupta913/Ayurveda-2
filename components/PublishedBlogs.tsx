@@ -300,6 +300,11 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
     </div>
   );
 
+  // Get the current blog being edited
+  const currentEditingBlog = useMemo(() => {
+    return published.find((b) => b._id === editId);
+  }, [published, editId]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -479,7 +484,7 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
       </div>
 
       {/* Edit Modal */}
-      {showEditModal && (
+      {showEditModal && currentEditingBlog && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-gray-100 transform transition-all duration-300 hover:scale-[1.01]">
 
@@ -513,10 +518,7 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
                   Blog Title
                 </label>
                 <input
-                  className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-white"
-                  style={{ '--tw-ring-color': '#2D9AA5' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2D9AA5'}
-                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                  className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-white focus:ring-teal-500 focus:border-teal-500"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   placeholder="Enter your blog title..."
@@ -553,10 +555,7 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
                 </div>
 
                 <input
-                  className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-white"
-                  style={{ '--tw-ring-color': '#2D9AA5' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2D9AA5'}
-                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                  className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-white focus:ring-teal-500 focus:border-teal-500"
                   value={editParamlink}
                   onChange={(e) => setEditParamlink(slugify(e.target.value))}
                   placeholder="blog-url-slug"
@@ -573,11 +572,17 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
             {/* Action Buttons */}
             <div className="p-6 border-t border-gray-100 flex gap-3">
               <button
-                onClick={() => handleSave(published.find((b) => b._id === editId))}
+                onClick={() => handleSave(currentEditingBlog)}
                 className="flex-1 text-white py-4 px-6 rounded-xl font-semibold transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                 style={{ backgroundColor: '#2D9AA5' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#267a83'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#2D9AA5'}
+                onMouseEnter={(e) => {
+                  const target = e.target as HTMLButtonElement;
+                  target.style.backgroundColor = '#267a83';
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.target as HTMLButtonElement;
+                  target.style.backgroundColor = '#2D9AA5';
+                }}
               >
                 <Save className="w-5 h-5" />
                 Save Changes
