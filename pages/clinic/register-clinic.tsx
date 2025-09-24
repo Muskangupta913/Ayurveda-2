@@ -1244,3 +1244,4 @@ export default RegisterClinic;
 RegisterClinic.getLayout = function PageLayout(page: React.ReactNode) {
   return <Layout>{page}</Layout>;
 };
+

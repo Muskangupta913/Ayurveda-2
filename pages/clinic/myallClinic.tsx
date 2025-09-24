@@ -234,6 +234,8 @@ interface TreatmentManagerProps {
       price?: number;
     }>;
   }) => void;
+  // Add this missing prop
+  setAvailableTreatments: (treatments: Treatment[]) => void;
 }
 const TreatmentManager = ({
   label,
@@ -248,9 +250,8 @@ const TreatmentManager = ({
   setShowCustomInput,
   onAddFromDropdown,
   onUpdateTreatment,
+  setAvailableTreatments, // Now properly typed and available
 }: TreatmentManagerProps) => {
-  // const [selectedMainTreatment, setSelectedMainTreatment] =
-  //   useState<string>("");
   const [customSubTreatment, setCustomSubTreatment] = useState<string>("");
   const [customSubTreatmentPrice, setCustomSubTreatmentPrice] =
     useState<string>("");
@@ -318,7 +319,6 @@ const TreatmentManager = ({
 
     const updatedTreatment = {
       ...currentTreatment,
-
       subTreatments: updatedSubTreatments,
     };
 
@@ -575,13 +575,14 @@ const TreatmentManager = ({
                             value={subTreatment.price ?? 0}
                             onChange={(e) => {
                               const updatedSubTreatments =
-                                item.subTreatments.map((st, i) =>
+                                item.subTreatments!.map((st, i) =>
                                   i === subIndex
                                     ? { ...st, price: Number(e.target.value) }
                                     : st
                                 );
                               onUpdateTreatment(index, {
-                                ...item,
+                                mainTreatment: item.mainTreatment,
+                                mainTreatmentSlug: item.mainTreatment.toLowerCase().replace(/\s+/g, "-"),
                                 subTreatments: updatedSubTreatments,
                               });
                             }}
@@ -1217,6 +1218,7 @@ function ClinicManagementDashboard() {
                     setShowCustomInput={setShowCustomTreatmentInput}
                     onAddFromDropdown={addTreatmentFromDropdown}
                     onUpdateTreatment={handleUpdateTreatment}
+                    setAvailableTreatments={setAvailableTreatments}
                   />
 
                   {/* Photo Upload */}
