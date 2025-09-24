@@ -1,6 +1,15 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
-import { Calendar, FileText,Settings,ChevronLeft, ChevronRight, Heart, Thermometer, Pill, Activity, BarChart3, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import * as React from 'react';
+import { Calendar, FileText, Settings, ChevronLeft, ChevronRight, Heart, Thermometer, Pill, Activity, BarChart3, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { jsPDF } from "jspdf";
+// Global window type extensions
+declare global {
+  interface Window {
+    jspdf?: {
+      jsPDF: typeof import('jspdf').jsPDF;
+    };
+  }
+}
 
 // TypeScript Interfaces
 interface UserProfile {
@@ -41,6 +50,10 @@ interface ZevaAppData {
   createdAt: string;
 }
 
+interface PageWithLayout extends React.FC {
+  getLayout?: (page: React.ReactNode) => React.ReactNode;
+}
+type JSPDFConstructor = typeof jsPDF; 
 // Toast system
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 interface ToastItem {
@@ -55,22 +68,31 @@ interface ToastContextValue {
 
 const ToastContext = React.createContext<ToastContextValue | null>(null);
 
-// Storage helpers
+// Storage helpers - These would use localStorage in a real browser environment
+// For this demo, we'll use React state
 const STORAGE_KEY = 'zeva_app_data';
 
 function loadData(): ZevaAppData | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
+  // In a real browser environment, this would use localStorage
+  // For demo purposes, we'll return null initially
   try {
-    return JSON.parse(raw) as ZevaAppData;
+    const stored = window.localStorage?.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored) as ZevaAppData;
+    }
   } catch (e) {
     console.error('Invalid ZEVA data', e);
-    return null;
   }
+  return null;
 }
 
 function saveData(data: ZevaAppData): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // In a real browser environment, this would use localStorage
+  try {
+    window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save data', e);
+  }
 }
 
 function ensureUser(name: string, age: number): void {
@@ -108,16 +130,34 @@ function getDaysBetween(date1: string, date2: string): number {
   return Math.abs((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+
+
+// interface JSPDFInstance {
+//   internal: {
+//     pageSize: {
+//       getWidth(): number;
+//       getHeight(): number;
+//     };
+//   };
+//   setFontSize(size: number): void;
+//   setTextColor(r: number, g: number, b: number): void;
+//   text(text: string, x: number, y: number, options?: { align: string }): void;
+//   setDrawColor(r: number, g: number, b: number): void;
+//   line(x1: number, y1: number, x2: number, y2: number): void;
+//   addPage(): void;
+//   save(filename: string): void;
+// }
+
 // Main App Component
 const ZevaPeriodTracker: React.FC = () => {
-  const [data, setData] = useState<ZevaAppData | null>(null);
-  const [currentView, setCurrentView] = useState<'onboarding' | 'calendar' | 'log' | 'analytics' | 'settings' | 'report'>('onboarding');
-  const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [showFAQ, setShowFAQ] = useState<boolean>(false);
-  const [showResetModal, setShowResetModal] = useState<boolean>(false);
-  const reportRef = useRef<HTMLDivElement>(null);
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [data, setData] = React.useState<ZevaAppData | null>(null);
+  const [currentView, setCurrentView] = React.useState<'onboarding' | 'calendar' | 'log' | 'analytics' | 'settings' | 'report'>('onboarding');
+  const [selectedDate, setSelectedDate] = React.useState<string>(formatDate(new Date()));
+  const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
+  const [showFAQ, setShowFAQ] = React.useState<boolean>(false);
+  const [showResetModal, setShowResetModal] = React.useState<boolean>(false);
+  const reportRef = React.useRef<HTMLDivElement>(null);
+  const [toasts, setToasts] = React.useState<ToastItem[]>([]);
 
   const showToast = (message: string, type: ToastType = 'info', durationMs = 3000) => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -127,7 +167,7 @@ const ZevaPeriodTracker: React.FC = () => {
     }, durationMs);
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     const loadedData = loadData();
     if (loadedData?.user) {
       setData(loadedData);
@@ -144,9 +184,9 @@ const ZevaPeriodTracker: React.FC = () => {
 
   // Onboarding Component
   const OnboardingView: React.FC = () => {
-    const toastCtx = useContext(ToastContext);
-    const [name, setName] = useState('');
-    const [age, setAge] = useState('');
+    const toastCtx = React.useContext(ToastContext);
+    const [name, setName] = React.useState('');
+    const [age, setAge] = React.useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -161,118 +201,43 @@ const ZevaPeriodTracker: React.FC = () => {
       }
     };
 
-return (
-  <div className="h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex">
-    <div className="w-full flex">
-      {/* Mobile Layout */}
-      <div className="lg:hidden bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto my-auto">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#ed449b] rounded-full flex items-center justify-center mx-auto mb-4">
-            <Heart className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-800">ZEVA</h1>
-          <p className="text-gray-600 mt-2">Your personal periods tracker</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
-              placeholder="Enter your name"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Age
-            </label>
-            <input
-              type="number"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
-              placeholder="Enter your age"
-              min="13"
-              max="60"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-[#ed449b] text-white py-3 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors"
-          >
-            Get Started
-          </button>
-        </form>
-
-        <p className="text-xs text-gray-500 mt-6 text-center">
-          All your data stays private on your device
-        </p>
-      </div>
-
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex w-full h-full">
-        {/* Left Side - Branding */}
-        <div className="w-1/2 bg-gradient-to-br from-[#ed449b] to-[#d63d8f] flex flex-col justify-center items-center text-white">
-          <div className="text-center">
-           
-            <h1 className="text-6xl font-bold mb-6">ZEVA</h1>
-            <p className="text-2xl mb-12 opacity-90">Your personal periods tracker</p>
-            <div className="space-y-6 text-left text-lg">
-              <div className="flex items-center space-x-4">
-                <div className="w-3 h-3 bg-white rounded-full"></div>
-                <span>Track your cycle with ease</span>
+    return (
+      <div className="h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex">
+        <div className="w-full flex">
+          {/* Mobile Layout */}
+          <div className="lg:hidden bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto my-auto">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-[#ed449b] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Heart className="w-8 h-8 text-white" />
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-3 h-3 bg-white rounded-full"></div>
-                <span>Get personalized insights</span>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-3 h-3 bg-white rounded-full"></div>
-                <span>Complete privacy guaranteed</span>
-              </div>
+              <h1 className="text-3xl font-bold text-gray-800">ZEVA</h1>
+              <p className="text-gray-600 mt-2">Your personal periods tracker</p>
             </div>
-          </div>
-        </div>
 
-        {/* Right Side - Form */}
-        <div className="w-1/2 bg-white flex flex-col justify-center items-center px-16">
-          <div className="max-w-md w-full">
-            <h2 className="text-3xl font-bold text-gray-800 mb-3">Welcome!</h2>
-            <p className="text-gray-600 mb-10 text-lg">Let&apos;s get you started on your journey</p>
-
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-base font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Your Name
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="text-gray-900 w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-lg"
+                  className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
                   placeholder="Enter your name"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-base font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Your Age
                 </label>
                 <input
                   type="number"
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
-                  className="text-gray-900 w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-lg"
+                  className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent"
                   placeholder="Enter your age"
                   min="13"
                   max="60"
@@ -282,21 +247,96 @@ return (
 
               <button
                 type="submit"
-                className="w-full bg-[#ed449b] text-white py-4 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors text-lg"
+                className="w-full bg-[#ed449b] text-white py-3 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors"
               >
                 Get Started
               </button>
             </form>
 
-            <p className="text-sm text-gray-500 mt-8 text-center">
+            <p className="text-xs text-gray-500 mt-6 text-center">
               All your data stays private on your device
             </p>
           </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden lg:flex w-full h-full">
+            {/* Left Side - Branding */}
+            <div className="w-1/2 bg-gradient-to-br from-[#ed449b] to-[#d63d8f] flex flex-col justify-center items-center text-white">
+              <div className="text-center">
+               
+                <h1 className="text-6xl font-bold mb-6">ZEVA</h1>
+                <p className="text-2xl mb-12 opacity-90">Your personal periods tracker</p>
+                <div className="space-y-6 text-left text-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                    <span>Track your cycle with ease</span>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                    <span>Get personalized insights</span>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                    <span>Complete privacy guaranteed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Form */}
+            <div className="w-1/2 bg-white flex flex-col justify-center items-center px-16">
+              <div className="max-w-md w-full">
+                <h2 className="text-3xl font-bold text-gray-800 mb-3">Welcome!</h2>
+                <p className="text-gray-600 mb-10 text-lg">Let&apos;s get you started on your journey</p>
+
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div>
+                    <label className="block text-base font-medium text-gray-700 mb-3">
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="text-gray-900 w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-lg"
+                      placeholder="Enter your name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-base font-medium text-gray-700 mb-3">
+                      Your Age
+                    </label>
+                    <input
+                      type="number"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      className="text-gray-900 w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ed449b] focus:border-transparent text-lg"
+                      placeholder="Enter your age"
+                      min="13"
+                      max="60"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-[#ed449b] text-white py-4 rounded-lg font-medium hover:bg-[#d63d8f] transition-colors text-lg"
+                  >
+                    Get Started
+                  </button>
+                </form>
+
+                <p className="text-sm text-gray-500 mt-8 text-center">
+                  All your data stays private on your device
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-);
+    );
   };
 
   // Calendar View Component
@@ -456,16 +496,16 @@ return (
 
   // Daily Log View Component
   const LogView: React.FC = () => {
-    const toastCtx = useContext(ToastContext);
-    const [flow, setFlow] = useState<'light' | 'medium' | 'heavy' | ''>('');
-    const [symptoms, setSymptoms] = useState<string[]>([]);
-    const [mood, setMood] = useState<string>('');
-    const [bbt, setBbt] = useState<string>('');
-    const [medication, setMedication] = useState<string[]>([]);
-    const [sexualActivity, setSexualActivity] = useState<'protected' | 'unprotected' | 'none' | ''>('');
-    const [notes] = useState<string>('');
+    const toastCtx = React.useContext(ToastContext);
+    const [flow, setFlow] = React.useState<'light' | 'medium' | 'heavy' | ''>('');
+    const [symptoms, setSymptoms] = React.useState<string[]>([]);
+    const [mood, setMood] = React.useState<string>('');
+    const [bbt, setBbt] = React.useState<string>('');
+    const [medication, setMedication] = React.useState<string[]>([]);
+    const [sexualActivity, setSexualActivity] = React.useState<'protected' | 'unprotected' | 'none' | ''>('');
+    const [notes] = React.useState<string>('');
 
-    useEffect(() => {
+    React.useEffect(() => {
       if (!data) return;
       
       const dailyLog = data.dailyLogs[selectedDate];
@@ -894,8 +934,8 @@ return (
 
   // Report View Component
   const ReportView: React.FC = () => {
-    const toastCtx = useContext(ToastContext);
-    
+    const toastCtx = React.useContext(ToastContext);
+
     const loadScript = (src: string): Promise<void> => {
       return new Promise((resolve, reject) => {
         const existing = Array.from(document.getElementsByTagName('script')).find(s => s.src === src);
@@ -914,40 +954,40 @@ return (
     };
 
     const ensurePdfLibs = async () => {
-      const w = window as Record<string, unknown>;
-      if (!w.jspdf || !(w.jspdf as Record<string, unknown>).jsPDF) {
-        try { await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'); }
-        catch {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        try { 
+          await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'); 
+        } catch {
           await loadScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
         }
       }
     };
-    
-    const generateBasicPdf = (jsPDF: new (...args: unknown[]) => Record<string, unknown>, fileName: string) => {
-      const doc = new jsPDF('p', 'mm', 'a4') as Record<string, unknown>;
-      const pageWidth = (doc.internal as Record<string, unknown>).pageSize.getWidth() as number;
+
+    const generateBasicPdf = (jsPDFConstructor: JSPDFConstructor, fileName: string) => {
+      const doc = new jsPDFConstructor('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
       let y = 18;
       const addTitle = (text: string) => {
-        (doc.setFontSize as (size: number) => void)(18);
-        (doc.setTextColor as (r: number, g: number, b: number) => void)(237, 68, 155);
-        (doc.text as (text: string, x: number, y: number, options?: Record<string, unknown>) => void)(text, pageWidth / 2, y, { align: 'center' });
+        doc.setFontSize(18);
+        doc.setTextColor(237, 68, 155);
+        doc.text(text, pageWidth / 2, y, { align: 'center' });
         y += 8;
       };
       const addSmall = (text: string) => {
-        (doc.setFontSize as (size: number) => void)(12);
-        (doc.setTextColor as (r: number, g: number, b: number) => void)(55, 65, 81);
-        (doc.text as (text: string, x: number, y: number, options?: Record<string, unknown>) => void)(text, pageWidth / 2, y, { align: 'center' });
+        doc.setFontSize(12);
+        doc.setTextColor(55, 65, 81);
+        doc.text(text, pageWidth / 2, y, { align: 'center' });
         y += 6;
       };
       const addKey = (k: string, v: string) => {
-        (doc.setFontSize as (size: number) => void)(11);
-        (doc.setTextColor as (r: number, g: number, b: number) => void)(31, 41, 55);
-        (doc.text as (text: string, x: number, y: number, options?: Record<string, unknown>) => void)(`${k}: ${v}`, 15, y);
+        doc.setFontSize(11);
+        doc.setTextColor(31, 41, 55);
+        doc.text(`${k}: ${v}`, 15, y);
         y += 6;
       };
       const addDivider = () => {
-        (doc.setDrawColor as (r: number, g: number, b: number) => void)(230, 230, 230);
-        (doc.line as (x1: number, y1: number, x2: number, y2: number) => void)(15, y, pageWidth - 15, y);
+        doc.setDrawColor(230, 230, 230);
+        doc.line(15, y, pageWidth - 15, y);
         y += 8;
       };
 
@@ -961,9 +1001,9 @@ return (
       addKey('Report date', new Date().toLocaleDateString());
 
       addDivider();
-      (doc.setFontSize as (size: number) => void)(14);
-      (doc.setTextColor as (r: number, g: number, b: number) => void)(31, 41, 55);
-      (doc.text as (text: string, x: number, y: number) => void)('Summary', 15, y);
+      doc.setFontSize(14);
+      doc.setTextColor(31, 41, 55);
+      doc.text('Summary', 15, y);
       y += 8;
       const avgCycleLength = data.cycles.length > 0
         ? Math.round(data.cycles.reduce((s, c) => s + c.length, 0) / data.cycles.length)
@@ -973,37 +1013,37 @@ return (
 
       if (data.cycles.length > 0) {
         addDivider();
-        (doc.setFontSize as (size: number) => void)(14);
-        (doc.setTextColor as (r: number, g: number, b: number) => void)(31, 41, 55);
-        (doc.text as (text: string, x: number, y: number) => void)('Recent Cycles', 15, y);
+        doc.setFontSize(14);
+        doc.setTextColor(31, 41, 55);
+        doc.text('Recent Cycles', 15, y);
         y += 8;
-        (doc.setFontSize as (size: number) => void)(11);
-        (doc.setTextColor as (r: number, g: number, b: number) => void)(55, 65, 81);
+        doc.setFontSize(11);
+        doc.setTextColor(55, 65, 81);
         const headerY = y;
-        (doc.text as (text: string, x: number, y: number) => void)('Start', 15, headerY);
-        (doc.text as (text: string, x: number, y: number) => void)('End', 65, headerY);
-        (doc.text as (text: string, x: number, y: number) => void)('Length', 115, headerY);
-        (doc.text as (text: string, x: number, y: number) => void)('Flow Days', 150, headerY);
+        doc.text('Start', 15, headerY);
+        doc.text('End', 65, headerY);
+        doc.text('Length', 115, headerY);
+        doc.text('Flow Days', 150, headerY);
         y += 5;
-        (doc.setDrawColor as (r: number, g: number, b: number) => void)(200, 200, 200);
-        (doc.line as (x1: number, y1: number, x2: number, y2: number) => void)(15, y, pageWidth - 15, y);
+        doc.setDrawColor(200, 200, 200);
+        doc.line(15, y, pageWidth - 15, y);
         y += 4;
         data.cycles.slice(-5).forEach((cycle) => {
-          if (y > 270) { (doc.addPage as () => void)(); y = 18; }
-          (doc.text as (text: string, x: number, y: number) => void)(new Date(cycle.startDate).toLocaleDateString(), 15, y);
-          (doc.text as (text: string, x: number, y: number) => void)(new Date(cycle.endDate).toLocaleDateString(), 65, y);
-          (doc.text as (text: string, x: number, y: number) => void)(String(cycle.length), 115, y);
-          (doc.text as (text: string, x: number, y: number) => void)(String(cycle.flowByDay.length), 150, y);
+          if (y > 270) { doc.addPage(); y = 18; }
+          doc.text(new Date(cycle.startDate).toLocaleDateString(), 15, y);
+          doc.text(new Date(cycle.endDate).toLocaleDateString(), 65, y);
+          doc.text(String(cycle.length), 115, y);
+          doc.text(String(cycle.flowByDay.length), 150, y);
           y += 6;
         });
       }
 
       y += 10;
-      (doc.setFontSize as (size: number) => void)(10);
-      (doc.setTextColor as (r: number, g: number, b: number) => void)(107, 114, 128);
-      (doc.text as (text: string, x: number, y: number) => void)('This report was generated from your personal tracking data. Certified by ZEVA.', 15, y);
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128);
+      doc.text('This report was generated from your personal tracking data. Certified by ZEVA.', 15, y);
 
-      (doc.save as (filename: string) => void)(fileName);
+      doc.save(fileName);
     };
     
     const generatePDF = async () => {
@@ -1012,9 +1052,11 @@ return (
       const fileName = `ZEVA_report_${data.user?.name || 'user'}_${new Date().toISOString().slice(0, 10)}.pdf`;
       try {
         await ensurePdfLibs();
-        const w = window as Record<string, unknown>;
-        const jsPDF = ((w.jspdf as Record<string, unknown>) && (w.jspdf as Record<string, unknown>).jsPDF) ? (w.jspdf as Record<string, unknown>).jsPDF as new (...args: unknown[]) => Record<string, unknown> : w.jsPDF as new (...args: unknown[]) => Record<string, unknown>;
-        generateBasicPdf(jsPDF, fileName);
+        const jsPDFConstructor = window.jspdf?.jsPDF;
+        if (!jsPDFConstructor) {
+          throw new Error('jsPDF not loaded');
+        }
+        generateBasicPdf(jsPDFConstructor, fileName);
 
         const newData = { ...data };
         newData.exports.push({
@@ -1149,11 +1191,11 @@ return (
 
   // Enhanced Confirmation Modal Component
   const ResetConfirmationModal: React.FC = () => {
-    const toastCtx = useContext(ToastContext);
+    const toastCtx = React.useContext(ToastContext);
 
     const handleConfirmReset = () => {
       try {
-        localStorage.removeItem(STORAGE_KEY);
+        window.localStorage?.removeItem(STORAGE_KEY);
         setData(null);
         setCurrentView('onboarding');
         setShowResetModal(false);
@@ -1256,10 +1298,10 @@ return (
 
   // Settings View Component
   const SettingsView: React.FC = () => {
-    const toastCtx = useContext(ToastContext);
-    const [editName, setEditName] = useState<string>(data?.user?.name || '');
-    const [editAge, setEditAge] = useState<string>(data?.user?.age?.toString() || '');
-    const [preferredCycle, setPreferredCycle] = useState<string>(
+    const toastCtx = React.useContext(ToastContext);
+    const [editName, setEditName] = React.useState<string>(data?.user?.name || '');
+    const [editAge, setEditAge] = React.useState<string>(data?.user?.age?.toString() || '');
+    const [preferredCycle, setPreferredCycle] = React.useState<string>(
       data?.settings.preferredCycleLength ? String(data.settings.preferredCycleLength) : ''
     );
 
@@ -1370,7 +1412,7 @@ return (
 
   // FAQ Component
   const FAQView: React.FC = () => {
-    const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+    const [openFAQ, setOpenFAQ] = React.useState<number | null>(null);
 
     const faqs = [
       {
@@ -1569,7 +1611,7 @@ return (
 
 export default ZevaPeriodTracker;
 
-
-ZevaPeriodTracker.getLayout = function PageLayout(page: React.ReactNode) {
+const ZevaPeriodTrackerWithLayout = ZevaPeriodTracker as PageWithLayout;
+ZevaPeriodTrackerWithLayout.getLayout = function PageLayout(page: React.ReactNode) {
   return page; // No layout
-}
+};

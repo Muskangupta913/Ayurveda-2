@@ -20,7 +20,6 @@ type Blog = {
   liked?: boolean;
 };
 
-
 export default function BlogList() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [filteredBlogs, setFilteredBlogs] = useState<Blog[]>([]);
@@ -31,9 +30,6 @@ export default function BlogList() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const blogsPerPage = 15;
-
-  // Popup state for thumb up
-  const [setShowThumbPopup] = useState<{ [key: string]: boolean }>({});
 
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
@@ -71,7 +67,6 @@ export default function BlogList() {
           } else {
             blogData = blogData.map((b: Blog): Blog => ({ ...b, liked: false }));
           }
-
 
           setBlogs(blogData);
           setFilteredBlogs(blogData);
@@ -140,20 +135,6 @@ export default function BlogList() {
       setShowAuthModal(true);
       pendingLikeBlogId.current = blogId;
       return;
-    }
-
-    // Find the current blog to check its liked status
-    const currentBlog = blogs.find(blog => blog._id === blogId);
-    const isCurrentlyLiked = currentBlog?.liked || false;
-
-    // Show thumb popup only when liking (not when unliking)
-    if (!isCurrentlyLiked) {
-      setShowThumbPopup(prev => ({ ...prev, [blogId]: true }));
-
-      // Hide popup after 2 seconds
-      setTimeout(() => {
-        setShowThumbPopup(prev => ({ ...prev, [blogId]: false }));
-      }, 2000);
     }
 
     try {
