@@ -40,6 +40,22 @@ interface Clinic {
   };
 }
 
+interface GeocodeResponse {
+  results: Array<{
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
+    formatted_address: string;
+  }>;
+  plus_code?: {
+    global_code: string;
+  };
+}
+
+
 function AdminClinicApproval() {
   const [clinics, setClinics] = useState<{
     pending: Clinic[];
@@ -90,21 +106,23 @@ function AdminClinicApproval() {
     setLoading(true);
     try {
       const [pending, approved, declined] = await Promise.all([
-        axios.get("/api/admin/pending-clinics"),
-        axios.get("/api/admin/approved-clinics"),
-        axios.get("/api/admin/declined-clinics"),
+        axios.get<{ clinics: Clinic[] }>("/api/admin/pending-clinics"),
+        axios.get<{ clinics: Clinic[] }>("/api/admin/approved-clinics"),
+        axios.get<{ clinics: Clinic[] }>("/api/admin/declined-clinics"),
       ]);
+
       setClinics({
         pending: pending.data.clinics,
         approved: approved.data.clinics,
         declined: declined.data.clinics,
       });
-    } catch {
-      // console.error("Failed to fetch clinics:", error);
+    } catch (error) {
+      console.error("Failed to fetch clinics:", error);
     } finally {
       setLoading(false);
     }
   };
+
 
 
   const handleAction = async (type: string, clinicId: string) => {
@@ -116,7 +134,9 @@ function AdminClinicApproval() {
       };
 
       if (type === "delete") {
-        await axios.delete(endpoints[type as keyof typeof endpoints], {
+        await axios.request({
+          url: endpoints[type as keyof typeof endpoints],
+          method: 'DELETE',
           data: { clinicId },
         });
       } else {
@@ -130,23 +150,24 @@ function AdminClinicApproval() {
     }
   };
 
-  const handleAddressClick = async (address: string) => {
-    try {
-      const response = await axios.get(
-        `https://maps.googleapis.com/maps/api/geocode/json`,
-        {
-          params: { address, key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY },
-        }
-      );
-      const location = response.data.results[0]?.geometry?.location;
-      if (location) {
-        setSelectedLocation(location);
-        setMapVisible(true);
+const handleAddressClick = async (address: string) => {
+  try {
+    const response = await axios.get<GeocodeResponse>(
+      "https://maps.googleapis.com/maps/api/geocode/json",
+      {
+        params: { address, key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY },
       }
-    } catch {
-      // console.error("Map fetch failed:", err);
+    );
+
+    const location = response.data.results[0]?.geometry?.location;
+    if (location) {
+      setSelectedLocation(location);
+      setMapVisible(true);
     }
-  };
+  } catch (err) {
+    console.error("Map fetch failed:", err);
+  }
+};
 
   const currentClinics = clinics[activeTab];
   const filteredClinics = currentClinics.filter(
@@ -290,13 +311,12 @@ function AdminClinicApproval() {
                       clinicId: clinic._id,
                     })
                   }
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    action === "approve"
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${action === "approve"
                       ? "bg-green-500 hover:bg-green-600 text-white"
                       : action === "decline"
-                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                      : "bg-red-500 hover:bg-red-600 text-white"
-                  }`}
+                        ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
+                    }`}
                 >
                   {action.charAt(0).toUpperCase() + action.slice(1)}
                 </button>
@@ -395,27 +415,28 @@ function AdminClinicApproval() {
     return `${toDMS(lat, "N", "S")} ${toDMS(lng, "E", "W")}`;
   }
 
-  useEffect(() => {
-    if (selectedLocation) {
-      axios
-        .get("https://maps.googleapis.com/maps/api/geocode/json", {
-          params: {
-            latlng: `${selectedLocation.lat},${selectedLocation.lng}`,
-            key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
-          },
-        })
-        .then((res) => {
-          const plus = res.data.plus_code?.global_code || null;
-          setPlusCode(plus);
-          const summary = res.data.results?.[0]?.formatted_address || null;
-          setAddressSummary(summary);
-        })
-        .catch(() => {
-          setPlusCode(null);
-          setAddressSummary(null);
-        });
-    }
-  }, [selectedLocation]);
+useEffect(() => {
+  if (selectedLocation) {
+    axios
+      .get<GeocodeResponse>("https://maps.googleapis.com/maps/api/geocode/json", {
+        params: {
+          latlng: `${selectedLocation.lat},${selectedLocation.lng}`,
+          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+        },
+      })
+      .then((res) => {
+        const plus = res.data.plus_code?.global_code || null;
+        setPlusCode(plus);
+        const summary = res.data.results?.[0]?.formatted_address || null;
+        setAddressSummary(summary);
+      })
+      .catch(() => {
+        setPlusCode(null);
+        setAddressSummary(null);
+      });
+  }
+}, [selectedLocation]);
+
 
   if (loading) {
     return (
@@ -475,19 +496,17 @@ function AdminClinicApproval() {
                     );
                     setCurrentPage(1);
                   }}
-                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-                    activeTab === tab.key
+                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === tab.key
                       ? `border-[#2D9AA5] text-[#2D9AA5]`
                       : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                   <span
-                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${
-                      activeTab === tab.key
+                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${activeTab === tab.key
                         ? `bg-[#2D9AA5]/10 text-[#2D9AA5]`
                         : "bg-gray-100 text-black"
-                    }`}
+                      }`}
                   >
                     {tab.count}
                   </span>
@@ -697,19 +716,18 @@ function AdminClinicApproval() {
                     }
                     setConfirmAction({ show: false, type: "", clinicId: null });
                   }}
-                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${
-                    confirmAction.type === "approve"
+                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${confirmAction.type === "approve"
                       ? "bg-[#2D9AA5] hover:bg-[#2D9AA5]/90"
                       : confirmAction.type === "decline"
-                      ? "bg-yellow-500 hover:bg-yellow-600"
-                      : "bg-red-500 hover:bg-red-600"
-                  }`}
+                        ? "bg-yellow-500 hover:bg-yellow-600"
+                        : "bg-red-500 hover:bg-red-600"
+                    }`}
                 >
                   {confirmAction.type === "approve"
                     ? "Approve"
                     : confirmAction.type === "decline"
-                    ? "Decline"
-                    : "Delete"}
+                      ? "Decline"
+                      : "Delete"}
                 </button>
               </div>
             </div>

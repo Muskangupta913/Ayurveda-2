@@ -15,7 +15,7 @@ export interface SocialMediaShareProps {
   blogTitle: string;
   blogUrl: string; // absolute URL preferred
   blogDescription?: string;
-  triggerLabel?: string;
+  triggerLabel?: React.ReactNode;
   triggerClassName?: string;
 }
 
@@ -29,6 +29,7 @@ const SocialMediaShare: React.FC<SocialMediaShareProps> = ({
   blogDescription = "",
   // triggerLabel = "Share",
   triggerClassName,
+  triggerLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -114,7 +115,7 @@ const SocialMediaShare: React.FC<SocialMediaShareProps> = ({
         aria-expanded={isOpen}
       >
         <Share2 className="w-4 h-4" />
-        {/* {triggerLabel} */}
+        {triggerLabel}
       </button>
 
       {isOpen && (

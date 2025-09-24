@@ -56,15 +56,16 @@ interface Blog {
 
 interface Props {
   tokenKey: "clinicToken" | "doctorToken" | "adminToken";
-  blog: Blog;
-  totalLikes: number;
-  totalComments: number;
-  avgEngagement: number;
-  setDetailsLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  setDetailsBlog: React.Dispatch<React.SetStateAction<Blog | null>>;
-  setDetailsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  openCommentsPopup: (blog: Blog) => void;
+  blog?: Blog;
+  totalLikes?: number;
+  totalComments?: number;
+  avgEngagement?: number;
+  setDetailsLoading?: React.Dispatch<React.SetStateAction<boolean>>;
+  setDetailsBlog?: React.Dispatch<React.SetStateAction<Blog | null>>;
+  setDetailsModalOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+  openCommentsPopup?: (blog: Blog) => void;
 }
+
 
 interface BlogDetailsModalProps {
   isOpen: boolean;

@@ -48,13 +48,13 @@ const AddTreatment: NextPageWithLayout = () => {
   };
 
   const fetchTreatments = async () => {
-    try {
-      const res = await axios.get('/api/doctor/getTreatment');
-      setTreatments(res.data.treatments);
-    } catch {
-      console.error('Failed to fetch treatments');
-    }
-  };
+  try {
+    const res = await axios.get<{ treatments: Treatment[] }>('/api/doctor/getTreatment');
+    setTreatments(res.data.treatments);
+  } catch (err) {
+    console.error('Failed to fetch treatments', err);
+  }
+};
 
   useEffect(() => {
     fetchTreatments();

@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { getAuth, sendSignInLinkToEmail } from "firebase/auth";
 import { initializeApp } from "firebase/app";
-import { firebaseConfig } from "@/lib/firebase"; // 🔁 Extract config
-import axios from "axios";
+import { firebaseConfig } from "@/lib/firebase";
 import toast, { Toaster } from "react-hot-toast";
 import React from "react";
 import Link from "next/link";
@@ -24,40 +23,41 @@ export default function AdminForgotPassword() {
     setIsLoading(true);
 
     try {
-      const checkEmailResponse = await axios.post("/api/admin/check-email", {
-        email,
+      const res = await fetch("/api/admin/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
-      if (checkEmailResponse.status === 200) {
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        const actionCodeSettings = {
-          url: `https://ayurvedanearme.ae/admin/reset-password?email=${encodeURIComponent(
-            email
-          )}`,
-          handleCodeInApp: true,
-        };
-
-        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-        window.localStorage.setItem("adminEmailForReset", email);
-        setMessage("Verification email sent! Check your inbox.");
-        toast.success("Verification email sent! Check your inbox.");
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      if (axios.isAxiosError(err)) {
-        if (err.response?.status === 404) {
+      if (!res.ok) {
+        if (res.status === 404) {
           setError("Email or admin not found");
           toast.error("Email or admin not found");
-        } else {
-          setError("Error sending verification email. Please try again.");
-          toast.error("Error sending verification email. Please try again.");
+          return;
         }
-      } else {
-        setError("Error sending verification email. Please try again.");
-        toast.error("Error sending verification email. Please try again.");
+        throw new Error("Error checking email");
       }
+
+      // Firebase logic
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      const actionCodeSettings = {
+        url: `https://ayurvedanearme.ae/admin/reset-password?email=${encodeURIComponent(
+          email
+        )}`,
+        handleCodeInApp: true,
+      };
+
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      window.localStorage.setItem("adminEmailForReset", email);
+
+      setMessage("Verification email sent! Check your inbox.");
+      toast.success("Verification email sent! Check your inbox.");
+    } catch (err) {
+      console.error(err);
+      setError("Error sending verification email. Please try again.");
+      toast.error("Error sending verification email. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -69,37 +69,18 @@ export default function AdminForgotPassword() {
         position="top-center"
         reverseOrder={false}
         gutter={8}
-        containerClassName=""
-        containerStyle={{}}
         toastOptions={{
-          // Define default options
           className: "",
           duration: 4000,
-          style: {
-            background: "#363636",
-            color: "#fff",
-          },
-          // Default options for specific types
-          success: {
-            duration: 3000,
-            style: {
-              background: "#10b981",
-              color: "#fff",
-            },
-          },
-          error: {
-            duration: 4000,
-            style: {
-              background: "#ef4444",
-              color: "#fff",
-            },
-          },
+          style: { background: "#363636", color: "#fff" },
+          success: { duration: 3000, style: { background: "#10b981", color: "#fff" } },
+          error: { duration: 4000, style: { background: "#ef4444", color: "#fff" } },
         }}
       />
 
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          {/* Header Section */}
+          {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full mb-4 shadow-lg">
               <svg
@@ -156,7 +137,7 @@ export default function AdminForgotPassword() {
                       id="email"
                       type="email"
                       placeholder="admin@example.com"
-                      className="w-full pl-10 pr-4 py-3  border border-gray-300 rounded-lg  focus:border-purple-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
                       value={email}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setEmail(e.target.value)

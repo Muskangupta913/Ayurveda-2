@@ -1,17 +1,40 @@
+import React from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import type { GetServerSideProps } from "next";
+import { GetServerSideProps } from "next";
 import { useEffect, useState, useRef } from "react";
 import parse from "html-react-parser";
 import { useAuth } from "@/context/AuthContext";
 import AuthModal from "../../components/AuthModal";
 import SocialMediaShare from "../../components/SocialMediaShare";
 import { Toaster, toast } from "react-hot-toast";
-// Server-side only imports used in getServerSideProps
 import dbConnect from "../../lib/database";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - JS model import
 import BlogModel from "../../models/Blog";
+
+declare module 'react' {
+  interface StyleHTMLAttributes<T> extends React.HTMLAttributes<T> {
+    jsx?: boolean;
+    global?: boolean;
+  }
+}
+
+interface BlogDoc {
+  _id: string;
+  title: string;
+  content: string;
+  status: "draft" | "published";
+  paramlink: string;
+  postedBy: {
+    _id: string;
+    name: string;
+  };
+  role: "clinic" | "doctor";
+  likes: string[];
+  comments: unknown[];
+  createdAt: string;
+  updatedAt: string;
+  image?: string;
+}
 
 type BlogReply = {
   _id: string;
@@ -57,14 +80,14 @@ interface BlogDetailProps {
 
 export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
   const router = useRouter();
-  const { id } = router.query;
+  const { id } = router.query as { id: string };
   const { user, isAuthenticated } = useAuth();
 
   const [blog, setBlog] = useState<Blog | null>(initialBlog);
   const [error, setError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState("login");
+  const [authModalMode, setAuthModalMode] = useState<"login" | "register" | undefined>("login");
   const [replyTexts, setReplyTexts] = useState<{ [commentId: string]: string }>(
     {}
   );
@@ -74,7 +97,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
   const shouldCommentAfterLogin = useRef(false);
   const pendingComment = useRef("");
   const [showAllComments, setShowAllComments] = useState(false);
-  const [expandedComments, setExpandedComments] = useState({});
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [expandedReplies, setExpandedReplies] = useState<{
     [commentId: string]: boolean;
   }>({});
@@ -90,18 +113,18 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
     }
     return "https://zeva360.com";
   };
-  const toggleCommentExpansion = (commentId) => {
+  const toggleCommentExpansion = (commentId: string) => {
     setExpandedComments((prev) => ({
       ...prev,
       [commentId]: !prev[commentId],
     }));
   };
 
-  const isLongComment = (text) => {
+  const isLongComment = (text: string) => {
     return text.split("\n").length > 4;
   };
 
-  const truncateComment = (text, isExpanded) => {
+  const truncateComment = (text: string, isExpanded: boolean) => {
     const lines = text.split("\n");
     if (!isExpanded && lines.length > 4) {
       return lines.slice(0, 4).join("\n");
@@ -903,14 +926,14 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                 <button
                   onClick={toggleLike}
                   className={`group relative flex items-center space-x-3 px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${blog.liked
-                      ? "bg-gradient-to-r from-red-50 to-pink-50 text-red-600 border-2 border-red-200 hover:from-red-100 hover:to-pink-100"
-                      : "bg-white text-gray-600 border-2 border-gray-200 hover:border-red-200 hover:text-red-600"
+                    ? "bg-gradient-to-r from-red-50 to-pink-50 text-red-600 border-2 border-red-200 hover:from-red-100 hover:to-pink-100"
+                    : "bg-white text-gray-600 border-2 border-gray-200 hover:border-red-200 hover:text-red-600"
                     }`}
                 >
                   <svg
                     className={`w-6 h-6 transition-all duration-200 hover:scale-110 ${blog.liked
-                        ? "text-red-500"
-                        : "text-gray-400 hover:text-red-400"
+                      ? "text-red-500"
+                      : "text-gray-400 hover:text-red-400"
                       }`}
                     fill={blog.liked ? "currentColor" : "none"}
                     stroke="currentColor"
@@ -920,6 +943,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      strokeWidth={2}
                       d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
                     />
                   </svg>
@@ -1227,16 +1251,16 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                               <div
                                 key={r._id}
                                 className={`p-6 rounded-xl ${isAuthorReply
-                                    ? "bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 border-2 border-[#2D9AA5]/20"
-                                    : "bg-white border border-gray-200"
+                                  ? "bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 border-2 border-[#2D9AA5]/20"
+                                  : "bg-white border border-gray-200"
                                   }`}
                               >
                                 <div className="flex justify-between items-start mb-3">
                                   <div className="flex items-center space-x-3">
                                     <div
                                       className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${isAuthorReply
-                                          ? "bg-gradient-to-br from-[#2D9AA5] to-[#236b73]"
-                                          : "bg-gradient-to-br from-gray-400 to-gray-500"
+                                        ? "bg-gradient-to-br from-[#2D9AA5] to-[#236b73]"
+                                        : "bg-gradient-to-br from-gray-400 to-gray-500"
                                         }`}
                                     >
                                       {r.username.charAt(0).toUpperCase()}
@@ -1244,8 +1268,8 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                                     <div>
                                       <p
                                         className={`font-bold text-sm flex items-center ${isAuthorReply
-                                            ? "text-[#2D9AA5]"
-                                            : "text-gray-700"
+                                          ? "text-[#2D9AA5]"
+                                          : "text-gray-700"
                                           }`}
                                       >
                                         {r.username}
@@ -1474,7 +1498,7 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
 
     const blogDoc = await BlogModel.findById(id)
       .populate("postedBy", "name _id")
-      .lean();
+      .lean<BlogDoc>(); // ✅ properly typed plain object;
     if (!blogDoc) {
       return { notFound: true };
     }
@@ -1490,44 +1514,46 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
       imageFromContent || `${baseUrl}/assets/health_treatments_logo.png`;
 
     // Create the blog object, ensuring no undefined values
-    const initialBlog: Blog = {
-      _id: String(blogDoc._id),
-      title: blogDoc.title || "Blog",
-      content: blogDoc.content || "",
-      postedBy: {
-        name: blogDoc.postedBy?.name || "Author",
-        _id: blogDoc.postedBy?._id ? String(blogDoc.postedBy._id) : null,
-      },
-      createdAt: blogDoc.createdAt
-        ? new Date(blogDoc.createdAt).toISOString()
-        : new Date().toISOString(),
-      image: blogDoc.image || undefined,
-      likesCount: Array.isArray(blogDoc.likes) ? blogDoc.likes.length : 0,
-      liked: Boolean(liked),
-      comments: Array.isArray(blogDoc.comments)
-        ? blogDoc.comments.map((c): BlogComment => ({
-          _id: String(c._id || ""),
-          username: c.username || "Anonymous",
-          text: c.text || "",
-          createdAt: c.createdAt
-            ? new Date(c.createdAt).toISOString()
-            : new Date().toISOString(),
-          user: c.user ? String(c.user) : null,
-          replies: Array.isArray(c.replies)
-            ? c.replies.map((r): BlogReply => ({
-              _id: String(r._id || ""),
-              username: r.username || "Anonymous",
-              text: r.text || "",
+    
+const initialBlog: Blog = {
+  _id: blogDoc._id,
+  title: blogDoc.title || "Blog",
+  content: blogDoc.content || "",
+  postedBy: {
+    name: blogDoc.postedBy?.name || "Author",
+    _id: blogDoc.postedBy?._id || null,
+  },
+  createdAt: blogDoc.createdAt
+    ? new Date(blogDoc.createdAt).toISOString()
+    : new Date().toISOString(),
+  image: blogDoc.image || undefined,
+  likesCount: Array.isArray(blogDoc.likes) ? blogDoc.likes.length : 0,
+  liked: false, // will be set on client
+  comments: Array.isArray(blogDoc.comments)
+    ? (blogDoc.comments as Partial<BlogComment>[]).map((c): BlogComment => ({
+        _id: String(c._id ?? ""),
+        username: c.username ?? "Anonymous",
+        text: c.text ?? "",
+        createdAt: c.createdAt
+          ? new Date(c.createdAt).toISOString()
+          : new Date().toISOString(),
+        user: c.user ?? null,
+        replies: Array.isArray(c.replies)
+          ? (c.replies as Partial<BlogReply>[]).map((r): BlogReply => ({
+              _id: String(r._id ?? ""),
+              username: r.username ?? "Anonymous",
+              text: r.text ?? "",
               createdAt: r.createdAt
                 ? new Date(r.createdAt).toISOString()
                 : new Date().toISOString(),
-              user: r.user ? String(r.user) : null,
+              user: r.user ?? null,
             }))
-            : [],
-        }))
-        : [],
-      paramlink: blogDoc.paramlink || null,
-    };
+          : [],
+      }))
+    : [],
+  paramlink: blogDoc.paramlink || null,
+};
+
 
 
     // Only add image property if it exists (not null/undefined)

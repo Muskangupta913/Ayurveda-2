@@ -3,7 +3,7 @@ import React, {
   useEffect,
   useMemo,
 } from "react";
-import dynamic from "next/dynamic";
+// import dynamic from "next/dynamic";
 import axios from "axios";
 import { useRouter } from "next/router";
 import {
@@ -20,21 +20,68 @@ import {
   Link as LinkIcon,
   RotateCcw,
 } from "lucide-react";
-
-import { RangeStatic, StringMap } from "quill";
-
+// Minimal local types to avoid importing quill types
+type QuillRange = { index: number; length: number } | null;
+type StringMap = Record<string, unknown>;
+interface MinimalQuillEditor {
+  getSelection: (focus?: boolean) => QuillRange;
+  focus: () => void;
+  setSelection: (index: number, length: number, source?: string) => void;
+  getFormat: (index?: number, length?: number) => StringMap;
+  on: (event: string, handler: (range: QuillRange) => void) => void;
+  off: (event: string, handler: (range: QuillRange) => void) => void;
+  history: { undo: () => void; redo: () => void };
+  insertEmbed: (index: number, type: string, value: unknown) => void;
+  insertText: (index: number, text: string) => void;
+  blur: () => void;
+  getBounds: (index: number, length?: number) => { top: number; left: number };
+  formatText: (
+    index: number,
+    length: number,
+    formats: Record<string, unknown>
+  ) => void;
+  format: (name: string, value: unknown) => void;
+  removeFormat: (index: number, length: number, source?: string) => void;
+}
+import dynamic from "next/dynamic";
+import "react-quill/dist/quill.snow.css";
+import type { ComponentType } from "react";
 type InlineFormat = "bold" | "italic" | "underline" | "link";
 type DesiredValue = boolean | string | undefined;
 
+// Domain types for API responses
+interface Draft {
+  _id?: string;
+  title?: string;
+  content?: string;
+  paramlink?: string;
+}
+type DraftResponse = { draft?: Draft } | Draft;
+
+interface BlogDoc {
+  _id?: string;
+  title?: string;
+  content?: string;
+  paramlink?: string;
+}
+type BlogResponse = { blog?: BlogDoc } | BlogDoc;
+
 // Dynamic import for ReactQuill
-const ReactQuill = dynamic(() => import("react-quill"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-64 bg-gray-100 animate-pulse rounded flex items-center justify-center">
-      <p className="text-gray-500">Loading editor...</p>
-    </div>
-  ),
-});
+const ReactQuill = dynamic<ComponentType<unknown>>(
+  () =>
+    import("react-quill").then((mod) => {
+      // Tell TypeScript this is a React component
+      return mod.default as ComponentType<unknown>;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 bg-gray-100 animate-pulse rounded flex items-center justify-center">
+        <p className="text-gray-500">Loading editor...</p>
+      </div>
+    ),
+  }
+);
 
 interface Toast {
   id: string;
@@ -753,11 +800,11 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 
   const loadDraft = async (draftId: string) => {
     try {
-      const response = await axios.get(
+      const response = await axios.get<DraftResponse>(
         `/api/blog/draft?id=${draftId}`,
         getAuthHeaders()
       );
-      const draft = response.data?.draft || response.data;
+      const draft = (response.data as DraftResponse as { draft?: Draft }).draft || (response.data as Draft);
       if (!draft) {
         showToast("Draft not found", "error");
         return;
@@ -776,11 +823,11 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 
   const loadPublishedBlog = async (blogId: string) => {
     try {
-      const response = await axios.get(
+      const response = await axios.get<BlogResponse>(
         `/api/blog/published?id=${blogId}`,
         getAuthHeaders()
       );
-      const blog = response.data?.blog || response.data;
+      const blog = (response.data as BlogResponse as { blog?: BlogDoc }).blog || (response.data as BlogDoc);
       if (!blog) {
         showToast("Published blog not found", "error");
         return;
@@ -834,7 +881,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
         setLastSaved(new Date());
         showToast("Draft updated successfully!", "success");
       } else {
-        const response = await axios.post(
+        const response = await axios.post<DraftResponse>(
           "/api/blog/draft",
           {
             title: title || "Untitled Draft",
@@ -843,7 +890,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           },
           getAuthHeaders()
         );
-        const newDraft = response.data?.draft || response.data;
+        const newDraft = (response.data as DraftResponse as { draft?: Draft }).draft || (response.data as Draft);
         if (newDraft && newDraft._id) {
           setSelectedDraft(newDraft._id);
         }
@@ -866,61 +913,52 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     }
   };
 
- const publishBlog = async () => {
-  if (!title || !content) {
-    showToast("Title and content required", "warning");
-    return;
-  }
-  if (!paramlink) {
-    setParamlinkError("Paramlink is required");
-    return;
-  }
-  setParamlinkError("");
+  const publishBlog = async () => {
+    if (!title || !content) {
+      showToast("Title and content required", "warning");
+      return;
+    }
+    if (!paramlink) {
+      setParamlinkError("Paramlink is required");
+      return;
+    }
+    setParamlinkError("");
 
-  if (checkImageSizes(content)) {
-    return;
-  }
+    if (checkImageSizes(content)) {
+      return;
+    }
 
-  setIsLoading(true);
-  try {
-    await axios.post(
-      "/api/blog/published",
-      {
-        title,
-        content: ensureLinksUnderlined(content),
-        paramlink,
-      },
-      getAuthHeaders()
-    );
+    setIsLoading(true);
+    try {
+      await axios.post(
+        "/api/blog/published",
+        {
+          title,
+          content: ensureLinksUnderlined(content),
+          paramlink,
+        },
+        getAuthHeaders()
+      );
 
-    // After publishing, navigate to Published Blogs page to manage/share
-    showToast("Blog published successfully!", "success");
-    setTitle("");
-    setContent("");
-    setParamlink("");
-    setSelectedDraft(null);
-    setSelectedPublished(null);
-  } catch (err: unknown) {
-    if (axios.isAxiosError(err)) {
-      // ✅ Handle Axios errors properly
-      const message = err.response?.data?.message ?? "An error occurred";
-      if (message.includes("Paramlink already exists")) {
+      // After publishing, navigate to Published Blogs page to manage/share
+
+      showToast("Blog published successfully!", "success");
+      setTitle("");
+      setContent("");
+      setParamlink("");
+      setSelectedDraft(null);
+      setSelectedPublished(null);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      if (error.response?.data?.message?.includes("Paramlink already exists")) {
         setParamlinkError("Paramlink already exists. Please choose another.");
       } else {
-        showToast("Failed to publish blog: " + message, "error");
+        showToast("Failed to publish blog", "error");
       }
-    } else if (err instanceof Error) {
-      // ✅ Handle native JS errors
-      showToast("Failed to publish blog: " + err.message, "error");
-    } else {
-      // ✅ Handle unknown errors
-      showToast("Failed to publish blog due to unknown error", "error");
+    } finally {
+      setIsLoading(false);
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const updatePublishedBlog = async () => {
     if (!selectedPublished) {
@@ -968,7 +1006,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       const error = err as { response?: { data?: { message?: string } } };
       if (error.response?.data?.message?.includes("Paramlink already exists")) {
         setParamlinkError("Paramlink already exists. Please choose another.");
-      }
+      } 
     } finally {
       setIsLoading(false);
     }
@@ -1013,15 +1051,15 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     top: number;
     left: number;
   }>({ top: 0, left: 0 });
-  const quillRef = React.useRef(null);
-  const lastRangeRef = React.useRef(null);
+  const quillRef = React.useRef<{ getEditor: () => MinimalQuillEditor } | null>(null);
+  const lastRangeRef = React.useRef<QuillRange>(null);
 
   // Attach native selection-change to keep latest range from Quill itself
   useEffect(() => {
     const quill = quillRef.current?.getEditor?.();
     if (!quill) return;
 
-    const handler = (range: RangeStatic | null) => {
+    const handler = (range: QuillRange) => {
       if (range) lastRangeRef.current = range;
     };
 
@@ -1043,7 +1081,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     const run = (fn: () => void) => setTimeout(fn, 0);
 
     const restoreAnd = (fn: () => void) => {
-      const r: RangeStatic | null = lastRangeRef.current || quill.getSelection();
+      const r: QuillRange = lastRangeRef.current || quill.getSelection();
       if (!r || r.length === 0) return; // require selection
       quill.focus();
       quill.setSelection(r.index, r.length || 0, "user");
@@ -1052,7 +1090,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 
     // Link handling
     if (format === "link") {
-      const r2: RangeStatic | null = quill.getSelection(true);
+      const r2: QuillRange = quill.getSelection(true);
       if (!r2 || r2.length === 0) return;
       lastRangeRef.current = r2;
       const currentFormats: StringMap = quill.getFormat(r2.index, r2.length);
@@ -1064,7 +1102,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     // Inline styles (minimal) with robust formatText
     if (["bold", "italic", "underline"].includes(format)) {
       restoreAnd(() => {
-        const r2: RangeStatic | null = quill.getSelection(true);
+        const r2: QuillRange = quill.getSelection(true);
         if (!r2) return;
         const current: StringMap = quill.getFormat(r2.index, r2.length);
         const nextVal =
@@ -1075,7 +1113,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     }
   };
 
-  const handleSelectionChange = (range: Range, source: string, editor: Quill) => {
+  const handleSelectionChange = (range: QuillRange, source: string, editor: MinimalQuillEditor) => {
     try {
       if (range && range.length > 0) {
         const bounds = editor.getBounds(range.index, range.length);
@@ -1109,22 +1147,24 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
           ["clean"],
         ],
         handlers: {
-          link: function (this: { quill: Quill }) {
-            const sel = this.quill.getSelection(true);
-            if (!sel || sel.length === 0) return;
+          link: function (this: { quill: MinimalQuillEditor }) {
+  const sel = this.quill.getSelection(true);
+  if (!sel || sel.length === 0) return;
 
-            try {
-              const formats = this.quill.getFormat(sel.index, sel.length);
-              setTextLinkUrl((formats as Record<string, unknown>)?.link as string || "");
-            } catch {
-              // ignore
-            }
+  try {
+    const formats = this.quill.getFormat(sel.index, sel.length);
+    setTextLinkUrl(
+      ((formats as Record<string, unknown>)?.link as string) || ""
+    );
+  } catch (err) {
+    console.error("Error getting formats:", err);
+  }
 
-            lastRangeRef.current = sel;
-            this.quill.blur();
-            setShowTextLinkModal(true);
-          },
-          image: function (this) {
+  lastRangeRef.current = sel;
+  this.quill.blur();
+  setShowTextLinkModal(true);
+},
+          image: function (this: { quill: MinimalQuillEditor }) {
             const input = document.createElement("input");
             input.setAttribute("type", "file");
             input.setAttribute("accept", "image/*");
@@ -1141,25 +1181,26 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                 const reader = new FileReader();
                 reader.onload = () => {
                   const range = this.quill.getSelection();
+                  if (!range) return;
                   this.quill.insertEmbed(range.index, "image", reader.result);
                   this.quill.insertText(range.index + 1, "\n");
-                  this.quill.setSelection(range.index + 2);
+                  this.quill.setSelection(range.index + 2, 0);
                 };
                 reader.readAsDataURL(file);
               }
             };
           },
-          video: function (this: { quill: Quill }) {
+          video: function (this: { quill: MinimalQuillEditor }) {
             this.quill.blur();
             setShowVideoModal(true);
           },
-          undo: function (this: { quill: Quill }) {
+          undo: function (this: { quill: MinimalQuillEditor }) {
             this.quill.history.undo();
           },
-          redo: function (this: { quill: Quill }) {
+          redo: function (this: { quill: MinimalQuillEditor }) {
             this.quill.history.redo();
           },
-          clean: function (this: { quill: Quill }) {
+          clean: function (this: { quill: MinimalQuillEditor }) {
             const sel = this.quill.getSelection(true);
             if (!sel) return;
             if (sel.length === 0) {
@@ -1419,7 +1460,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
                     <QuillAny
                       theme="snow"
                       value={content}
-                      onChange={(val) => setContent(val)}
+                      onChange={(val: string) => setContent(val)}
                       ref={quillRef}
                       onChangeSelection={handleSelectionChange}
                       modules={modules}
