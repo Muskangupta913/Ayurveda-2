@@ -781,7 +781,7 @@ function HealthQuiz() {
                 className="p-2 rounded-lg text-white mr-3 flex-shrink-0"
                 style={{ backgroundColor: levelData.color }}
               >
-                {React.cloneElement(levelData.icon as React.ReactElement, { className: "w-5 h-5" })}
+                {React.cloneElement(levelData.icon as React.ReactElement, {})}
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-800">Level {currentLevel}</h1>

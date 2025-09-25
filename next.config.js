@@ -6,7 +6,7 @@ const nextConfig = {
   images: {
     domains: [
       "localhost",             // for local development
-      "ayurvedanearme.ae",     // for production
+      "zeva360.com",     // for production
       "images.unsplash.com",   // for Unsplash images
     ],
   },

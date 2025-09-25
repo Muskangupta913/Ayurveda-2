@@ -1,8 +1,18 @@
 'use client';
 import { useState, FormEvent } from 'react';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+
+// Define response type for doctor login API
+interface DoctorLoginResponse {
+  doctor: {
+    name: string;
+    email: string;
+  };
+  token: string;
+  message?: string;
+}
 
 export default function DoctorLoginPage() {
   const router = useRouter();
@@ -23,10 +33,12 @@ export default function DoctorLoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await axios.post('/api/doctor/login', form);
+      // ✅ Tell axios what the response will look like
+      const res: AxiosResponse<DoctorLoginResponse> = await axios.post('/api/doctor/login', form);
+
       const doctorUser = {
         name: res.data.doctor.name,
-        email: res.data.doctor.email
+        email: res.data.doctor.email,
       };
       localStorage.setItem('doctorUser', JSON.stringify(doctorUser));
       localStorage.setItem('doctorToken', res.data.token);
@@ -36,15 +48,14 @@ export default function DoctorLoginPage() {
       setToastMessage(res.data.message || 'Login successful!');
       setShowToast(true);
 
-      // Hide toast after 3 seconds and redirect
+      // Hide toast after 2 seconds and redirect
       setTimeout(() => {
         setShowToast(false);
         router.push('/doctor/doctor-dashboard');
       }, 2000);
 
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        // @ts-expect-error: err.response may not be typed
+      if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message || 'Login failed');
       } else {
         setError('Login failed');

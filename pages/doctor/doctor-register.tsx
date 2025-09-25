@@ -9,6 +9,10 @@ export default function DoctorRegister() {
   const searchRef = useRef<HTMLDivElement>(null);
   const registrationRef = useRef<HTMLDivElement>(null);
 
+interface TreatmentResponse {
+  treatments: { name: string }[];
+}
+
   // State variables
   const [form, setForm] = useState<{
     name: string;
@@ -42,21 +46,19 @@ export default function DoctorRegister() {
   });
 
   // Fetch treatments from backend API
-  useEffect(() => {
-    const fetchTreatments = async () => {
-      try {
-        const res = await axios.get("/api/doctor/getTreatment");
-        if (res.data && Array.isArray(res.data.treatments)) {
-          setTreatments(
-            res.data.treatments.map((t: { name: string }) => t.name)
-          );
-        }
-      } catch {
-        setTreatments([]);
+useEffect(() => {
+  const fetchTreatments = async () => {
+    try {
+      const res = await axios.get<TreatmentResponse>("/api/doctor/getTreatment");
+      if (res.data && Array.isArray(res.data.treatments)) {
+        setTreatments(res.data.treatments.map((t) => t.name));
       }
-    };
-    fetchTreatments();
-  }, []);
+    } catch {
+      setTreatments([]);
+    }
+  };
+  fetchTreatments();
+}, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -103,8 +103,8 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
       );
       // Refetch chat to get updated isRead status
       fetchChat(false);
-    } catch {
-      // console.error("Failed to mark messages as read:", error);
+    } catch (error) {
+      console.error("Failed to mark messages as read:", error);
     }
   };
 
@@ -135,7 +135,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
         setChat(response.data.data.chat);
         setPrescriptionRequest(response.data.data.prescriptionRequest);
       }
-    } catch {
+    } catch (error) {
       console.error("Failed to fetch chat:", error);
     } finally {
       if (showLoader) setInitialLoading(false);
@@ -175,7 +175,7 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
           }
         }, 100);
       }
-    } catch {
+    } catch (error) {
       console.error("Failed to send message:", error);
     } finally {
       setSending(false);
@@ -217,8 +217,8 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
           }
         }, 100);
       }
-    } catch {
-      // console.error("Failed to send prescription:", error);
+    } catch (error) {
+      console.error("Failed to send prescription:", error);
     } finally {
       setSending(false);
     }
@@ -235,8 +235,8 @@ function DoctorChat({ requestId: propRequestId, onClose }: { requestId?: string;
       if (response.data.success) {
         setChat(response.data.chat);
       }
-    } catch {
-      // console.error("Failed to delete message:", error);
+    } catch (error) {
+      console.error("Failed to delete message:", error);
     }
   };
 
@@ -1081,15 +1081,15 @@ Example:
       }
 
       /* Enhanced hover effects */
-      .group:hover .group-hover\:scale-110 {
+      .group:hover .group-hover\\:scale-110 {
         transform: scale(1.1);
       }
       
-      .hover\:rotate-12:hover {
+      .hover\\:rotate-12:hover {
         transform: rotate(12deg);
       }
       
-      .hover\:rotate-90:hover {
+      .hover\\:rotate-90:hover {
         transform: rotate(90deg);
       }
     `}</style>

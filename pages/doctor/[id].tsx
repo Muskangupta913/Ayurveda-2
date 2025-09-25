@@ -147,22 +147,6 @@ export default function DoctorDetail() {
     router.push(`/doctor/review-form?${params.toString()}`);
   };
 
-  // const handleEnquiryClick = () => {
-  //   if (!profile) return;
-  //   if (!isAuthenticated) {
-  //     setPendingAction({ type: "enquiry" });
-  //     setAuthModalMode("login");
-  //     setShowAuthModal(true);
-  //     return;
-  //   }
-  //   const params = new URLSearchParams({
-  //     doctorId: profile._id,
-  //     doctorName: profile.user.name,
-  //     specialization: profile.degree || "",
-  //   });
-  //   router.push(`/doctor/enquiry-form?${params.toString()}`);
-  // };
-
   const handlePrescriptionRequest = () => {
     if (!profile) return;
     if (!isAuthenticated) {
@@ -196,47 +180,54 @@ export default function DoctorDetail() {
     setPendingAction(null);
   };
 
-  const handlePrescriptionSubmit = async () => {
-    if (!prescriptionForm.healthIssue.trim()) {
-      toast.error("Please describe your health issue", {
+ const handlePrescriptionSubmit = async () => {
+  if (!prescriptionForm.healthIssue.trim()) {
+    toast.error("Please describe your health issue", {
+      style: { background: "#2D9AA5", color: "#fff" },
+    });
+    return;
+  }
+
+  setPrescriptionLoading(true);
+
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch("/api/prescription/request", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify({
+        doctorId: id,
+        healthIssue: prescriptionForm.healthIssue,
+        symptoms: prescriptionForm.symptoms,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      toast.success("Prescription request sent successfully!", {
         style: { background: "#2D9AA5", color: "#fff" },
       });
-      return;
+      setShowPrescriptionModal(false);
+      setPrescriptionForm({ healthIssue: "", symptoms: "" });
+    } else {
+      toast.error(data.message || "Failed to send prescription request", {
+        style: { background: "#2D9AA5", color: "#fff" },
+      });
     }
+  } catch {
+    // For fetch, error is usually a network error
+    toast.error("Failed to send prescription request", {
+      style: { background: "#2D9AA5", color: "#fff" },
+    });
+  } finally {
+    setPrescriptionLoading(false);
+  }
+};
 
-    setPrescriptionLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "/api/prescription/request",
-        {
-          doctorId: id,
-          healthIssue: prescriptionForm.healthIssue,
-          symptoms: prescriptionForm.symptoms,
-        },
-        {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Prescription request sent successfully!", {
-          style: { background: "#2D9AA5", color: "#fff" },
-        });
-        setShowPrescriptionModal(false);
-        setPrescriptionForm({ healthIssue: "", symptoms: "" });
-      }
-    } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "Failed to send prescription request",
-        { style: { background: "#2D9AA5", color: "#fff" } }
-      );
-    } finally {
-      setPrescriptionLoading(false);
-    }
-  };
 
   const handleAuthModalClose = () => {
     setShowAuthModal(false);

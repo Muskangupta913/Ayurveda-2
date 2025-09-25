@@ -58,7 +58,7 @@ function UserChat() {
   const router = useRouter();
   const { requestId } = router.query as { requestId?: string };
   const [chat, setChat] = useState<Chat | null>(null);
-  const [setPrescriptionRequest] = useState<PrescriptionRequestLite | null>(null);
+ const [prescriptionRequest, setPrescriptionRequest] = useState<PrescriptionRequestLite | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -99,23 +99,28 @@ function UserChat() {
             setChat(nextChat);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         const status = err?.response?.status;
         const apiMessage = err?.response?.data?.message;
-        if (!redirectedRef.current && status === 404 && apiMessage === 'Prescription request not found') {
+
+        if (!redirectedRef.current && status === 404 && apiMessage === "Prescription request not found") {
           redirectedRef.current = true;
           if (pollingRef.current) window.clearInterval(pollingRef.current);
-          toast.success('Chat completed. Redirecting to dashboard...', { style: { background: '#2D9AA5', color: '#fff' } });
+
+          toast.success("Chat completed. Redirecting to dashboard...", {
+            style: { background: "#2D9AA5", color: "#fff" },
+          });
+
           redirectTimeoutRef.current = window.setTimeout(() => {
-            router.replace('/user/profile');
+            router.replace("/user/profile");
           }, 5000);
           return;
         }
-        // silent for other errors
       } finally {
         isFetchingRef.current = false;
       }
     };
+
 
     pollingRef.current = window.setInterval(poll, 3000);
 
@@ -148,27 +153,31 @@ function UserChat() {
         `/api/chat/get-messages?prescriptionRequestId=${requestId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       if (response.data.success) {
         const { chat: chatData, prescriptionRequest: pr } = response.data.data;
         setChat(chatData);
         setPrescriptionRequest(pr);
       }
-    } catch (err) {
+    } catch (err: any) {
       const status = err?.response?.status;
       const apiMessage = err?.response?.data?.message;
-      if (!redirectedRef.current && status === 404 && apiMessage === 'Prescription request not found') {
+
+      if (!redirectedRef.current && status === 404 && apiMessage === "Prescription request not found") {
         redirectedRef.current = true;
-        toast.success('Chat completed. Redirecting to dashboard...', { style: { background: '#2D9AA5', color: '#fff' } });
+        toast.success("Chat completed. Redirecting to dashboard...", {
+          style: { background: "#2D9AA5", color: "#fff" },
+        });
         redirectTimeoutRef.current = window.setTimeout(() => {
-          router.replace('/user/profile');
+          router.replace("/user/profile");
         }, 5000);
         return;
       }
-      // console.error("Failed to fetch chat:", err);
     } finally {
       setLoading(false);
     }
   };
+
 
   // Send a message
   const sendMessage = async () => {

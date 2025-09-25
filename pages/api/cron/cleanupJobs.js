@@ -1,7 +1,7 @@
 // cron/cleanupJobs.js
-import dbConnect from "../lib/database.js";
-import JobApplication from "../models/JobApplication.js";
-import JobPosting from "../models/JobPosting.js";
+import dbConnect from "../../../lib/database.js";
+import JobApplication from "../../../models/JobApplication.js";
+import JobPosting from "../../../models/JobPosting.js";
 import mongoose from "mongoose";
 
 await dbConnect();

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { getAuth, sendSignInLinkToEmail } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 import { firebaseConfig } from '@/lib/firebase'; // 🔁 Extract config
-import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import React from 'react';
 import Link from 'next/link';
@@ -24,29 +23,29 @@ export default function DoctorForgotPassword() {
 
     try {
       // First, check if email exists with doctor role
-      const checkEmailResponse = await axios.post('/api/doctor/check-email', { email });
-      
-      if (checkEmailResponse.status === 200) {
+      const response = await fetch('/api/doctor/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
         // Email exists with doctor role, proceed with Firebase verification
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-         window.localStorage.setItem('doctorEmailForReset', email);
+        window.localStorage.setItem('doctorEmailForReset', email);
         toast.success('Verification email sent! Check your inbox.');
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      if (axios.isAxiosError(err)) {
-        if (err.response?.status === 404) {
-          toast.error('Email or doctor not found');
-        } else if (err.response?.status) {
-          toast.error(`Error: ${err.response.status}. Please try again.`);
-        } else {
-          toast.error('Error sending verification email. Please try again.');
-        }
+      } else if (response.status === 404) {
+        toast.error('Email or doctor not found');
       } else {
-        toast.error('Error sending verification email. Please try again.');
+        toast.error(`Error: ${response.status}. Please try again.`);
       }
+    } catch (err) {
+      console.error(err);
+      toast.error('Unexpected error sending verification email. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -58,17 +57,12 @@ export default function DoctorForgotPassword() {
         position="top-center"
         reverseOrder={false}
         gutter={8}
-        containerClassName=""
-        containerStyle={{}}
         toastOptions={{
-          // Define default options
-          className: '',
           duration: 4000,
           style: {
             background: '#363636',
             color: '#fff',
           },
-          // Default options for specific types
           success: {
             duration: 3000,
             style: {

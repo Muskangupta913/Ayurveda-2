@@ -1,17 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw,Timer, Trophy, Heart, RefreshCw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Timer, Trophy, Heart, RefreshCw } from 'lucide-react';
 
-const FitnessApp = () => {
-  const [screen, setScreen] = useState('profile');
-  const [profile, setProfile] = useState({ name: '', age: '', weight: '', gender: '' });
-  const [currentDay, setCurrentDay] = useState(1);
-  const [currentExercise, setCurrentExercise] = useState(0);
-  const [timer, setTimer] = useState(0);
-  const [isActive, setIsActive] = useState(false);
-  const [exercisePlan, setExercisePlan] = useState([]);
-  const [completedDays, setCompletedDays] = useState([]);
+// Type definitions
+interface UserProfile {
+  name: string;
+  age: string;
+  weight: string;
+  gender: string;
+}
 
-  const exercises = {
+interface Exercise {
+  name: string;
+  duration: number;
+  image: string;
+  calories: number;
+  description: string;
+}
+
+interface ExercisePlan {
+  day: number;
+  type: 'cardio' | 'strength' | 'flexibility';
+  exercises: Exercise[];
+  target: string;
+}
+
+interface ExerciseCategories {
+  cardio: Exercise[];
+  strength: Exercise[];
+  flexibility: Exercise[];
+}
+
+type ScreenType = 'profile' | 'plan' | 'exercise' | 'complete';
+
+function FitnessApp () {
+  const [screen, setScreen] = useState<ScreenType>('profile');
+  const [profile, setProfile] = useState<UserProfile>({ name: '', age: '', weight: '', gender: '' });
+  const [currentDay, setCurrentDay] = useState<number>(1);
+  const [currentExercise, setCurrentExercise] = useState<number>(0);
+  const [timer, setTimer] = useState<number>(0);
+  const [isActive, setIsActive] = useState<boolean>(false);
+  const [exercisePlan, setExercisePlan] = useState<ExercisePlan[]>([]);
+  const [completedDays, setCompletedDays] = useState<number[]>([]);
+
+  const exercises: ExerciseCategories = {
     cardio: [
       {
         name: 'Jumping Jacks',
@@ -76,42 +107,77 @@ const FitnessApp = () => {
     ]
   };
 
+  // Safe localStorage operations with error handling
+  const safeLocalStorage = {
+    getItem: (key: string): string | null => {
+      if (typeof window === 'undefined') return null;
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    setItem: (key: string, value: string): void => {
+      if (typeof window === 'undefined') return;
+      try {
+        localStorage.setItem(key, value);
+      } catch {
+        // Silently fail if localStorage is not available
+      }
+    },
+    removeItem: (key: string): void => {
+      if (typeof window === 'undefined') return;
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Silently fail if localStorage is not available
+      }
+    }
+  };
+
   // Load saved data on component mount
   useEffect(() => {
     try {
-      const savedProfile = JSON.parse(localStorage.getItem('zevaFitnessProfile') || 'null');
-      const savedCurrentDay = parseInt(localStorage.getItem('zevaCurrentDay') || '1');
-      const savedCompletedDays = JSON.parse(localStorage.getItem('zevaCompletedDays') || '[]');
-      const savedExercisePlan = JSON.parse(localStorage.getItem('zevaExercisePlan') || '[]');
+      const savedProfile = safeLocalStorage.getItem('zevaFitnessProfile');
+      const savedCurrentDay = safeLocalStorage.getItem('zevaCurrentDay');
+      const savedCompletedDays = safeLocalStorage.getItem('zevaCompletedDays');
+      const savedExercisePlan = safeLocalStorage.getItem('zevaExercisePlan');
 
-      if (savedProfile && savedProfile.name) {
-        setProfile(savedProfile);
-        setCurrentDay(savedCurrentDay);
-        setCompletedDays(savedCompletedDays);
-        setExercisePlan(savedExercisePlan);
+      const parsedProfile: UserProfile | null = savedProfile ? JSON.parse(savedProfile) : null;
+      const parsedCurrentDay: number = savedCurrentDay ? parseInt(savedCurrentDay, 10) : 1;
+      const parsedCompletedDays: number[] = savedCompletedDays ? JSON.parse(savedCompletedDays) : [];
+      const parsedExercisePlan: ExercisePlan[] = savedExercisePlan ? JSON.parse(savedExercisePlan) : [];
+
+      if (parsedProfile && parsedProfile.name) {
+        setProfile(parsedProfile);
+        setCurrentDay(parsedCurrentDay);
+        setCompletedDays(parsedCompletedDays);
+        setExercisePlan(parsedExercisePlan);
         setScreen('plan');
       }
-    } catch  {
-      console.log('No saved data found');
+    } catch (error) {
+      console.log('No saved data found or error loading data:', error);
     }
   }, []);
 
   // Save data whenever it changes
   useEffect(() => {
     if (profile.name) {
-      localStorage.setItem('zevaFitnessProfile', JSON.stringify(profile));
-      localStorage.setItem('zevaCurrentDay', currentDay.toString());
-      localStorage.setItem('zevaCompletedDays', JSON.stringify(completedDays));
-      localStorage.setItem('zevaExercisePlan', JSON.stringify(exercisePlan));
+      safeLocalStorage.setItem('zevaFitnessProfile', JSON.stringify(profile));
+      safeLocalStorage.setItem('zevaCurrentDay', currentDay.toString());
+      safeLocalStorage.setItem('zevaCompletedDays', JSON.stringify(completedDays));
+      safeLocalStorage.setItem('zevaExercisePlan', JSON.stringify(exercisePlan));
     }
   }, [profile, currentDay, completedDays, exercisePlan]);
 
-  const generatePlan = (userProfile) => {
-    const intensity = userProfile.weight > 80 ? 'high' : userProfile.weight > 60 ? 'medium' : 'low';
-    const plan = [];
+  const generatePlan = (userProfile: UserProfile): ExercisePlan[] => {
+    const weight = parseInt(userProfile.weight, 10);
+    const intensity: 'high' | 'medium' | 'low' = weight > 80 ? 'high' : weight > 60 ? 'medium' : 'low';
+    const plan: ExercisePlan[] = [];
 
     for (let day = 1; day <= 30; day++) {
-      const dayType = day % 3 === 1 ? 'cardio' : day % 3 === 2 ? 'strength' : 'flexibility';
+      const dayType: 'cardio' | 'strength' | 'flexibility' = 
+        day % 3 === 1 ? 'cardio' : day % 3 === 2 ? 'strength' : 'flexibility';
       const exerciseCount = intensity === 'high' ? 3 : 2;
 
       plan.push({
@@ -124,18 +190,18 @@ const FitnessApp = () => {
     return plan;
   };
 
-  const startProfile = () => {
+  const startProfile = (): void => {
     if (!profile.name || !profile.age || !profile.weight || !profile.gender) return;
     const plan = generatePlan(profile);
     setExercisePlan(plan);
     setScreen('plan');
   };
 
-  const resetSession = () => {
-    localStorage.removeItem('zevaFitnessProfile');
-    localStorage.removeItem('zevaCurrentDay');
-    localStorage.removeItem('zevaCompletedDays');
-    localStorage.removeItem('zevaExercisePlan');
+  const resetSession = (): void => {
+    safeLocalStorage.removeItem('zevaFitnessProfile');
+    safeLocalStorage.removeItem('zevaCurrentDay');
+    safeLocalStorage.removeItem('zevaCompletedDays');
+    safeLocalStorage.removeItem('zevaExercisePlan');
     setProfile({ name: '', age: '', weight: '', gender: '' });
     setCurrentDay(1);
     setCompletedDays([]);
@@ -143,7 +209,7 @@ const FitnessApp = () => {
     setScreen('profile');
   };
 
-  const startDay = (day) => {
+  const startDay = (day: number): void => {
     setCurrentDay(day);
     setCurrentExercise(0);
     const todayPlan = exercisePlan.find(p => p.day === day);
@@ -154,7 +220,7 @@ const FitnessApp = () => {
   };
 
   useEffect(() => {
-    let interval = null;
+    let interval: NodeJS.Timeout | null = null;
     if (isActive && timer > 0) {
       interval = setInterval(() => setTimer(prev => prev - 1), 1000);
     } else if (timer === 0 && isActive) {
@@ -173,8 +239,14 @@ const FitnessApp = () => {
         setScreen('complete');
       }
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isActive, timer, currentExercise, exercisePlan, currentDay, completedDays]);
+
+  const handleProfileChange = (field: keyof UserProfile, value: string): void => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+  };
 
   // Profile Screen
   if (screen === 'profile') {
@@ -197,7 +269,7 @@ const FitnessApp = () => {
                 type="text"
                 placeholder="Enter your name"
                 value={profile.name}
-                onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => handleProfileChange('name', e.target.value)}
                 className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
               />
             </div>
@@ -209,7 +281,7 @@ const FitnessApp = () => {
                   type="number"
                   placeholder="25"
                   value={profile.age}
-                  onChange={(e) => setProfile(prev => ({ ...prev, age: e.target.value }))}
+                  onChange={(e) => handleProfileChange('age', e.target.value)}
                   className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
                 />
               </div>
@@ -219,7 +291,7 @@ const FitnessApp = () => {
                   type="number"
                   placeholder="70"
                   value={profile.weight}
-                  onChange={(e) => setProfile(prev => ({ ...prev, weight: e.target.value }))}
+                  onChange={(e) => handleProfileChange('weight', e.target.value)}
                   className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
                 />
               </div>
@@ -229,7 +301,7 @@ const FitnessApp = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
               <select
                 value={profile.gender}
-                onChange={(e) => setProfile(prev => ({ ...prev, gender: e.target.value }))}
+                onChange={(e) => handleProfileChange('gender', e.target.value)}
                 className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
               >
                 <option value="">Select Gender</option>
@@ -493,7 +565,6 @@ const FitnessApp = () => {
         </div>
       </div>
     );
-
   }
 
   // Completion Screen

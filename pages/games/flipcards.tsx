@@ -71,7 +71,7 @@ interface Particle {
   color: string;
 }
 
-function ZevaAdvancedMemoryGame(){
+function ZevaAdvancedMemoryGame() {
   const [state, setState] = useState<GameState>({
     level: 1,
     unlocked: 1,
@@ -86,7 +86,7 @@ function ZevaAdvancedMemoryGame(){
     multiplier: 1,
     difficulty: 'normal'
   });
-  
+
   const [cards, setCards] = useState<GameCard[]>([]);
   const [time, setTime] = useState<number | null>(null);
   const [status, setStatus] = useState<'menu' | 'playing' | 'won' | 'lost' | 'stats' | 'settings'>('menu');
@@ -132,7 +132,7 @@ function ZevaAdvancedMemoryGame(){
     const pairs = levels[level - 1].pairs;
     const selectedIcons = [];
     const available = [...iconKeys];
-    
+
     for (let i = 0; i < pairs; i++) {
       const idx = rand(available.length);
       selectedIcons.push(available.splice(idx, 1)[0]);
@@ -158,27 +158,27 @@ function ZevaAdvancedMemoryGame(){
     const perfectBonus = perfect ? baseScore : 0;
     const comboBonus = comboCount * 100;
     const difficultyMultiplier = state.difficulty === 'extreme' ? 2 : state.difficulty === 'hard' ? 1.5 : 1;
-    
+
     return Math.floor((baseScore + attemptBonus + timeBonus + perfectBonus + comboBonus) * state.multiplier * difficultyMultiplier);
   }, [comboCount, state.multiplier, state.difficulty]);
 
   const startLevel = useCallback((level: number) => {
     if (level > state.unlocked) return;
-    
+
     const seed = Date.now() + Math.random().toString();
     const newCards = generateBoard(level, seed);
-    
+
     setCards(newCards);
     setStatus('playing');
     setTime(levels[level - 1].time);
     setComboCount(0);
     setShowHint(false);
-    save({ 
-      level, 
-      seed, 
-      matched: [], 
-      selected: [], 
-      attempts: 0, 
+    save({
+      level,
+      seed,
+      matched: [],
+      selected: [],
+      attempts: 0,
       started: Date.now(),
       currentScore: 0,
       multiplier: 1
@@ -187,26 +187,26 @@ function ZevaAdvancedMemoryGame(){
 
   const useHint = useCallback(() => {
     if (showHint) return;
-    
+
     const unmatched = cards.filter(c => !c.matched && !c.flipped);
     if (unmatched.length < 2) return;
-    
+
     const iconGroups: { [key: string]: GameCard[] } = {};
     unmatched.forEach(card => {
       if (!iconGroups[card.icon]) iconGroups[card.icon] = [];
       iconGroups[card.icon].push(card);
     });
-    
+
     const availablePairs = Object.values(iconGroups).filter(group => group.length >= 2);
     if (availablePairs.length === 0) return;
-    
+
     const randomPair = availablePairs[Math.floor(Math.random() * availablePairs.length)];
     const [card1, card2] = randomPair.slice(0, 2);
-    
-    setCards(prev => prev.map(c => 
+
+    setCards(prev => prev.map(c =>
       c.id === card1.id || c.id === card2.id ? { ...c, hint: true } : c
     ));
-    
+
     setShowHint(true);
     setTimeout(() => {
       setCards(prev => prev.map(c => ({ ...c, hint: false })));
@@ -216,99 +216,80 @@ function ZevaAdvancedMemoryGame(){
 
   const handleClick = useCallback((cardId: string) => {
     if (status !== 'playing' || showMismatch) return;
-    
+
     const card = cards.find(c => c.id === cardId);
     if (!card || card.flipped || card.matched) return;
-    
+
     playSound('flip');
+
     const newSelected = [...state.selected, cardId];
-    setCards(prev => prev.map(c => c.id === cardId ? { ...c, flipped: true, pulsing: true } : c));
-    
+    setCards(prev =>
+      prev.map(c =>
+        c.id === cardId ? { ...c, flipped: true, pulsing: true } : c
+      )
+    );
+
     if (newSelected.length === 2) {
-      const [first, second] = newSelected.map(id => cards.find(c => c.id === id));
-      
-      if (first?.icon === second?.icon) {
+      const [first, second] = newSelected.map(id =>
+        cards.find(c => c.id === id)
+      );
+
+      // ✅ Explicit type guard makes TS happy
+      if (first && second && first.icon === second.icon) {
         playSound('match');
         const newCombo = comboCount + 1;
         setComboCount(newCombo);
-        
+
         if (newCombo >= 3) {
           save({ multiplier: Math.min(state.multiplier + 0.5, 5) });
           playSound('combo');
         }
-        
+
         // Create particles at card positions
-        const cardElements = document.querySelectorAll(`[data-card-id="${first.id}"], [data-card-id="${second.id}"]`);
+        const cardElements = document.querySelectorAll(
+          `[data-card-id="${first.id}"], [data-card-id="${second.id}"]`
+        );
         cardElements.forEach(el => {
           const rect = el.getBoundingClientRect();
-          createParticles(rect.left + rect.width/2, rect.top + rect.height/2, '#10B981');
+          createParticles(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+            '#10B981'
+          );
         });
-        
+
         setTimeout(() => {
-          setCards(prev => prev.map(c => 
-            newSelected.includes(c.id) ? { ...c, matched: true, pulsing: false } : c
-          ));
+          setCards(prev =>
+            prev.map(c =>
+              newSelected.includes(c.id)
+                ? { ...c, matched: true, pulsing: false }
+                : c
+            )
+          );
+
           const newMatched = [...state.matched, first.icon];
-          const matchScore = 100 * state.multiplier + (newCombo * 50);
-          
-          save({ 
-            matched: newMatched, 
-            selected: [], 
-            attempts: state.attempts + 1,
-            currentScore: state.currentScore + matchScore,
-            stats: { 
-              ...state.stats, 
-              totalMatches: state.stats.totalMatches + 1,
-              maxCombo: Math.max(state.stats.maxCombo, newCombo)
-            }
-          });
-          
-          if (newMatched.length === levels[state.level - 1].pairs) {
-            const timeUsed = levels[state.level - 1].time ? 
-              (levels[state.level - 1].time! - (time || 0)) : 0;
-            const perfect = state.attempts + 1 === levels[state.level - 1].pairs;
-            const finalScore = calculateScore(state.level, state.attempts + 1, timeUsed, perfect);
-            
-            setTimeout(() => {
-              setStatus('won');
-              playSound('win');
-              const newStats = {
-                ...state.stats,
-                totalScore: state.stats.totalScore + finalScore,
-                gamesPlayed: state.stats.gamesPlayed + 1,
-                perfectGames: perfect ? state.stats.perfectGames + 1 : state.stats.perfectGames,
-                streak: state.stats.streak + 1,
-                bestTime: {
-                  ...state.stats.bestTime,
-                  [state.level]: timeUsed > 0 ? Math.min(state.stats.bestTime[state.level] || Infinity, timeUsed) : state.stats.bestTime[state.level]
-                }
-              };
-              save({ 
-                unlocked: Math.max(state.unlocked, state.level + 1),
-                stats: newStats,
-                currentScore: finalScore
-              });
-            }, 800);
-          }
-        }, 800);
+          save({ matched: newMatched });
+        }, 600);
       } else {
-        playSound('flip');
+        // mismatch case
         setShowMismatch(true);
-        setComboCount(0);
-        save({ multiplier: 1 });
-        
         setTimeout(() => {
-          setCards(prev => prev.map(c => 
-            newSelected.includes(c.id) ? { ...c, flipped: false, pulsing: false } : c
-          ));
+          setCards(prev =>
+            prev.map(c =>
+              newSelected.includes(c.id)
+                ? { ...c, flipped: false, pulsing: false }
+                : c
+            )
+          );
           setShowMismatch(false);
-          save({ selected: [], attempts: state.attempts + 1 });
-        }, 1200);
+          save({ attempts: state.attempts + 1, selected: [] });
+        }, 1000);
       }
     } else {
       save({ selected: newSelected });
     }
-  }, [cards, status, showMismatch, state, save, comboCount, time, playSound, calculateScore, createParticles]);
+  }, [status, showMismatch, cards, playSound, comboCount, state, createParticles, save]);
+
 
   const resetGame = useCallback(() => {
     setState({
@@ -387,7 +368,7 @@ function ZevaAdvancedMemoryGame(){
                 </h2>
                 <p className="text-lg text-[#2D9AA5] font-medium">{getRankTitle(state.stats.totalScore)}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setStatus('menu')}
                 className="p-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all duration-300 hover:scale-110 self-start sm:self-auto"
               >
@@ -495,49 +476,43 @@ function ZevaAdvancedMemoryGame(){
                 Achievement Gallery
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
-                  state.stats.gamesPlayed >= 1 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
-                }`}>
+                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${state.stats.gamesPlayed >= 1 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
+                  }`}>
                   <Star className={`w-8 h-8 mb-2 ${state.stats.gamesPlayed >= 1 ? 'text-yellow-400' : 'text-gray-500'}`} />
                   <p className={`font-bold ${state.stats.gamesPlayed >= 1 ? 'text-white' : 'text-gray-400'}`}>First Victory</p>
                   <p className="text-xs text-gray-400">Complete your first level</p>
                 </div>
-                
-                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
-                  state.stats.perfectGames >= 3 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
-                }`}>
+
+                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${state.stats.perfectGames >= 3 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
+                  }`}>
                   <Target className={`w-8 h-8 mb-2 ${state.stats.perfectGames >= 3 ? 'text-yellow-400' : 'text-gray-500'}`} />
                   <p className={`font-bold ${state.stats.perfectGames >= 3 ? 'text-white' : 'text-gray-400'}`}>Perfectionist</p>
                   <p className="text-xs text-gray-400">3 perfect games</p>
                 </div>
-                
-                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
-                  state.unlocked >= 5 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
-                }`}>
+
+                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${state.unlocked >= 5 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
+                  }`}>
                   <Brain className={`w-8 h-8 mb-2 ${state.unlocked >= 5 ? 'text-yellow-400' : 'text-gray-500'}`} />
                   <p className={`font-bold ${state.unlocked >= 5 ? 'text-white' : 'text-gray-400'}`}>Memory Master</p>
                   <p className="text-xs text-gray-400">Unlock level 5</p>
                 </div>
-                
-                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
-                  state.stats.maxCombo >= 5 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
-                }`}>
+
+                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${state.stats.maxCombo >= 5 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
+                  }`}>
                   <Zap className={`w-8 h-8 mb-2 ${state.stats.maxCombo >= 5 ? 'text-yellow-400' : 'text-gray-500'}`} />
                   <p className={`font-bold ${state.stats.maxCombo >= 5 ? 'text-white' : 'text-gray-400'}`}>Combo Master</p>
                   <p className="text-xs text-gray-400">5x combo streak</p>
                 </div>
-                
-                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
-                  state.stats.totalScore >= 5000 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
-                }`}>
+
+                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${state.stats.totalScore >= 5000 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
+                  }`}>
                   <Trophy className={`w-8 h-8 mb-2 ${state.stats.totalScore >= 5000 ? 'text-yellow-400' : 'text-gray-500'}`} />
                   <p className={`font-bold ${state.stats.totalScore >= 5000 ? 'text-white' : 'text-gray-400'}`}>High Scorer</p>
                   <p className="text-xs text-gray-400">5000+ total points</p>
                 </div>
-                
-                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
-                  state.unlocked >= 9 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
-                }`}>
+
+                <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${state.unlocked >= 9 ? 'bg-green-500/20 border-green-400/30' : 'bg-gray-700/50 border-gray-600/30'
+                  }`}>
                   <Award className={`w-8 h-8 mb-2 ${state.unlocked >= 9 ? 'text-yellow-400' : 'text-gray-500'}`} />
                   <p className={`font-bold ${state.unlocked >= 9 ? 'text-white' : 'text-gray-400'}`}>Ultimate ZEVA</p>
                   <p className="text-xs text-gray-400">Complete all levels</p>
@@ -561,7 +536,7 @@ function ZevaAdvancedMemoryGame(){
                 <Settings className="w-8 h-8 text-[#2D9AA5]" />
                 Game Settings
               </h2>
-              <button 
+              <button
                 onClick={() => setStatus('menu')}
                 className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-300 hover:scale-110"
               >
@@ -585,13 +560,11 @@ function ZevaAdvancedMemoryGame(){
                   </div>
                   <button
                     onClick={() => save({ soundEnabled: !state.soundEnabled })}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 ${
-                      state.soundEnabled ? 'bg-[#2D9AA5]' : 'bg-gray-600'
-                    }`}
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 ${state.soundEnabled ? 'bg-[#2D9AA5]' : 'bg-gray-600'
+                      }`}
                   >
-                    <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${
-                      state.soundEnabled ? 'translate-x-7' : 'translate-x-1'
-                    }`} />
+                    <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform duration-300 shadow-lg ${state.soundEnabled ? 'translate-x-7' : 'translate-x-1'
+                      }`} />
                   </button>
                 </div>
               </div>
@@ -603,12 +576,11 @@ function ZevaAdvancedMemoryGame(){
                   {['normal', 'hard', 'extreme'].map((diff) => (
                     <button
                       key={diff}
-                      onClick={() => save({ difficulty: diff })}
-                      className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${
-                        state.difficulty === diff
+                      onClick={() => save({ difficulty: diff as 'normal' | 'hard' | 'extreme' })}
+                      className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 ${state.difficulty === diff
                           ? 'bg-[#2D9AA5]/20 border-[#2D9AA5]/50 text-[#2D9AA5]'
                           : 'bg-white/5 border-white/20 text-gray-300 hover:bg-white/10'
-                      }`}
+                        }`}
                     >
                       <div className="text-center">
                         <p className="font-bold capitalize">{diff}</p>
@@ -630,13 +602,13 @@ function ZevaAdvancedMemoryGame(){
                     <span className="text-[#2D9AA5] font-bold">{state.unlocked}/{levels.length}</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-3">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-[#2D9AA5] to-blue-500 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${(state.unlocked / levels.length) * 100}%` }}
                     />
                   </div>
                 </div>
-                
+
                 <button
                   onClick={resetGame}
                   className="w-full py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl border border-red-400/30 transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105"
@@ -704,18 +676,17 @@ function ZevaAdvancedMemoryGame(){
                     <span>Difficulty: {state.difficulty}</span>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {levels.map((cfg, i) => (
                     <button
                       key={i}
                       onClick={() => startLevel(i + 1)}
                       disabled={i + 1 > state.unlocked}
-                      className={`group relative overflow-hidden rounded-2xl p-6 transition-all duration-500 transform hover:scale-105 ${
-                        i + 1 <= state.unlocked
+                      className={`group relative overflow-hidden rounded-2xl p-6 transition-all duration-500 transform hover:scale-105 ${i + 1 <= state.unlocked
                           ? 'bg-gradient-to-br from-[#2D9AA5]/20 to-blue-600/20 hover:from-[#2D9AA5]/30 hover:to-blue-600/30 border border-[#2D9AA5]/40 hover:border-[#2D9AA5]/60 text-white shadow-xl hover:shadow-2xl hover:shadow-[#2D9AA5]/20'
                           : 'bg-gray-800/50 text-gray-500 cursor-not-allowed border border-gray-700/50'
-                      }`}
+                        }`}
                     >
                       {/* Unlock indicator */}
                       {i + 1 <= state.unlocked && (
@@ -723,7 +694,7 @@ function ZevaAdvancedMemoryGame(){
                           <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
                         </div>
                       )}
-                      
+
                       <div className="relative z-10">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex items-center gap-2">
@@ -736,9 +707,9 @@ function ZevaAdvancedMemoryGame(){
                             {cfg.difficulty}
                           </span>
                         </div>
-                        
+
                         <p className="text-sm opacity-90 mb-3 font-medium">{cfg.desc}</p>
-                        
+
                         <div className="flex justify-between items-center text-xs">
                           <div className="flex items-center gap-1">
                             <Cpu className="w-4 h-4" />
@@ -755,7 +726,7 @@ function ZevaAdvancedMemoryGame(){
                             <span className="text-yellow-400 font-bold">+{cfg.reward}</span>
                           </div>
                         </div>
-                        
+
                         {/* Best time indicator */}
                         {state.stats.bestTime[i + 1] && (
                           <div className="mt-2 text-xs text-[#2D9AA5] font-medium">
@@ -763,7 +734,7 @@ function ZevaAdvancedMemoryGame(){
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Hover effect overlay */}
                       {i + 1 <= state.unlocked && (
                         <div className="absolute inset-0 bg-gradient-to-r from-[#2D9AA5]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -789,24 +760,24 @@ function ZevaAdvancedMemoryGame(){
                     </div>
                     <p className="text-[#2D9AA5] font-bold">{getRankTitle(state.stats.totalScore)}</p>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300 text-sm">Level Progress</span>
                       <span className="text-[#2D9AA5] font-bold">{state.unlocked}/{levels.length}</span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
+                      <div
                         className="bg-gradient-to-r from-[#2D9AA5] to-blue-500 h-2 rounded-full transition-all duration-500"
                         style={{ width: `${(state.unlocked / levels.length) * 100}%` }}
                       />
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300 text-sm">Perfect Games</span>
                       <span className="text-green-400 font-bold">{state.stats.perfectGames}</span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300 text-sm">Current Streak</span>
                       <span className="text-orange-400 font-bold">{state.stats.streak}</span>
@@ -824,7 +795,7 @@ function ZevaAdvancedMemoryGame(){
                   <Trophy className="w-5 h-5" />
                   View Full Statistics
                 </button>
-                
+
                 {state.unlocked > 1 && (
                   <button
                     onClick={() => startLevel(state.unlocked)}
@@ -843,9 +814,8 @@ function ZevaAdvancedMemoryGame(){
                   Achievements
                 </h3>
                 <div className="space-y-3">
-                  <div className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
-                    state.stats.gamesPlayed >= 1 ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600/30'
-                  }`}>
+                  <div className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${state.stats.gamesPlayed >= 1 ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600/30'
+                    }`}>
                     <Star className={`w-6 h-6 ${state.stats.gamesPlayed >= 1 ? 'text-yellow-400' : 'text-gray-500'}`} />
                     <div className="flex-1">
                       <p className={`font-medium ${state.stats.gamesPlayed >= 1 ? 'text-white' : 'text-gray-400'}`}>First Victory</p>
@@ -853,10 +823,9 @@ function ZevaAdvancedMemoryGame(){
                     </div>
                     {state.stats.gamesPlayed >= 1 && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />}
                   </div>
-                  
-                  <div className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
-                    state.stats.perfectGames >= 3 ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600/30'
-                  }`}>
+
+                  <div className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${state.stats.perfectGames >= 3 ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600/30'
+                    }`}>
                     <Target className={`w-6 h-6 ${state.stats.perfectGames >= 3 ? 'text-yellow-400' : 'text-gray-500'}`} />
                     <div className="flex-1">
                       <p className={`font-medium ${state.stats.perfectGames >= 3 ? 'text-white' : 'text-gray-400'}`}>Perfectionist</p>
@@ -896,7 +865,7 @@ function ZevaAdvancedMemoryGame(){
         {/* Enhanced Game Header */}
         <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-4 sm:p-6 mb-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-[#2D9AA5]/5 to-transparent" />
-          
+
           <div className="relative flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="bg-gradient-to-r from-[#2D9AA5] to-blue-600 rounded-2xl p-4 shadow-lg">
@@ -921,9 +890,8 @@ function ZevaAdvancedMemoryGame(){
               {/* Enhanced Stats Display */}
               <div className="flex gap-4">
                 {time !== null && (
-                  <div className={`bg-white/10 rounded-2xl px-4 py-3 border border-white/20 min-w-[120px] text-center transition-all duration-300 ${
-                    time <= 10 ? 'bg-red-500/20 border-red-400/40 animate-pulse' : time <= 20 ? 'bg-yellow-500/20 border-yellow-400/40' : ''
-                  }`}>
+                  <div className={`bg-white/10 rounded-2xl px-4 py-3 border border-white/20 min-w-[120px] text-center transition-all duration-300 ${time <= 10 ? 'bg-red-500/20 border-red-400/40 animate-pulse' : time <= 20 ? 'bg-yellow-500/20 border-yellow-400/40' : ''
+                    }`}>
                     <Clock className={`w-5 h-5 mx-auto mb-1 ${time <= 10 ? 'text-red-400' : time <= 20 ? 'text-yellow-400' : 'text-[#2D9AA5]'}`} />
                     <div className={`text-xl font-bold ${time <= 10 ? 'text-red-400' : time <= 20 ? 'text-yellow-400' : 'text-white'}`}>
                       {time}s
@@ -970,7 +938,7 @@ function ZevaAdvancedMemoryGame(){
                 >
                   <Home className="w-5 h-5" />
                 </button>
-                
+
                 <button
                   onClick={useHint}
                   disabled={showHint}
@@ -979,7 +947,7 @@ function ZevaAdvancedMemoryGame(){
                 >
                   <Eye className="w-5 h-5" />
                 </button>
-                
+
 
               </div>
             </div>
@@ -989,7 +957,7 @@ function ZevaAdvancedMemoryGame(){
         {/* Game Board */}
         <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-6 sm:p-8 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-[#2D9AA5]/5 to-transparent" />
-          
+
           <div className="relative">
             <div className={`grid gap-3 sm:gap-4 justify-center ${getGridCols(config.pairs * 2)}`}>
               {cards.map((card) => (
@@ -998,30 +966,26 @@ function ZevaAdvancedMemoryGame(){
                   data-card-id={card.id}
                   onClick={() => handleClick(card.id)}
                   disabled={showMismatch || card.matched}
-                  className={`group relative aspect-square w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl transition-all duration-500 transform hover:scale-110 hover:rotate-3 shadow-lg hover:shadow-2xl ${
-                    card.flipped || card.matched
-                      ? card.matched 
-                        ? 'bg-gradient-to-br from-green-500/30 to-emerald-600/30 border-2 border-green-400/50 shadow-green-400/20' 
+                  className={`group relative aspect-square w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl transition-all duration-500 transform hover:scale-110 hover:rotate-3 shadow-lg hover:shadow-2xl ${card.flipped || card.matched
+                      ? card.matched
+                        ? 'bg-gradient-to-br from-green-500/30 to-emerald-600/30 border-2 border-green-400/50 shadow-green-400/20'
                         : state.selected.includes(card.id) && showMismatch
-                        ? 'bg-gradient-to-br from-red-500/30 to-rose-600/30 border-2 border-red-400/50 animate-shake'
-                        : 'bg-gradient-to-br from-[#2D9AA5]/30 to-blue-600/30 border-2 border-[#2D9AA5]/50'
+                          ? 'bg-gradient-to-br from-red-500/30 to-rose-600/30 border-2 border-red-400/50 animate-shake'
+                          : 'bg-gradient-to-br from-[#2D9AA5]/30 to-blue-600/30 border-2 border-[#2D9AA5]/50'
                       : 'bg-gradient-to-br from-white/20 to-white/10 border-2 border-white/30 hover:border-[#2D9AA5]/50 hover:bg-[#2D9AA5]/10'
-                  } ${card.pulsing ? 'animate-pulse' : ''} ${card.hint ? 'animate-bounce bg-yellow-400/30 border-yellow-400/50' : ''}`}
+                    } ${card.pulsing ? 'animate-pulse' : ''} ${card.hint ? 'animate-bounce bg-yellow-400/30 border-yellow-400/50' : ''}`}
                 >
                   {/* Card Glow Effect */}
-                  <div className={`absolute inset-0 rounded-2xl transition-opacity duration-500 ${
-                    card.flipped || card.matched ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
-                  } ${
-                    card.matched ? 'bg-gradient-to-br from-green-400/20 to-emerald-500/20' : 'bg-gradient-to-br from-[#2D9AA5]/20 to-blue-500/20'
-                  }`} />
-                  
+                  <div className={`absolute inset-0 rounded-2xl transition-opacity duration-500 ${card.flipped || card.matched ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
+                    } ${card.matched ? 'bg-gradient-to-br from-green-400/20 to-emerald-500/20' : 'bg-gradient-to-br from-[#2D9AA5]/20 to-blue-500/20'
+                    }`} />
+
                   {/* Card Content */}
                   <div className="relative flex items-center justify-center h-full">
                     {card.flipped || card.matched ? (
                       <svg
-                        className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 transition-all duration-300 ${
-                          card.matched ? 'text-white animate-pulse' : 'text-[#2D9AA5]'
-                        }`}
+                        className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 transition-all duration-300 ${card.matched ? 'text-white animate-pulse' : 'text-[#2D9AA5]'
+                          }`}
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -1056,7 +1020,7 @@ function ZevaAdvancedMemoryGame(){
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-8 max-w-md w-full text-center relative overflow-hidden">
               <div className={`absolute inset-0 ${status === 'won' ? 'bg-gradient-to-br from-green-500/10 to-emerald-600/10' : 'bg-gradient-to-br from-red-500/10 to-rose-600/10'}`} />
-              
+
               <div className="relative">
                 <div className="mb-6">
                   {status === 'won' ? (

@@ -43,7 +43,7 @@ export default function AdminForgotPassword() {
       const auth = getAuth(app);
 
       const actionCodeSettings = {
-        url: `https://ayurvedanearme.ae/admin/reset-password?email=${encodeURIComponent(
+        url: `https://zeva360.com/admin/reset-password?email=${encodeURIComponent(
           email
         )}`,
         handleCodeInApp: true,
