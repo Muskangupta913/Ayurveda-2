@@ -29,9 +29,9 @@ export default async function handler(req, res) {
     // Helper to get base URL
     function getBaseUrl() {
       if (process.env.NODE_ENV === "production") {
-        return "https://ayurvedanearme.ae";
+        return "https://zeva360.com";
       }
-      return "http://localhost:3000";
+      return process.env.NEXT_PUBLIC_BASE_URL ;
     }
 
     // Ensure photos are absolute URLs

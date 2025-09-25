@@ -460,7 +460,7 @@ function AdminDoctors() {
                       if (filenameMatch) {
                         const baseUrl =
                           process.env.NEXT_PUBLIC_BASE_URL ||
-                          "http://localhost:3000";
+                          "http://localhost:3001";
                         safeUrl = `${baseUrl}/${filenameMatch[0]}`;
                         console.log("Cleaned resume URL:", safeUrl);
                       }

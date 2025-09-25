@@ -1244,7 +1244,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     if (typeof window !== "undefined") {
       const origin = window.location.origin;
       if (origin.includes("localhost")) {
-        return "http://localhost:3000";
+       return process.env.NEXT_PUBLIC_BASE_URL;
       } else {
         return "https://zeva360.com";
       }

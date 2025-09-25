@@ -45,7 +45,7 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
   const getBaseUrl = () => {
     if (typeof window !== "undefined") {
       const origin = window.location.origin;
-      return origin.includes("localhost") ? "http://localhost:3000" : "https://zeva360.com";
+      return origin.includes("localhost") ? process.env.NEXT_PUBLIC_BASE_URL: "https://zeva360.com";
     }
     return "";
   };

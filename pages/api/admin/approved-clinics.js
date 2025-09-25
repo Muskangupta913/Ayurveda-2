@@ -18,9 +18,9 @@ export default async function handler(req, res) {
     // Set base URL for images
     const getBaseUrl = () => {
       if (process.env.NODE_ENV === "production") {
-        return "https://ayurvedanearme.ae";
+        return "https://zeva360.com";
       }
-      return "http://localhost:3000";
+     return process.env.NEXT_PUBLIC_BASE_URL;
     };
 
     // Process clinic data to ensure consistent image URLs
