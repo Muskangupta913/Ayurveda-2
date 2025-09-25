@@ -1,6 +1,7 @@
 //migrate-leads.mjs
 import dotenv from "dotenv";
-dotenv.config({ path: ".env" }); 
+// dotenv.config({ path: ".env" }); 
+dotenv.config({ path: '/home/Ayurveda-2/.env' });
 console.log("Loaded MONGODB_URI:", process.env.MONGODB_URI);
 import mongoose from "mongoose";
 import dbConnect from "./lib/database.js";
