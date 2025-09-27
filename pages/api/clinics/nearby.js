@@ -309,7 +309,7 @@ export default async function handler(req, res) {
           if (photo.startsWith("/uploads/clinic/")) return photo; // Local dev
 
           const filename = photo.split("uploads/clinic/").pop();
-          return `https://ayurvedanearme.ae/uploads/clinic/${filename}`;
+          return `https://zeva360.com/uploads/clinic/${filename}`;
         }) || [],
     }));
 
@@ -342,7 +342,7 @@ export default async function handler(req, res) {
             if (photo.startsWith("/uploads/clinic/")) return photo;
 
             const filename = photo.split("uploads/clinic/").pop();
-            return `https://ayurvedanearme.ae/uploads/clinic/${filename}`;
+            return `https://zeva360.com/uploads/clinic/${filename}`;
           }) || [];
 
         clinics = clinics.filter(

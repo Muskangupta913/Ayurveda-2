@@ -21,9 +21,8 @@ import {
   sendSignInLinkToEmail,
 } from "firebase/auth";
 import axios from "axios";
-import { GoogleMap, Marker } from "@react-google-maps/api";
+import { GoogleMap, Marker} from "@react-google-maps/api";
 import { useRouter } from "next/router";
-import Layout from "@/components/Layout";
 
 // Types for SuccessPopup and Toast
 interface SuccessPopupProps {
@@ -34,13 +33,6 @@ interface SuccessPopupProps {
 const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
-
   if (!isOpen) return null;
 
   const handleRedirect = () => {
@@ -48,30 +40,37 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose }) => {
     router.push("/"); // Navigate to home (change path if needed)
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all duration-500 ease-out">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transform transition-transform duration-300 hover:scale-110" style={{backgroundColor: '#2D9AA5'}}>
-            <span className="text-3xl text-white">🎉</span>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2 transition-opacity duration-700">
-            Registration Complete!
-          </h3>
-          <p className="text-gray-600 mb-6 transition-opacity duration-700 delay-100">
-            Your Health Center has been registered. Pending approval from ZEVA
-          </p>
-          <button
-            onClick={handleRedirect}
-            className="text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
-            style={{background: `linear-gradient(to right, #2D9AA5, #258A94)`}}
-          >
-            Continue to ZEVA
-          </button>
+  useEffect(() => {
+  document.body.style.overflow = 'hidden';
+  return () => {
+    document.body.style.overflow = 'unset';
+  };
+}, []);
+
+return (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
+    <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all duration-500 ease-out">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transform transition-transform duration-300 hover:scale-110" style={{backgroundColor: '#2D9AA5'}}>
+          <span className="text-3xl text-white">🎉</span>
         </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2 transition-opacity duration-700">
+          Registration Complete!
+        </h3>
+        <p className="text-gray-600 mb-6 transition-opacity duration-700 delay-100">
+          Your Health Center has been registered. Pending approval from ZEVA
+        </p>
+        <button
+          onClick={handleRedirect}
+          className="text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+          style={{background: `linear-gradient(to right, #2D9AA5, #258A94)`}}
+        >
+          Continue to ZEVA
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 interface ToastProps {
@@ -244,10 +243,12 @@ const RegisterClinic: React.FC & {
     return Object.keys(newErrors).length === 0;
   };
 
+
   const onMapLoad = useCallback(() => {
     const geocoderInstance = new window.google.maps.Geocoder();
     setGeocoder(geocoderInstance);
   }, []);
+
 
   const geocodeAddress = useCallback(
     (address: string) => {
@@ -534,18 +535,29 @@ const RegisterClinic: React.FC & {
     }
   };
 
-  // Removed unused function handleAddTreatment
-  // const handleAddTreatment = async () => {
-  //   if (selectedTreatments.length === 0) {
-  //     setErrors({ ...errors, treatments: "Please select at least one treatment" });
-  //     return;
-  //   }
-  //
-  //   const mainTreatments = selectedTreatments.filter(
-  //     (treatment) => treatment.mainTreatment
-  //   );
-  //   // Further logic...
-  // };
+  // Optional helper to add treatments via API as per requested snippet
+  const handleAddTreatment = async () => {
+    if (selectedTreatments.length === 0) {
+      setErrors({ ...errors, treatments: "Please select at least one treatment" });
+      return;
+    }
+
+    const mainTreatments = selectedTreatments.filter(
+      (t) => typeof t === "object" && (t as TreatmentType).slug
+    ) as TreatmentType[];
+
+    const payload = {
+      treatments: mainTreatments,
+      otherTreatment: otherTreatments, // send array as requested
+      // clinicId can be added here if available in scope
+    };
+
+    await fetch("/api/clinics/add-treatment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1242,6 +1254,5 @@ const RegisterClinic: React.FC & {
 export default RegisterClinic;
 
 RegisterClinic.getLayout = function PageLayout(page: React.ReactNode) {
-  return <Layout>{page}</Layout>;
+  return page;
 };
-
