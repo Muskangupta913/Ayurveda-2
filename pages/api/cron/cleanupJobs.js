@@ -1,10 +1,10 @@
 // cron/cleanupJobs.js
-import dbConnect from "../lib/database.js";
+import dbConnect from "../../../lib/database.js";
 import mongoose from "mongoose";
 
 // Import your schemas
-import JobApplicationSchema from "../models/JobApplication.js";
-import JobPostingSchema from "../models/JobPosting.js";
+import JobApplicationSchema from "../../../models/JobApplication.js";
+import JobPostingSchema from "../../../models/JobPosting.js";
 
 // Safely register models
 const JobApplication = mongoose.models.JobApplication || mongoose.model("JobApplication", JobApplicationSchema);
@@ -39,8 +39,8 @@ async function cleanupJobs() {
     });
 
     console.log("🧹 Cleanup complete:");
-    console.log(- Rejected applications deleted: ${rejectedDeleted.deletedCount});
-    console.log(- Expired job applications deleted: ${expiredAppsDeleted.deletedCount});
+    // console.log(- Rejected applications deleted: ${rejectedDeleted.deletedCount});
+    // console.log(- Expired job applications deleted: ${expiredAppsDeleted.deletedCount});
   } catch (err) {
     console.error("❌ Cleanup failed:", err);
   }
