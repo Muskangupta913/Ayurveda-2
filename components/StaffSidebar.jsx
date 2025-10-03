@@ -10,6 +10,12 @@ const navItems = [
     icon: '🏠',
     description: 'Overview & analytics'
   },
+  {
+     label: "Create Agent",
+     path: "/staff/patient-registration",
+     icon: "📅",
+     description: "Manage Clinic",
+   },
 ];
 
 const AdminSidebar = ({ className }) => {
