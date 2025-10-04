@@ -9,11 +9,11 @@ import {
   Phone,
   MapPin,
   Clock,
-  Leaf,
   Heart,
   Users,
   Shield,
-  Star,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   isSignInWithEmailLink,
@@ -21,10 +21,9 @@ import {
   sendSignInLinkToEmail,
 } from "firebase/auth";
 import axios from "axios";
-import { GoogleMap, Marker} from "@react-google-maps/api";
+import { GoogleMap, Marker } from "@react-google-maps/api";
 import { useRouter } from "next/router";
 
-// Types for SuccessPopup and Toast
 interface SuccessPopupProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,44 +32,46 @@ interface SuccessPopupProps {
 const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleRedirect = () => {
-    onClose(); // Close popup first (optional)
-    router.push("/"); // Navigate to home (change path if needed)
+    onClose();
+    router.push("/");
   };
 
-  useEffect(() => {
-  document.body.style.overflow = 'hidden';
-  return () => {
-    document.body.style.overflow = 'unset';
-  };
-}, []);
-
-return (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
-    <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all duration-500 ease-out">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transform transition-transform duration-300 hover:scale-110" style={{backgroundColor: '#2D9AA5'}}>
-          <span className="text-3xl text-white">🎉</span>
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#2D9AA5'}}>
+            <span className="text-3xl text-white">🎉</span>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">
+            Registration Complete!
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Your Health Center has been registered. Pending approval from ZEVA
+          </p>
+          <button
+            onClick={handleRedirect}
+            className="text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300"
+            style={{background: `linear-gradient(to right, #2D9AA5, #258A94)`}}
+          >
+            Continue to ZEVA
+          </button>
         </div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2 transition-opacity duration-700">
-          Registration Complete!
-        </h3>
-        <p className="text-gray-600 mb-6 transition-opacity duration-700 delay-100">
-          Your Health Center has been registered. Pending approval from ZEVA
-        </p>
-        <button
-          onClick={handleRedirect}
-          className="text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
-          style={{background: `linear-gradient(to right, #2D9AA5, #258A94)`}}
-        >
-          Continue to ZEVA
-        </button>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 interface ToastProps {
@@ -81,7 +82,15 @@ interface ToastProps {
 }
 
 const Toast: React.FC<ToastProps> = ({ message, type, visible, onClose }) => {
+  useEffect(() => {
+    if (visible) {
+      const timer = setTimeout(onClose, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, onClose]);
+
   if (!visible || !message) return null;
+
   const styles = {
     success: "bg-green-500 border-green-600",
     error: "bg-red-500 border-red-600",
@@ -109,7 +118,6 @@ const Toast: React.FC<ToastProps> = ({ message, type, visible, onClose }) => {
   );
 };
 
-// Types for form, errors, treatments, etc.
 interface ContactInfo {
   name: string;
   phone: string;
@@ -137,6 +145,7 @@ interface Errors {
   emailVerification?: string;
   password?: string;
 }
+
 interface TreatmentType {
   name: string;
   slug: string;
@@ -150,6 +159,7 @@ interface ToastState {
 const RegisterClinic: React.FC & {
   getLayout?: (page: React.ReactNode) => React.ReactNode;
 } = () => {
+  const [currentStep, setCurrentStep] = useState(1);
   const [emailVerified, setEmailVerified] = useState<boolean>(false);
   const [emailSent, setEmailSent] = useState<boolean>(false);
   const [ownerPassword, setOwnerPassword] = useState<string>("");
@@ -159,7 +169,6 @@ const RegisterClinic: React.FC & {
   });
   const [addressDebounceTimer, setAddressDebounceTimer] =
     useState<NodeJS.Timeout | null>(null);
-  const [isGeocoding, setIsGeocoding] = useState<boolean>(false);
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState<boolean>(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -182,7 +191,6 @@ const RegisterClinic: React.FC & {
   const [newOther, setNewOther] = useState<string>("");
   const [clinicPhoto, setClinicPhoto] = useState<File | null>(null);
   const [licenseDoc, setLicenseDoc] = useState<File | null>(null);
-  const [status, setStatus] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [toast, setToast] = useState<ToastState>({
     message: "",
@@ -197,33 +205,43 @@ const RegisterClinic: React.FC & {
   ) => {
     setToast({ message, type });
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 4000);
+  };
+
+  const validateStep = (step: number): boolean => {
+    const newErrors: Errors = {};
+    
+    if (step === 1) {
+      if (!form.email.trim()) newErrors.email = "Email is required";
+      if (!emailVerified) newErrors.emailVerification = "Email must be verified";
+      if (!ownerPassword.trim()) newErrors.password = "Password is required";
+    } else if (step === 2) {
+      if (!form.name.trim()) newErrors.name = "Clinic name is required";
+      
+      // Count total services including custom ones
+      const standardServices = selectedTreatments.filter((t) => t !== "other");
+      const totalServices = standardServices.length + otherTreatments.length;
+      
+      if (totalServices === 0) {
+        newErrors.treatments = "Please select at least one service";
+      }
+      
+      if (!form.address.trim()) newErrors.address = "Address is required";
+      if (form.latitude === 0 && form.longitude === 0)
+        newErrors.location = "Please set location on map";
+      if (!clinicPhoto) newErrors.clinicPhoto = "Clinic photo is required";
+    }
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      const firstKey = Object.keys(newErrors)[0];
+      showToastMessage(newErrors[firstKey as keyof Errors] || "", "error");
+      return false;
+    }
+    return true;
   };
 
   const validateForm = (): boolean => {
     const newErrors: Errors = {};
-    if (!form.name.trim()) newErrors.name = "Clinic name is required";
-    {
-      const resolvedSelected = selectedTreatments.includes("other")
-        ? [
-            ...selectedTreatments.filter((t) => t !== "other"),
-            ...Array.from(
-              new Set(
-                otherTreatments
-                  .map((s) => s.trim())
-                  .filter((s) => s.length > 0)
-                  .slice(0, 5)
-              )
-            ),
-          ]
-        : selectedTreatments;
-      if (resolvedSelected.length === 0)
-      newErrors.treatments = "Please select at least one service";
-    }
-    if (!form.address.trim()) newErrors.address = "Address is required";
-    if (form.latitude === 0 && form.longitude === 0)
-      newErrors.location = "Please set location on map";
-    if (!clinicPhoto) newErrors.clinicPhoto = "Clinic photo is required";
     if (!contactInfo.name.trim())
       newErrors.contactName = "Your name is required";
     if (!contactInfo.phone.trim()) {
@@ -231,9 +249,6 @@ const RegisterClinic: React.FC & {
     } else if (!/^\d{10}$/.test(contactInfo.phone.replace(/\D/g, ""))) {
       newErrors.phone = "Phone number must be exactly 10 digits";
     }
-    if (!form.email.trim()) newErrors.email = "Email is required";
-    if (!emailVerified) newErrors.emailVerification = "Email must be verified";
-    if (!ownerPassword.trim()) newErrors.password = "Password is required";
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
@@ -243,19 +258,15 @@ const RegisterClinic: React.FC & {
     return Object.keys(newErrors).length === 0;
   };
 
-
   const onMapLoad = useCallback(() => {
     const geocoderInstance = new window.google.maps.Geocoder();
     setGeocoder(geocoderInstance);
   }, []);
 
-
   const geocodeAddress = useCallback(
     (address: string) => {
       if (!geocoder || !address.trim()) return;
-      setIsGeocoding(true);
       geocoder.geocode({ address: address }, (results, status) => {
-        setIsGeocoding(false);
         if (status === "OK" && results && results[0]) {
           const location = results[0].geometry.location;
           setForm((f) => ({
@@ -263,22 +274,21 @@ const RegisterClinic: React.FC & {
             latitude: location.lat(),
             longitude: location.lng(),
           }));
-          setStatus("📍 Address located on map automatically!");
-          setTimeout(() => setStatus(""), 3000);
+          showToastMessage("Address located on map automatically!", "success");
           if (errors.location)
             setErrors((prev) => ({ ...prev, location: undefined }));
         } else {
-          setStatus(
-            "⚠️ Could not locate address automatically. Please click on the map to set location manually."
+          showToastMessage(
+            "Could not locate address automatically. Please click on the map to set location.",
+            "info"
           );
-          setTimeout(() => setStatus(""), 5000);
         }
       });
     },
     [geocoder, errors.location]
   );
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddressChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newAddress = e.target.value;
     setForm((f) => ({ ...f, address: newAddress }));
     if (errors.address) setErrors((prev) => ({ ...prev, address: undefined }));
@@ -303,15 +313,12 @@ const RegisterClinic: React.FC & {
     const fetchTreatments = async () => {
       try {
         const response = await axios.get("/api/clinics/treatments");
-        if (response.data.success) {
-          setTreatments(response.data.treatments);
-        } 
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          // console.error('Error fetching treatments:', error.message);
-        } else {
-          // console.error('Error fetching treatments:', error);
+        const data = response.data as { success: boolean; treatments: TreatmentType[] };
+        if (data.success) {
+          setTreatments(data.treatments);
         }
+      } catch (err) {
+        console.error('Error fetching treatments:', err);
       }
     };
     fetchTreatments();
@@ -323,23 +330,23 @@ const RegisterClinic: React.FC & {
           setForm((f) => ({ ...f, email: stored || "" }));
           setEmailVerified(true);
           setEmailSent(true);
-          setStatus("✅ Email verified successfully!");
+          showToastMessage("Email verified successfully!", "success");
           setErrors((prev) => ({
             ...prev,
             email: undefined,
             emailVerification: undefined,
           }));
         })
-        .catch(() => setStatus("❌ Invalid verification link"));
+        .catch(() => showToastMessage("Invalid verification link", "error"));
     }
     return () => {
       if (addressDebounceTimer) clearTimeout(addressDebounceTimer);
     };
-  }, [addressDebounceTimer]);
+  }, []);
 
   const sendVerificationLink = () => {
     if (!form.email) {
-      setStatus("❌ Please enter an email address");
+      showToastMessage("Please enter an email address", "error");
       return;
     }
     sendSignInLinkToEmail(auth, form.email, {
@@ -348,14 +355,13 @@ const RegisterClinic: React.FC & {
     });
     localStorage.setItem("clinicEmail", form.email);
     setEmailSent(true);
-    setStatus("📧 Verification link sent! Check your inbox.");
+    showToastMessage("Verification link sent! Check your inbox.", "success");
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const isValid = validateForm();
     if (!isValid) return;
-    setStatus("✅ All details are valid. Submitting...");
 
     if (selectedTreatments.includes("other")) {
       const uniqueCustoms = Array.from(
@@ -367,13 +373,13 @@ const RegisterClinic: React.FC & {
         )
       );
       for (const custom of uniqueCustoms) {
-      try {
-        await axios.post("/api/clinics/treatments", {
+        try {
+          await axios.post("/api/clinics/treatments", {
             treatment_name: custom,
-        });
-      } catch (error: unknown) {
-          if (!(axios.isAxiosError(error) && error.response?.status === 409)) {
-            // Ignore non-409 errors for custom additions so registration can proceed
+          });
+        } catch (err) {
+          if (axios.isAxiosError(err) && err.response?.status !== 409) {
+            console.error('Error adding custom treatment:', err);
           }
         }
       }
@@ -392,21 +398,12 @@ const RegisterClinic: React.FC & {
         name: contactInfo.name,
         phone: contactInfo.phone,
       });
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        setStatus(
-          "❌ Owner registration failed: " +
-            (error.response?.data?.message || "Unknown error")
-        );
-        showToastMessage(
-          "Owner registration failed: " +
-            (error.response?.data?.message ||
-              "Unknown error" ||
-              "Unknown error"),
-          "error"
-        );
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const errorData = err.response?.data as { message?: string } | undefined;
+        const errorMessage = errorData?.message || "Unknown error";
+        showToastMessage(`Owner registration failed: ${errorMessage}`, "error");
       } else {
-        setStatus("❌ Owner registration failed: Unknown error");
         showToastMessage("Owner registration failed: Unknown error", "error");
       }
       return;
@@ -415,7 +412,6 @@ const RegisterClinic: React.FC & {
     const data = new FormData();
     Object.entries(form).forEach(([k, v]) => data.append(k, v.toString()));
 
-    // Convert treatments to the required format with mainTreatment and mainTreatmentSlug
     const finalTreatments = (() => {
       if (selectedTreatments.includes("other")) {
         const customs = Array.from(
@@ -433,16 +429,13 @@ const RegisterClinic: React.FC & {
       return selectedTreatments;
     })();
 
-    // Create treatment objects with mainTreatment and mainTreatmentSlug
     const treatmentObjects = finalTreatments.map((treatment) => {
       if (typeof treatment === "string") {
-        // For string treatments (like "other" treatments), create slug from name
         return {
           mainTreatment: treatment,
           mainTreatmentSlug: treatment.toLowerCase().replace(/\s+/g, "-"),
         };
       } else {
-        // For TreatmentType objects
         return {
           mainTreatment: treatment.name,
           mainTreatmentSlug: treatment.slug,
@@ -457,10 +450,8 @@ const RegisterClinic: React.FC & {
     try {
       await axios.post("/api/clinics/register", data);
       setShowSuccessPopup(true);
-      setStatus("");
       showToastMessage("Clinic registered successfully!", "success");
-    } catch {
-      setStatus("❌ Clinic registration failed");
+    } catch (err) {
       showToastMessage("Clinic registration failed", "error");
     }
   };
@@ -488,24 +479,13 @@ const RegisterClinic: React.FC & {
       );
       if (typeof treatment === "string" && treatment === "other") {
         setOtherTreatments([]);
-        setNewOther("");
       }
     } else {
       setSelectedTreatments((prev) => [...prev, treatment]);
     }
 
-    // Close dropdown if "other" is selected
     if (typeof treatment === "string" && treatment === "other") {
       setIsDropdownOpen(false);
-      // start with empty input for chip adder
-      setNewOther("");
-    }
-    if (
-      (typeof treatment === "string" && treatment === "other") === false &&
-      typeof treatment === "string" &&
-      treatment !== "other"
-    ) {
-      // no-op
     }
   };
 
@@ -513,7 +493,6 @@ const RegisterClinic: React.FC & {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 1024 * 1024) {
-        // 1MB in bytes
         showToastMessage("Please Upload File Less Than 1MB", "error");
         return;
       }
@@ -527,36 +506,11 @@ const RegisterClinic: React.FC & {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 1024 * 1024) {
-        // 1MB in bytes
         showToastMessage("Please Upload File Less Than 1MB", "error");
         return;
       }
       setLicenseDoc(file);
     }
-  };
-
-  // Optional helper to add treatments via API as per requested snippet
-  const handleAddTreatment = async () => {
-    if (selectedTreatments.length === 0) {
-      setErrors({ ...errors, treatments: "Please select at least one treatment" });
-      return;
-    }
-
-    const mainTreatments = selectedTreatments.filter(
-      (t) => typeof t === "object" && (t as TreatmentType).slug
-    ) as TreatmentType[];
-
-    const payload = {
-      treatments: mainTreatments,
-      otherTreatment: otherTreatments, // send array as requested
-      // clinicId can be added here if available in scope
-    };
-
-    await fetch("/api/clinics/add-treatment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
   };
 
   useEffect(() => {
@@ -573,9 +527,15 @@ const RegisterClinic: React.FC & {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleNext = (nextStep: number) => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(nextStep);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-100 p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex flex-col overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full h-full flex flex-col py-3 px-4">
         <Toast
           message={toast.message}
           type={toast.type}
@@ -584,647 +544,569 @@ const RegisterClinic: React.FC & {
         />
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Leaf className="w-12 h-12 text-[#2D9AA5]" />
-          </div>
-          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] bg-clip-text text-transparent mb-4">
-            Register Your Health Center on ZEVA Today
+        <div className="text-center mb-3">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-800 mb-1">
+            Healthcare Center Registration
           </h1>
-          {/* <p className="text-gray-700 text-lg">
-            Join the ancient healing network
-          </p> */}
+          <p className="text-gray-600 text-xs lg:text-sm">
+            Join our network and connect with patients
+          </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Main Form */}
-          <div className="flex-1 lg:order-1">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Login Section */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-8 border border-[#2D9AA5]/20">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] rounded-full flex items-center justify-center text-white font-bold">
-                    1
-                  </div>
-                  <h2 className="text-2xl font-bold text-[#2D9AA5] flex items-center gap-2">
-                    <Mail className="w-6 h-6" />
-                    Account Setup
-                  </h2>
-                </div>
+        {/* Progress Indicator */}
+        <div className="bg-white rounded-xl shadow-md p-2 lg:p-3 border border-gray-100 mb-3">
+          <div className="flex items-center justify-between max-w-2xl mx-auto">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                currentStep >= 1 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                {currentStep > 1 ? '✓' : '1'}
+              </div>
+              <span className="text-xs font-medium text-gray-700 hidden sm:inline">Account</span>
+            </div>
+            <div className={`flex-1 h-1 mx-2 rounded transition-all duration-500 ${
+              currentStep >= 2 ? 'bg-[#00b480]' : 'bg-gray-200'
+            }`}></div>
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                currentStep >= 2 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                {currentStep > 2 ? '✓' : '2'}
+              </div>
+              <span className="text-xs font-medium text-gray-700 hidden sm:inline">Details</span>
+            </div>
+            <div className={`flex-1 h-1 mx-2 rounded transition-all duration-500 ${
+              currentStep >= 3 ? 'bg-[#00b480]' : 'bg-gray-200'
+            }`}></div>
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                currentStep >= 3 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                3
+              </div>
+              <span className="text-xs font-medium text-gray-700 hidden sm:inline">Contact</span>
+            </div>
+          </div>
+        </div>
 
-                <div className="grid lg:grid-cols-2 gap-6">
+        {/* Form Container - No Scrolling */}
+        <div className="flex-1 overflow-hidden">
+          <div 
+            className="h-full transition-transform duration-500 ease-in-out flex"
+            style={{ transform: `translateX(-${(currentStep - 1) * 100}%)` }}
+          >
+            {/* Step 1: Account Setup */}
+            <div className="w-full flex-shrink-0 flex items-center justify-center px-2">
+              <div className="w-full max-w-xl">
+                <div className="bg-white rounded-xl shadow-md p-4 lg:p-6 border border-gray-100">
+                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#00b480] to-[#008f66] rounded-xl flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg lg:text-xl font-bold text-gray-800">Account Setup</h2>
+                      <p className="text-xs text-gray-500">Create your credentials</p>
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                        Email Address *
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email Address <span className="text-red-500">*</span>
                       </label>
-                      <div className="flex gap-3">
-                        <input
-                          type="email"
-                          placeholder="Enter your email"
-                          className={`text-black flex-1 px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${
-                            errors.email
-                              ? "border-red-400 focus:border-red-500"
-                              : "border-[#2D9AA5]/30 focus:border-[#2D9AA5]"
-                          }`}
-                          value={form.email}
-                          onChange={(e) => {
-                            setForm({ ...form, email: e.target.value });
-                            if (errors.email)
-                              setErrors((prev) => ({
-                                ...prev,
-                                email: undefined,
-                              }));
-                          }}
-                          disabled={emailVerified}
-                        />
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="email"
+                              placeholder="healthcare@example.com"
+                              className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm ${
+                                errors.email ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-[#00b480]"
+                              }`}
+                              value={form.email}
+                              onChange={(e) => {
+                                setForm({ ...form, email: e.target.value });
+                                if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+                              }}
+                              disabled={emailVerified}
+                            />
+                          </div>
+                        </div>
                         <button
                           type="button"
-                          className={`px-6 py-3 rounded-xl font-semibold whitespace-nowrap transition-all duration-200 ${
+                          className={`px-4 py-2.5 rounded-lg font-semibold whitespace-nowrap transition-all text-sm ${
                             emailVerified
-                              ? "bg-[#2D9AA5] text-white"
+                              ? "bg-[#00b480] text-white"
                               : emailSent
-                              ? "bg-[#2D9AA5]/10 text-[#2D9AA5]"
-                              : "bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] hover:from-[#236f7a] hover:to-[#1a5a61] text-white transform hover:scale-105"
+                              ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                              : "bg-gradient-to-r from-[#00b480] to-[#008f66] text-white"
                           }`}
                           onClick={() => {
                             if (!form.email.includes("@")) {
-                              setErrors((prev) => ({
-                                ...prev,
-                                email: "Enter a valid email (must include @)",
-                              }));
+                              setErrors((prev) => ({ ...prev, email: "Enter a valid email" }));
                               return;
                             }
-
                             sendVerificationLink();
                           }}
                           disabled={emailSent && !emailVerified}
                         >
-                          {emailVerified
-                            ? "✓ Verified"
-                            : emailSent
-                            ? "Sent"
-                            : "Verify"}
+                          {emailVerified ? "✓ Verified" : emailSent ? "Sent" : "Verify"}
                         </button>
                       </div>
-                      {errors.email && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.email}
-                        </p>
-                      )}
-                      {emailSent && !emailVerified && (
-                        <div className="mt-3 p-4 bg-[#2D9AA5]/5 border border-[#2D9AA5]/20 rounded-lg">
-                          <p className="text-[#2D9AA5] text-sm">
-                            📧 Check your email for verification link
-                          </p>
-                        </div>
-                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Password <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Create password (min. 8 characters)"
+                          className={`text-black w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm ${
+                            errors.password ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-[#00b480]"
+                          }`}
+                          value={ownerPassword}
+                          onChange={(e) => {
+                            setOwnerPassword(e.target.value);
+                            if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                      Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Create a strong password"
-                        className={`text-black w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${
-                          errors.password
-                            ? "border-red-400 focus:border-red-500"
-                            : "border-[#2D9AA5]/30 focus:border-[#2D9AA5]"
-                        }`}
-                        value={ownerPassword}
-                        onChange={(e) => {
-                          setOwnerPassword(e.target.value);
-                          if (errors.password)
-                            setErrors((prev) => ({
-                              ...prev,
-                              password: undefined,
-                            }));
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#2D9AA5]"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff size={20} />
-                        ) : (
-                          <Eye size={20} />
-                        )}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.password}
-                      </p>
-                    )}
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      type="button"
+                      className={`px-6 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm ${
+                        emailVerified
+                          ? "bg-gradient-to-r from-[#00b480] to-[#008f66] text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                      onClick={() => handleNext(2)}
+                      disabled={!emailVerified}
+                    >
+                      Next <ChevronRight size={18} />
+                    </button>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Clinic Details */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-8 border border-[#2D9AA5]/20">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] rounded-full flex items-center justify-center text-white font-bold">
-                    2
-                  </div>
-                  <h2 className="text-2xl font-bold text-[#2D9AA5] flex items-center gap-2">
-                    <Building className="w-6 h-6" />
-                    Health Center Information
-                  </h2>
-                </div>
-
-                <div className="grid lg:grid-cols-2 gap-6">
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                      Health Center Name *
-                      </label>
-                      <input
-                        placeholder="Enter Health Center name"
-                        className={`text-black w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${
-                          errors.name
-                            ? "border-red-400 focus:border-red-500"
-                            : "border-[#2D9AA5]/30 focus:border-[#2D9AA5]"
-                        }`}
-                        value={form.name}
-                        onChange={(e) => {
-                          setForm((f) => ({ ...f, name: e.target.value }));
-                          if (errors.name)
-                            setErrors((prev) => ({ ...prev, name: undefined }));
-                        }}
-                      />
-                      {errors.name && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.name}
-                        </p>
-                      )}
+            {/* Step 2: Healthcare Center Details */}
+            <div className="w-full flex-shrink-0 flex items-center justify-center px-2">
+              <div className="w-full max-w-5xl h-[calc(100vh-180px)] flex flex-col">
+                <div className="bg-white rounded-xl shadow-md p-4 border border-gray-100 flex-1 flex flex-col overflow-hidden">
+                  <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#00b480] to-[#008f66] rounded-xl flex items-center justify-center">
+                      <Building className="w-5 h-5 text-white" />
                     </div>
+                    <div>
+                      <h2 className="text-lg lg:text-xl font-bold text-gray-800">Center Information</h2>
+                      <p className="text-xs text-gray-500">About your facility</p>
+                    </div>
+                  </div>
 
-                    <div className="relative" ref={dropdownRef}>
-                      <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                        Services *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className={`text-black w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all text-left flex items-center justify-between ${
-                          errors.treatments
-                            ? "border-red-400"
-                            : "border-[#2D9AA5]/30 hover:border-[#2D9AA5]/60"
-                        }`}
-                      >
-                        <div className="flex-1">
-                          {selectedTreatments.length === 0 ? (
-                            <span className="text-gray-500">
-                              Select services...
-                            </span>
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {selectedTreatments.map((treatment, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-[#2D9AA5]/10 text-[#2D9AA5]"
-                                >
-                                  {typeof treatment === "string"
-                                    ? treatment
-                                    : treatment.name}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTreatmentSelect(treatment);
-                                    }}
-                                    className="ml-1 hover:bg-[#2D9AA5]/20 rounded-full w-4 h-4 flex items-center justify-center"
+                  <div className="flex-1 overflow-y-auto py-3">
+                    <div className="grid lg:grid-cols-2 gap-4">
+                      {/* Left Column */}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Center Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            placeholder="Green Valley Wellness"
+                            className={`text-black w-full px-3 py-2 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${
+                              errors.name ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
+                            }`}
+                            value={form.name}
+                            onChange={(e) => {
+                              setForm((f) => ({ ...f, name: e.target.value }));
+                              if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                            }}
+                          />
+                        </div>
+
+                        <div className="relative text-black" ref={dropdownRef}>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Services Offered <span className="text-red-500">*</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className={`text-black w-full px-3 py-2 border-2 rounded-lg text-left flex items-center justify-between bg-gray-50 hover:bg-white text-sm ${
+                              errors.treatments ? "border-red-400" : "border-gray-200"
+                            }`}
+                          >
+                            <div className="flex-1">
+                              {selectedTreatments.length === 0 && otherTreatments.length === 0 ? (
+                                <span className="text-gray-400 text-xs">Select services...</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {selectedTreatments.filter(t => t !== "other").slice(0, 2).map((treatment, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[#00b480]/10 text-[#00b480]"
+                                    >
+                                      {typeof treatment === "string" ? treatment : treatment.name}
+                                    </span>
+                                  ))}
+                                  {otherTreatments.length > 0 && (
+                                    <span className="text-xs text-[#00b480]">+{otherTreatments.length} custom</span>
+                                  )}
+                                  {(selectedTreatments.filter(t => t !== "other").length + otherTreatments.length) > 2 && (
+                                    <span className="text-xs text-gray-500">...</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <svg
+                              className={`w-4 h-4 text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          {isDropdownOpen && (
+                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                              <div className="p-1">
+                                {treatments.map((treatment, index) => (
+                                  <div
+                                    key={index}
+                                    onClick={() => handleTreatmentSelect(treatment)}
+                                    className={`px-3 py-1.5 cursor-pointer rounded text-xs ${
+                                      selectedTreatments.some((t) => typeof t === "object" && t.slug === treatment.slug)
+                                        ? "bg-[#00b480]/10 text-[#00b480]"
+                                        : "hover:bg-gray-50"
+                                    }`}
                                   >
-                                    ×
-                                  </button>
-                                </span>
-                              ))}
+                                    {treatment.name}
+                                  </div>
+                                ))}
+                                <div
+                                  onClick={() => handleTreatmentSelect("other")}
+                                  className={`px-3 py-1.5 cursor-pointer rounded border-t text-xs ${
+                                    selectedTreatments.includes("other") ? "bg-[#00b480]/10 text-[#00b480]" : "hover:bg-gray-50"
+                                  }`}
+                                >
+                                  Other Services
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
-                        <svg
-                          className={`w-5 h-5 transition-transform ${
-                            isDropdownOpen ? "rotate-180" : ""
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </button>
-                      {isDropdownOpen && (
-                        <div className="absolute z-20 w-full mt-1 bg-white border border-[#2D9AA5]/30 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                          {treatments.map((treatment, index) => (
-                            <div
-                              key={index}
-                              onClick={() => handleTreatmentSelect(treatment)}
-                              className={`text-black px-4 py-3 cursor-pointer hover:bg-[#2D9AA5]/5 flex items-center justify-between ${
-                                selectedTreatments.some(
-                                  (t) =>
-                                    typeof t === "object" &&
-                                    t.slug === treatment.slug
-                                )
-                                  ? "bg-[#2D9AA5]/5 text-[#2D9AA5]"
-                                  : ""
-                              }`}
-                            >
-                              <span>{treatment.name}</span>
-                              {selectedTreatments.some(
-                                (t) =>
-                                  typeof t === "object" &&
-                                  t.slug === treatment.slug
-                              ) && <span className="text-[#2D9AA5]">✓</span>}
-                            </div>
-                          ))}
 
-                          <div
-                            onClick={() => handleTreatmentSelect("other")}
-                            className={`text-black px-4 py-3 cursor-pointer hover:bg-[#2D9AA5]/5 flex items-center justify-between border-t ${
-                              selectedTreatments.includes("other")
-                                ? "bg-[#2D9AA5]/5 text-[#2D9AA5]"
-                                : ""
-                            }`}
-                          >
-                            <span>Other</span>
-                            {selectedTreatments.includes("other") && (
-                              <span className="text-[#2D9AA5]">✓</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {errors.treatments && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.treatments}
-                        </p>
-                      )}
-                      {selectedTreatments.includes("other") && (
-                        <div className="mt-3">
-                          {otherTreatments.map((t, index) => (
-                            <div key={index} className="flex items-center gap-2 mt-2">
-                              <span className="px-2 py-1 bg-[#2D9AA5]/10 text-[#2D9AA5] rounded-lg">{t}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...otherTreatments];
-                                  updated.splice(index, 1);
-                                  setOtherTreatments(updated);
-                                }}
-                                className="px-2 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                          {otherTreatments.length < 5 && (
-                            <div className="flex mt-2 gap-2">
+                        {/* Custom Treatments Input - Show when "Other" is selected */}
+                        {selectedTreatments.includes("other") && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <label className="block text-xs font-semibold text-gray-900 mb-2">
+                              Add Custom Services (Max 5)
+                            </label>
+                            <div className="flex gap-2 mb-2">
                               <input
-                                placeholder="Add other treatment"
+                                type="text"
+                                placeholder="Enter service name"
+                                className="text-gray-900 flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#00b480] focus:outline-none bg-white text-sm"
                                 value={newOther}
                                 onChange={(e) => setNewOther(e.target.value)}
-                                className="text-black px-4 py-2 border-2 border-[#2D9AA5]/30 rounded-xl flex-1 focus:border-[#2D9AA5] focus:outline-none"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (newOther.trim() && otherTreatments.length < 5) {
+                                      if (!otherTreatments.includes(newOther.trim())) {
+                                        setOtherTreatments([...otherTreatments, newOther.trim()]);
+                                        setNewOther("");
+                                        showToastMessage("Custom service added!", "success");
+                                      } else {
+                                        showToastMessage("Service already added", "info");
+                                      }
+                                    } else if (otherTreatments.length >= 5) {
+                                      showToastMessage("Maximum 5 custom services allowed", "error");
+                                    }
+                                  }
+                                }}
                               />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const trimmed = newOther.trim();
-                                  if (!trimmed) return;
-                                  if (otherTreatments.length >= 5) return;
-                                  setOtherTreatments([...otherTreatments, trimmed]);
-                                  setNewOther("");
+                                  if (newOther.trim() && otherTreatments.length < 5) {
+                                    if (!otherTreatments.includes(newOther.trim())) {
+                                      setOtherTreatments([...otherTreatments, newOther.trim()]);
+                                      setNewOther("");
+                                      showToastMessage("Custom service added!", "success");
+                                    } else {
+                                      showToastMessage("Service already added", "info");
+                                    }
+                                  } else if (otherTreatments.length >= 5) {
+                                    showToastMessage("Maximum 5 custom services allowed", "error");
+                                  }
                                 }}
-                                className="px-4 py-2 bg-[#2D9AA5] text-white rounded-xl"
+                                disabled={otherTreatments.length >= 5}
+                                className={`px-3 py-2 rounded-lg font-semibold text-xs whitespace-nowrap ${
+                                  otherTreatments.length >= 5
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    : "bg-[#00b480] text-white hover:bg-[#009973]"
+                                }`}
                               >
                                 Add
                               </button>
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-[#2D9AA5] mb-2 flex items-center gap-2">
-                          <div className="w-4 h-4 text-[#2D9AA5] text-sm leading-none">
-                            د.إ
+                            
+                            {/* Display added custom treatments */}
+                            {otherTreatments.length > 0 && (
+                              <div className="space-y-1">
+                                <p className="text-xs text-gray-600 mb-1">Added services ({otherTreatments.length}/5):</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {otherTreatments.map((treatment, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-2 py-1 rounded-lg text-xs bg-[#00b480] text-white"
+                                    >
+                                      {treatment}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOtherTreatments(otherTreatments.filter((_, i) => i !== index));
+                                          showToastMessage("Service removed", "info");
+                                        }}
+                                        className="ml-1.5 hover:bg-[#008f66] rounded-full w-4 h-4 flex items-center justify-center"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <p className="text-xs text-gray-500 mt-2">
+                              Press Enter or click Add to save each service
+                            </p>
                           </div>
-                          Pricing
-                        </label>
-
-                        <input
-                          placeholder="د.إ500-2000"
-                          className="text-black w-full px-4 py-3 border-2 border-[#2D9AA5]/30 rounded-xl focus:border-[#2D9AA5] focus:outline-none"
-                          value={form.pricing}
-                          onChange={(e) =>
-                            setForm((f) => ({ ...f, pricing: e.target.value }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#2D9AA5] mb-2 flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          Timings
-                        </label>
-                        <input
-                          placeholder="9 AM - 6 PM"
-                          className="text-black w-full px-4 py-3 border-2 border-[#2D9AA5]/30 rounded-xl focus:border-[#2D9AA5] focus:outline-none"
-                          value={form.timings}
-                          onChange={(e) =>
-                            setForm((f) => ({ ...f, timings: e.target.value }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-[#2D9AA5] mb-2 flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        Address *{" "}
-                        {isGeocoding && (
-                          <span className="text-[#2D9AA5] text-sm">
-                            🔍 Locating...
-                          </span>
                         )}
-                      </label>
-                      <input
-                        placeholder="Enter Health Center address"
-                        className={`text-black w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${
-                          errors.address
-                            ? "border-red-400 focus:border-red-500"
-                            : "border-[#2D9AA5]/30 focus:border-[#2D9AA5]"
-                        }`}
-                        value={form.address}
-                        onChange={handleAddressChange}
-                      />
-                      {errors.address && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.address}
-                        </p>
-                      )}
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                        Location on Map *
-                      </label>
-                      <div
-                        className={`h-64 border-2 rounded-xl overflow-hidden ${
-                          errors.location
-                            ? "border-red-400"
-                            : "border-[#2D9AA5]/30"
-                        }`}
-                      >
-                        <GoogleMap
-                          zoom={form.latitude !== 0 ? 15 : 12}
-                          center={{
-                            lat: form.latitude !== 0 ? form.latitude : 28.61,
-                            lng: form.longitude !== 0 ? form.longitude : 77.2,
-                          }}
-                          mapContainerStyle={{ width: "100%", height: "100%" }}
-                          onLoad={onMapLoad}
-                          onClick={(e) => {
-                            if (e.latLng) {
-                              const lat = e.latLng.lat();
-                              const lng = e.latLng.lng();
-                              setForm((f) => ({
-                                ...f,
-                                latitude: lat,
-                                longitude: lng,
-                              }));
-                              if (errors.location)
-                                setErrors((prev) => ({
-                                  ...prev,
-                                  location: undefined,
-                                }));
-                            }
-                          }}
-                        >
-                          {form.latitude !== 0 && (
-                            <Marker
-                              position={{
-                                lat: form.latitude,
-                                lng: form.longitude,
-                              }}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">Price Range</label>
+                            <input
+                              placeholder="500-2000"
+                              className="text-black w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#00b480] focus:outline-none bg-gray-50 text-sm"
+                              value={form.pricing}
+                              onChange={(e) => setForm((f) => ({ ...f, pricing: e.target.value }))}
                             />
-                          )}
-                        </GoogleMap>
-                      </div>
-                      {errors.location && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.location}
-                        </p>
-                      )}
-                    </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">Hours</label>
+                            <input
+                              placeholder="9 AM - 6 PM"
+                              className="text-black w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#00b480] focus:outline-none bg-gray-50 text-sm"
+                              value={form.timings}
+                              onChange={(e) => setForm((f) => ({ ...f, timings: e.target.value }))}
+                            />
+                          </div>
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                        Health Center Photo *
-                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                              Photo <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className={`text-black w-full px-2 py-1.5 border-2 rounded-lg bg-gray-50 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#00b480] file:text-white text-xs ${
+                                errors.clinicPhoto ? "border-red-400" : "border-gray-200"
+                              }`}
+                              onChange={handleFileChange}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">License</label>
+                            <input
+                              type="file"
+                              accept=".pdf,image/*"
+                              className="text-black w-full px-2 py-1.5 border-2 border-gray-200 rounded-lg bg-gray-50 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-gray-200 file:text-gray-700 text-xs"
+                              onChange={handleLicenseChange}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column */}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Address <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            placeholder="Street, Building, City, State"
+                            className={`text-black w-full px-3 py-2 border-2 rounded-lg focus:outline-none bg-gray-50 resize-none text-sm ${
+                              errors.address ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
+                            }`}
+                            value={form.address}
+                            onChange={handleAddressChange}
+                            rows={2}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Location <span className="text-red-500">*</span>
+                          </label>
+                          <p className="text-xs text-gray-500 mb-1">Click map to pin location</p>
+                          <div className={`h-44 border-2 rounded-lg overflow-hidden ${errors.location ? "border-red-400" : "border-gray-200"}`}>
+                            <GoogleMap
+                              zoom={form.latitude !== 0 ? 15 : 12}
+                              center={{
+                                lat: form.latitude !== 0 ? form.latitude : 28.61,
+                                lng: form.longitude !== 0 ? form.longitude : 77.2,
+                              }}
+                              mapContainerStyle={{ width: "100%", height: "100%" }}
+                              onLoad={onMapLoad}
+                              onClick={(e) => {
+                                if (e.latLng) {
+                                  setForm((f) => ({ ...f, latitude: e.latLng!.lat(), longitude: e.latLng!.lng() }));
+                                  if (errors.location) setErrors((prev) => ({ ...prev, location: undefined }));
+                                }
+                              }}
+                            >
+                              {form.latitude !== 0 && (
+                                <Marker position={{ lat: form.latitude, lng: form.longitude }} />
+                              )}
+                            </GoogleMap>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between">
+                    <button
+                      type="button"
+                      className="px-4 py-2 rounded-lg font-semibold flex items-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
+                      onClick={() => setCurrentStep(1)}
+                    >
+                      <ChevronLeft size={18} /> Back
+                    </button>
+                    <button
+                      type="button"
+                      className="px-6 py-2 rounded-lg font-semibold flex items-center gap-2 bg-gradient-to-r from-[#00b480] to-[#008f66] text-white text-sm"
+                      onClick={() => handleNext(3)}
+                    >
+                      Next <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3: Contact Information */}
+            <div className="w-full flex-shrink-0 flex items-center justify-center px-2">
+              <div className="w-full max-w-xl">
+                <div className="bg-white rounded-xl shadow-md p-4 lg:p-6 border border-gray-100">
+                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#00b480] to-[#008f66] rounded-xl flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg lg:text-xl font-bold text-gray-800">Contact Information</h2>
+                      <p className="text-xs text-gray-500">How can patients reach you?</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Your Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
-                          type="file"
-                          accept="image/*"
-                          className={`text-black w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${
-                            errors.clinicPhoto
-                              ? "border-red-400 focus:border-red-500"
-                              : "border-[#2D9AA5]/30 focus:border-[#2D9AA5]"
+                          placeholder="Dr. John Smith"
+                          className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${
+                            errors.contactName ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
                           }`}
-                          onChange={handleFileChange}
-                        />
-                        {errors.clinicPhoto && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.clinicPhoto}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                          License (Optional)
-                        </label>
-                        <input
-                          type="file"
-                          accept=".pdf,image/*"
-                          className="text-black w-full px-4 py-3 border-2 border-[#2D9AA5]/30 rounded-xl focus:border-[#2D9AA5] focus:outline-none"
-                          onChange={handleLicenseChange}
+                          value={contactInfo.name}
+                          onChange={(e) => {
+                            setContactInfo({ ...contactInfo, name: e.target.value });
+                            if (errors.contactName) setErrors((prev) => ({ ...prev, contactName: undefined }));
+                          }}
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="tel"
+                          placeholder="1234567890"
+                          className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${
+                            errors.phone ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
+                          }`}
+                          value={contactInfo.phone}
+                          onChange={handlePhoneChange}
+                          maxLength={10}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">10-digit mobile number</p>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Contact Details */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-8 border border-[#2D9AA5]/20">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] rounded-full flex items-center justify-center text-white font-bold">
-                    3
+                  <div className="mt-4 p-4 bg-gradient-to-br from-[#00b480]/5 to-[#00b480]/10 rounded-lg border border-[#00b480]/20">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Shield className="w-5 h-5 text-[#00b480]" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-800 mb-1 text-sm">Ready to Join?</h4>
+                        <p className="text-xs text-gray-600 mb-2">
+                          Connect with patients and manage your center efficiently.
+                        </p>
+                        <ul className="text-xs text-gray-600 space-y-0.5">
+                          <li>• Reach potential patients</li>
+                          <li>• Manage appointments</li>
+                          <li>• Post job openings</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-bold text-[#2D9AA5] flex items-center gap-2">
-                    <Phone className="w-6 h-6" />
-                    Contact Information
-                  </h2>
-                </div>
 
-                <div className="grid lg:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                      Your Name *
-                    </label>
-                    <input
-                      placeholder="Owner's full name"
-                      className={`text-black w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${
-                        errors.contactName
-                          ? "border-red-400 focus:border-red-500"
-                          : "border-[#2D9AA5]/30 focus:border-[#2D9AA5]"
-                      }`}
-                      value={contactInfo.name}
-                      onChange={(e) => {
-                        setContactInfo({
-                          ...contactInfo,
-                          name: e.target.value,
-                        });
-                        if (errors.contactName)
-                          setErrors((prev) => ({
-                            ...prev,
-                            contactName: undefined,
-                          }));
-                      }}
-                    />
-                    {errors.contactName && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.contactName}
-                      </p>
-                    )}
+                  <div className="mt-6 flex justify-between">
+                    <button
+                      type="button"
+                      className="px-4 py-2.5 rounded-lg font-semibold flex items-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
+                      onClick={() => setCurrentStep(2)}
+                    >
+                      <ChevronLeft size={18} /> Back
+                    </button>
+                    <button
+                      type="submit"
+                      onClick={handleSubmit}
+                      className="px-6 py-2.5 rounded-lg font-bold transition-all bg-gradient-to-r from-[#00b480] to-[#008f66] text-white flex items-center gap-2 text-sm"
+                    >
+                      <Heart className="w-4 h-4" />
+                      Complete Registration
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#2D9AA5] mb-2">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="10-digit phone number"
-                      className={`text-black w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${
-                        errors.phone
-                          ? "border-red-400 focus:border-red-500"
-                          : "border-[#2D9AA5]/30 focus:border-[#2D9AA5]"
-                      }`}
-                      value={contactInfo.phone}
-                      onChange={handlePhoneChange}
-                      maxLength={10}
-                    />
-                    {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.phone}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              {/* Submit Button */}
-              <div className="text-center">
-                <button
-                  className={`px-12 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform ${
-                    emailVerified
-                      ? "bg-gradient-to-r from-[#2D9AA5] to-[#1e6b73] hover:from-[#236f7a] hover:to-[#1a5a61] text-white shadow-lg hover:shadow-xl hover:scale-105"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                  type="submit"
-                  disabled={!emailVerified}
-                >
-                  {emailVerified
-                    ? "🌿 Register My Health Center"
-                    : "⚠️ Verify Email First"}
-                </button>
-              </div>
-            </form>
-
-            {status && (
-              <div
-                className={`mt-6 p-4 rounded-xl text-center font-medium ${
-                  status.includes("✅")
-                    ? "bg-[#2D9AA5]/5 text-[#2D9AA5]"
-                    : status.includes("❌")
-                    ? "bg-red-50 text-red-800"
-                    : "bg-[#2D9AA5]/5 text-[#2D9AA5]"
-                }`}
-              >
-                {status}
-              </div>
-            )}
-
-            <SuccessPopup
-              isOpen={showSuccessPopup}
-              onClose={() => setShowSuccessPopup(false)}
-            />
-          </div>
-
-          {/* Why Register Section - Sidebar */}
-          <div className="lg:w-80 lg:order-2">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-[#2D9AA5]/20 sticky top-4">
-              <h3 className="text-2xl font-bold text-[#2D9AA5] mb-6 text-center flex items-center justify-center gap-2">
-                <Star className="w-6 h-6" /> Why Register With Us?
-              </h3>
-              <div className="space-y-4">
-                <div className="text-center p-4 rounded-xl bg-[#2D9AA5]/5 border border-[#2D9AA5]/20">
-                  <Users className="w-8 h-8 text-[#2D9AA5] mx-auto mb-2" />
-                  <h4 className="font-semibold text-[#2D9AA5] mb-1">
-                    Reach More Patients
-                  </h4>
-                  <p className="text-sm text-[#2D9AA5]">
-                    Connect with patients seeking authentic Ayurvedic treatments
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-[#2D9AA5]/5 border border-[#2D9AA5]/20">
-                  <Shield className="w-8 h-8 text-[#2D9AA5] mx-auto mb-2" />
-                  <h4 className="font-semibold text-[#2D9AA5] mb-1">
-                    Post Jobs
-                  </h4>
-                  <p className="text-sm text-[#2D9AA5]">
-                    You can post job opportunities and hire qualified staff
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-[#2D9AA5]/5 border border-[#2D9AA5]/20">
-                  <Heart className="w-8 h-8 text-[#2D9AA5] mx-auto mb-2" />
-                  <h4 className="font-semibold text-[#2D9AA5] mb-1">
-                    Personal Dashboard
-                  </h4>
-                  <p className="text-sm text-[#2D9AA5]">
-                    Manage your Health Center with a comprehensive personal dashboard
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-[#2D9AA5]/5 border border-[#2D9AA5]/20">
-                  <span className="w-8 h-8 text-[#2D9AA5] mx-auto mb-2 text-center block text-3xl">
-                    د.إ
-                  </span>
-                  <h4 className="font-semibold text-[#2D9AA5] mb-1">
-                    Easy Booking
-                  </h4>
-                  <p className="text-sm text-[#2D9AA5]">
-                    Streamlined appointment system for better management
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-[#2D9AA5]/5 border border-[#2D9AA5]/20">
-                  <Leaf className="w-8 h-8 text-[#2D9AA5] mx-auto mb-2" />
-                  <h4 className="font-semibold text-[#2D9AA5] mb-1">
-                    Write Blogs
-                  </h4>
-                  <p className="text-sm text-[#2D9AA5]">
-                    Share your expertise through blogs and expand your audience
+                  <p className="text-xs text-center text-gray-500 mt-3">
+                    By registering, you agree to our Terms of Service
                   </p>
                 </div>
               </div>
@@ -1233,24 +1115,42 @@ const RegisterClinic: React.FC & {
         </div>
       </div>
 
+      <SuccessPopup isOpen={showSuccessPopup} onClose={() => setShowSuccessPopup(false)} />
+
       <style jsx>{`
         @keyframes slide-in {
           from {
-            transform: translateX(100%);
             opacity: 0;
+            transform: translateX(100px);
           }
           to {
-            transform: translateX(0);
             opacity: 1;
+            transform: translateX(0);
           }
         }
         .animate-slide-in {
           animation: slide-in 0.3s ease-out;
         }
+        
+        ::-webkit-scrollbar {
+          width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #00b480;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #008f66;
+        }
       `}</style>
     </div>
   );
 };
+
 export default RegisterClinic;
 
 RegisterClinic.getLayout = function PageLayout(page: React.ReactNode) {
