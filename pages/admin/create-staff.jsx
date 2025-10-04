@@ -1,8 +1,9 @@
+// components/admin/CreateUser.jsx
 import React, { useState } from "react";
 import axios from "axios";
 
-export default function CreateStaff() {
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+export default function CreateUser() {
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "staff" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -17,7 +18,6 @@ export default function CreateStaff() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      console.log("Token:", token); // Debugging line to check the token value
 
       const res = await axios.post("/api/admin/create-staff", form, {
         headers: {
@@ -26,9 +26,9 @@ export default function CreateStaff() {
       });
 
       setMessage(res.data.message);
-      setForm({ name: "", email: "", password: "" });
+      setForm({ name: "", email: "", password: "", role: "staff" });
     } catch (err) {
-      setMessage(err.response?.data?.error || "Error creating staff");
+      setMessage(err.response?.data?.error || err.response?.data?.message || "Error creating user");
     } finally {
       setLoading(false);
     }
@@ -36,12 +36,12 @@ export default function CreateStaff() {
 
   return (
     <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow-md">
-      <h2 className="text-xl font-bold mb-4">Create Staff</h2>
+      <h2 className="text-xl font-bold mb-4">Create Staff / Doctor</h2>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           type="text"
           name="name"
-          placeholder="Staff Name"
+          placeholder="Name"
           value={form.name}
           onChange={handleChange}
           className="w-full p-2 border rounded"
@@ -50,7 +50,7 @@ export default function CreateStaff() {
         <input
           type="email"
           name="email"
-          placeholder="Staff Email"
+          placeholder="Email"
           value={form.email}
           onChange={handleChange}
           className="w-full p-2 border rounded"
@@ -65,12 +65,25 @@ export default function CreateStaff() {
           className="w-full p-2 border rounded"
           required
         />
+
+        {/* Role dropdown */}
+        <select
+          name="role"
+          value={form.role}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          required
+        >
+          <option value="staff">Staff</option>
+          <option value="doctor">Doctor</option>
+        </select>
+
         <button
           type="submit"
           disabled={loading}
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
         >
-          {loading ? "Creating..." : "Create Staff"}
+          {loading ? "Creating..." : "Create User"}
         </button>
       </form>
       {message && (

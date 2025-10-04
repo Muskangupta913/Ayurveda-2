@@ -4,12 +4,12 @@ import bcrypt from 'bcryptjs';
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  phone: { type: String, required: true },
+  phone: { type: String },
   email: { type: String, required: true },
   password: { type: String, required: false },
   role: {
     type: String,
-    enum: ['user', 'clinic', 'admin', 'doctor', 'lead', 'agent'],
+    enum: ['user', 'clinic', 'admin', 'doctor', 'lead', 'agent','staff','doctorStaff'],
     default: 'user',
   },
   clinicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' }, // ✅ tie agent to clinic
@@ -29,5 +29,6 @@ UserSchema.pre('save', async function (next) {
   }
   next();
 });
+delete mongoose.models.User; 
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);
