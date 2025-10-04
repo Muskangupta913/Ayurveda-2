@@ -3,7 +3,12 @@ import React, { useState } from "react";
 import axios from "axios";
 
 export default function CreateUser() {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "staff" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "staff",
+  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -28,7 +33,11 @@ export default function CreateUser() {
       setMessage(res.data.message);
       setForm({ name: "", email: "", password: "", role: "staff" });
     } catch (err) {
-      setMessage(err.response?.data?.error || err.response?.data?.message || "Error creating user");
+      setMessage(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Error creating user"
+      );
     } finally {
       setLoading(false);
     }
@@ -75,7 +84,7 @@ export default function CreateUser() {
           required
         >
           <option value="staff">Staff</option>
-          <option value="doctor">Doctor</option>
+          <option value="doctorStaff">Doctor</option>
         </select>
 
         <button

@@ -1,9 +1,9 @@
-"use client"; 
+"use client";
 import React, { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
 
-export default function StaffLogin() {
+export default function StaffDoctorLogin() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -20,8 +20,13 @@ export default function StaffLogin() {
 
     try {
       const res = await axios.post("/api/staff/login", form);
-      localStorage.setItem("staffToken", res.data.token); // ✅ save staff token
-      router.push("/staff/staff-dashboard"); // ✅ redirect
+      const { token, user } = res.data;
+
+      // save single token with role inside
+      localStorage.setItem("userToken", token);
+
+      // send both staff and doctor to the same dashboard
+      router.push("/staff/staff-dashboard"); 
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     } finally {
@@ -31,12 +36,12 @@ export default function StaffLogin() {
 
   return (
     <div className="max-w-md mx-auto mt-20 bg-white p-6 rounded-xl shadow-lg">
-      <h2 className="text-2xl font-bold text-center mb-6">Staff Login</h2>
+      <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"
           name="email"
-          placeholder="Staff Email"
+          placeholder="Email"
           value={form.email}
           onChange={handleChange}
           className="w-full p-2 border rounded"
