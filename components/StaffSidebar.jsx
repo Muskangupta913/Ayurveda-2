@@ -10,6 +10,12 @@ const navItems = [
     icon: '🏠',
     description: 'Overview & analytics'
   },
+  {
+     label: "Patient Registration",
+     path: "/staff/patient-registration",
+     icon: "📅",
+     description: "Manage Clinic",
+   },
 ];
 
 const AdminSidebar = ({ className }) => {
