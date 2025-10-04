@@ -1,56 +1,184 @@
-// models/PatientRegistration.js
-import mongoose from 'mongoose';
-
-const paymentSchema = new mongoose.Schema({
-  amount: { type: Number, required: true },
-  paid: { type: Number, default: 0 },
-  advance: { type: Number, default: 0 },
-  pending: { type: Number, default: 0 }, // calculated
-  createdAt: { type: Date, default: Date.now },
-});
+import mongoose from "mongoose";
 
 const patientRegistrationSchema = new mongoose.Schema(
   {
-    // User who created the record
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // 🔹 Auto-generated fields
+    invoiceNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    invoicedDate: {
+      type: Date,
+      default: Date.now,
+    },
+    invoicedBy: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true, // The admin or staff who created the invoice
+    },
 
-    // Auto-generated fields
-    invoiceNumber: { type: String, required: true, unique: true },
-    invoicedDate: { type: Date, default: Date.now },
-    invoicedBy: { type: String, required: true },
+    // 🔹 Patient Details
+    emrNumber: {
+      type: String,
+      trim: true,
+    },
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Other"],
+      required: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+    mobileNumber: {
+      type: String,
+      required: true,
+      match: [/^[0-9]{10}$/, "Please enter a valid 10-digit number"],
+    },
+    referredBy: {
+      type: String,
+      trim: true,
+    },
+    patientType: {
+      type: String,
+      enum: ["New", "Old"],
+      default: "New",
+    },
 
-    // Patient Info
-    emrNumber: { type: String, required: true },
-    patientName: { type: String, required: true },
-    mobileNumber: { type: String },
-    gender: { type: String, required: true, enum: ['Male', 'Female', 'Other'] },
-    doctor: { type: String, required: true },
-    treatment: { type: String, required: true },
-    patientType: { type: String, required: true, enum: ['New', 'Old'] },
-    referredBy: { type: String },
+    // 🔹 Medical Details
+    doctor: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    service: {
+      type: String,
+      enum: ["Package", "Treatment"],
+      required: true,
+    },
+    treatment: {
+      type: String,
+      trim: true,
+    },
+    package: {
+      type: String,
+      trim: true,
+    },
 
-    // Payments as array
-    payments: { type: [paymentSchema], default: [] },
+    // 🔹 Payment Details
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    paid: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    advance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    pending: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["Cash", "Card", "BT", "Tabby", "Tamara"],
+      required: true,
+    },
 
-    // Insurance Details
-    insurance: { type: String, enum: ['Yes', 'No'], default: 'No' },
-    advanceGivenAmount: { type: Number, default: 0 },
-    coPayPercent: { type: Number, default: 0 },
-    advanceClaimStatus: { type: String, enum: ['Pending Release', 'Released'], default: 'Pending Release' },
-    advanceClaimReleaseDate: { type: Date, default: null },
-    advanceClaimReleasedBy: { type: String, default: null },
+    // 🔹 Insurance Section
+    insurance: {
+      type: String,
+      enum: ["Yes", "No"],
+      default: "No",
+    },
+    advanceGivenAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    coPayPercent: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    needToPay: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    advanceClaimStatus: {
+      type: String,
+      enum: ["Pending Release", "Released", "Cancelled"],
+      default: "Pending Release",
+    },
+    advanceClaimReleaseDate: {
+      type: Date,
+    },
+    advanceClaimReleasedBy: {
+      type: String,
+      trim: true,
+    },
 
-    // Optional audit fields
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
+    // 🔹 Status & Notes
+    status: {
+      type: String,
+      enum: ["Active", "Cancelled", "Completed"],
+      default: "Active",
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
   },
-  { timestamps: true, collection: 'patient_registration' }
+  {
+    timestamps: true, // adds createdAt & updatedAt
+  }
 );
 
-// Optional: update timestamps automatically
-patientRegistrationSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+// 🔹 Pre-save Hook: Calculate pending and needToPay before saving
+patientRegistrationSchema.pre("save", function (next) {
+  if (this.amount && this.paid) {
+    this.pending = Math.max(0, this.amount - (this.paid + this.advance));
+  }
+  if (this.insurance === "Yes") {
+    const insuranceCover = (this.amount * this.coPayPercent) / 100;
+    this.needToPay = Math.max(0, this.amount - insuranceCover - this.advanceGivenAmount);
+  } else {
+    this.needToPay = Math.max(0, this.amount - (this.paid + this.advance));
+  }
   next();
 });
 
-export default mongoose.models.PatientRegistration || mongoose.model('PatientRegistration', patientRegistrationSchema);
+// 🔹 Indexes for faster search
+patientRegistrationSchema.index({ invoiceNumber: 1 });
+patientRegistrationSchema.index({ firstName: 1, lastName: 1 });
+patientRegistrationSchema.index({ mobileNumber: 1 });
+
+export default mongoose.models.PatientRegistration ||
+  mongoose.model("PatientRegistration", patientRegistrationSchema);
