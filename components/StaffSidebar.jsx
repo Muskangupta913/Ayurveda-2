@@ -11,7 +11,7 @@ const navItems = [
     description: 'Overview & analytics'
   },
   {
-     label: "Create Agent",
+     label: "Patient Registration",
      path: "/staff/patient-registration",
      icon: "📅",
      description: "Manage Clinic",
