@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useState, useEffect } from 'react';
 import clsx from 'clsx';
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
+
 
 const Sidebar = () => {
   const router = useRouter();
@@ -63,7 +64,7 @@ const Sidebar = () => {
     ];
   }
 
-  if (role === "doctor") {
+  if (role === "doctorStaff") {
     navItems = [
       { 
         label: "Dashboard", 
