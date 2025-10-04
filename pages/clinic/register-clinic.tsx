@@ -7,8 +7,6 @@ import {
   Mail,
   Building,
   Phone,
-  MapPin,
-  Clock,
   Heart,
   Users,
   Shield,
@@ -52,7 +50,7 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#2D9AA5'}}>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#2D9AA5' }}>
             <span className="text-3xl text-white">🎉</span>
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -64,7 +62,7 @@ const SuccessPopup: React.FC<SuccessPopupProps> = ({ isOpen, onClose }) => {
           <button
             onClick={handleRedirect}
             className="text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300"
-            style={{background: `linear-gradient(to right, #2D9AA5, #258A94)`}}
+            style={{ background: `linear-gradient(to right, #2D9AA5, #258A94)` }}
           >
             Continue to ZEVA
           </button>
@@ -209,22 +207,22 @@ const RegisterClinic: React.FC & {
 
   const validateStep = (step: number): boolean => {
     const newErrors: Errors = {};
-    
+
     if (step === 1) {
       if (!form.email.trim()) newErrors.email = "Email is required";
       if (!emailVerified) newErrors.emailVerification = "Email must be verified";
       if (!ownerPassword.trim()) newErrors.password = "Password is required";
     } else if (step === 2) {
       if (!form.name.trim()) newErrors.name = "Clinic name is required";
-      
+
       // Count total services including custom ones
       const standardServices = selectedTreatments.filter((t) => t !== "other");
       const totalServices = standardServices.length + otherTreatments.length;
-      
+
       if (totalServices === 0) {
         newErrors.treatments = "Please select at least one service";
       }
-      
+
       if (!form.address.trim()) newErrors.address = "Address is required";
       if (form.latitude === 0 && form.longitude === 0)
         newErrors.location = "Please set location on map";
@@ -372,17 +370,17 @@ const RegisterClinic: React.FC & {
             .slice(0, 5)
         )
       );
+
       for (const custom of uniqueCustoms) {
         try {
           await axios.post("/api/clinics/treatments", {
             treatment_name: custom,
           });
         } catch (err) {
-          if (axios.isAxiosError(err) && err.response?.status !== 409) {
-            console.error('Error adding custom treatment:', err);
-          }
+          console.error("Error adding custom treatment:", err);
         }
       }
+
       if (uniqueCustoms.length > 0) {
         const updatedTreatments = selectedTreatments
           .filter((t) => t !== "other")
@@ -398,14 +396,10 @@ const RegisterClinic: React.FC & {
         name: contactInfo.name,
         phone: contactInfo.phone,
       });
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const errorData = err.response?.data as { message?: string } | undefined;
-        const errorMessage = errorData?.message || "Unknown error";
-        showToastMessage(`Owner registration failed: ${errorMessage}`, "error");
-      } else {
-        showToastMessage("Owner registration failed: Unknown error", "error");
-      }
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || "Unknown error occurred while registering owner.";
+      showToastMessage(`Owner registration failed: ${errorMessage}`, "error");
       return;
     }
 
@@ -455,6 +449,7 @@ const RegisterClinic: React.FC & {
       showToastMessage("Clinic registration failed", "error");
     }
   };
+
 
   const handleTreatmentSelect = (treatment: TreatmentType | string) => {
     const alreadySelected = selectedTreatments.some((t) => {
@@ -557,31 +552,26 @@ const RegisterClinic: React.FC & {
         <div className="bg-white rounded-xl shadow-md p-2 lg:p-3 border border-gray-100 mb-3">
           <div className="flex items-center justify-between max-w-2xl mx-auto">
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
-                currentStep >= 1 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${currentStep >= 1 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
                 {currentStep > 1 ? '✓' : '1'}
               </div>
               <span className="text-xs font-medium text-gray-700 hidden sm:inline">Account</span>
             </div>
-            <div className={`flex-1 h-1 mx-2 rounded transition-all duration-500 ${
-              currentStep >= 2 ? 'bg-[#00b480]' : 'bg-gray-200'
-            }`}></div>
+            <div className={`flex-1 h-1 mx-2 rounded transition-all duration-500 ${currentStep >= 2 ? 'bg-[#00b480]' : 'bg-gray-200'
+              }`}></div>
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
-                currentStep >= 2 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${currentStep >= 2 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
                 {currentStep > 2 ? '✓' : '2'}
               </div>
               <span className="text-xs font-medium text-gray-700 hidden sm:inline">Details</span>
             </div>
-            <div className={`flex-1 h-1 mx-2 rounded transition-all duration-500 ${
-              currentStep >= 3 ? 'bg-[#00b480]' : 'bg-gray-200'
-            }`}></div>
+            <div className={`flex-1 h-1 mx-2 rounded transition-all duration-500 ${currentStep >= 3 ? 'bg-[#00b480]' : 'bg-gray-200'
+              }`}></div>
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
-                currentStep >= 3 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${currentStep >= 3 ? 'bg-[#00b480] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
                 3
               </div>
               <span className="text-xs font-medium text-gray-700 hidden sm:inline">Contact</span>
@@ -591,7 +581,7 @@ const RegisterClinic: React.FC & {
 
         {/* Form Container - No Scrolling */}
         <div className="flex-1 overflow-hidden">
-          <div 
+          <div
             className="h-full transition-transform duration-500 ease-in-out flex"
             style={{ transform: `translateX(-${(currentStep - 1) * 100}%)` }}
           >
@@ -621,9 +611,8 @@ const RegisterClinic: React.FC & {
                             <input
                               type="email"
                               placeholder="healthcare@example.com"
-                              className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm ${
-                                errors.email ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-[#00b480]"
-                              }`}
+                              className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm ${errors.email ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-[#00b480]"
+                                }`}
                               value={form.email}
                               onChange={(e) => {
                                 setForm({ ...form, email: e.target.value });
@@ -635,13 +624,12 @@ const RegisterClinic: React.FC & {
                         </div>
                         <button
                           type="button"
-                          className={`px-4 py-2.5 rounded-lg font-semibold whitespace-nowrap transition-all text-sm ${
-                            emailVerified
+                          className={`px-4 py-2.5 rounded-lg font-semibold whitespace-nowrap transition-all text-sm ${emailVerified
                               ? "bg-[#00b480] text-white"
                               : emailSent
-                              ? "bg-gray-100 text-gray-600 cursor-not-allowed"
-                              : "bg-gradient-to-r from-[#00b480] to-[#008f66] text-white"
-                          }`}
+                                ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                                : "bg-gradient-to-r from-[#00b480] to-[#008f66] text-white"
+                            }`}
                           onClick={() => {
                             if (!form.email.includes("@")) {
                               setErrors((prev) => ({ ...prev, email: "Enter a valid email" }));
@@ -664,9 +652,8 @@ const RegisterClinic: React.FC & {
                         <input
                           type={showPassword ? "text" : "password"}
                           placeholder="Create password (min. 8 characters)"
-                          className={`text-black w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm ${
-                            errors.password ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-[#00b480]"
-                          }`}
+                          className={`text-black w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm ${errors.password ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-[#00b480]"
+                            }`}
                           value={ownerPassword}
                           onChange={(e) => {
                             setOwnerPassword(e.target.value);
@@ -687,11 +674,10 @@ const RegisterClinic: React.FC & {
                   <div className="mt-6 flex justify-end">
                     <button
                       type="button"
-                      className={`px-6 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm ${
-                        emailVerified
+                      className={`px-6 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm ${emailVerified
                           ? "bg-gradient-to-r from-[#00b480] to-[#008f66] text-white"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      }`}
+                        }`}
                       onClick={() => handleNext(2)}
                       disabled={!emailVerified}
                     >
@@ -726,9 +712,8 @@ const RegisterClinic: React.FC & {
                           </label>
                           <input
                             placeholder="Green Valley Wellness"
-                            className={`text-black w-full px-3 py-2 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${
-                              errors.name ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
-                            }`}
+                            className={`text-black w-full px-3 py-2 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${errors.name ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
+                              }`}
                             value={form.name}
                             onChange={(e) => {
                               setForm((f) => ({ ...f, name: e.target.value }));
@@ -744,9 +729,8 @@ const RegisterClinic: React.FC & {
                           <button
                             type="button"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className={`text-black w-full px-3 py-2 border-2 rounded-lg text-left flex items-center justify-between bg-gray-50 hover:bg-white text-sm ${
-                              errors.treatments ? "border-red-400" : "border-gray-200"
-                            }`}
+                            className={`text-black w-full px-3 py-2 border-2 rounded-lg text-left flex items-center justify-between bg-gray-50 hover:bg-white text-sm ${errors.treatments ? "border-red-400" : "border-gray-200"
+                              }`}
                           >
                             <div className="flex-1">
                               {selectedTreatments.length === 0 && otherTreatments.length === 0 ? (
@@ -786,20 +770,18 @@ const RegisterClinic: React.FC & {
                                   <div
                                     key={index}
                                     onClick={() => handleTreatmentSelect(treatment)}
-                                    className={`px-3 py-1.5 cursor-pointer rounded text-xs ${
-                                      selectedTreatments.some((t) => typeof t === "object" && t.slug === treatment.slug)
+                                    className={`px-3 py-1.5 cursor-pointer rounded text-xs ${selectedTreatments.some((t) => typeof t === "object" && t.slug === treatment.slug)
                                         ? "bg-[#00b480]/10 text-[#00b480]"
                                         : "hover:bg-gray-50"
-                                    }`}
+                                      }`}
                                   >
                                     {treatment.name}
                                   </div>
                                 ))}
                                 <div
                                   onClick={() => handleTreatmentSelect("other")}
-                                  className={`px-3 py-1.5 cursor-pointer rounded border-t text-xs ${
-                                    selectedTreatments.includes("other") ? "bg-[#00b480]/10 text-[#00b480]" : "hover:bg-gray-50"
-                                  }`}
+                                  className={`px-3 py-1.5 cursor-pointer rounded border-t text-xs ${selectedTreatments.includes("other") ? "bg-[#00b480]/10 text-[#00b480]" : "hover:bg-gray-50"
+                                    }`}
                                 >
                                   Other Services
                                 </div>
@@ -854,16 +836,15 @@ const RegisterClinic: React.FC & {
                                   }
                                 }}
                                 disabled={otherTreatments.length >= 5}
-                                className={`px-3 py-2 rounded-lg font-semibold text-xs whitespace-nowrap ${
-                                  otherTreatments.length >= 5
+                                className={`px-3 py-2 rounded-lg font-semibold text-xs whitespace-nowrap ${otherTreatments.length >= 5
                                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                                     : "bg-[#00b480] text-white hover:bg-[#009973]"
-                                }`}
+                                  }`}
                               >
                                 Add
                               </button>
                             </div>
-                            
+
                             {/* Display added custom treatments */}
                             {otherTreatments.length > 0 && (
                               <div className="space-y-1">
@@ -890,7 +871,7 @@ const RegisterClinic: React.FC & {
                                 </div>
                               </div>
                             )}
-                            
+
                             <p className="text-xs text-gray-500 mt-2">
                               Press Enter or click Add to save each service
                             </p>
@@ -926,9 +907,8 @@ const RegisterClinic: React.FC & {
                             <input
                               type="file"
                               accept="image/*"
-                              className={`text-black w-full px-2 py-1.5 border-2 rounded-lg bg-gray-50 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#00b480] file:text-white text-xs ${
-                                errors.clinicPhoto ? "border-red-400" : "border-gray-200"
-                              }`}
+                              className={`text-black w-full px-2 py-1.5 border-2 rounded-lg bg-gray-50 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#00b480] file:text-white text-xs ${errors.clinicPhoto ? "border-red-400" : "border-gray-200"
+                                }`}
                               onChange={handleFileChange}
                             />
                           </div>
@@ -952,9 +932,8 @@ const RegisterClinic: React.FC & {
                           </label>
                           <textarea
                             placeholder="Street, Building, City, State"
-                            className={`text-black w-full px-3 py-2 border-2 rounded-lg focus:outline-none bg-gray-50 resize-none text-sm ${
-                              errors.address ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
-                            }`}
+                            className={`text-black w-full px-3 py-2 border-2 rounded-lg focus:outline-none bg-gray-50 resize-none text-sm ${errors.address ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
+                              }`}
                             value={form.address}
                             onChange={handleAddressChange}
                             rows={2}
@@ -1035,9 +1014,8 @@ const RegisterClinic: React.FC & {
                         <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           placeholder="Dr. John Smith"
-                          className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${
-                            errors.contactName ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
-                          }`}
+                          className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${errors.contactName ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
+                            }`}
                           value={contactInfo.name}
                           onChange={(e) => {
                             setContactInfo({ ...contactInfo, name: e.target.value });
@@ -1056,9 +1034,8 @@ const RegisterClinic: React.FC & {
                         <input
                           type="tel"
                           placeholder="1234567890"
-                          className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${
-                            errors.phone ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
-                          }`}
+                          className={`text-black w-full pl-10 pr-3 py-2.5 border-2 rounded-lg focus:outline-none bg-gray-50 focus:bg-white text-sm ${errors.phone ? "border-red-400" : "border-gray-200 focus:border-[#00b480]"
+                            }`}
                           value={contactInfo.phone}
                           onChange={handlePhoneChange}
                           maxLength={10}
@@ -1097,7 +1074,7 @@ const RegisterClinic: React.FC & {
                     </button>
                     <button
                       type="submit"
-                      onClick={handleSubmit}
+                      onClick={() => setCurrentStep(2)}
                       className="px-6 py-2.5 rounded-lg font-bold transition-all bg-gradient-to-r from-[#00b480] to-[#008f66] text-white flex items-center gap-2 text-sm"
                     >
                       <Heart className="w-4 h-4" />
