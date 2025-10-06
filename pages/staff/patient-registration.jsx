@@ -33,7 +33,7 @@ const INITIAL_FORM_DATA = {
   insurance: "No",
   advanceGivenAmount: "",
   coPayPercent: "",
-  advanceClaimStatus: "Pending Release",
+  advanceClaimStatus: "Pending",
 };
 
 const InvoiceManagementSystem = () => {
@@ -148,7 +148,7 @@ const InvoiceManagementSystem = () => {
           ...prev,
           advanceGivenAmount: "",
           coPayPercent: "",
-          advanceClaimStatus: "Pending Release",
+          advanceClaimStatus: "Pending",
         }));
         setAutoFields(prev => ({
           ...prev,
@@ -836,7 +836,7 @@ const InvoiceManagementSystem = () => {
                                 : 'bg-yellow-100 border-yellow-400 text-yellow-800'
                             }`}
                             />
-                            {formData.advanceClaimStatus === 'Pending Release' && (
+                            {formData.advanceClaimStatus === 'Pending' && (
                             <button
                                 type="button"
                                 onClick={handleReleaseClaim}
