@@ -73,7 +73,7 @@ const Sidebar = () => {
         description: "Doctor Overview & Appointments" 
       },
       { 
-        label: "My Patients", 
+        label: "Pending Claims", 
         path: "/doctor/my-patients", 
         icon: "🧑‍⚕️", 
         description: "View & Manage Patients" 
