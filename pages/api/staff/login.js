@@ -17,36 +17,40 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Email and password are required" });
     }
 
-    // find staff
-    const staff = await User.findOne({ email, role: "staff" });
-    if (!staff) {
-      return res.status(404).json({ success: false, message: "Staff not found" });
+    // find user with role staff OR doctorStaff
+    const user = await User.findOne({ 
+      email, 
+      role: { $in: ["staff", "doctorStaff"] } 
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     // check approval
-    if (!staff.isApproved || staff.declined) {
-      return res.status(403).json({ success: false, message: "Staff account not approved" });
+    if (!user.isApproved || user.declined) {
+      return res.status(403).json({ success: false, message: "Account not approved" });
     }
 
     // check password
-    const isMatch = await bcrypt.compare(password, staff.password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
 
     // generate token
-    const token = signToken(staff);
-    console.log("Generated token:", token); // Debugging line to check the token value
+    const token = signToken(user);
+    console.log("Generated token:", token); // Debug
 
     return res.status(200).json({
       success: true,
       message: "Login successful",
       token,
-      staff: { id: staff._id, name: staff.name, email: staff.email },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
 
   } catch (err) {
-    console.error("Staff login error:", err);
+    console.error("Login error:", err);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }

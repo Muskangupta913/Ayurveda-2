@@ -2,27 +2,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useState, useEffect } from 'react';
 import clsx from 'clsx';
+import { jwtDecode } from "jwt-decode";
 
-const navItems = [
-  { 
-    label: 'Dashboard', 
-    path: '/staff/staff-dashboard', 
-    icon: '🏠',
-    description: 'Overview & analytics'
-  },
-  {
-     label: "Patient Registration",
-     path: "/staff/patient-registration",
-     icon: "📅",
-     description: "Manage Clinic",
-   },
-];
 
-const AdminSidebar = ({ className }) => {
+const Sidebar = () => {
   const router = useRouter();
+  const [role, setRole] = useState(null);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isDesktopHidden, setIsDesktopHidden] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      const decoded = jwtDecode(token);
+      setRole(decoded.role); // "staff" or "doctor"
+    }
+  }, []);
 
   // Handle escape key to close mobile menu
   useEffect(() => {
@@ -48,6 +44,42 @@ const AdminSidebar = ({ className }) => {
       document.body.style.overflow = 'unset';
     };
   }, [isMobileOpen]);
+
+  let navItems = [];
+
+  if (role === "staff") {
+    navItems = [
+      { 
+        label: "Dashboard", 
+        path: "/staff/staff-dashboard", 
+        icon: "🏠", 
+        description: "Overview & analytics" 
+      },
+      { 
+        label: "Patient Registration", 
+        path: "/staff/patient-registration", 
+        icon: "📅", 
+        description: "Manage Clinic" 
+      },
+    ];
+  }
+
+  if (role === "doctorStaff") {
+    navItems = [
+      { 
+        label: "Dashboard", 
+        path: "/staff/staff-dashboard", 
+        icon: "🏠", 
+        description: "Doctor Overview & Appointments" 
+      },
+      { 
+        label: "Pending Claims", 
+        path: "/staff/pending-claims", 
+        icon: "🧑‍⚕️", 
+        description: "View & Manage Patients" 
+      },
+    ];
+  }
 
   const handleToggleDesktop = () => {
     setIsDesktopHidden(!isDesktopHidden);
@@ -116,14 +148,13 @@ const AdminSidebar = ({ className }) => {
         {
           'lg:flex': !isDesktopHidden,
           'lg:hidden': isDesktopHidden
-        },
-        className
+        }
       )} style={{ height: '100vh' }}>
 
         <div className="flex flex-col h-full">
           {/* Desktop Header */}
           <div className="p-6 border-b border-gray-100 flex-shrink-0 relative">
-            <Link href="/admin/dashboard-admin">
+            <Link href="/staff/staff-dashboard">
               <div className="group cursor-pointer">
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 group-hover:bg-[#2D9AA5]/5 transition-all duration-300 border border-gray-100">
                   <div className="w-10 h-10 bg-gradient-to-br from-[#2D9AA5] to-[#1e7d87] rounded-xl flex items-center justify-center shadow-sm">
@@ -360,8 +391,7 @@ const AdminSidebar = ({ className }) => {
         </aside>
       </div>
     </>
-
   );
 };
 
-export default AdminSidebar;
+export default Sidebar;

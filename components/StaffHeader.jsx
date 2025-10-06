@@ -5,8 +5,8 @@ const AdminHeader = () => {
   const email = storedUser.email;
 
   const handleLogout = () => {
-    localStorage.removeItem('staffToken');
-    localStorage.removeItem('staffToken');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userToken');
     window.location.href = '/staff';
   };
 

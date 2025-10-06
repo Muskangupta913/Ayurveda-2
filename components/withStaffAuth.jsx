@@ -11,7 +11,7 @@ export default function withDoctorAuth(WrappedComponent) {
 
     useEffect(() => {
       const clearStorage = () => {
-        const keys = ['staffToken'];
+        const keys = ['userToken'];
         keys.forEach((k) => {
           try { localStorage.removeItem(k); } catch {}
           try { sessionStorage.removeItem(k); } catch {}
@@ -20,7 +20,7 @@ export default function withDoctorAuth(WrappedComponent) {
 
       const checkAuth = async () => {
         const token = typeof window !== 'undefined'
-          ? (localStorage.getItem('staffToken') || sessionStorage.getItem('staffToken') || localStorage.getItem('token') || sessionStorage.getItem('token'))
+          ? (localStorage.getItem('userToken') || sessionStorage.getItem('staffToken') || localStorage.getItem('staffToken') || sessionStorage.getItem('token'))
           : null;
 
         if (!token) {

@@ -84,6 +84,12 @@ const navItems: NavItem[] = [
     icon: '⚙️',
     description: 'Approve or decline job'
   },
+  { 
+    label: 'Create-Staff', 
+    path: '/admin/create-staff', 
+    icon: '⚙️',
+    description: 'create-staff'
+  },
 ];
 
 interface AdminSidebarProps {
