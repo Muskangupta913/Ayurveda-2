@@ -10,16 +10,6 @@ const doctorList = [
   "Dr. James Anderson",
 ];
 
-const treatmentOptions = [
-  "General Consultation",
-  "Surgery",
-  "Physiotherapy",
-  "Dental Care",
-  "Cardiology",
-  "Orthopedics",
-  "Other",
-];
-
 const paymentMethods = ["Cash", "Card", "BT", "Tabby", "Tamara"];
 
 const INITIAL_FORM_DATA = {
@@ -33,6 +23,7 @@ const INITIAL_FORM_DATA = {
   doctor: "",
   service: "",
   treatment: "",
+  package: "",
   patientType: "",
   referredBy: "",
   amount: "",
@@ -54,16 +45,59 @@ const InvoiceManagementSystem = () => {
     advanceClaimReleaseDate: null,
     advanceClaimReleasedBy: null,
   });
+
+  const [fetchedTreatments, setFetchedTreatments] = useState([]);
+  const [fetchedPackages, setFetchedPackages] = useState([]);
   const [calculatedFields, setCalculatedFields] = useState({ pending: 0, needToPay: 0 });
   const [errors, setErrors] = useState({});
   const [usedEMRNumbers] = useState(() => new Set());
 
+  // -------------------------------
+  // Fetch treatments/packages from API
+  // -------------------------------
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const staffToken = localStorage.getItem("staffToken");
+        if (!staffToken) return;
+
+        const res = await fetch("/api/admin/staff-treatments", {
+          headers: { Authorization: `Bearer ${staffToken}` },
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          const treatments = data.data
+            .filter(item => item.treatment)
+            .map(item => ({ _id: item._id, name: item.treatment }));
+
+          const packages = data.data
+            .filter(item => item.package)
+            .map(item => ({ _id: item._id, name: item.package }));
+
+          setFetchedTreatments(treatments);
+          setFetchedPackages(packages);
+        } else {
+          console.error("Failed to fetch staff-treatments:", data.message);
+        }
+      } catch (error) {
+        console.error("Error fetching staff-treatments:", error);
+      }
+    };
+
+    fetchOptions();
+  }, []);
+
+  // -------------------------------
   // Generate invoice number on mount
+  // -------------------------------
   useEffect(() => {
     generateInvoiceNumber();
   }, []);
 
-  // Auto-calculate pending and need-to-pay on relevant changes
+  // -------------------------------
+  // Auto-calculate fields
+  // -------------------------------
   useEffect(() => {
     calculatePending();
   }, [formData.amount, formData.paid, formData.advance]);
@@ -72,13 +106,16 @@ const InvoiceManagementSystem = () => {
     calculateNeedToPay();
   }, [formData.amount, formData.coPayPercent, formData.insurance]);
 
+  // -------------------------------
+  // Handlers
+  // -------------------------------
   const generateInvoiceNumber = useCallback(() => {
     const date = new Date();
     const seq = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
     const id = `INV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(
       date.getDate()
     ).padStart(2, "0")}-${seq}`;
-    setFormData((prev) => ({ ...prev, invoiceNumber: id }));
+    setFormData(prev => ({ ...prev, invoiceNumber: id }));
   }, []);
 
   const calculatePending = useCallback(() => {
@@ -86,7 +123,7 @@ const InvoiceManagementSystem = () => {
     const paid = parseFloat(formData.paid) || 0;
     const advance = parseFloat(formData.advance) || 0;
     const pending = Math.max(0, amount - (paid + advance));
-    setCalculatedFields((prev) => ({ ...prev, pending }));
+    setCalculatedFields(prev => ({ ...prev, pending }));
   }, [formData.amount, formData.paid, formData.advance]);
 
   const calculateNeedToPay = useCallback(() => {
@@ -94,27 +131,26 @@ const InvoiceManagementSystem = () => {
       const amount = parseFloat(formData.amount) || 0;
       const coPayPercent = parseFloat(formData.coPayPercent) || 0;
       const needToPay = Math.max(0, (amount * (100 - coPayPercent)) / 100);
-      setCalculatedFields((prev) => ({ ...prev, needToPay }));
+      setCalculatedFields(prev => ({ ...prev, needToPay }));
     } else {
-      setCalculatedFields((prev) => ({ ...prev, needToPay: 0 }));
+      setCalculatedFields(prev => ({ ...prev, needToPay: 0 }));
     }
   }, [formData.amount, formData.coPayPercent, formData.insurance]);
 
   const handleInputChange = useCallback(
-    (e) => {
+    e => {
       const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
-
-      if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+      setFormData(prev => ({ ...prev, [name]: value }));
+      if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
 
       if (name === "insurance" && value === "No") {
-        setFormData((prev) => ({
+        setFormData(prev => ({
           ...prev,
           advanceGivenAmount: "",
           coPayPercent: "",
           advanceClaimStatus: "Pending Release",
         }));
-        setAutoFields((prev) => ({
+        setAutoFields(prev => ({
           ...prev,
           advanceClaimReleaseDate: null,
           advanceClaimReleasedBy: null,
@@ -123,79 +159,65 @@ const InvoiceManagementSystem = () => {
     },
     [errors]
   );
-const validateForm = useCallback(() => {
-  const newErrors = {};
-  const {
-    invoiceNumber,
-    emrNumber,
-    firstName,
-    lastName,
-    email,
-    gender,
-    doctor,
-    service,
-    treatment,
-    package: selectedPackage,
-    patientType,
-    amount,
-    paymentMethod,
-    insurance,
-    advanceGivenAmount,
-    coPayPercent,
-  } = formData;
 
-  // Invoice & EMR
-  if (!invoiceNumber.trim()) newErrors.invoiceNumber = "Invoice Number is required";
-  if (!emrNumber.trim()) newErrors.emrNumber = "EMR Number is required";
-  else if (usedEMRNumbers.has(emrNumber))
-    newErrors.emrNumber = "EMR Number already exists. Must be unique.";
+  const validateForm = useCallback(() => {
+    const newErrors = {};
+    const {
+      invoiceNumber,
+      emrNumber,
+      firstName,
+      lastName,
+      email,
+      gender,
+      doctor,
+      service,
+      treatment,
+      package: selectedPackage,
+      patientType,
+      amount,
+      paymentMethod,
+      insurance,
+      advanceGivenAmount,
+      coPayPercent,
+    } = formData;
 
-  // Personal info
-  if (!firstName.trim()) newErrors.firstName = "First Name is required";
-  if (!lastName.trim()) newErrors.lastName = "Last Name is required";
-  if (!email.trim()) newErrors.email = "Email is required";
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    newErrors.email = "Valid email is required";
+    if (!invoiceNumber.trim()) newErrors.invoiceNumber = "Invoice Number is required";
+    if (!emrNumber.trim()) newErrors.emrNumber = "EMR Number is required";
+    else if (usedEMRNumbers.has(emrNumber))
+      newErrors.emrNumber = "EMR Number already exists. Must be unique.";
 
-  if (!gender) newErrors.gender = "Gender is required";
+    if (!firstName.trim()) newErrors.firstName = "First Name is required";
+    if (!lastName.trim()) newErrors.lastName = "Last Name is required";
+    if (!email.trim()) newErrors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      newErrors.email = "Valid email is required";
 
-  // Patient type
-  if (!patientType) newErrors.patientType = "Patient Type is required";
+    if (!gender) newErrors.gender = "Gender is required";
+    if (!patientType) newErrors.patientType = "Patient Type is required";
+    if (!doctor) newErrors.doctor = "Doctor is required";
+    if (!service) newErrors.service = "Service is required";
+    if (service === "Treatment" && !treatment) newErrors.treatment = "Treatment is required";
+    if (service === "Package" && !selectedPackage) newErrors.package = "Package selection is required";
 
-  // Doctor & service
-  if (!doctor) newErrors.doctor = "Doctor is required";
-  if (!service) newErrors.service = "Service is required";
+    if (!amount || parseFloat(amount) <= 0) newErrors.amount = "Valid amount is required";
+    if (!paymentMethod) newErrors.paymentMethod = "Payment Method is required";
 
-  // Conditional validation for treatment/package
-  if (service === "Treatment" && !treatment)
-    newErrors.treatment = "Treatment is required";
-  if (service === "Package" && !selectedPackage)
-    newErrors.package = "Package selection is required";
+    if (insurance === "Yes") {
+      if (!advanceGivenAmount || parseFloat(advanceGivenAmount) <= 0)
+        newErrors.advanceGivenAmount = "Advance Given Amount is required when insurance is Yes";
+      if (!coPayPercent || parseFloat(coPayPercent) < 0 || parseFloat(coPayPercent) > 100)
+        newErrors.coPayPercent = "Valid Co-Pay % (0-100) is required";
+    }
 
-  // Payment
-  if (!amount || parseFloat(amount) <= 0) newErrors.amount = "Valid amount is required";
-  if (!paymentMethod) newErrors.paymentMethod = "Payment Method is required";
-
-  // Insurance fields
-  if (insurance === "Yes") {
-    if (!advanceGivenAmount || parseFloat(advanceGivenAmount) <= 0)
-      newErrors.advanceGivenAmount = "Advance Given Amount is required when insurance is Yes";
-    if (!coPayPercent || parseFloat(coPayPercent) < 0 || parseFloat(coPayPercent) > 100)
-      newErrors.coPayPercent = "Valid Co-Pay % (0-100) is required";
-  }
-
-  setErrors(newErrors);
-
-  // Return true if no errors
-  return Object.keys(newErrors).length === 0;
-}, [formData, usedEMRNumbers]);
-
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData, usedEMRNumbers]);
 
   const handleReleaseClaim = useCallback(() => {
     const allowedRoles = ["Staff", "Admin", "Super Admin"];
     if (allowedRoles.includes(currentUser.role)) {
-      setFormData((prev) => ({ ...prev, advanceClaimStatus: "Released" }));
-      setAutoFields((prev) => ({
+      setFormData(prev => ({ ...prev, advanceClaimStatus: "Released" }));
+      setAutoFields(prev => ({
         ...prev,
         advanceClaimReleaseDate: new Date().toISOString(),
         advanceClaimReleasedBy: currentUser.name,
@@ -205,55 +227,52 @@ const validateForm = useCallback(() => {
     }
   }, [currentUser]);
 
-  // ✅ API-integrated handleSubmit
-const handleSubmit = useCallback(async () => {
-  if (!validateForm()) {
-    alert("Please fix the errors before submitting");
-    return;
-  }
-
-  usedEMRNumbers.add(formData.emrNumber);
-
-  const invoiceData = {
-    ...formData,
-    ...autoFields,
-    calculatedFields: {
-      pending: parseFloat(calculatedFields.pending) || 0,
-      needToPay: parseFloat(calculatedFields.needToPay) || 0,
-    },
-  };
-
-  try {
-    // ✅ Get staffToken from localStorage
-    const staffToken = localStorage.getItem("staffToken");
-    if (!staffToken) {
-      alert("Authentication token not found. Please login again.");
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) {
+      alert("Please fix the errors before submitting");
       return;
     }
 
-    const response = await fetch("/api/staff/patient-registration", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${staffToken}`, // ✅ Include token
+    usedEMRNumbers.add(formData.emrNumber);
+
+    const invoiceData = {
+      ...formData,
+      ...autoFields,
+      calculatedFields: {
+        pending: parseFloat(calculatedFields.pending) || 0,
+        needToPay: parseFloat(calculatedFields.needToPay) || 0,
       },
-      body: JSON.stringify(invoiceData),
-    });
+    };
 
-    const result = await response.json();
+    try {
+      const staffToken = localStorage.getItem("staffToken");
+      if (!staffToken) {
+        alert("Authentication token not found. Please login again.");
+        return;
+      }
 
-    if (response.ok) {
-      alert("Invoice saved successfully!");
-      resetForm();
-    } else {
-      alert(`Error: ${result.message || "Failed to save invoice"}`);
-      console.error("API Error:", result);
+      const response = await fetch("/api/staff/patient-registration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${staffToken}`,
+        },
+        body: JSON.stringify(invoiceData),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert("Invoice saved successfully!");
+        resetForm();
+      } else {
+        alert(`Error: ${result.message || "Failed to save invoice"}`);
+        console.error("API Error:", result);
+      }
+    } catch (err) {
+      console.error("Network Error:", err);
+      alert("Network error. Please try again later.");
     }
-  } catch (err) {
-    console.error("Network Error:", err);
-    alert("Network error. Please try again later.");
-  }
-}, [formData, autoFields, calculatedFields, usedEMRNumbers, validateForm]);
+  }, [formData, autoFields, calculatedFields, usedEMRNumbers, validateForm]);
 
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA);
@@ -545,86 +564,88 @@ const handleSubmit = useCallback(async () => {
         </div>
 
         {/* Service Selection */}
-        <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-            Service <span className="text-red-500">*</span>
-        </label>
-        <select
-            name="service"
-            value={formData.service}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-            errors.service ? "border-red-500 bg-red-50" : "border-gray-300"
-            }`}
-        >
-            <option value="">Select service</option>
-            <option value="Package">Package</option>
-            <option value="Treatment">Treatment</option>
-        </select>
-        {errors.service && (
-            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            {errors.service}
-            </p>
-        )}
-        </div>
+           <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Service <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="service"
+                  value={formData.service}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                    errors.service ? "border-red-500 bg-red-50" : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select service</option>
+                  <option value="Package">Package</option>
+                  <option value="Treatment">Treatment</option>
+                </select>
+                {errors.service && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.service}
+                  </p>
+                )}
+              </div>
 
-        {/* Conditional Dropdowns */}
-        {formData.service === "Package" && (
-        <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-            Package <span className="text-red-500">*</span>
-            </label>
-            <select
-            name="package"
-            value={formData.package || ""}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                errors.package ? "border-red-500 bg-red-50" : "border-gray-300"
-            }`}
-            >
-            <option value="">Select package</option>
-            <option value="Wellness Package">Wellness Package</option>
-            <option value="Full Body Checkup">Full Body Checkup</option>
-            <option value="Post Surgery Care">Post Surgery Care</option>
-            </select>
-            {errors.package && (
-            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                {errors.package}
-            </p>
-            )}
-        </div>
-        )}
+              {/* Conditional Dropdowns */}
+              {formData.service === "Package" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Package <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="package"
+                    value={formData.package || ""}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                      errors.package ? "border-red-500 bg-red-50" : "border-gray-300"
+                    }`}
+                  >
+                    <option value="">Select package</option>
+                    {fetchedPackages.map((pkg) => (
+                      <option key={pkg._id} value={pkg.name}>
+                        {pkg.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.package && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.package}
+                    </p>
+                  )}
+                </div>
+              )}
 
-        {formData.service === "Treatment" && (
-        <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-            Treatment <span className="text-red-500">*</span>
-            </label>
-            <select
-            name="treatment"
-            value={formData.treatment}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"
-            }`}
-            >
-            <option value="">Select treatment</option>
-            {treatmentOptions.map((treatment, index) => (
-                <option key={index} value={treatment}>
-                {treatment}
-                </option>
-            ))}
-            </select>
-            {errors.treatment && (
-            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                {errors.treatment}
-            </p>
-            )}
-        </div>
-        )}
+              {formData.service === "Treatment" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Treatment <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="treatment"
+                    value={formData.treatment}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                      errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"
+                    }`}
+                  >
+                    <option value="">Select treatment</option>
+                    {fetchedTreatments.map((t) => (
+                      <option key={t._id} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.treatment && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.treatment}
+                    </p>
+                  )}
+                </div>
+              )}
     </div>
     </div>
 
