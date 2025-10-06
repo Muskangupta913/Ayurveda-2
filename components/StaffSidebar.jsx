@@ -68,13 +68,13 @@ const Sidebar = () => {
     navItems = [
       { 
         label: "Dashboard", 
-        path: "/doctor/doctor-dashboard", 
+        path: "/staff/staff-dashboard", 
         icon: "🏠", 
         description: "Doctor Overview & Appointments" 
       },
       { 
         label: "Pending Claims", 
-        path: "/doctor/my-patients", 
+        path: "/staff/pending-claims", 
         icon: "🧑‍⚕️", 
         description: "View & Manage Patients" 
       },

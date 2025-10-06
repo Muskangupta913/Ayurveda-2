@@ -134,8 +134,8 @@ const patientRegistrationSchema = new mongoose.Schema(
     },
     advanceClaimStatus: {
       type: String,
-      enum: ["Pending Release", "Released", "Cancelled"],
-      default: "Pending Release",
+      enum: ["Pending", "Released", "Cancelled"],
+      default: "Pending",
     },
     advanceClaimReleaseDate: {
       type: Date,
