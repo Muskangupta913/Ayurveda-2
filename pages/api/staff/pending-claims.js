@@ -11,7 +11,7 @@ import User from "../../../models/Users";
   if (!token) throw { status: 401, message: "No token provided" };
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
+    const user = await User.findById(decoded.userId).select("-password");
     if (!user) throw { status: 401, message: "User not found" };
     return user;
   } catch (err) {

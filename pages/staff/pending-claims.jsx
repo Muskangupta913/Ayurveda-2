@@ -2,6 +2,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import ClinicLayout from '../../components/staffLayout';
+import withClinicAuth from '../../components/withStaffAuth';
 
 const CHECKLIST_FIELDS = [
   { key: "appointment", label: "Appointment" },
@@ -18,7 +20,7 @@ const CHECKLIST_FIELDS = [
   { key: "startDate", label: "Start date" },
 ];
 
-export default function PatientsPage() {
+ function PatientsPage() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -87,7 +89,7 @@ export default function PatientsPage() {
         checklist, // server validates completeness
       };
 
-      const res = await axios.patch("/api/patients", body, { headers: getAuthHeader() });
+      const res = await axios.patch("/api/staff/pending-claims", body, { headers: getAuthHeader() });
       // update local state
       const updated = res.data.data;
       setPatients((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
@@ -104,14 +106,14 @@ export default function PatientsPage() {
     if (!confirm("Are you sure you want to cancel this claim?")) return;
     try {
       const body = { id: patient._id, action: "cancel" };
-      const res = await axios.patch("/api/patients", body, { headers: getAuthHeader() });
+      const res = await axios.patch("/api/staff/pending-claims", body, { headers: getAuthHeader() });
       const updated = res.data.data;
       setPatients((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
     } catch (err) {
       console.error("Cancel error:", err.response?.data || err.message);
       alert(err.response?.data?.message || "Cancel failed");
     }
-  };
+  }
 
   const openModalFromCancelled = (patient) => {
     // When user clicks "Release" in cancelled section -> open modal same as pending
@@ -254,3 +256,15 @@ export default function PatientsPage() {
     </div>
   );
 }
+ PatientsPage.getLayout = function PageLayout(page) {
+  return <ClinicLayout>{page}</ClinicLayout>;
+};
+
+// Apply HOC
+const ProtectedDashboard = withClinicAuth( PatientsPage);
+
+// Reassign layout
+ProtectedDashboard.getLayout =  PatientsPage.getLayout;
+
+export default ProtectedDashboard;
+
