@@ -61,6 +61,12 @@ const Sidebar = () => {
         icon: "📅", 
         description: "Manage Clinic" 
       },
+      { 
+        label: "Patient Information", 
+        path: "/staff/patient-information", 
+        icon: "📅", 
+        description: "Manage Clinic" 
+      },
     ];
   }
 
@@ -78,6 +84,7 @@ const Sidebar = () => {
         icon: "🧑‍⚕️", 
         description: "View & Manage Patients" 
       },
+      
     ];
   }
 
