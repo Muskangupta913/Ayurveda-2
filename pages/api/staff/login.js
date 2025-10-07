@@ -1,7 +1,7 @@
 import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
 import bcrypt from "bcryptjs";
-import { signToken } from "../lead-ms/auth";
+import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -38,8 +38,15 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
 
-    // generate token
-    const token = signToken(user);
+    // generate token with name included
+    const payload = {
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET); // expires in 7 days
     console.log("Generated token:", token); // Debug
 
     return res.status(200).json({
