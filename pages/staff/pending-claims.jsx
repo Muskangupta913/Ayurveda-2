@@ -5,6 +5,8 @@ import axios from "axios";
 import ClinicLayout from '../../components/staffLayout';
 import withClinicAuth from '../../components/withStaffAuth';
 
+
+
 const CHECKLIST_FIELDS = [
   { key: "appointment", label: "Appointment" },
   { key: "personalDetails", label: "Personal details" },

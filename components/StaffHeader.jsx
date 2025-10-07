@@ -1,23 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { jwtDecode } from "jwt-decode";
 
 const AdminHeader = () => {
-  const storedUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  let storedUser = {};
+  const token = localStorage.getItem('userToken');
+
+  if (token) {
+    try {
+      storedUser = jwtDecode(token);
+    } catch (err) {
+      console.error("Invalid token", err);
+      storedUser = {};
+    }
+  }
+
   const email = storedUser.email;
 
   const handleLogout = () => {
-    localStorage.removeItem('userToken');
     localStorage.removeItem('userToken');
     window.location.href = '/staff';
   };
 
   const getInitials = (name) => {
+    if (!name) return 'A';
     return name
       .split(' ')
       .map(word => word.charAt(0).toUpperCase())
       .join('')
       .slice(0, 2);
   };
-
   return (
     <header className="w-full bg-white border-b border-gray-200 shadow-sm">
       <div className="px-4 py-4 sm:px-6">
@@ -60,10 +71,10 @@ const AdminHeader = () => {
           <div className="flex items-center gap-3">
             <div className="hidden sm:block text-right">
               <div className="text-sm font-medium text-gray-900">
-                {storedUser?.name || 'Admin'}
+                {storedUser.name || 'Admin'}
               </div>
               <div className="text-xs text-gray-500">
-                {email || ''}
+                {storedUser.email || ''}
               </div>
             </div>
             
