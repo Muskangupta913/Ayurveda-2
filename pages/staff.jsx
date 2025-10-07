@@ -36,7 +36,7 @@ export default function StaffDoctorLogin() {
 
   return (
     <div className="max-w-md mx-auto mt-20 bg-white p-6 rounded-xl shadow-lg">
-      <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
+      <h2 className="text-2xl font-bold text-center mb-6 text-black">Login</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"
@@ -44,7 +44,7 @@ export default function StaffDoctorLogin() {
           placeholder="Email"
           value={form.email}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded text-gray-700"
           required
         />
         <input
@@ -53,7 +53,7 @@ export default function StaffDoctorLogin() {
           placeholder="Password"
           value={form.password}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded text-gray-700"
           required
         />
         <button
@@ -67,4 +67,8 @@ export default function StaffDoctorLogin() {
       {error && <p className="mt-3 text-center text-red-500">{error}</p>}
     </div>
   );
+}
+
+StaffDoctorLogin.getLayout = function PageLayout(page) {
+  return <>{page}</>;
 }
