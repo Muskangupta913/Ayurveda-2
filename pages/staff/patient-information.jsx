@@ -15,21 +15,25 @@ export default function PatientFilterUI() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Get token from localStorage
+  const token = typeof window !== "undefined" ? localStorage.getItem("staffToken") : null;
+
   // ✅ Handle input change
   const handleChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
-  // ✅ Fetch filtered data from API
+  // ✅ Fetch filtered data from API with token
   const fetchPatients = async () => {
     setLoading(true);
     try {
       const { data } = await axios.get("/api/staff/get-patient-registrations", {
         params: filters,
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Add token here
+        },
       });
 
-      // ✅ Adjust to match your actual API response
-      // Example: { success: true, count: 1, data: [ {...} ] }
       if (data?.success && Array.isArray(data.data)) {
         setPatients(data.data);
       } else {
@@ -57,25 +61,39 @@ export default function PatientFilterUI() {
   // ✅ Update / Complete button handlers
   const handleUpdate = async (emrNumber) => {
     try {
-      await axios.put(`/api/staff/get-patient-registrations/${emrNumber}`, {
-        status: "Updated",
-      });
+      await axios.put(
+        `/api/staff/get-patient-registrations/${emrNumber}`,
+        { status: "Updated" },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Include token
+          },
+        }
+      );
       alert(`Record ${emrNumber} updated successfully`);
       fetchPatients();
     } catch (error) {
       console.error("Update error:", error);
+      alert("Failed to update record");
     }
   };
 
   const handleComplete = async (emrNumber) => {
     try {
-      await axios.put(`/api/staff/get-patient-registrations/${emrNumber}`, {
-        status: "Completed",
-      });
+      await axios.put(
+        `/api/staff/get-patient-registrations/${emrNumber}`,
+        { status: "Completed" },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Include token
+          },
+        }
+      );
       alert(`Record ${emrNumber} marked as completed`);
       fetchPatients();
     } catch (error) {
       console.error("Complete error:", error);
+      alert("Failed to mark as completed");
     }
   };
 
