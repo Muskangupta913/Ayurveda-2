@@ -67,6 +67,18 @@ const Sidebar = () => {
         icon: "📅", 
         description: "Manage Clinic" 
       },
+      { 
+        label: "Add EOD Task", 
+        path: "/staff/eodNotes", 
+        icon: "📅", 
+        description: "Manage Clinic" 
+      },
+      { 
+        label: "Add Expense", 
+        path: "/staff/AddPettyCashForm", 
+        icon: "📅", 
+        description: "Add Petty Cash Entry" 
+      },
     ];
   }
 
