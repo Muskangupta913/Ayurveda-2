@@ -242,7 +242,7 @@ export default function MyClaims() {
         </div>
 
         {/* Claims Table */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+        {/* <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
           <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
             <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center">
               <span className="w-1 h-6 bg-indigo-500 rounded mr-3"></span>
@@ -314,7 +314,7 @@ export default function MyClaims() {
               </table>
             </div>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );
