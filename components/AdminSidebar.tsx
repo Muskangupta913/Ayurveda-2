@@ -90,6 +90,18 @@ const navItems: NavItem[] = [
     icon: '⚙️',
     description: 'create-staff'
   },
+  { 
+    label: 'View EOD Report', 
+    path: '/admin/getAllEodNotes', 
+    icon: '⚙️',
+    description: 'staff-report'
+  },
+  { 
+    label: 'Patient Report', 
+    path: '/admin/patient-report', 
+    icon: '⚙️',
+    description: 'patient-report'
+  },
 ];
 
 interface AdminSidebarProps {

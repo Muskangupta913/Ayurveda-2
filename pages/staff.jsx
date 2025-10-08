@@ -26,7 +26,7 @@ export default function StaffDoctorLogin() {
       localStorage.setItem("userToken", token);
 
       // send both staff and doctor to the same dashboard
-      router.push("/staff/staff-dashboard"); 
+      router.push("/staff/staff-dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     } finally {
