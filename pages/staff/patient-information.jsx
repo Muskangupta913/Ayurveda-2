@@ -51,21 +51,6 @@ export default function PatientFilterUI() {
 
   const handleUpdate = (id) => router.push(`/staff/update-patient-info/${id}`);
 
-  const handleComplete = async (id) => {
-    if (!token) return alert("Session expired. Please login again.");
-    try {
-      await axios.put(
-        "/api/staff/get-patient-registrations",
-        { id, status: "Completed" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Marked as Completed");
-      fetchPatients();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update status");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -123,7 +108,6 @@ export default function PatientFilterUI() {
                     <td className="border p-2">{item.status}</td>
                     <td className="border p-2 text-center space-x-2">
                       <button onClick={() => handleUpdate(item._id)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg inline-flex items-center gap-1"><Edit3 className="w-4 h-4"/> Update</button>
-                      <button onClick={() => handleComplete(item._id)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg inline-flex items-center gap-1"><CheckCircle className="w-4 h-4"/> Complete</button>
                     </td>
                   </tr>
                 ))

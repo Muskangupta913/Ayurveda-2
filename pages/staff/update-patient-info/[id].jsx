@@ -155,31 +155,45 @@ const InvoiceUpdateSystem = () => {
           </div>
 
           {/* Patient Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <input
-              type="text"
-              value={formData.firstName || ""}
-              disabled
-              placeholder="First Name"
-              className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-            />
-            <input
-              type="text"
-              value={formData.lastName || ""}
-              disabled
-              placeholder="Last Name"
-              className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-            />
-            {canViewMobileNumber && (
-              <input
-                type="text"
-                value={formData.mobileNumber || ""}
-                disabled
-                placeholder="Mobile Number"
-                className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-              />
-            )}
-          </div>
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border-l-4 border-indigo-500">
+  <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+    <Calendar className="w-5 h-5 text-indigo-600" />
+    Invoice Information
+  </h2>
+
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    {/* Invoice Number */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Invoice Number
+      </label>
+      <p className="font-mono font-semibold text-gray-800">
+        {formData.invoiceNumber || "-"}
+      </p>
+    </div>
+
+    {/* Invoiced Date */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Invoiced Date
+      </label>
+      <p className="text-gray-800">
+        {formData.invoicedDate
+          ? new Date(formData.invoicedDate).toLocaleString()
+          : "-"}
+      </p>
+    </div>
+
+    {/* Invoiced By */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Invoiced By
+      </label>
+      <p className="text-gray-800">{formData.invoicedBy || "-"}</p>
+    </div>
+  </div>
+</div>
+
 
 <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
   <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
