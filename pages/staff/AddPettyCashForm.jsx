@@ -20,6 +20,9 @@ export default function PettyCashAndExpense() {
   const [pettyCashList, setPettyCashList] = useState([]);
   const [search, setSearch] = useState("");
 
+ 
+
+
   // Date filter and global data
   const toInputDate = (d) => {
     const dt = new Date(d);
@@ -35,6 +38,8 @@ export default function PettyCashAndExpense() {
     globalRemaining: 0,
     patients: [],
   });
+
+   const isTodaySelected = selectedDate === new Date().toISOString().split("T")[0];
   
   // Filtered expenses based on selected date
   const [filteredExpenses, setFilteredExpenses] = useState([]);
@@ -225,7 +230,7 @@ export default function PettyCashAndExpense() {
   if (!confirm("Are you sure you want to delete this patient record?")) return;
 
   try {
-    await axios.delete("/api/pettycash/delete", {
+    await axios.delete("/api/pettycash/delete-pattycash", {
       headers: { Authorization: `Bearer ${staffToken}` },
       data: { type: "patient", pettyCashId },
     });
@@ -243,7 +248,7 @@ const handleDeleteExpense = async (expenseId) => {
   if (!confirm("Delete this expense?")) return;
 
   try {
-    await axios.delete("/api/pettycash/delete", {
+    await axios.delete("/api/pettycash/delete-pattycash", {
       headers: { Authorization: `Bearer ${staffToken}` },
       data: { type: "expense", pettyCashId, expenseId },
     });
@@ -440,39 +445,48 @@ const handleDeleteExpense = async (expenseId) => {
                   <th className="border p-2">Note</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredRecords.map((item) => {
-                  const targetDate = new Date(selectedDate);
-                  targetDate.setHours(0, 0, 0, 0);
-                  const nextDay = new Date(targetDate);
-                  nextDay.setDate(targetDate.getDate() + 1);
+             <tbody>
+  {filteredRecords.map((item) => {
+    const targetDate = new Date(selectedDate);
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
 
-                  const allocForDate = item.allocatedAmounts.filter((alloc) => {
-                    const allocDate = new Date(alloc.date);
-                    return allocDate >= targetDate && allocDate < nextDay;
-                  });
+    const allocForDate = item.allocatedAmounts.filter((alloc) => {
+      const allocDate = new Date(alloc.date);
+      return allocDate >= targetDate && allocDate < nextDay;
+    });
 
-                  return (
-                    <tr key={item._id} className="text-center">
-                      <td className="border p-2">{item.patientName}</td>
-                      <td className="border p-2">{item.patientEmail}</td>
-                      <td className="border p-2">{item.patientPhone}</td>
-                      <td className="border p-2">
-                        {allocForDate.length > 0 ? (
-                          allocForDate.map((a, idx) => (
-                            <div key={idx}>
-                              ₹{a.amount}
-                            </div>
-                          ))
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="border p-2">{item.note || "-"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+    return (
+      <tr key={item._id} className="text-center">
+        <td className="border p-2">{item.patientName}</td>
+        <td className="border p-2">{item.patientEmail}</td>
+        <td className="border p-2">{item.patientPhone}</td>
+        <td className="border p-2">
+          {allocForDate.length > 0 ? (
+            allocForDate.map((a, idx) => <div key={idx}>₹{a.amount}</div>)
+          ) : (
+            <span className="text-gray-400">-</span>
+          )}
+        </td>
+        <td className="border p-2">{item.note || "-"}</td>
+        {/* ✅ DELETE PATIENT BUTTON */}
+        <td className="border p-2">
+          {isTodaySelected && (
+  <button
+    onClick={() => handleDeletePatient(item._id)}
+    className="text-red-600 hover:text-red-800 ml-2"
+  >
+    Delete
+  </button>
+)}
+
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
+
             </table>
           </div>
         )}
@@ -495,14 +509,33 @@ const handleDeleteExpense = async (expenseId) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredExpenses.map((exp) => (
-                  <tr key={exp._id} className="text-center">
-                    <td className="border p-2">{exp.description}</td>
-                    <td className="border p-2 font-semibold text-blue-600">
-                      ₹{exp.spentAmount}
-                    </td>
-                  </tr>
-                ))}
+             {filteredExpenses.map((ex) => (
+  <li key={ex._id} className="border rounded p-2 text-sm">
+    <div className="flex justify-between items-center">
+      <div>
+        <div className="font-medium">{ex.description}</div>
+       
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-blue-600">
+          ₹{ex.spentAmount}
+        </span>
+        {/* ✅ DELETE EXPENSE BUTTON */}
+       {isTodaySelected && (
+  <button
+    onClick={() => handleDeleteExpense(ex._id)}
+    className="text-red-600 hover:text-red-800 ml-2 text-xs"
+  >
+    Delete
+  </button>
+)}
+
+      </div>
+    </div>
+  </li>
+))}
+
+
               </tbody>
             </table>
           </div>
