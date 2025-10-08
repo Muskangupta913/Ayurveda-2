@@ -2,9 +2,13 @@
 import mongoose from "mongoose";
 
 const AllocSchema = new mongoose.Schema({
-  amount: { type: Number, required: true },
-  date: { type: Date, default: Date.now },
-  receipts: [{ type: String }], // array of Cloudinary URLs
+  amounts: [
+    {
+      amount: { type: Number, required: true },
+      receipts: [{ type: String }], // array of Cloudinary URLs per amount
+      date: { type: Date, default: Date.now },
+    },
+  ],
 });
 
 const ExpenseSchema = new mongoose.Schema({
