@@ -1,3 +1,4 @@
+// components/PettyCashAndExpense.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -19,10 +20,29 @@ export default function PettyCashAndExpense() {
   const [pettyCashList, setPettyCashList] = useState([]);
   const [search, setSearch] = useState("");
 
+  // Date filter and global data
+  const toInputDate = (d) => {
+    const dt = new Date(d);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const [selectedDate, setSelectedDate] = useState(toInputDate(new Date()));
+  const [globalData, setGlobalData] = useState({
+    globalAllocated: 0,
+    globalSpent: 0,
+    globalRemaining: 0,
+    patients: [],
+  });
+  
+  // Filtered expenses based on selected date
+  const [filteredExpenses, setFilteredExpenses] = useState([]);
+
   const staffToken =
     typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
 
-  // ✅ Fetch petty cash + expenses
+  // Fetch petty cash list
   const fetchPettyCash = async (query = "") => {
     try {
       const res = await axios.get(
@@ -30,18 +50,68 @@ export default function PettyCashAndExpense() {
         { headers: { Authorization: `Bearer ${staffToken}` } }
       );
       setPettyCashList(res.data.pettyCashList);
+      // Filter expenses based on selected date after fetching
+      filterExpensesByDate(res.data.pettyCashList, selectedDate);
     } catch (error) {
       console.error("Error fetching petty cash:", error);
     }
   };
 
+  // Filter expenses by date
+  const filterExpensesByDate = (cashList, dateStr) => {
+    const targetDate = new Date(dateStr);
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
+
+    const allExpenses = [];
+    cashList.forEach((record) => {
+      record.expenses.forEach((expense) => {
+        const expDate = new Date(expense.date);
+        if (expDate >= targetDate && expDate < nextDay) {
+          allExpenses.push({
+            ...expense,
+            patientName: record.patientName,
+            patientEmail: record.patientEmail,
+          });
+        }
+      });
+    });
+    setFilteredExpenses(allExpenses);
+  };
+
+  // Fetch global totals for selectedDate
+  const fetchGlobalTotals = async (dateStr) => {
+    try {
+      const res = await axios.get(
+        `/api/pettycash/getTotalAmount${dateStr ? `?date=${dateStr}` : ""}`,
+        { headers: { Authorization: `Bearer ${staffToken}` } }
+      );
+      if (res.data.success) {
+        setGlobalData({
+          globalAllocated: res.data.globalAllocated || 0,
+          globalSpent: res.data.globalSpent || 0,
+          globalRemaining: res.data.globalRemaining || 0,
+          patients: res.data.patients || [],
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching global totals:", err);
+    }
+  };
+
   useEffect(() => {
     fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // =============================
-  // 💰 Add Petty Cash Form
-  // =============================
+  // Whenever selectedDate changes, refetch and filter
+  useEffect(() => {
+    fetchGlobalTotals(selectedDate);
+    filterExpensesByDate(pettyCashList, selectedDate);
+  }, [selectedDate]);
+
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -80,14 +150,12 @@ export default function PettyCashAndExpense() {
         allocatedAmounts: [""],
       });
       fetchPettyCash();
+      fetchGlobalTotals(selectedDate);
     } catch (error) {
       setMessage(error.response?.data?.message || "Error adding petty cash");
     }
   };
 
-  // =============================
-  // 🧾 Add Expense Form
-  // =============================
   const handleExpenseChange = (e) =>
     setExpenseForm({ ...expenseForm, [e.target.name]: e.target.value });
 
@@ -96,13 +164,12 @@ export default function PettyCashAndExpense() {
     setExpenseMsg("");
 
     try {
-      // Always add expense to the most recent petty cash record
       if (pettyCashList.length === 0) {
         setExpenseMsg("No petty cash record found. Please add one first.");
         return;
       }
 
-      const pettyCashId = pettyCashList[0]._id; // latest petty cash
+      const pettyCashId = pettyCashList[0]._id;
 
       const res = await axios.post(
         "/api/pettycash/add-expense",
@@ -117,6 +184,7 @@ export default function PettyCashAndExpense() {
       setExpenseMsg(res.data.message);
       setExpenseForm({ description: "", spentAmount: "" });
       fetchPettyCash();
+      fetchGlobalTotals(selectedDate);
     } catch (error) {
       setExpenseMsg(
         error.response?.data?.message || "Error adding expense record"
@@ -124,14 +192,69 @@ export default function PettyCashAndExpense() {
     }
   };
 
-  // =============================
-  // 🔍 Search handler
-  // =============================
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearch(value);
     fetchPettyCash(value);
   };
+
+  // Filter petty cash records by selected date
+  const getFilteredPettyCashRecords = () => {
+    const targetDate = new Date(selectedDate);
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
+
+    return pettyCashList.filter((record) => {
+      const hasAllocations = record.allocatedAmounts.some((alloc) => {
+        const allocDate = new Date(alloc.date);
+        return allocDate >= targetDate && allocDate < nextDay;
+      });
+      const hasExpenses = record.expenses.some((exp) => {
+        const expDate = new Date(exp.date);
+        return expDate >= targetDate && expDate < nextDay;
+      });
+      return hasAllocations || hasExpenses;
+    });
+  };
+
+  const filteredRecords = getFilteredPettyCashRecords();
+
+
+  const handleDeletePatient = async (pettyCashId) => {
+  if (!confirm("Are you sure you want to delete this patient record?")) return;
+
+  try {
+    await axios.delete("/api/pettycash/delete", {
+      headers: { Authorization: `Bearer ${staffToken}` },
+      data: { type: "patient", pettyCashId },
+    });
+    fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || "Error deleting patient");
+  }
+};
+
+const handleDeleteExpense = async (expenseId) => {
+  if (pettyCashList.length === 0) return;
+  const pettyCashId = pettyCashList[0]._id;
+  if (!confirm("Delete this expense?")) return;
+
+  try {
+    await axios.delete("/api/pettycash/delete", {
+      headers: { Authorization: `Bearer ${staffToken}` },
+      data: { type: "expense", pettyCashId, expenseId },
+    });
+    fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || "Error deleting expense");
+  }
+};
+
 
   return (
     <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg p-6">
@@ -139,7 +262,18 @@ export default function PettyCashAndExpense() {
         Petty Cash Management
       </h2>
 
-      {/* ✅ Two forms side-by-side */}
+      {/* Date filter */}
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <label className="font-medium">Select Date:</label>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="border p-2 rounded"
+        />
+      </div>
+
+      {/* Two forms side-by-side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* LEFT: Add Expense Form */}
         <div className="border rounded-lg p-4">
@@ -178,25 +312,29 @@ export default function PettyCashAndExpense() {
             <p className="text-center text-green-600 mt-3">{expenseMsg}</p>
           )}
 
-          {/* ✅ Show added expenses just below form */}
+          {/* Show expenses for selected date */}
           <div className="mt-6">
-            <h4 className="text-md font-semibold mb-2">Added Expenses</h4>
-            {pettyCashList.length > 0 && pettyCashList[0].expenses.length > 0 ? (
+            <h4 className="text-md font-semibold mb-2">
+              Expenses on {selectedDate}
+            </h4>
+            {filteredExpenses.length > 0 ? (
               <ul className="space-y-2">
-                {pettyCashList[0].expenses.map((ex) => (
+                {filteredExpenses.map((ex) => (
                   <li
                     key={ex._id}
-                    className="border rounded p-2 flex justify-between text-sm"
+                    className="border rounded p-2 text-sm"
                   >
-                    <span>{ex.description}</span>
-                    <span className="font-semibold text-blue-600">
-                      ₹{ex.spentAmount}
-                    </span>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{ex.description}</span>
+                      <span className="font-semibold text-blue-600">
+                        ₹{ex.spentAmount}
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-gray-500 text-sm">No expenses added yet.</p>
+              <p className="text-gray-500 text-sm">No expenses for this date.</p>
             )}
           </div>
         </div>
@@ -275,7 +413,7 @@ export default function PettyCashAndExpense() {
         </div>
       </div>
 
-      {/* 🔍 Search and Table */}
+      {/* Search and Table */}
       <div className="mt-8">
         <input
           type="text"
@@ -285,9 +423,11 @@ export default function PettyCashAndExpense() {
           className="w-full border p-2 rounded mb-4"
         />
 
-        <h3 className="text-lg font-semibold mb-2">Petty Cash Records</h3>
-        {pettyCashList.length === 0 ? (
-          <p className="text-gray-500">No petty cash records found.</p>
+        <h3 className="text-lg font-semibold mb-2">
+          Petty Cash Records for {selectedDate}
+        </h3>
+        {filteredRecords.length === 0 ? (
+          <p className="text-gray-500">No records found for this date.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border text-sm">
@@ -296,35 +436,104 @@ export default function PettyCashAndExpense() {
                   <th className="border p-2">Patient Name</th>
                   <th className="border p-2">Email</th>
                   <th className="border p-2">Phone</th>
-                  <th className="border p-2">Allocated Amounts</th>
-                  {/* <th className="border p-2">Expenses</th> */}
+                  <th className="border p-2">Allocated (This Date)</th>
                   <th className="border p-2">Note</th>
                 </tr>
               </thead>
               <tbody>
-                {pettyCashList.map((item) => (
-                  <tr key={item._id} className="text-center">
-                    <td className="border p-2">{item.patientName}</td>
-                    <td className="border p-2">{item.patientEmail}</td>
-                    <td className="border p-2">{item.patientPhone}</td>
-                    <td className="border p-2">
-                      {item.allocatedAmounts.map((a, idx) => (
-                        <div key={idx}>
-                          ₹{a.amount}{" "}
-                          <span className="text-gray-400 text-xs">
-                            ({new Date(a.date).toLocaleDateString()})
-                          </span>
-                        </div>
-                      ))}
-                    </td>
+                {filteredRecords.map((item) => {
+                  const targetDate = new Date(selectedDate);
+                  targetDate.setHours(0, 0, 0, 0);
+                  const nextDay = new Date(targetDate);
+                  nextDay.setDate(targetDate.getDate() + 1);
 
-                    <td className="border p-2">{item.note || "-"}</td>
+                  const allocForDate = item.allocatedAmounts.filter((alloc) => {
+                    const allocDate = new Date(alloc.date);
+                    return allocDate >= targetDate && allocDate < nextDay;
+                  });
+
+                  return (
+                    <tr key={item._id} className="text-center">
+                      <td className="border p-2">{item.patientName}</td>
+                      <td className="border p-2">{item.patientEmail}</td>
+                      <td className="border p-2">{item.patientPhone}</td>
+                      <td className="border p-2">
+                        {allocForDate.length > 0 ? (
+                          allocForDate.map((a, idx) => (
+                            <div key={idx}>
+                              ₹{a.amount}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="border p-2">{item.note || "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* All Expenses for selected date */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-2">
+          All Expenses for {selectedDate}
+        </h3>
+        {filteredExpenses.length === 0 ? (
+          <p className="text-gray-500">No expenses for this date.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border p-2">Description</th>
+                  <th className="border p-2">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredExpenses.map((exp) => (
+                  <tr key={exp._id} className="text-center">
+                    <td className="border p-2">{exp.description}</td>
+                    <td className="border p-2 font-semibold text-blue-600">
+                      ₹{exp.spentAmount}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+      </div>
+
+      {/* Global totals for selected date */}
+      <div className="mt-8 border rounded-lg p-4 bg-blue-50">
+        <h3 className="text-lg font-semibold mb-3">
+          Global Totals for {selectedDate}
+        </h3>
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-sm text-gray-600">Total Allocated</div>
+            <div className="text-2xl font-bold text-blue-700">
+              ₹{globalData.globalAllocated}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600">Total Spent</div>
+            <div className="text-2xl font-bold text-red-600">
+              ₹{globalData.globalSpent}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600">Total Remaining</div>
+            <div className="text-2xl font-bold text-green-600">
+              ₹{globalData.globalRemaining}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
