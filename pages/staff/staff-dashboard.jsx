@@ -1,33 +1,37 @@
 import React from 'react';
 import ClinicLayout from '../../components/staffLayout';
 import withClinicAuth from '../../components/withStaffAuth';
+import StaffStats from '../../components/StaffStats';
+import { jwtDecode } from "jwt-decode";
+
 
 const ClinicDashboard = () => {
+  let storedUser = {};
+  const token = localStorage.getItem('userToken');
+  if (token) {
+    try {
+      storedUser = jwtDecode(token);
+    } catch (err) {
+      console.error("Invalid token", err);
+      storedUser = {};
+    }
+  }
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
-      <div className="max-w-4xl mx-auto bg-white shadow rounded-lg p-8">
-        <h1 className="text-3xl font-bold">Hi, Staff!</h1>
-        <p className="mt-3 text-sm text-gray-600">
-          Welcome to your clinic dashboard.
-        </p>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Welcome Section */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 lg:p-10 border border-gray-100">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+            Hii {storedUser.name || 'Staff User'}
+          </h1>
+          <p className="mt-3 text-sm sm:text-base text-gray-600">
+            Welcome to your Dashboard
+          </p>
+        </div>
 
-        {/* quick stats / placeholder */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 border rounded">
-            Patients
-            <br />
-            <span className="text-xl font-semibold">--</span>
-          </div>
-          <div className="p-4 border rounded">
-            Appointments
-            <br />
-            <span className="text-xl font-semibold">--</span>
-          </div>
-          <div className="p-4 border rounded">
-            Messages
-            <br />
-            <span className="text-xl font-semibold">--</span>
-          </div>
+        {/* Stats Section */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 border border-gray-100">
+          <StaffStats />
         </div>
       </div>
     </div>

@@ -1,8 +1,55 @@
 // components/admin/CreateUser.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import AdminLayout from "../../components/AdminLayout";
+import withAdminAuth from "../../components/withAdminAuth";
+import { UserPlus, Mail, Lock, Users, CheckCircle, AlertCircle, X, Info, AlertTriangle } from "lucide-react";
 
-export default function CreateUser() {
+// Toast Component
+function Toast({ toast, onClose }) {
+  const icons = {
+    success: <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />,
+    error: <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />,
+    warning: <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />,
+    info: <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+  };
+
+  const styles = {
+    success: "bg-green-50 border-green-200 text-green-800",
+    error: "bg-red-50 border-red-200 text-red-800",
+    warning: "bg-amber-50 border-amber-200 text-amber-800",
+    info: "bg-blue-50 border-blue-200 text-blue-800"
+  };
+
+  return (
+    <div className={`flex items-start gap-3 p-4 rounded-lg border shadow-lg ${styles[toast.type]} animate-slideIn`}>
+      {icons[toast.type]}
+      <div className="flex-1">
+        {toast.title && <p className="font-semibold text-sm mb-1">{toast.title}</p>}
+        <p className="text-sm">{toast.message}</p>
+      </div>
+      <button
+        onClick={() => onClose(toast.id)}
+        className="flex-shrink-0 hover:opacity-70 transition-opacity"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+// Toast Container
+function ToastContainer({ toasts, onClose }) {
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-3 max-w-md w-full px-4">
+      {toasts.map(toast => (
+        <Toast key={toast.id} toast={toast} onClose={onClose} />
+      ))}
+    </div>
+  );
+}
+
+function CreateUser() {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -51,12 +98,55 @@ export default function CreateUser() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    
+    // Clear any validation messages when user starts typing
+    if (message) {
+      setMessage("");
+      setMessageType("");
+    }
+  };
+
+  const validateForm = () => {
+    // Name validation
+    if (form.name.trim().length < 2) {
+      addToast("warning", "Please enter a valid full name (at least 2 characters)", "Validation Error");
+      return false;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      addToast("warning", "Please enter a valid email address", "Invalid Email");
+      return false;
+    }
+
+    // Password validation
+    if (form.password.length < 6) {
+      addToast("warning", "Password must be at least 6 characters long", "Weak Password");
+      return false;
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])/.test(form.password)) {
+      addToast("info", "Consider using uppercase and lowercase letters for a stronger password", "Password Tip");
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setMessage("");
+    setMessageType("");
+    
+    // Show loading toast
+    addToast("info", "Creating user account...", "Please Wait");
 
     try {
       const token = localStorage.getItem("adminToken");
@@ -64,19 +154,46 @@ export default function CreateUser() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // Success toasts
       setMessage(res.data.message);
+      setMessageType("success");
+      addToast("success", `User ${form.name} has been created successfully!`, "Account Created");
+      addToast("info", "Login credentials have been sent to the user's email", "Email Sent");
+      
+      // Reset form
       setForm({ name: "", email: "", password: "", role: "staff" });
       fetchStaff(); // refresh list after creating
     } catch (err) {
-      setMessage(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Error creating user"
-      );
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || "Error creating user";
+      
+      setMessage(errorMessage);
+      setMessageType("error");
+
+      // Specific error handling with different toast types
+      if (err.response?.status === 401) {
+        addToast("error", "Your session has expired. Please log in again.", "Session Expired");
+      } else if (err.response?.status === 409) {
+        addToast("error", "A user with this email already exists in the system.", "Duplicate Email");
+      } else if (err.response?.status === 403) {
+        addToast("error", "You don't have permission to perform this action.", "Access Denied");
+      } else if (err.response?.status === 400) {
+        addToast("warning", errorMessage, "Invalid Input");
+      } else if (err.response?.status >= 500) {
+        addToast("error", "Server error occurred. Please try again later.", "Server Error");
+      } else if (!err.response) {
+        addToast("error", "Network error. Please check your connection.", "Connection Failed");
+      } else {
+        addToast("error", errorMessage, "Error");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Show info toast on page load (optional)
+  React.useEffect(() => {
+    addToast("info", "Fill in all required fields to create a new user account", "Welcome");
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -182,3 +299,18 @@ export default function CreateUser() {
     </div>
   );
 }
+
+// -------------------------------
+// PAGE LAYOUT
+// -------------------------------
+CreateUser.getLayout = function PageLayout(page) {
+  return <AdminLayout>{page}</AdminLayout>;
+};
+
+// -------------------------------
+// PROTECTED PAGE
+// -------------------------------
+const ProtectedCreateUser = withAdminAuth(CreateUser);
+ProtectedCreateUser.getLayout = CreateUser.getLayout;
+
+export default ProtectedCreateUser;
