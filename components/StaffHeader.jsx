@@ -62,7 +62,7 @@ const AdminHeader = () => {
                 <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                   ZEVA
                 </h1>
-                <p className="text-sm text-[#2D9AA5] font-medium -mt-1">Admin Panel</p>
+                <p className="text-sm text-[#2D9AA5] font-medium -mt-1">Staff Panel</p>
               </div>
             </div>
           </div>
@@ -71,7 +71,7 @@ const AdminHeader = () => {
           <div className="flex items-center gap-3">
             <div className="hidden sm:block text-right">
               <div className="text-sm font-medium text-gray-900">
-                {storedUser.name || 'Admin'}
+                {storedUser.name || 'Staff User'}
               </div>
               <div className="text-xs text-gray-500">
                 {storedUser.email || ''}

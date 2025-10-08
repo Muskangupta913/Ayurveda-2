@@ -183,7 +183,7 @@ const Sidebar = () => {
                   </div>
                   <div>
                     <span className="font-bold text-xl text-gray-900 block">ZEVA</span>
-                    <span className="text-sm text-[#2D9AA5] font-medium">Admin Dashboard</span>
+                    <span className="text-sm text-[#2D9AA5] font-medium">Staff Dashboard</span>
                   </div>
                 </div>
               </div>
@@ -204,7 +204,7 @@ const Sidebar = () => {
           {/* Desktop Navigation */}
           <nav className="flex-1 overflow-y-auto custom-scrollbar px-4 py-6 min-h-0">
             <div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-4 px-2">
-              Admin Management
+              Staff Management
             </div>
             <div className="space-y-1">
               {navItems.map((item) => {
@@ -311,7 +311,7 @@ const Sidebar = () => {
               </button>
 
               <div className="pr-16">
-                <Link href="/admin/dashboard-admin" onClick={handleItemClick}>
+                <Link href="/staff/staff-dashboard" onClick={handleItemClick}>
                   <div className="group cursor-pointer">
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 group-hover:bg-[#2D9AA5]/5 transition-all duration-300 border border-gray-100">
                       <div className="w-10 h-10 bg-gradient-to-br from-[#2D9AA5] to-[#1e7d87] rounded-xl flex items-center justify-center shadow-sm">
@@ -321,7 +321,7 @@ const Sidebar = () => {
                       </div>
                       <div>
                         <span className="font-bold text-lg text-gray-900 block">ZEVA</span>
-                        <span className="text-xs text-[#2D9AA5] font-medium">Admin Dashboard</span>
+                        <span className="text-xs text-[#2D9AA5] font-medium">Staff Dashboard</span>
                       </div>
                     </div>
                   </div>
@@ -332,7 +332,7 @@ const Sidebar = () => {
             {/* Mobile Navigation */}
             <nav className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
               <div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-4 px-2">
-                Admin Management
+                Staff Management
               </div>
 
               <div className="space-y-1">
