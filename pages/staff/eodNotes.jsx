@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import ClinicLayout from '../../components/staffLayout';
 import withClinicAuth from '../../components/withStaffAuth';
+import { Toaster, toast } from 'react-hot-toast';
 
 const EodNotePad = () => {
   const [note, setNote] = useState("");
@@ -14,7 +15,17 @@ const EodNotePad = () => {
   const token = localStorage.getItem("userToken");
 
   const handleAddNote = async () => {
-    if (!note.trim()) return alert("Please enter a note");
+    if (!note.trim()) {
+      toast.error("Please enter a note", {
+        duration: 3000,
+        position: 'top-right',
+      });
+      return;
+    }
+
+    const loadingToast = toast.loading("Saving your note...", {
+      position: 'top-right',
+    });
 
     try {
       const res = await axios.post(
@@ -26,10 +37,18 @@ const EodNotePad = () => {
       );
       setNotes(res.data.eodNotes);
       setNote("");
-      alert("EOD note added successfully!");
+      toast.success("Note saved successfully!", {
+        duration: 3000,
+        position: 'top-right',
+      });
       setActiveTab("view");
     } catch (error) {
-      alert(error.response?.data?.message || "Error adding note");
+      toast.error(error.response?.data?.message || "Failed to save note. Please try again.", {
+        duration: 4000,
+        position: 'top-right',
+      });
+    } finally {
+      toast.dismiss(loadingToast);
     }
   };
 
@@ -40,13 +59,38 @@ const EodNotePad = () => {
       });
       setNotes(res.data.eodNotes || []);
       setExpandedNotes({});
+      
+      if (date) {
+        toast.success(`Notes filtered for ${new Date(date).toLocaleDateString()}`, {
+          duration: 2000,
+          position: 'top-right',
+        });
+      }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to fetch notes. Please try again.", {
+        duration: 3000,
+        position: 'top-right',
+      });
     }
   };
 
   useEffect(() => {
-    fetchNotes();
+    const loadNotes = async () => {
+      try {
+        await fetchNotes();
+        toast.success("Notes loaded successfully", {
+          duration: 2000,
+          position: 'top-right',
+        });
+      } catch (err) {
+        toast.error("Failed to load notes", {
+          duration: 3000,
+          position: 'top-right',
+        });
+      }
+    };
+    loadNotes();
   }, []);
 
   const handleDateChange = (e) => {
@@ -55,11 +99,28 @@ const EodNotePad = () => {
     fetchNotes(newDate);
   };
 
+  const clearDateFilter = () => {
+    setSelectedDate("");
+    fetchNotes();
+    toast.success("Filter cleared. Showing all notes.", {
+      duration: 2000,
+      position: 'top-right',
+    });
+  };
+
   const toggleExpand = (index) => {
     setExpandedNotes(prev => ({
       ...prev,
       [index]: !prev[index]
     }));
+    
+    if (!expandedNotes[index]) {
+      toast.success("Note expanded", {
+        duration: 1500,
+        position: 'bottom-right',
+        icon: '📖',
+      });
+    }
   };
 
   const shouldTruncate = (text) => {
@@ -73,6 +134,36 @@ const EodNotePad = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster 
+        toastOptions={{
+          success: {
+            style: {
+              background: '#10b981',
+              color: '#fff',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#10b981',
+            },
+          },
+          error: {
+            style: {
+              background: '#ef4444',
+              color: '#fff',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#ef4444',
+            },
+          },
+          loading: {
+            style: {
+              background: '#3b82f6',
+              color: '#fff',
+            },
+          },
+        }}
+      />
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -170,14 +261,11 @@ const EodNotePad = () => {
                     type="date"
                     value={selectedDate}
                     onChange={handleDateChange}
-                    className="text-gray-700 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="text-gray-800 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   />
                   {selectedDate && (
                     <button
-                      onClick={() => {
-                        setSelectedDate("");
-                        fetchNotes();
-                      }}
+                      onClick={clearDateFilter}
                       className="text-sm text-gray-500 hover:text-gray-700 underline"
                     >
                       Clear
