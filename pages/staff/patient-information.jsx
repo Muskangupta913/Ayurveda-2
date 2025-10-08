@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Filter, Edit3, CheckCircle } from "lucide-react";
+import { useRouter } from "next/router";
 
 export default function PatientFilterUI() {
+  const router = useRouter();
   const [filters, setFilters] = useState({
     emrNumber: "",
     invoiceNumber: "",
@@ -15,85 +17,53 @@ export default function PatientFilterUI() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Get token from localStorage
-  const token = typeof window !== "undefined" ? localStorage.getItem("staffToken") : null;
+  const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
 
-  // ✅ Handle input change
-  const handleChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setFilters({ ...filters, [e.target.name]: e.target.value });
 
-  // ✅ Fetch filtered data from API with token
   const fetchPatients = async () => {
+    if (!token) {
+      alert("Session expired. Please login again.");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data } = await axios.get("/api/staff/get-patient-registrations", {
         params: filters,
-        headers: {
-          Authorization: `Bearer ${token}`, // ✅ Add token here
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (data?.success && Array.isArray(data.data)) {
-        setPatients(data.data);
-      } else {
-        setPatients([]);
-      }
-    } catch (error) {
-      console.error("Error fetching patients:", error);
+      setPatients(data.success ? data.data : []);
+    } catch (err) {
+      console.error(err);
       setPatients([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Fetch on mount
-  useEffect(() => {
-    fetchPatients();
-  }, []);
+  useEffect(() => { fetchPatients(); }, []);
 
-  // ✅ Apply filters manually (on button click)
   const handleFilterSubmit = (e) => {
     e.preventDefault();
     fetchPatients();
   };
 
-  // ✅ Update / Complete button handlers
-  const handleUpdate = async (emrNumber) => {
-    try {
-      await axios.put(
-        `/api/staff/get-patient-registrations/${emrNumber}`,
-        { status: "Updated" },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // ✅ Include token
-          },
-        }
-      );
-      alert(`Record ${emrNumber} updated successfully`);
-      fetchPatients();
-    } catch (error) {
-      console.error("Update error:", error);
-      alert("Failed to update record");
-    }
-  };
+  const handleUpdate = (id) => router.push(`/staff/update-patient-info/${id}`);
 
-  const handleComplete = async (emrNumber) => {
+  const handleComplete = async (id) => {
+    if (!token) return alert("Session expired. Please login again.");
     try {
       await axios.put(
-        `/api/staff/get-patient-registrations/${emrNumber}`,
-        { status: "Completed" },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // ✅ Include token
-          },
-        }
+        "/api/staff/get-patient-registrations",
+        { id, status: "Completed" },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert(`Record ${emrNumber} marked as completed`);
+      alert("Marked as Completed");
       fetchPatients();
-    } catch (error) {
-      console.error("Complete error:", error);
-      alert("Failed to mark as completed");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update status");
     }
   };
 
@@ -105,73 +75,24 @@ export default function PatientFilterUI() {
         </h2>
 
         {/* Filter Form */}
-        <form
-          onSubmit={handleFilterSubmit}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
-        >
-          <input
-            type="text"
-            name="emrNumber"
-            placeholder="EMR Number"
-            value={filters.emrNumber}
-            onChange={handleChange}
-            className="border rounded-lg p-2 w-full"
-          />
-          <input
-            type="text"
-            name="invoiceNumber"
-            placeholder="Invoice Number"
-            value={filters.invoiceNumber}
-            onChange={handleChange}
-            className="border rounded-lg p-2 w-full"
-          />
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            value={filters.name}
-            onChange={handleChange}
-            className="border rounded-lg p-2 w-full"
-          />
-          <input
-            type="text"
-            name="phone"
-            placeholder="Phone Number"
-            value={filters.phone}
-            onChange={handleChange}
-            className="border rounded-lg p-2 w-full"
-          />
-
-          <select
-            name="claimStatus"
-            value={filters.claimStatus}
-            onChange={handleChange}
-            className="border rounded-lg p-2 w-full"
-          >
+        <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <input type="text" name="emrNumber" placeholder="EMR Number" value={filters.emrNumber} onChange={handleChange} className="border rounded-lg p-2 w-full" />
+          <input type="text" name="invoiceNumber" placeholder="Invoice Number" value={filters.invoiceNumber} onChange={handleChange} className="border rounded-lg p-2 w-full" />
+          <input type="text" name="name" placeholder="Name" value={filters.name} onChange={handleChange} className="border rounded-lg p-2 w-full" />
+          <input type="text" name="phone" placeholder="Phone Number" value={filters.phone} onChange={handleChange} className="border rounded-lg p-2 w-full" />
+          <select name="claimStatus" value={filters.claimStatus} onChange={handleChange} className="border rounded-lg p-2 w-full">
             <option value="">Claim Status</option>
             <option value="Pending">Pending</option>
             <option value="Released">Released</option>
             <option value="Cancelled">Cancelled</option>
           </select>
-
-          <select
-            name="applicationStatus"
-            value={filters.applicationStatus}
-            onChange={handleChange}
-            className="border rounded-lg p-2 w-full"
-          >
+          <select name="applicationStatus" value={filters.applicationStatus} onChange={handleChange} className="border rounded-lg p-2 w-full">
             <option value="">Application Status</option>
             <option value="Active">Active</option>
             <option value="Cancelled">Cancelled</option>
             <option value="Completed">Completed</option>
           </select>
-
-          <button
-            type="submit"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg col-span-1 md:col-span-3"
-          >
-            Apply Filters
-          </button>
+          <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg col-span-1 md:col-span-3">Apply Filters</button>
         </form>
 
         {/* Results Table */}
@@ -190,44 +111,24 @@ export default function PatientFilterUI() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="7" className="text-center p-4 text-gray-500">
-                    Loading data...
-                  </td>
-                </tr>
+                <tr><td colSpan="7" className="text-center p-4 text-gray-500">Loading data...</td></tr>
               ) : patients.length > 0 ? (
-                patients.map((item, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
+                patients.map((item) => (
+                  <tr key={item._id} className="hover:bg-gray-50">
                     <td className="border p-2">{item.emrNumber}</td>
                     <td className="border p-2">{item.invoiceNumber}</td>
-                    <td className="border p-2">
-                      {item.firstName} {item.lastName}
-                    </td>
+                    <td className="border p-2">{item.firstName} {item.lastName}</td>
                     <td className="border p-2">{item.mobileNumber}</td>
                     <td className="border p-2">{item.advanceClaimStatus}</td>
                     <td className="border p-2">{item.status}</td>
                     <td className="border p-2 text-center space-x-2">
-                      <button
-                        onClick={() => handleUpdate(item.emrNumber)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg inline-flex items-center gap-1"
-                      >
-                        <Edit3 className="w-4 h-4" /> Update
-                      </button>
-                      <button
-                        onClick={() => handleComplete(item.emrNumber)}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg inline-flex items-center gap-1"
-                      >
-                        <CheckCircle className="w-4 h-4" /> Complete
-                      </button>
+                      <button onClick={() => handleUpdate(item._id)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg inline-flex items-center gap-1"><Edit3 className="w-4 h-4"/> Update</button>
+                      <button onClick={() => handleComplete(item._id)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg inline-flex items-center gap-1"><CheckCircle className="w-4 h-4"/> Complete</button>
                     </td>
                   </tr>
                 ))
               ) : (
-                <tr>
-                  <td colSpan="7" className="text-center text-gray-500 p-4">
-                    No matching records found.
-                  </td>
-                </tr>
+                <tr><td colSpan="7" className="text-center text-gray-500 p-4">No matching records found.</td></tr>
               )}
             </tbody>
           </table>

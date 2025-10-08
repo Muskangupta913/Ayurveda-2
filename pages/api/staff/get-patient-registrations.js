@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import PatientRegistration from "../../../models/PatientRegistration";
 import User from "../../../models/Users";
 
+// Helper: verify JWT and get user
 async function getUserFromToken(req) {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.split(" ")[1];
@@ -10,8 +11,6 @@ async function getUserFromToken(req) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // ✅ Use userId (not id)
     const user = await User.findById(decoded.userId).select("-password");
     if (!user) throw { status: 401, message: "User not found" };
     return user;
@@ -23,23 +22,16 @@ async function getUserFromToken(req) {
 export default async function handler(req, res) {
   await dbConnect();
 
+  // ---------------- GET: fetch patients ----------------
   if (req.method === "GET") {
     try {
       const user = await getUserFromToken(req);
 
-      // ✅ Allow only staff role
       if (user.role !== "staff") {
-        return res.status(403).json({ success: false, message: "Access denied: staff only" });
+        return res.status(403).json({ success: false, message: "Only staff allowed" });
       }
 
-      const {
-        emrNumber,
-        invoiceNumber,
-        name,
-        phone,
-        claimStatus,
-        applicationStatus,
-      } = req.query;
+      const { emrNumber, invoiceNumber, name, phone, claimStatus, applicationStatus } = req.query;
 
       const query = { userId: user._id };
 
@@ -56,59 +48,38 @@ export default async function handler(req, res) {
         ];
       }
 
-      const patients = await PatientRegistration.find(query)
-        .sort({ createdAt: -1 })
-        .limit(50);
+      const patients = await PatientRegistration.find(query).sort({ createdAt: -1 });
 
-      return res.status(200).json({
-        success: true,
-        count: patients.length,
-        data: patients,
-      });
+      return res.status(200).json({ success: true, count: patients.length, data: patients });
     } catch (err) {
-      console.error("GET /api/staff/get-patient-registrations error:", err);
-      return res
-        .status(err.status || 500)
-        .json({ success: false, message: err.message || "Server error" });
+      console.error("GET error:", err);
+      return res.status(err.status || 500).json({ success: false, message: err.message || "Server error" });
     }
   }
 
+  // ---------------- PUT: update status ----------------
   if (req.method === "PUT") {
     try {
       const user = await getUserFromToken(req);
-      if (user.role !== "staff") {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
-
       const { id, status } = req.body;
+
       if (!id || !status) {
         return res.status(400).json({ success: false, message: "id and status required" });
       }
 
-      const patient = await PatientRegistration.findById(id);
-      if (!patient) {
-        return res.status(404).json({ success: false, message: "Patient not found" });
-      }
+      const patient = await PatientRegistration.findOne({ _id: id, userId: user._id });
+      if (!patient) return res.status(404).json({ success: false, message: "Patient not found or unauthorized" });
 
       patient.status = status;
       await patient.save();
 
-      return res.status(200).json({
-        success: true,
-        message: `Patient ${status.toLowerCase()} successfully`,
-        data: patient,
-      });
+      return res.status(200).json({ success: true, message: `Patient status updated to ${status}`, data: patient });
     } catch (err) {
-      console.error("PUT /api/staff/get-patient-registrations error:", err);
-      return res
-        .status(err.status || 500)
-        .json({ success: false, message: err.message || "Server error" });
+      console.error("PUT error:", err);
+      return res.status(err.status || 500).json({ success: false, message: err.message || "Server error" });
     }
   }
 
   res.setHeader("Allow", ["GET", "PUT"]);
-  return res.status(405).json({
-    success: false,
-    message: `Method ${req.method} Not Allowed`,
-  });
+  return res.status(405).json({ success: false, message: `Method ${req.method} Not Allowed` });
 }
