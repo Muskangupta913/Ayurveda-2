@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
-import { Plus, Edit2, Trash2, Package, Activity, X, Check, CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
+import { Plus, Edit2, Trash2, Package, Activity, X, Check, CheckCircle, XCircle, AlertCircle, Info, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Toast Component
 function Toast({ message, type, onClose }) {
@@ -12,10 +12,10 @@ function Toast({ message, type, onClose }) {
   }, [onClose]);
 
   const styles = {
-    success: "bg-green-500 border-green-600",
-    error: "bg-red-500 border-red-600",
+    success: "bg-emerald-500 border-emerald-600",
+    error: "bg-rose-500 border-rose-600",
     info: "bg-blue-500 border-blue-600",
-    warning: "bg-yellow-500 border-yellow-600"
+    warning: "bg-amber-500 border-amber-600"
   };
 
   const icons = {
@@ -26,10 +26,10 @@ function Toast({ message, type, onClose }) {
   };
 
   return (
-    <div className={`${styles[type]} text-white px-6 py-4 rounded-lg shadow-2xl border-2 flex items-center gap-3 min-w-[300px] max-w-md animate-slide-in`}>
+    <div className={`${styles[type]} text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl shadow-lg border flex items-center gap-2 sm:gap-3 min-w-[280px] sm:min-w-[300px] max-w-[calc(100vw-2rem)] sm:max-w-md backdrop-blur-sm animate-[slide-in_0.3s_ease-out]`}>
       {icons[type]}
-      <span className="flex-1 font-medium">{message}</span>
-      <button onClick={onClose} className="hover:bg-white/20 rounded p-1 transition-colors">
+      <span className="flex-1 font-medium text-sm sm:text-base">{message}</span>
+      <button onClick={onClose} className="hover:bg-white/20 rounded-lg p-1 sm:p-1.5 transition-colors flex-shrink-0">
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -52,31 +52,108 @@ function ConfirmModal({ isOpen, onConfirm, onCancel, title, message }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel}></div>
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel}></div>
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 sm:p-6 animate-[scale-in_0.2s_ease-out] mx-4">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <AlertCircle className="w-6 h-6 text-red-600" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-rose-600" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+          <h3 className="text-lg sm:text-xl font-semibold text-slate-900">{title}</h3>
         </div>
-        <p className="text-gray-600 mb-6">{message}</p>
+        <p className="text-sm sm:text-base text-slate-600 mb-5 sm:mb-6 leading-relaxed">{message}</p>
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+            className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors text-sm sm:text-base"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all"
+            className="flex-1 px-4 py-2.5 bg-rose-500 text-white rounded-xl font-medium hover:bg-rose-600 transition-colors shadow-sm text-sm sm:text-base"
           >
             Delete
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Pagination Component
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  const pages = [];
+  const maxVisiblePages = 5;
+  
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage < maxVisiblePages - 1) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
+  }
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-6">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+      </button>
+      
+      {startPage > 1 && (
+        <>
+          <button
+            onClick={() => onPageChange(1)}
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium transition-colors"
+          >
+            1
+          </button>
+          {startPage > 2 && <span className="text-slate-400">...</span>}
+        </>
+      )}
+      
+      {pages.map(page => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg text-sm font-medium transition-colors ${
+            currentPage === page
+              ? "bg-indigo-600 text-white shadow-sm"
+              : "border border-slate-200 bg-white hover:bg-slate-50"
+          }`}
+        >
+          {page}
+        </button>
+      ))}
+      
+      {endPage < totalPages && (
+        <>
+          {endPage < totalPages - 1 && <span className="text-slate-400">...</span>}
+          <button
+            onClick={() => onPageChange(totalPages)}
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium transition-colors"
+          >
+            {totalPages}
+          </button>
+        </>
+      )}
+      
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+      </button>
     </div>
   );
 }
@@ -88,8 +165,14 @@ function AdminStaffTreatments() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [toasts, setToasts] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: "", message: "" });
+  
+  const formRef = useRef(null);
+
+  const ITEMS_PER_PAGE = 7;
 
   const showToast = (message, type = "info") => {
     const id = Date.now();
@@ -142,6 +225,11 @@ function AdminStaffTreatments() {
     fetchTreatments();
   }, []);
 
+  // Reset to page 1 when tab or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -179,7 +267,13 @@ function AdminStaffTreatments() {
     setFormData({ package: item.package || "", treatment: item.treatment || "" });
     setEditingId(item._id);
     showToast("Editing mode activated", "info");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Scroll to form section using ref
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   const handleUpdate = async () => {
@@ -237,48 +331,41 @@ function AdminStaffTreatments() {
     showToast("Edit cancelled", "info");
   };
 
+  // Filter logic
   const filteredTreatments = treatments.filter(item => {
-    if (activeTab === "packages") return item.package && item.package.trim();
-    if (activeTab === "treatments") return item.treatment && item.treatment.trim();
+    const matchesSearch = 
+      (item.package?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+       item.treatment?.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (!matchesSearch) return false;
+
+    if (activeTab === "all") {
+      return (item.package && item.package.trim()) || (item.treatment && item.treatment.trim());
+    }
+    if (activeTab === "packages") {
+      return item.package && item.package.trim();
+    }
+    if (activeTab === "treatments") {
+      return item.treatment && item.treatment.trim();
+    }
     return true;
   });
 
-  const packagesOnly = treatments.filter(t => t.package && t.package.trim());
-  const treatmentsOnly = treatments.filter(t => t.treatment && t.treatment.trim());
+  // Pagination logic
+  const totalPages = Math.ceil(filteredTreatments.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedTreatments = filteredTreatments.slice(startIndex, endIndex);
+
+  // Updated counts
+  const allCount = treatments.filter(t => (t.package && t.package.trim()) || (t.treatment && t.treatment.trim())).length;
+  const packagesCount = treatments.filter(t => t.package && t.package.trim()).length;
+  const treatmentsCount = treatments.filter(t => t.treatment && t.treatment.trim()).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 sm:p-4 md:p-6 lg:p-8">
-      <style>{`
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes scale-in {
-          from {
-            transform: scale(0.9);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
-        }
-        .animate-scale-in {
-          animation: scale-in 0.2s ease-out;
-        }
-      `}</style>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-4 md:p-6 lg:p-8">
       {/* Toast Container */}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-3">
+      <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50 flex flex-col gap-2 sm:gap-3">
         {toasts.map(toast => (
           <Toast
             key={toast.id}
@@ -300,29 +387,29 @@ function AdminStaffTreatments() {
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
-            Staff Treatments Management
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-1 sm:mb-2">
+            Staff Treatments
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage packages and treatments for your staff</p>
+          <p className="text-sm sm:text-base text-slate-600">Manage packages and treatments for your staff</p>
         </div>
 
         {/* Form Section */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+        <div ref={formRef} className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 md:p-8 mb-6 sm:mb-8 scroll-mt-4">
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             {editingId ? (
               <>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-50 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
                   <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Edit Record</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900">Edit Record</h2>
               </>
             ) : (
               <>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-50 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
                 </div>
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Add New Entry</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900">Add New Entry</h2>
               </>
             )}
           </div>
@@ -330,8 +417,8 @@ function AdminStaffTreatments() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
             {/* Package Input */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                <Package className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-600 flex-shrink-0" />
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
+                <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 flex-shrink-0" />
                 <span>Package Name</span>
               </label>
               <input
@@ -340,15 +427,15 @@ function AdminStaffTreatments() {
                 value={formData.package}
                 onChange={handleChange}
                 placeholder="e.g., Premium Wellness Package"
-                className="text-gray-700 w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-slate-900 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400"
               />
-              <p className="text-xs text-gray-500">Optional - Leave empty if adding only treatment</p>
+              <p className="text-xs text-slate-500">Optional - Leave empty if adding only treatment</p>
             </div>
 
             {/* Treatment Input */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-teal-600 flex-shrink-0" />
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
+                <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-600 flex-shrink-0" />
                 <span>Treatment Name</span>
               </label>
               <textarea
@@ -357,9 +444,9 @@ function AdminStaffTreatments() {
                 onChange={handleChange}
                 placeholder="e.g., Full Body Massage&#10;Aromatherapy&#10;Facial Treatment"
                 rows="3"
-                className="text-gray-700 w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-slate-900 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none placeholder:text-slate-400"
               />
-              <p className="text-xs text-gray-500">Optional - Use new lines for multiple treatments</p>
+              <p className="text-xs text-slate-500">Optional - Use new lines for multiple treatments</p>
             </div>
           </div>
 
@@ -369,7 +456,7 @@ function AdminStaffTreatments() {
               <button
                 onClick={handleAdd}
                 disabled={loading}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg sm:rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-emerald-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                 {loading ? "Adding..." : "Add Record"}
@@ -379,14 +466,14 @@ function AdminStaffTreatments() {
                 <button
                   onClick={handleUpdate}
                   disabled={loading}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg sm:rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-initial"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-blue-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                   {loading ? "Updating..." : "Update Record"}
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base bg-gray-500 text-white rounded-lg sm:rounded-xl font-semibold hover:bg-gray-600 transition-all flex-1 sm:flex-initial"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-medium hover:bg-slate-300 transition-colors"
                 >
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   Cancel
@@ -397,136 +484,170 @@ function AdminStaffTreatments() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs sm:text-sm font-semibold opacity-90">Total Records</h3>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-xs sm:text-sm font-medium text-slate-600">All Records</h3>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-bold">{treatments.length}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-slate-900">{allCount}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs sm:text-sm font-semibold opacity-90">Packages</h3>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-xs sm:text-sm font-medium text-slate-600">Packages</h3>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-bold">{packagesOnly.length}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-slate-900">{packagesCount}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs sm:text-sm font-semibold opacity-90">Treatments</h3>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow xs:col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-xs sm:text-sm font-medium text-slate-600">Treatments</h3>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-bold">{treatmentsOnly.length}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-slate-900">{treatmentsCount}</p>
           </div>
         </div>
 
         {/* List Section */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-6 md:p-8">
-          {/* Tabs */}
-          <div className="flex gap-1 sm:gap-2 mb-4 sm:mb-6 p-1 bg-gray-100 rounded-lg sm:rounded-xl overflow-x-auto">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`flex-1 min-w-[90px] py-2 sm:py-2.5 px-2 sm:px-4 text-xs sm:text-sm md:text-base rounded-md sm:rounded-lg font-semibold transition-all whitespace-nowrap ${
-                activeTab === "all"
-                  ? "bg-white text-indigo-600 shadow-md"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              All ({treatments.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("packages")}
-              className={`flex-1 min-w-[90px] py-2 sm:py-2.5 px-2 sm:px-4 text-xs sm:text-sm md:text-base rounded-md sm:rounded-lg font-semibold transition-all whitespace-nowrap ${
-                activeTab === "packages"
-                  ? "bg-white text-indigo-600 shadow-md"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Packages ({packagesOnly.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("treatments")}
-              className={`flex-1 min-w-[90px] py-2 sm:py-2.5 px-2 sm:px-4 text-xs sm:text-sm md:text-base rounded-md sm:rounded-lg font-semibold transition-all whitespace-nowrap ${
-                activeTab === "treatments"
-                  ? "bg-white text-indigo-600 shadow-md"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Treatments ({treatmentsOnly.length})
-            </button>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 md:p-8">
+          {/* Tabs and Search */}
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="flex gap-1.5 sm:gap-2 p-1 bg-slate-100 rounded-lg sm:rounded-xl overflow-x-auto">
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`flex-shrink-0 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md sm:rounded-lg transition-all whitespace-nowrap ${
+                  activeTab === "all"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                All ({allCount})
+              </button>
+              <button
+                onClick={() => setActiveTab("packages")}
+                className={`flex-shrink-0 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md sm:rounded-lg transition-all whitespace-nowrap ${
+                  activeTab === "packages"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Packages ({packagesCount})
+              </button>
+              <button
+                onClick={() => setActiveTab("treatments")}
+                className={`flex-shrink-0 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md sm:rounded-lg transition-all whitespace-nowrap ${
+                  activeTab === "treatments"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Treatments ({treatmentsCount})
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search..."
+                className="text-gray-700 w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400"
+              />
+            </div>
           </div>
+
+          {/* Results Info */}
+          {!fetching && filteredTreatments.length > 0 && (
+            <div className="mb-4 text-sm text-slate-600">
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredTreatments.length)} of {filteredTreatments.length} records
+            </div>
+          )}
 
           {fetching ? (
             <div className="text-center py-8 sm:py-12">
-              <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-              <p className="mt-3 sm:mt-4 text-sm sm:text-base text-gray-500">Loading records...</p>
+              <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base text-slate-500">Loading records...</p>
             </div>
-          ) : filteredTreatments.length === 0 ? (
+          ) : paginatedTreatments.length === 0 ? (
             <div className="text-center py-8 sm:py-12">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400" />
               </div>
-              <p className="text-gray-500 text-base sm:text-lg">No records found</p>
-              <p className="text-gray-400 text-xs sm:text-sm mt-2">Add your first package or treatment above</p>
+              <p className="text-slate-600 text-base sm:text-lg font-medium">No records found</p>
+              <p className="text-slate-400 text-xs sm:text-sm mt-2">
+                {searchQuery ? "Try adjusting your search" : "Add your first package or treatment above"}
+              </p>
             </div>
           ) : (
-            <div className="grid gap-3 sm:gap-4">
-              {filteredTreatments.map((item) => (
-                <div
-                  key={item._id}
-                  className="group border-2 border-gray-100 rounded-lg sm:rounded-xl p-4 sm:p-6 hover:border-indigo-200 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50"
-                >
-                  <div className="flex flex-col gap-3 sm:gap-4">
-                    <div className="flex-1 space-y-2 sm:space-y-3">
-                      {item.package && item.package.trim() && (
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
-                          <span className="inline-block bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 text-xs sm:text-sm font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg break-words">
-                            {item.package}
-                          </span>
-                        </div>
-                      )}
-                      {item.treatment && item.treatment.trim() && (
-                        <div className="flex items-start gap-2">
-                          <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap leading-relaxed break-words">
-                              {item.treatment}
-                            </p>
+            <>
+              <div className="grid gap-3 sm:gap-4">
+                {paginatedTreatments.map((item) => (
+                  <div
+                    key={item._id}
+                    className="group border border-slate-200 rounded-lg sm:rounded-xl p-4 sm:p-6 hover:border-indigo-200 hover:shadow-md transition-all"
+                  >
+                    <div className="flex flex-col gap-3 sm:gap-4">
+                      <div className="flex-1 space-y-2 sm:space-y-3">
+                        {/* Show package only in "all" and "packages" tabs */}
+                        {activeTab !== "treatments" && item.package && item.package.trim() && (
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
+                            <span className="inline-block bg-indigo-50 text-indigo-700 text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg break-words">
+                              {item.package}
+                            </span>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                        {/* Show treatment only in "all" and "treatments" tabs */}
+                        {activeTab !== "packages" && item.treatment && item.treatment.trim() && (
+                          <div className="flex items-start gap-2">
+                            <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 mt-0.5 sm:mt-1 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs sm:text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed break-words">
+                                {item.treatment}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="flex gap-2 pt-2 border-t border-gray-100">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all font-medium shadow-md hover:shadow-lg"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item._id)}
-                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all font-medium shadow-md hover:shadow-lg"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span>Delete</span>
-                      </button>
+                      <div className="flex gap-2 pt-3 sm:pt-4 border-t border-slate-100">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium text-xs sm:text-sm"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item._id)}
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors font-medium text-xs sm:text-sm"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
           )}
         </div>
       </div>
