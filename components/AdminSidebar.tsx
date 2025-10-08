@@ -133,6 +133,12 @@ const navItems: NavItem[] = [
     icon: '⚙️',
     description: 'patient-report'
   },
+  { 
+    label: 'Track Expenses', 
+    path: '/admin/track-expenses', 
+    icon: '⚙️',
+    description: 'Track Expenses'
+  },
 ];
 
 interface AdminSidebarProps {

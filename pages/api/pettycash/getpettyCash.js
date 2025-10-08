@@ -1,3 +1,4 @@
+//api/pettycash/getpettyCash.js
 import jwt from "jsonwebtoken";
 import dbConnect from "../../../lib/database";
 import PettyCash from "../../../models/PettyCash";
