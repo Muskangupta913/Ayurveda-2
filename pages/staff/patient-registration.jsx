@@ -2,13 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Calendar, User, DollarSign, FileText, AlertCircle } from "lucide-react";
 
 // ✅ Constant data (moved outside component to avoid re-creation)
-const doctorList = [
-  "Dr. Smith Johnson",
-  "Dr. Emily Davis",
-  "Dr. Michael Brown",
-  "Dr. Sarah Wilson",
-  "Dr. James Anderson",
-];
 
 const paymentMethods = ["Cash", "Card", "BT", "Tabby", "Tamara"];
 
@@ -36,37 +29,91 @@ const INITIAL_FORM_DATA = {
   advanceClaimStatus: "Pending",
 };
 
+
+
 const InvoiceManagementSystem = () => {
-  const [currentUser] = useState({ name: "Admin User", role: "Admin" });
+  const [currentUser, setCurrentUser] = useState({ name: "", role: "" });
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [autoFields, setAutoFields] = useState({
     invoicedDate: new Date().toISOString(),
-    invoicedBy: currentUser.name,
+    invoicedBy: " ",
     advanceClaimReleaseDate: null,
     advanceClaimReleasedBy: null,
   });
 
+  const [doctorList, setDoctorList] = useState([]);
   const [fetchedTreatments, setFetchedTreatments] = useState([]);
   const [fetchedPackages, setFetchedPackages] = useState([]);
   const [calculatedFields, setCalculatedFields] = useState({ pending: 0, needToPay: 0 });
   const [errors, setErrors] = useState({});
   const [usedEMRNumbers] = useState(() => new Set());
 
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const res = await fetch("/api/admin/get-all-doctor-staff");
+
+        if (!res.ok) {
+          console.error(`HTTP error! status: ${res.status}`);
+          return;
+        }
+
+        const data = await res.json();
+
+        if (data.success) {
+          setDoctorList(data.data);
+        } else {
+          console.error("Failed to fetch doctors:", data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching doctors:", err);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+        if (!token) throw new Error("User not authenticated");
+
+        const res = await fetch("/api/staff/patient-registration", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+        });
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        setCurrentUser(data.data);
+        setAutoFields(prev => ({ ...prev, invoicedBy: data.data.name }));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+
+
   // -------------------------------
   // Fetch treatments/packages from API
   // -------------------------------
+
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const staffToken = localStorage.getItem("staffToken");
-        if (!staffToken) return;
-
-        const res = await fetch("/api/admin/staff-treatments", {
-          headers: { Authorization: `Bearer ${staffToken}` },
-        });
+        const res = await fetch("/api/admin/staff-treatments");
         const data = await res.json();
 
         if (res.ok && data.success) {
+          // Map API fields to "name" for dropdown
           const treatments = data.data
             .filter(item => item.treatment)
             .map(item => ({ _id: item._id, name: item.treatment }));
@@ -87,6 +134,25 @@ const InvoiceManagementSystem = () => {
 
     fetchOptions();
   }, []);
+
+
+  // -------------------------------
+  // Auto-update Advance Given Amount for insurance when Paid + Advance changes
+  // -------------------------------
+  useEffect(() => {
+    if (formData.insurance === "Yes") {
+      const paid = parseFloat(formData.paid) || 0;
+      const advance = parseFloat(formData.advance) || 0;
+      const totalAdvance = paid + advance;
+
+      setFormData(prev => ({
+        ...prev,
+        advanceGivenAmount: totalAdvance.toFixed(2),
+      }));
+    }
+  }, [formData.paid, formData.advance, formData.insurance]);
+
+
 
   // -------------------------------
   // Generate invoice number on mount
@@ -128,14 +194,15 @@ const InvoiceManagementSystem = () => {
 
   const calculateNeedToPay = useCallback(() => {
     if (formData.insurance === "Yes" && formData.coPayPercent) {
-      const amount = parseFloat(formData.amount) || 0;
+      const totalAmount = parseFloat(formData.amount) || 0;
       const coPayPercent = parseFloat(formData.coPayPercent) || 0;
-      const needToPay = Math.max(0, (amount * (100 - coPayPercent)) / 100);
+      const needToPay = Math.max(0, totalAmount * (coPayPercent / 100));
       setCalculatedFields(prev => ({ ...prev, needToPay }));
     } else {
       setCalculatedFields(prev => ({ ...prev, needToPay: 0 }));
     }
   }, [formData.amount, formData.coPayPercent, formData.insurance]);
+
 
   const handleInputChange = useCallback(
     e => {
@@ -227,17 +294,19 @@ const InvoiceManagementSystem = () => {
     }
   }, [currentUser]);
 
+
   const handleSubmit = useCallback(async () => {
+    // 1️⃣ Validate form
     if (!validateForm()) {
       alert("Please fix the errors before submitting");
       return;
     }
 
-    usedEMRNumbers.add(formData.emrNumber);
-
+    // 2️⃣ Prepare invoice data
     const invoiceData = {
       ...formData,
       ...autoFields,
+      userId: currentUser._id, // optional if needed by API
       calculatedFields: {
         pending: parseFloat(calculatedFields.pending) || 0,
         needToPay: parseFloat(calculatedFields.needToPay) || 0,
@@ -245,40 +314,45 @@ const InvoiceManagementSystem = () => {
     };
 
     try {
-      const staffToken = localStorage.getItem("staffToken");
-      if (!staffToken) {
+      const token = localStorage.getItem("userToken");
+      if (!token) {
         alert("Authentication token not found. Please login again.");
         return;
       }
 
-      const response = await fetch("/api/staff/patient-registration", {
+      // 3️⃣ Call API
+      const res = await fetch("/api/staff/patient-registration", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${staffToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(invoiceData),
       });
 
-      const result = await response.json();
-      if (response.ok) {
+      const data = await res.json();
+
+      // 4️⃣ Handle API response
+      if (res.ok && data.success) {
         alert("Invoice saved successfully!");
         resetForm();
       } else {
-        alert(`Error: ${result.message || "Failed to save invoice"}`);
-        console.error("API Error:", result);
+        alert(`Error: ${data.message || "Failed to save invoice"}`);
+        console.error("API Error:", data);
       }
     } catch (err) {
       console.error("Network Error:", err);
       alert("Network error. Please try again later.");
     }
-  }, [formData, autoFields, calculatedFields, usedEMRNumbers, validateForm]);
+  }, [formData, autoFields, currentUser, calculatedFields, validateForm]);
+
+
 
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA);
     setAutoFields({
       invoicedDate: new Date().toISOString(),
-      invoicedBy: currentUser.name,
+      invoicedBy: " ",
       advanceClaimReleaseDate: null,
       advanceClaimReleasedBy: null,
     });
@@ -292,616 +366,615 @@ const InvoiceManagementSystem = () => {
     [currentUser.role]
   );
 
-    // ✅ JSX — identical UI, untouched
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-lg shadow-xl p-8">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                    <FileText className="text-indigo-600" />
-                    Medical Invoice Management
-                </h1>
-                <p className="text-gray-600 mt-2">Complete invoice and patient details</p>
-                </div>
-                <div className="text-right">
-                <div className="text-sm text-gray-600">Logged in as:</div>
-                <div className="font-semibold text-indigo-600">{autoFields.invoicedBy}</div>
-                <div className="text-xs text-gray-500">{currentUser.role}</div>
-                </div>
+  // ✅ JSX — identical UI, untouched
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg shadow-xl p-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+                <FileText className="text-indigo-600" />
+                Medical Invoice Management
+              </h1>
+              <p className="text-gray-600 mt-2">Complete invoice and patient details</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-600">Logged in as:</div>
+              <div className="font-semibold text-indigo-600">
+                {autoFields.invoicedBy || "Loading..."}
+              </div>
+              <div className="text-xs text-gray-500">
+                {currentUser.role || "Loading..."}
+              </div>
             </div>
 
-                <div className="space-y-6">
-                {/* Auto-Generated Fields */}
-                <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border-l-4 border-indigo-500">
-                <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-indigo-600" />
-                    Invoice Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Invoice Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="invoiceNumber"
-                        value={formData.invoiceNumber}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono font-semibold ${
-                        errors.invoiceNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                    />
-                    {errors.invoiceNumber && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.invoiceNumber}
-                        </p>
-                    )}
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoiced Date</label>
-                    <input
-                        type="text"
-                        value={new Date(autoFields.invoicedDate).toLocaleString()}
-                        disabled
-                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 cursor-not-allowed"
-                    />
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoiced By</label>
-                    <input
-                        type="text"
-                        value={autoFields.invoicedBy}
-                        disabled
-                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 cursor-not-allowed"
-                    />
-                    </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Auto-Generated Fields */}
+            <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border-l-4 border-indigo-500">
+              <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-600" />
+                Invoice Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Invoice Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="invoiceNumber"
+                    value={formData.invoiceNumber}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono font-semibold ${errors.invoiceNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                  />
+                  {errors.invoiceNumber && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.invoiceNumber}
+                    </p>
+                  )}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Invoiced Date</label>
+                  <input
+                    type="text"
+                    value={new Date(autoFields.invoicedDate).toLocaleString()}
+                    disabled
+                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Invoiced By</label>
+                  <input
+                    type="text"
+                    value={autoFields.invoicedBy}
+                    disabled
+                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Patient Information */}
+            <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+              <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-600" />
+                Patient Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    EMR Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="emrNumber"
+                    value={formData.emrNumber}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.emrNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    placeholder="Unique EMR number"
+                  />
+                  {errors.emrNumber && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.emrNumber}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.firstName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    placeholder="First name"
+                  />
+                  {errors.firstName && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.firstName}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.lastName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    placeholder="Last name"
+                  />
+                  {errors.lastName && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.lastName}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    placeholder="email@example.com"
+                  />
+                  {errors.email && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.email}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mobile Number {!canViewMobileNumber && '(Restricted)'}
+                  </label>
+                  <input
+                    type='number'
+                    name="mobileNumber"
+                    value={formData.mobileNumber}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder='10-digit mobile'
+                    maxLength="10"
+                  />
+                  {!canViewMobileNumber && (
+                    <p className="text-xs text-gray-500 mt-1">Admin access required</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.gender ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {errors.gender && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.gender}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Patient Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="patientType"
+                    value={formData.patientType}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.patientType ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                  >
+                    <option value="">Select Type</option>
+                    <option value="New">New</option>
+                    <option value="Old">Old</option>
+                  </select>
+                  {errors.patientType && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.patientType}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Referred By</label>
+                  <input
+                    type="text"
+                    name="referredBy"
+                    value={formData.referredBy}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Medical Details */}
+            <div className="bg-green-50 rounded-lg p-6 border border-green-200">
+              <h2 className="text-lg font-semibold text-gray-700 mb-4">Medical Details</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Doctor Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Doctor <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="doctor"
+                    value={formData.doctor}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.doctor ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                  >
+                    <option value="">Select from Doctor Master List</option>
+                    {doctorList.map((doctor) => (
+                      <option key={doctor._id} value={doctor._id}>
+                        {doctor.name} ({doctor.role})
+                      </option>
+                    ))}
+                  </select>
+                  {errors.doctor && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.doctor}
+                    </p>
+                  )}
                 </div>
 
-                {/* Patient Information */}
-                <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-                <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-blue-600" />
-                    Patient Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
+                {/* Service Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Service <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="service"
+                    value={formData.service}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.service ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                  >
+                    <option value="">Select service</option>
+                    <option value="Package">Package</option>
+                    <option value="Treatment">Treatment</option>
+                  </select>
+                  {errors.service && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.service}
+                    </p>
+                  )}
+                </div>
+
+                {/* Conditional Dropdowns */}
+                {formData.service === "Package" && (
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        EMR Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="emrNumber"
-                        value={formData.emrNumber}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.emrNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="Unique EMR number"
-                    />
-                    {errors.emrNumber && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.emrNumber}
-                        </p>
-                    )}
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        First Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.firstName ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="First name"
-                    />
-                    {errors.firstName && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.firstName}
-                        </p>
-                    )}
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Last Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.lastName ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="Last name"
-                    />
-                    {errors.lastName && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.lastName}
-                        </p>
-                    )}
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="email@example.com"
-                    />
-                    {errors.email && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.email}
-                        </p>
-                    )}
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Mobile Number {!canViewMobileNumber && '(Restricted)'}
-                    </label>
-                    <input
-                        type={canViewMobileNumber ? 'tel' : 'password'}
-                        name="mobileNumber"
-                        value={formData.mobileNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder={canViewMobileNumber ? '10-digit mobile' : '••••••••••'}
-                        maxLength="10"
-                    />
-                    {!canViewMobileNumber && (
-                        <p className="text-xs text-gray-500 mt-1">Admin access required</p>
-                    )}
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Gender <span className="text-red-500">*</span>
+                      Package <span className="text-red-500">*</span>
                     </label>
                     <select
-                        name="gender"
-                        value={formData.gender}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.gender ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      name="package"
+                      value={formData.package || ""}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"
                         }`}
                     >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                      <option value="">Select package</option>
+                      {fetchedPackages.map((pkg) => (
+                        <option key={pkg._id} value={pkg.name}>
+                          {pkg.name}
+                        </option>
+                      ))}
                     </select>
-                    {errors.gender && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    {errors.package && (
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
-                        {errors.gender}
-                        </p>
+                        {errors.package}
+                      </p>
                     )}
-                    </div>
-                    <div>
+                  </div>
+                )}
+
+                {formData.service === "Treatment" && (
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Patient Type <span className="text-red-500">*</span>
+                      Treatment <span className="text-red-500">*</span>
                     </label>
                     <select
-                        name="patientType"
-                        value={formData.patientType}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.patientType ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      name="treatment"
+                      value={formData.treatment}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"
                         }`}
                     >
-                        <option value="">Select Type</option>
-                        <option value="New">New</option>
-                        <option value="Old">Old</option>
+                      <option value="">Select treatment</option>
+                      {fetchedTreatments.map((t) => (
+                        <option key={t._id} value={t.name}>
+                          {t.name}
+                        </option>
+                      ))}
                     </select>
-                    {errors.patientType && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    {errors.treatment && (
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
-                        {errors.patientType}
-                        </p>
+                        {errors.treatment}
+                      </p>
                     )}
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Referred By</label>
-                    <input
-                        type="text"
-                        name="referredBy"
-                        value={formData.referredBy}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder="Optional"
-                    />
-                    </div>
-                </div>
-                </div>
-
-                {/* Medical Details */}
-    <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-    <h2 className="text-lg font-semibold text-gray-700 mb-4">Medical Details</h2>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Doctor Selection */}
-        <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-            Doctor <span className="text-red-500">*</span>
-        </label>
-        <select
-            name="doctor"
-            value={formData.doctor}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-            errors.doctor ? "border-red-500 bg-red-50" : "border-gray-300"
-            }`}
-        >
-            <option value="">Select from Doctor Master List</option>
-            {doctorList.map((doctor, index) => (
-            <option key={index} value={doctor}>
-                {doctor}
-            </option>
-            ))}
-        </select>
-        {errors.doctor && (
-            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            {errors.doctor}
-            </p>
-        )}
-        </div>
-
-        {/* Service Selection */}
-           <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Service <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="service"
-                  value={formData.service}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                    errors.service ? "border-red-500 bg-red-50" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select service</option>
-                  <option value="Package">Package</option>
-                  <option value="Treatment">Treatment</option>
-                </select>
-                {errors.service && (
-                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.service}
-                  </p>
+                  </div>
                 )}
               </div>
+            </div>
 
-              {/* Conditional Dropdowns */}
-              {formData.service === "Package" && (
+
+
+            {/* Payment Details */}
+            <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200">
+              <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-yellow-600" />
+                Payment Details
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Package <span className="text-red-500">*</span>
+                    Amount <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="package"
-                    value={formData.package || ""}
+                  <input
+                    type="number"
+                    name="amount"
+                    value={formData.amount}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                      errors.package ? "border-red-500 bg-red-50" : "border-gray-300"
-                    }`}
-                  >
-                    <option value="">Select package</option>
-                    {fetchedPackages.map((pkg) => (
-                      <option key={pkg._id} value={pkg.name}>
-                        {pkg.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.package && (
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.amount ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  />
+                  {errors.amount && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
-                      {errors.package}
+                      {errors.amount}
                     </p>
                   )}
                 </div>
-              )}
-
-              {formData.service === "Treatment" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Paid</label>
+                  <input
+                    type="number"
+                    name="paid"
+                    value={formData.paid}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Advance</label>
+                  <input
+                    type="number"
+                    name="advance"
+                    value={formData.advance}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Treatment <span className="text-red-500">*</span>
+                    Pending (Auto)
+                  </label>
+                  <input
+                    type="text"
+                    value={`₹ ${calculatedFields.pending.toFixed(2)}`}
+                    disabled
+                    className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 cursor-not-allowed font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method <span className="text-red-500">*</span>
                   </label>
                   <select
-                    name="treatment"
-                    value={formData.treatment}
+                    name="paymentMethod"
+                    value={formData.paymentMethod}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                      errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"
-                    }`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.paymentMethod ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                   >
-                    <option value="">Select treatment</option>
-                    {fetchedTreatments.map((t) => (
-                      <option key={t._id} value={t.name}>
-                        {t.name}
-                      </option>
+                    <option value="">Select payment method</option>
+                    {paymentMethods.map((method, index) => (
+                      <option key={index} value={method}>{method}</option>
                     ))}
                   </select>
-                  {errors.treatment && (
+                  {errors.paymentMethod && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
-                      {errors.treatment}
+                      {errors.paymentMethod}
                     </p>
                   )}
                 </div>
-              )}
-    </div>
-    </div>
+              </div>
+            </div>
 
+            {/* Insurance Details */}
+            <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
+              <h2 className="text-lg font-semibold text-gray-700 mb-4">Insurance Details</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Insurance</label>
+                  <select
+                    name="insurance"
+                    value={formData.insurance}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
 
-
-                {/* Payment Details */}
-                <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200">
-                <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-yellow-600" />
-                    Payment Details
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {formData.insurance === 'Yes' && (
+                  <>
                     <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Amount <span className="text-red-500">*</span>
-                    </label>
-                    <input
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Advance Given Amount <span className="text-red-500">*</span>
+                      </label>
+                      <input
                         type="number"
-                        name="amount"
-                        value={formData.amount}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.amount ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="0.00"
-                        step="0.01"
-                        min="0"
-                    />
-                    {errors.amount && (
+                        name="advanceGivenAmount"
+                        value={formData.advanceGivenAmount}
+                        disabled
+                        className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+                      />
+
+                      {errors.advanceGivenAmount && (
                         <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.amount}
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.advanceGivenAmount}
                         </p>
-                    )}
+                      )}
                     </div>
                     <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Paid</label>
-                    <input
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Co-Pay % <span className="text-red-500">*</span>
+                      </label>
+                      <input
                         type="number"
-                        name="paid"
-                        value={formData.paid}
+                        name="coPayPercent"
+                        value={formData.coPayPercent}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder="0.00"
-                        step="0.01"
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                        placeholder="0-100"
                         min="0"
-                    />
+                        max="100"
+                      />
+                      {errors.coPayPercent && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.coPayPercent}
+                        </p>
+                      )}
                     </div>
                     <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Advance</label>
-                    <input
-                        type="number"
-                        name="advance"
-                        value={formData.advance}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder="0.00"
-                        step="0.01"
-                        min="0"
-                    />
-                    </div>
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pending (Auto)
-                    </label>
-                    <input
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Need to Pay Amount (Auto)
+                      </label>
+                      <input
                         type="text"
-                        value={`₹ ${calculatedFields.pending.toFixed(2)}`}
+                        value={`₹ ${calculatedFields.needToPay.toFixed(2)}`}
                         disabled
                         className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 cursor-not-allowed font-bold"
-                    />
+                      />
                     </div>
                     <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Payment Method <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        name="paymentMethod"
-                        value={formData.paymentMethod}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                        errors.paymentMethod ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                    >
-                        <option value="">Select payment method</option>
-                        {paymentMethods.map((method, index) => (
-                        <option key={index} value={method}>{method}</option>
-                        ))}
-                    </select>
-                    {errors.paymentMethod && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.paymentMethod}
-                        </p>
-                    )}
-                    </div>
-                </div>
-                </div>
-
-                {/* Insurance Details */}
-                <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-                <h2 className="text-lg font-semibold text-gray-700 mb-4">Insurance Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Insurance</label>
-                    <select
-                        name="insurance"
-                        value={formData.insurance}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    >
-                        <option value="No">No</option>
-                        <option value="Yes">Yes</option>
-                    </select>
-                    </div>
-
-                    {formData.insurance === 'Yes' && (
-                    <>
-                        <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Advance Given Amount <span className="text-red-500">*</span>
-                        </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Advance Claim Status
+                      </label>
+                      <div className="flex gap-2">
                         <input
-                            type="number"
-                            name="advanceGivenAmount"
-                            value={formData.advanceGivenAmount}
-                            onChange={handleInputChange}
-                            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                            errors.advanceGivenAmount ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          type="text"
+                          value={formData.advanceClaimStatus}
+                          disabled
+                          className={`flex-1 px-4 py-2 border rounded-lg cursor-not-allowed font-semibold ${formData.advanceClaimStatus === 'Released'
+                              ? 'bg-green-100 border-green-400 text-green-800'
+                              : 'bg-yellow-100 border-yellow-400 text-yellow-800'
                             }`}
-                            placeholder="0.00"
-                            step="0.01"
-                            min="0"
                         />
-                        {errors.advanceGivenAmount && (
-                            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            {errors.advanceGivenAmount}
-                            </p>
-                        )}
-                        </div>
-                        <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Co-Pay % <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            name="coPayPercent"
-                            value={formData.coPayPercent}
-                            onChange={handleInputChange}
-                            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                            errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                            placeholder="0-100"
-                            min="0"
-                            max="100"
-                        />
-                        {errors.coPayPercent && (
-                            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            {errors.coPayPercent}
-                            </p>
-                        )}
-                        </div>
-                        <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Need to Pay Amount (Auto)
-                        </label>
-                        <input
-                            type="text"
-                            value={`₹ ${calculatedFields.needToPay.toFixed(2)}`}
-                            disabled
-                            className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 cursor-not-allowed font-bold"
-                        />
-                        </div>
-                        <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Advance Claim Status
-                        </label>
-                        <div className="flex gap-2">
-                            <input
-                            type="text"
-                            value={formData.advanceClaimStatus}
-                            disabled
-                            className={`flex-1 px-4 py-2 border rounded-lg cursor-not-allowed font-semibold ${
-                                formData.advanceClaimStatus === 'Released'
-                                ? 'bg-green-100 border-green-400 text-green-800'
-                                : 'bg-yellow-100 border-yellow-400 text-yellow-800'
-                            }`}
-                            />
-                            {formData.advanceClaimStatus === 'Pending' && (
+                        {/* {formData.advanceClaimStatus === 'Pending' && (
                             <button
                                 type="button"
                                 onClick={handleReleaseClaim}
                                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md font-semibold"
+                              disabled  
                             >
                                 Release
                             </button>
-                            )}
-                        </div>
-                        </div>
-                        {autoFields.advanceClaimReleaseDate && (
-                        <>
-                            <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Advance Claim Release Date (Auto)
-                            </label>
-                            <input
-                                type="text"
-                                value={new Date(autoFields.advanceClaimReleaseDate).toLocaleString()}
-                                disabled
-                                className="w-full px-4 py-2 bg-white border border-gray-400 rounded-lg text-gray-700 cursor-not-allowed"
-                            />
-                            </div>
-                            <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Advance Claim Released By (Auto)
-                            </label>
-                            <input
-                                type="text"
-                                value={autoFields.advanceClaimReleasedBy || ''}
-                                disabled
-                                className="w-full px-4 py-2 bg-white border border-gray-400 rounded-lg text-gray-700 cursor-not-allowed"
-                            />
-                            </div>
-                        </>
+                            )} */}
+                        {formData.advanceClaimStatus === "Pending" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              alert("Doctor approval required before releasing the claim.");
+                            }}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md font-semibold"
+                          >
+                            Release
+                          </button>
                         )}
-                    </>
+
+                      </div>
+                    </div>
+                    {autoFields.advanceClaimReleaseDate && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Advance Claim Release Date (Auto)
+                          </label>
+                          <input
+                            type="text"
+                            value={new Date(autoFields.advanceClaimReleaseDate).toLocaleString()}
+                            disabled
+                            className="w-full px-4 py-2 bg-white border border-gray-400 rounded-lg text-gray-700 cursor-not-allowed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Advance Claim Released By (Auto)
+                          </label>
+                          <input
+                            type="text"
+                            value={autoFields.advanceClaimReleasedBy || ''}
+                            disabled
+                            className="w-full px-4 py-2 bg-white border border-gray-400 rounded-lg text-gray-700 cursor-not-allowed"
+                          />
+                        </div>
+                      </>
                     )}
-                </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end gap-4 pt-4">
-                <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
-                >
-                    Reset Form
-                </button>
-                <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-lg hover:shadow-xl"
-                >
-                    Save Invoice
-                </button>
-                </div>
+                  </>
+                )}
+              </div>
             </div>
-            </div>
-        </div>
-        </div>
-    );
-    };
 
-    export default InvoiceManagementSystem;
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-4 pt-4">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
+              >
+                Reset Form
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-lg hover:shadow-xl"
+              >
+                Save Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default InvoiceManagementSystem;
 
 

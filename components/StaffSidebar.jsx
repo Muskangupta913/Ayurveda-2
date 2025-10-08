@@ -79,6 +79,12 @@ const Sidebar = () => {
         icon: "📅", 
         description: "Add Petty Cash Entry" 
       },
+       { 
+        label: " Add Vendor", 
+        path: "/staff/add-vendor", 
+        icon: "📅", 
+        description: "Manage vendor" 
+      },
     ];
   }
 

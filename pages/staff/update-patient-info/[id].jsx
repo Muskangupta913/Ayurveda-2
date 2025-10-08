@@ -309,74 +309,119 @@ const InvoiceUpdateSystem = () => {
 
 
           {/* Payment Section */}
-          <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200 mt-6">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-yellow-600" />
-              Payment Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <input
-                type="number"
-                name="amount"
-                value={formData.amount || ""}
-                onChange={handlePaymentChange}
-                placeholder="Total Amount"
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-              <input
-                type="number"
-                name="paid"
-                value={formData.paid || ""}
-                onChange={handlePaymentChange}
-                placeholder="Paid"
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-              <input
-                type="number"
-                name="advance"
-                value={formData.advance || ""}
-                onChange={handlePaymentChange}
-                placeholder="Advance"
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-              <input
-                type="text"
-                value={`₹ ${calculatedFields.pending.toFixed(2)}`}
-                disabled
-                className="w-full px-4 py-2 bg-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold cursor-not-allowed"
-                placeholder="Pending Amount"
-              />
-              <input
-                type="text"
-                value={`₹ ${calculatedFields.needToPay.toFixed(2)}`}
-                disabled
-                className="w-full px-4 py-2 bg-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold cursor-not-allowed"
-                placeholder="Need to Pay"
-              />
-              <select
-                name="paymentMethod"
-                value={formData.paymentMethod || ""}
-                onChange={handlePaymentChange}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="">Select payment method</option>
-                {paymentMethods.map((method, idx) => (
-                  <option key={idx} value={method}>
-                    {method}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end pt-4">
-              <button
-                type="button"
-                onClick={handleUpdatePayment}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-lg"
-              >
-                Update Payment
-              </button>
-            </div>
-          </div>
+   
+ <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200 mt-6">
+  <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+    <DollarSign className="w-5 h-5 text-yellow-600" />
+    Payment Details
+  </h2>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {/* Amount */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Amount <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="number"
+        name="amount"
+        value={formData.amount || ""}
+        onChange={handlePaymentChange}
+        placeholder="0.00"
+        step="0.01"
+        min="0"
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+    </div>
+
+    {/* Paid */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Paid</label>
+      <input
+        type="number"
+        name="paid"
+        value={formData.paid || ""}
+        onChange={handlePaymentChange}
+        placeholder="0.00"
+        step="0.01"
+        min="0"
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+    </div>
+
+    {/* Advance */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Advance</label>
+      <input
+        type="number"
+        name="advance"
+        value={formData.advance || ""}
+        onChange={handlePaymentChange}
+        placeholder="0.00"
+        step="0.01"
+        min="0"
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+    </div>
+
+    {/* Pending (Auto) */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Pending (Auto)</label>
+      <input
+        type="text"
+        value={`₹ ${calculatedFields.pending.toFixed(2)}`}
+        disabled
+        className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold cursor-not-allowed"
+      />
+    </div>
+
+    {/* Need to Pay (Auto) */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay (Auto)</label>
+      <input
+        type="text"
+        value={`₹ ${calculatedFields.needToPay.toFixed(2)}`}
+        disabled
+        className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold cursor-not-allowed"
+      />
+    </div>
+
+    {/* Payment Method */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Payment Method <span className="text-red-500">*</span>
+      </label>
+      <select
+        name="paymentMethod"
+        value={formData.paymentMethod || ""}
+        onChange={handlePaymentChange}
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      >
+        <option value="">Select payment method</option>
+        {paymentMethods.map((method, idx) => (
+          <option key={idx} value={method}>
+            {method}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+
+  {/* Update Button */}
+  <div className="flex justify-end pt-4">
+    <button
+      type="button"
+      onClick={handleUpdatePayment}
+      className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-lg"
+    >
+      Update Payment
+    </button>
+  </div>
+</div>
+
+
+
+
   <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
   <h2 className="text-lg font-semibold text-gray-700 mb-4">Insurance Details</h2>
 

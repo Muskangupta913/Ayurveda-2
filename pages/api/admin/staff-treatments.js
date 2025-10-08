@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       // Build the object dynamically depending on input
       const dataToInsert = {};
       if (pkg?.trim()) dataToInsert.package = pkg.trim();
-      if (treatment?.trim()) dataToInsert.treatment = treatment.trim();
+      if (treatment?.trim()) dataToInsert.treatment = treatment.trim(); 
 
       const newTreatment = await StaffTreatment.create(dataToInsert);
 

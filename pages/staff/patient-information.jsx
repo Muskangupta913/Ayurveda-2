@@ -89,7 +89,7 @@ export default function PatientFilterUI() {
                 <th className="border p-2 text-left">Invoice No</th>
                 <th className="border p-2 text-left">Name</th>
                 <th className="border p-2 text-left">Phone</th>
-                <th className="border p-2 text-left">Claim Status</th>
+                <th className="border p-2 text-left">Doctor Release Status</th>
                 <th className="border p-2 text-left">Application Status</th>
                 <th className="border p-2 text-center">Action</th>
               </tr>
