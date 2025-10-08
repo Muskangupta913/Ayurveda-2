@@ -84,6 +84,50 @@ const navItems: NavItem[] = [
 
     ],
   },
+
+  { 
+    label: 'All Blogs', 
+    path: '/admin/all-blogs', 
+    icon: '👥',
+    description: 'Manage users & roles'
+  },
+  { 
+    label: 'User Analytics', 
+    path: '/admin/analytics', 
+    icon: '📊',
+    description: 'View detailed reports'
+  },
+
+  {
+  label: 'Request Call Back',
+  path: '/admin/get-in-touch',
+  icon: '📞',
+  description: 'View and export user call back requests'
+},
+  { 
+    label: 'Manage Job', 
+    path: '/admin/job-manage', 
+    icon: '⚙️',
+    description: 'Approve or decline job'
+  },
+  { 
+    label: 'Create-Staff', 
+    path: '/admin/create-staff', 
+    icon: '⚙️',
+    description: 'create-staff'
+  },
+  { 
+    label: 'View EOD Report', 
+    path: '/admin/getAllEodNotes', 
+    icon: '⚙️',
+    description: 'staff-report'
+  },
+  { 
+    label: 'Patient Report', 
+    path: '/admin/patient-report', 
+    icon: '⚙️',
+    description: 'patient-report'
+  },
 ];
 
 interface AdminSidebarProps {

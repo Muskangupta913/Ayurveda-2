@@ -2,6 +2,11 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+const EODNoteSchema = new mongoose.Schema({
+  note: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String },
@@ -15,6 +20,7 @@ const UserSchema = new mongoose.Schema({
   clinicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' }, // ✅ tie agent to clinic
   isApproved: { type: Boolean, default: false },
   declined: { type: Boolean, default: false },
+  eodNotes: [EODNoteSchema],
 }, { timestamps: true });
 
 UserSchema.index({ email: 1, role: 1 }, { unique: true });
