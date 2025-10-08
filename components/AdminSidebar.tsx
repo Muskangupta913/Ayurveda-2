@@ -81,6 +81,11 @@ const navItems: NavItem[] = [
         path: "/admin/admin-add-service",
         icon: "💼",
       },
+       {
+        label: "Create Vendor",
+        path: "/admin/admin-create-vendor",
+        icon: "💼",
+      },
 
     ],
   },

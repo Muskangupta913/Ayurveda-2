@@ -1,28 +1,58 @@
+// pages/api/staff/patient-registration.js
 import dbConnect from "../../../lib/database";
-import User from "../../../models/Users";
+import jwt from "jsonwebtoken";
 import PatientRegistration from "../../../models/PatientRegistration";
-import { getUserFromReq, requireRole } from "../lead-ms/auth";
+import User from "../../../models/Users";
+
+// Helper: verify JWT and get user
+async function getUserFromToken(req) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.split(" ")[1];
+  if (!token) throw { status: 401, message: "No token provided" };
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId || decoded.id).select("-password");
+    if (!user) throw { status: 401, message: "User not found" };
+    return user;
+  } catch (err) {
+    throw { status: 401, message: "Invalid or expired token" };
+  }
+}
+
+// Check if user has required role
+function requireRole(user, roles = []) {
+  return roles.includes(user.role);
+}
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  // Allow only POST and GET requests
-  if (!["POST", "GET"].includes(req.method)) {
-    return res
-      .status(405)
-      .json({ success: false, message: "Method not allowed" });
+  let user;
+  try {
+    user = await getUserFromToken(req);
+  } catch (err) {
+    return res.status(err.status || 401).json({ success: false, message: err.message });
   }
 
-  // ✅ Authenticate user
-  const me = await getUserFromReq(req);
-  if (!me || !requireRole(me, ["clinic", "staff", "admin"])) {
-    return res.status(403).json({ success: false, message: "Access denied" });
+  // ---------------- GET: return current user's name and role ----------------
+  if (req.method === "GET") {
+    return res.status(200).json({
+      success: true,
+      data: {
+        name: user.name,
+        role: user.role,
+        _id: user._id,
+      },
+    });
   }
 
-  // ===========================
-  // POST → Create a new patient
-  // ===========================
+  // ---------------- POST: create a new patient ----------------
   if (req.method === "POST") {
+    if (!requireRole(user, ["clinic", "staff", "admin"])) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
     try {
       const {
         invoiceNumber,
@@ -51,7 +81,7 @@ export default async function handler(req, res) {
         notes,
       } = req.body;
 
-      // 🔹 Validation
+      // Validation
       if (
         !invoiceNumber ||
         !firstName ||
@@ -63,26 +93,20 @@ export default async function handler(req, res) {
         !paid ||
         !paymentMethod
       ) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing required fields",
-        });
+        return res.status(400).json({ success: false, message: "Missing required fields" });
       }
 
-      // 🔹 Check for duplicate invoice number
+      // Check duplicate invoice
       const existing = await PatientRegistration.findOne({ invoiceNumber });
       if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: "Invoice number already exists",
-        });
+        return res.status(400).json({ success: false, message: "Invoice number already exists" });
       }
 
-      // 🔹 Create new patient registration
+      // Create patient
       const patient = await PatientRegistration.create({
         invoiceNumber,
         invoicedBy,
-        userId: me._id, // logged-in user
+        userId: user._id,
         emrNumber,
         firstName,
         lastName,
@@ -107,38 +131,13 @@ export default async function handler(req, res) {
         notes,
       });
 
-      return res.status(201).json({
-        success: true,
-        message: "Patient registered successfully",
-        data: patient,
-      });
+      return res.status(201).json({ success: true, message: "Patient registered successfully", data: patient });
     } catch (err) {
-      console.error("❌ Error creating patient registration:", err);
-      return res
-        .status(500)
-        .json({ success: false, message: "Internal Server Error" });
+      console.error("POST error:", err);
+      return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
   }
 
-  // ===========================
-  // GET → List all patient records created by this user
-  // ===========================
-  if (req.method === "GET") {
-    try {
-      const patients = await PatientRegistration.find({ userId: me._id })
-        .sort({ createdAt: -1 })
-        .lean();
-
-      return res.status(200).json({
-        success: true,
-        count: patients.length,
-        data: patients,
-      });
-    } catch (err) {
-      console.error("❌ Error fetching patients:", err);
-      return res
-        .status(500)
-        .json({ success: false, message: "Failed to fetch patients" });
-    }
-  }
+  // ---------------- Other methods ----------------
+  return res.status(405).json({ success: false, message: "Method not allowed" });
 }

@@ -52,41 +52,88 @@ const InvoiceManagementSystem = () => {
   const [errors, setErrors] = useState({});
   const [usedEMRNumbers] = useState(() => new Set());
 
+
+    useEffect(() => {
+    // Fetch logged-in user data
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem("userToken"); // assuming you store JWT in localStorage
+        if (!token) throw new Error("User not authenticated");
+
+        const res = await fetch("/api/staff/patient-registration", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+         console.log(data)
+        if (!data.success) throw new Error(data.message);
+
+        setUser(data.data);
+      } catch (err) {
+        console.error(err);
+
+      } 
+    };
+
+    fetchUser();
+  }, []);
+
+
   // -------------------------------
   // Fetch treatments/packages from API
   // -------------------------------
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const staffToken = localStorage.getItem("staffToken");
-        if (!staffToken) return;
 
-        const res = await fetch("/api/admin/staff-treatments", {
-          headers: { Authorization: `Bearer ${staffToken}` },
-        });
-        const data = await res.json();
+useEffect(() => {
+  const fetchOptions = async () => {
+    try {
+      const res = await fetch("/api/admin/staff-treatments");
+      const data = await res.json();
 
-        if (res.ok && data.success) {
-          const treatments = data.data
-            .filter(item => item.treatment)
-            .map(item => ({ _id: item._id, name: item.treatment }));
+      if (res.ok && data.success) {
+        // Map API fields to "name" for dropdown
+        const treatments = data.data
+          .filter(item => item.treatment)
+          .map(item => ({ _id: item._id, name: item.treatment }));
 
-          const packages = data.data
-            .filter(item => item.package)
-            .map(item => ({ _id: item._id, name: item.package }));
+        const packages = data.data
+          .filter(item => item.package)
+          .map(item => ({ _id: item._id, name: item.package }));
 
-          setFetchedTreatments(treatments);
-          setFetchedPackages(packages);
-        } else {
-          console.error("Failed to fetch staff-treatments:", data.message);
-        }
-      } catch (error) {
-        console.error("Error fetching staff-treatments:", error);
+        setFetchedTreatments(treatments);
+        setFetchedPackages(packages);
+      } else {
+        console.error("Failed to fetch staff-treatments:", data.message);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching staff-treatments:", error);
+    }
+  };
 
-    fetchOptions();
-  }, []);
+  fetchOptions();
+}, []);
+
+
+// -------------------------------
+// Auto-update Advance Given Amount for insurance when Paid + Advance changes
+// -------------------------------
+useEffect(() => {
+  if (formData.insurance === "Yes") {
+    const paid = parseFloat(formData.paid) || 0;
+    const advance = parseFloat(formData.advance) || 0;
+    const totalAdvance = paid + advance;
+
+    setFormData(prev => ({
+      ...prev,
+      advanceGivenAmount: totalAdvance.toFixed(2),
+    }));
+  }
+}, [formData.paid, formData.advance, formData.insurance]);
+
+
 
   // -------------------------------
   // Generate invoice number on mount
@@ -126,16 +173,17 @@ const InvoiceManagementSystem = () => {
     setCalculatedFields(prev => ({ ...prev, pending }));
   }, [formData.amount, formData.paid, formData.advance]);
 
-  const calculateNeedToPay = useCallback(() => {
-    if (formData.insurance === "Yes" && formData.coPayPercent) {
-      const amount = parseFloat(formData.amount) || 0;
-      const coPayPercent = parseFloat(formData.coPayPercent) || 0;
-      const needToPay = Math.max(0, (amount * (100 - coPayPercent)) / 100);
-      setCalculatedFields(prev => ({ ...prev, needToPay }));
-    } else {
-      setCalculatedFields(prev => ({ ...prev, needToPay: 0 }));
-    }
-  }, [formData.amount, formData.coPayPercent, formData.insurance]);
+const calculateNeedToPay = useCallback(() => {
+  if (formData.insurance === "Yes" && formData.coPayPercent) {
+    const totalAmount = parseFloat(formData.amount) || 0;
+    const coPayPercent = parseFloat(formData.coPayPercent) || 0;
+    const needToPay = Math.max(0, totalAmount * (coPayPercent / 100));
+    setCalculatedFields(prev => ({ ...prev, needToPay }));
+  } else {
+    setCalculatedFields(prev => ({ ...prev, needToPay: 0 }));
+  }
+}, [formData.amount, formData.coPayPercent, formData.insurance]);
+
 
   const handleInputChange = useCallback(
     e => {
@@ -227,52 +275,104 @@ const InvoiceManagementSystem = () => {
     }
   }, [currentUser]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!validateForm()) {
-      alert("Please fix the errors before submitting");
+  //   if (!validateForm()) {
+  //     alert("Please fix the errors before submitting");
+  //     return;
+  //   }
+
+  //   usedEMRNumbers.add(formData.emrNumber);
+
+  //   const invoiceData = {
+  //     ...formData,
+  //     ...autoFields,
+  //     calculatedFields: {
+  //       pending: parseFloat(calculatedFields.pending) || 0,
+  //       needToPay: parseFloat(calculatedFields.needToPay) || 0,
+  //     },
+  //   };
+
+  //   try {
+  //     const staffToken = localStorage.getItem("staffToken");
+  //     if (!staffToken) {
+  //       alert("Authentication token not found. Please login again.");
+  //       return;
+  //     }
+
+  //     const response = await fetch("/api/staff/patient-registration", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${staffToken}`,
+  //       },
+  //       body: JSON.stringify(invoiceData),
+  //     });
+
+  //     const result = await response.json();
+  //     if (response.ok) {
+  //       alert("Invoice saved successfully!");
+  //       resetForm();
+  //     } else {
+  //       alert(`Error: ${result.message || "Failed to save invoice"}`);
+  //       console.error("API Error:", result);
+  //     }
+  //   } catch (err) {
+  //     console.error("Network Error:", err);
+  //     alert("Network error. Please try again later.");
+  //   }
+  // }, [formData, autoFields, calculatedFields, usedEMRNumbers, validateForm]);
+
+const handleSubmit = useCallback(async () => {
+  // 1️⃣ Validate form
+  if (!validateForm()) {
+    alert("Please fix the errors before submitting");
+    return;
+  }
+
+  // 2️⃣ Prepare invoice data
+  const invoiceData = {
+    ...formData,
+    ...autoFields,
+    userId: currentUser._id, // optional if needed by API
+    calculatedFields: {
+      pending: parseFloat(calculatedFields.pending) || 0,
+      needToPay: parseFloat(calculatedFields.needToPay) || 0,
+    },
+  };
+
+  try {
+    const token = localStorage.getItem("staffToken");
+    if (!token) {
+      alert("Authentication token not found. Please login again.");
       return;
     }
 
-    usedEMRNumbers.add(formData.emrNumber);
-
-    const invoiceData = {
-      ...formData,
-      ...autoFields,
-      calculatedFields: {
-        pending: parseFloat(calculatedFields.pending) || 0,
-        needToPay: parseFloat(calculatedFields.needToPay) || 0,
+    // 3️⃣ Call API
+    const res = await fetch("/api/staff/patient-registration", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-    };
+      body: JSON.stringify(invoiceData),
+    });
 
-    try {
-      const staffToken = localStorage.getItem("staffToken");
-      if (!staffToken) {
-        alert("Authentication token not found. Please login again.");
-        return;
-      }
+    const data = await res.json();
 
-      const response = await fetch("/api/staff/patient-registration", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${staffToken}`,
-        },
-        body: JSON.stringify(invoiceData),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        alert("Invoice saved successfully!");
-        resetForm();
-      } else {
-        alert(`Error: ${result.message || "Failed to save invoice"}`);
-        console.error("API Error:", result);
-      }
-    } catch (err) {
-      console.error("Network Error:", err);
-      alert("Network error. Please try again later.");
+    // 4️⃣ Handle API response
+    if (res.ok && data.success) {
+      alert("Invoice saved successfully!");
+      resetForm();
+    } else {
+      alert(`Error: ${data.message || "Failed to save invoice"}`);
+      console.error("API Error:", data);
     }
-  }, [formData, autoFields, calculatedFields, usedEMRNumbers, validateForm]);
+  } catch (err) {
+    console.error("Network Error:", err);
+    alert("Network error. Please try again later.");
+  }
+}, [formData, autoFields, currentUser, calculatedFields, validateForm]);
+
+
 
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA);
@@ -768,18 +868,14 @@ const InvoiceManagementSystem = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Advance Given Amount <span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="number"
-                            name="advanceGivenAmount"
-                            value={formData.advanceGivenAmount}
-                            onChange={handleInputChange}
-                            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                            errors.advanceGivenAmount ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                            placeholder="0.00"
-                            step="0.01"
-                            min="0"
-                        />
+                      <input
+  type="number"
+  name="advanceGivenAmount"
+  value={formData.advanceGivenAmount}
+  disabled
+  className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+/>
+
                         {errors.advanceGivenAmount && (
                             <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" />
