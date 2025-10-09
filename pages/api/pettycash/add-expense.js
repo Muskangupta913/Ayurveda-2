@@ -58,6 +58,8 @@
 //   }
 // }
 
+
+
 // import jwt from "jsonwebtoken";
 // import dbConnect from "../../../lib/database";
 // import PettyCash from "../../../models/PettyCash";
@@ -138,6 +140,7 @@
 //   },
 // };
 
+
 import jwt from "jsonwebtoken";
 import dbConnect from "../../../lib/database";
 import PettyCash from "../../../models/PettyCash";
@@ -210,9 +213,7 @@ export default async function handler(req, res) {
     if (pettyCash.staffId.toString() !== staffId.toString()) {
       return res
         .status(403)
-        .json({
-          message: "You are not authorized to add expense to this record",
-        });
+        .json({ message: "You are not authorized to add expense to this record" });
     }
 
     // Upload receipts to Cloudinary
