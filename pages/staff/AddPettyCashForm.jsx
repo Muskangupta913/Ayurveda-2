@@ -28,6 +28,9 @@ const [editingId, setEditingId] = useState(null);
 const [editType, setEditType] = useState(""); // "allocated" or "expense"
 const [receiptUrls, setReceiptUrls] = useState([]);
 const [expenseReceiptUrls, setExpenseReceiptUrls] = useState([]);
+// Local previews before submit
+const [pettyPreviews, setPettyPreviews] = useState([]); // array of { url, file }
+const [expensePreviews, setExpensePreviews] = useState([]); // array of { url, file }
 
 // ---------- GLOBAL DATE HANDLING ----------
 const toInputDate = (d) => {
@@ -135,6 +138,35 @@ const handleAmountChange = (index, value) => {
 const addAmountField = () =>
   setForm({ ...form, allocatedAmounts: [...form.allocatedAmounts, ""] });
 
+// ---------- FILE INPUT HANDLERS WITH PREVIEWS ----------
+const handlePettyFilesChange = (e) => {
+  const filesArray = Array.from(e.target.files || []);
+  const previews = filesArray.map((file) => ({ url: URL.createObjectURL(file), file }));
+  setForm({ ...form, receipts: filesArray });
+  setPettyPreviews(previews);
+};
+
+const removePettyPreviewAt = (index) => {
+  const newPreviews = pettyPreviews.filter((_, i) => i !== index);
+  const newFiles = (form.receipts || []).filter((_, i) => i !== index);
+  setPettyPreviews(newPreviews);
+  setForm({ ...form, receipts: newFiles });
+};
+
+const handleExpenseFilesChange = (e) => {
+  const filesArray = Array.from(e.target.files || []);
+  const previews = filesArray.map((file) => ({ url: URL.createObjectURL(file), file }));
+  setExpenseForm({ ...expenseForm, receipts: filesArray });
+  setExpensePreviews(previews);
+};
+
+const removeExpensePreviewAt = (index) => {
+  const newPreviews = expensePreviews.filter((_, i) => i !== index);
+  const newFiles = (expenseForm.receipts || []).filter((_, i) => i !== index);
+  setExpensePreviews(newPreviews);
+  setExpenseForm({ ...expenseForm, receipts: newFiles });
+};
+
 // ---------- CLOUDINARY UPLOAD ----------
 const uploadToCloudinary = async (files) => {
   if (!files?.length) return [];
@@ -164,21 +196,23 @@ const uploadToCloudinary = async (files) => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   try {
-    // 1️⃣ Upload receipts to Cloudinary first
-    const uploadedReceiptUrls = await uploadToCloudinary(form.receipts);
+    // Build multipart FormData to match API (multer with bodyParser disabled)
+    const formData = new FormData();
+    formData.append("patientName", form.patientName);
+    formData.append("patientEmail", form.patientEmail);
+    formData.append("patientPhone", form.patientPhone);
+    formData.append("note", form.note || "");
+    formData.append(
+      "allocatedAmounts",
+      JSON.stringify(form.allocatedAmounts.filter((a) => a !== ""))
+    );
 
-    // 2️⃣ Prepare payload
-    const payload = {
-      patientName: form.patientName,
-      patientEmail: form.patientEmail,
-      patientPhone: form.patientPhone,
-      note: form.note,
-      allocatedAmounts: form.allocatedAmounts,
-      receipts: uploadedReceiptUrls,
-    };
+    if (Array.isArray(form.receipts) && form.receipts.length > 0) {
+      form.receipts.forEach((file) => formData.append("receipts", file));
+    }
 
     if (editMode && editType === "allocated") {
-      // Update existing
+      // Update existing (keep JSON API for updates)
       await axios.put(
         "/api/pettycash/update",
         {
@@ -186,16 +220,19 @@ const handleSubmit = async (e) => {
           type: "allocated",
           data: {
             newAmount: Number(form.allocatedAmounts[0]),
-            receipts: uploadedReceiptUrls,
+            // No file changes on edit here; images managed via update endpoint if needed
             note: form.note,
           },
         },
         { headers: { Authorization: `Bearer ${staffToken}` } }
       );
     } else {
-      // Add new
-      await axios.post("/api/pettycash/add", payload, {
-        headers: { Authorization: `Bearer ${staffToken}` },
+      // Add new via multipart
+      await axios.post("/api/pettycash/add", formData, {
+        headers: {
+          Authorization: `Bearer ${staffToken}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
     }
 
@@ -209,6 +246,7 @@ const handleSubmit = async (e) => {
       allocatedAmounts: [""],
       receipts: [],
     });
+    setPettyPreviews([]);
     fetchPettyCash();
     alert(editMode ? "Record updated successfully!" : "Petty Cash added!");
   } catch (err) {
@@ -222,22 +260,20 @@ const handleSubmit = async (e) => {
 const handleExpenseSubmit = async (e) => {
   e.preventDefault();
   try {
-    // ✅ Check if new files were uploaded
-    const hasNewFiles = expenseForm.receipts && 
-                        expenseForm.receipts instanceof FileList && 
-                        expenseForm.receipts.length > 0;
-
-    let uploadedExpenseUrls = [];
-    
-    if (hasNewFiles) {
-      // Upload new files
-      uploadedExpenseUrls = await uploadToCloudinary(expenseForm.receipts);
-    } else if (Array.isArray(expenseForm.receipts)) {
-      // Keep existing URLs if no new files uploaded
-      uploadedExpenseUrls = expenseForm.receipts;
-    }
-
+    // For edit mode, continue using JSON update API
     if (editMode && editType === "expense") {
+      const hasNewFiles =
+        expenseForm.receipts &&
+        expenseForm.receipts instanceof FileList &&
+        expenseForm.receipts.length > 0;
+
+      let receiptsForUpdate = [];
+      if (hasNewFiles) {
+        receiptsForUpdate = await uploadToCloudinary(expenseForm.receipts);
+      } else if (Array.isArray(expenseForm.receipts)) {
+        receiptsForUpdate = expenseForm.receipts;
+      }
+
       await axios.put(
         "/api/pettycash/update",
         {
@@ -247,25 +283,35 @@ const handleExpenseSubmit = async (e) => {
             expenseId: expenseForm.expenseId,
             description: expenseForm.description,
             spentAmount: Number(expenseForm.spentAmount),
-            receipts: uploadedExpenseUrls, // ✅ Will preserve old URLs if no new upload
+            receipts: receiptsForUpdate,
           },
         },
         { headers: { Authorization: `Bearer ${staffToken}` } }
       );
     } else {
-      await axios.post(
-        "/api/pettycash/add-expense",
-        { ...expenseForm, receipts: uploadedExpenseUrls },
-        { headers: { Authorization: `Bearer ${staffToken}` } }
-      );
+      // Build multipart form-data for API (no pettyCashId; backend will use general record)
+      const formData = new FormData();
+      formData.append("description", expenseForm.description);
+      formData.append("spentAmount", String(expenseForm.spentAmount));
+
+      if (expenseForm.receipts) {
+        if (Array.isArray(expenseForm.receipts)) {
+          expenseForm.receipts.forEach((file) => formData.append("receipts", file));
+        } else if (expenseForm.receipts instanceof FileList) {
+          Array.from(expenseForm.receipts).forEach((file) => formData.append("receipts", file));
+        }
+      }
+
+      await axios.post("/api/pettycash/add-expense", formData, {
+        headers: {
+          Authorization: `Bearer ${staffToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
     }
 
     // ✅ Reset form properly
-    setExpenseForm({
-      description: "",
-      spentAmount: "",
-      receipts: [],
-    });
+    setExpenseForm({ description: "", spentAmount: "", receipts: [] });
     setEditMode(false);
     setEditingId(null);
     fetchPettyCash();
@@ -376,6 +422,7 @@ const handleEdit = (item, type, pettyCashId = null) => {
       spentAmount: item.spentAmount || "",
       receipts: item.receipts || [],
     });
+    setExpenseReceiptUrls(item.receipts || []);
   }
 };
 
@@ -430,9 +477,48 @@ const handleEdit = (item, type, pettyCashId = null) => {
     type="file"
     name="receipts"
     multiple
-    onChange={(e) => setExpenseForm({ ...expenseForm, receipts: e.target.files })}
+    onChange={handleExpenseFilesChange}
     className="w-full border p-2 rounded"
   />
+
+  {/* Previews for newly selected expense receipts (before submit) */}
+  {expensePreviews.length > 0 && (
+    <div className="mt-2 grid grid-cols-3 gap-2">
+      {expensePreviews.map((p, idx) => (
+        <div key={idx} className="relative">
+          <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
+          <button
+            type="button"
+            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
+            onClick={() => removeExpensePreviewAt(idx)}
+            aria-label="Remove receipt"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {editMode && editType === "expense" && expenseReceiptUrls?.length > 0 && (
+    <div className="mt-2 grid grid-cols-3 gap-2">
+      {expenseReceiptUrls.map((url, idx) => (
+        <a
+          key={idx}
+          href={url.url || url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <img
+            src={url.url || url}
+            alt={`Receipt ${idx + 1}`}
+            className="w-full h-20 object-cover rounded border"
+          />
+        </a>
+      ))}
+    </div>
+  )}
 
   <button
     type="submit"
@@ -518,9 +604,28 @@ const handleEdit = (item, type, pettyCashId = null) => {
   type="file"
   name="receipts"
   multiple
-  onChange={(e) => setForm({ ...form, receipts: e.target.files })}
+  onChange={handlePettyFilesChange}
   className="w-full border p-2 rounded"
 />
+
+{/* Previews for newly selected petty cash receipts (before submit) */}
+{pettyPreviews.length > 0 && (
+  <div className="mt-2 grid grid-cols-3 gap-2">
+    {pettyPreviews.map((p, idx) => (
+      <div key={idx} className="relative">
+        <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
+        <button
+          type="button"
+          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
+          onClick={() => removePettyPreviewAt(idx)}
+          aria-label="Remove receipt"
+        >
+          ×
+        </button>
+      </div>
+    ))}
+  </div>
+)}
 
 
             {form.allocatedAmounts.map((amt, idx) => (

@@ -1,11 +1,20 @@
 // pages/api/pettycash/getTotalAmount.js
 import dbConnect from "../../../lib/database"; // adjust path if needed
 import PettyCash from "../../../models/PettyCash";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   try {
+    // Require auth and derive staffId
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ success: false, message: "Token missing" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const staffId = decoded.userId;
+    if (!staffId) return res.status(401).json({ success: false, message: "Invalid token" });
+
     // Accept date as YYYY-MM-DD (client will pass this). If not provided, default to today's date.
     const { date } = req.query;
     const targetDate = date ? new Date(date) : new Date();
@@ -18,6 +27,10 @@ export default async function handler(req, res) {
 
     // Aggregation: filter allocatedAmounts & expenses to only those entries within [start, end)
     const pipeline = [
+      // Only include petty cash documents for this staff user
+      {
+        $match: { staffId: new mongoose.Types.ObjectId(staffId) },
+      },
       {
         $project: {
           patientName: 1,
