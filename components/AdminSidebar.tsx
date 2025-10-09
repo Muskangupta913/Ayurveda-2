@@ -61,84 +61,69 @@ const navItems: NavItem[] = [
     description: 'View and export user call back requests'
   },
   {
-    label: 'Manage Job',
-    path: '/admin/job-manage',
-    icon: '⚙️',
-    description: 'Approve or decline job'
-  },
-  {
-    label: "Staff Managemant",
-    icon: "💼",
-    description: "Manage Staff",
-    children: [
-      {
-        label: "Create Staff",
-        path: "/admin/create-staff",
-        icon: "📢",
-      },
-      {
-        label: "Create Services",
-        path: "/admin/admin-add-service",
-        icon: "💼",
-      },
-       {
-        label: "Create Vendor",
-        path: "/admin/admin-create-vendor",
-        icon: "💼",
-      },
-
-    ],
-  },
-
-  { 
-    label: 'All Blogs', 
-    path: '/admin/all-blogs', 
+    label: 'All Blogs',
+    path: '/admin/all-blogs',
     icon: '👥',
     description: 'Manage users & roles'
   },
-  { 
-    label: 'User Analytics', 
-    path: '/admin/analytics', 
+  {
+    label: 'User Analytics',
+    path: '/admin/analytics',
     icon: '📊',
     description: 'View detailed reports'
   },
 
   {
-  label: 'Request Call Back',
-  path: '/admin/get-in-touch',
-  icon: '📞',
-  description: 'View and export user call back requests'
-},
-  { 
-    label: 'Manage Job', 
-    path: '/admin/job-manage', 
+    label: 'Request Call Back',
+    path: '/admin/get-in-touch',
+    icon: '📞',
+    description: 'View and export user call back requests'
+  },
+  {
+    label: 'Manage Job',
+    path: '/admin/job-manage',
     icon: '⚙️',
     description: 'Approve or decline job'
   },
-  { 
-    label: 'Create-Staff', 
-    path: '/admin/create-staff', 
-    icon: '⚙️',
-    description: 'create-staff'
-  },
-  { 
-    label: 'View EOD Report', 
-    path: '/admin/getAllEodNotes', 
-    icon: '⚙️',
-    description: 'staff-report'
-  },
-  { 
-    label: 'Patient Report', 
-    path: '/admin/patient-report', 
-    icon: '⚙️',
-    description: 'patient-report'
-  },
-  { 
-    label: 'Track Expenses', 
-    path: '/admin/track-expenses', 
-    icon: '⚙️',
-    description: 'Track Expenses'
-  },
+
+  {
+    label: "Staff Management",
+    icon: "👥",
+    description: "Manage Staff",
+    children: [
+      {
+        label: "Create Staff",
+        path: "/admin/create-staff",
+        icon: "🧑‍💼",
+      },
+      {
+        label: "Create Services",
+        path: "/admin/admin-add-service",
+        icon: "🛠️",
+      },
+      {
+        label: "Create Vendor",
+        path: "/admin/admin-create-vendor",
+        icon: "🏢",
+      },
+      {
+        label: 'View EOD Report',
+        path: '/admin/getAllEodNotes',
+        icon: '📄',
+      },
+      {
+        label: 'Patient Report',
+        path: '/admin/patient-report',
+        icon: '📋',
+      },
+      {
+        label: 'Track Expenses',
+        path: '/admin/track-expenses',
+        icon: '💰',
+      },
+    ],
+  }
+
 ];
 
 interface AdminSidebarProps {
@@ -688,30 +673,6 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
           </div>
         </aside>
       </div>
-      {/* 
-    <style jsx>{`
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 4px;
-    }
-    
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
-      border-radius: 2px;
-    }
-    
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(45, 154, 165, 0.3);
-      border-radius: 2px;
-    }
-    
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: rgba(45, 154, 165, 0.5);
-    }
-
-    .custom-scrollbar {
-      -webkit-overflow-scrolling: touch;
-    }
-  `}</style> */}
     </>
   );
 };
