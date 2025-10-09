@@ -1,4 +1,4 @@
-//api/pettycash/getpettyCash.js
+// /api/pettycash/getpettyCash.js
 import jwt from "jsonwebtoken";
 import dbConnect from "../../../lib/database";
 import PettyCash from "../../../models/PettyCash";
@@ -39,9 +39,28 @@ export default async function handler(req, res) {
         : {}),
     };
 
-    const pettyCashList = await PettyCash.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
+    const pettyCashList = await PettyCash.find(filter).sort({ createdAt: -1 }).lean();
+
+    // ✅ Ensure receipts are returned with proper types
+    pettyCashList.forEach((record) => {
+      // For allocated amounts
+      record.allocatedAmounts = record.allocatedAmounts.map((alloc) => ({
+        ...alloc,
+        receipts: alloc.receipts?.map((url) => ({
+          url,
+          fileType: url.split(".").pop(), // e.g., pdf, jpg, png
+        })) || [],
+      }));
+
+      // For expenses
+      record.expenses = record.expenses.map((exp) => ({
+        ...exp,
+        receipts: exp.receipts?.map((url) => ({
+          url,
+          fileType: url.split(".").pop(),
+        })) || [],
+      }));
+    });
 
     res.status(200).json({ pettyCashList });
   } catch (error) {

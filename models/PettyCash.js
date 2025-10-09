@@ -1,6 +1,20 @@
 // models/PettyCash.js
 import mongoose from "mongoose";
-// adjust path if needed
+
+// Allocation schema (flat array)
+const AllocSchema = new mongoose.Schema({
+  amount: { type: Number, required: true },
+  receipts: [{ type: String }], // array of Cloudinary URLs
+  date: { type: Date, default: Date.now },
+});
+
+// Expense schema
+const ExpenseSchema = new mongoose.Schema({
+  description: { type: String, required: true },
+  spentAmount: { type: Number, required: true },
+  receipts: [{ type: String }], // array of Cloudinary URLs
+  date: { type: Date, default: Date.now },
+});
 
 const PettyCashSchema = new mongoose.Schema(
   {
@@ -9,64 +23,47 @@ const PettyCashSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    patientName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    patientEmail: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    patientPhone: {
-      type: String,
-      required: true,
-    },
-    note: {
-      type: String,
-      default: "",
-    },
+    patientName: { type: String, required: true, trim: true },
+    patientEmail: { type: String, required: true, trim: true },
+    patientPhone: { type: String, required: true },
+    note: { type: String, default: "" },
 
-    allocatedAmounts: [
-      {
-        amount: { type: Number, required: true },
-        date: { type: Date, default: Date.now },
-      },
-    ],
+    // Flat allocated amounts array
+    allocatedAmounts: [AllocSchema],
 
-    expenses: [
-      {
-        description: { type: String, required: true },
-        spentAmount: { type: Number, required: true },
-        date: { type: Date, default: Date.now },
-      },
-    ],
+    // Expenses array
+    expenses: [ExpenseSchema],
 
-    // Per-record aggregates (kept updated automatically)
-    totalAllocated: { type: Number, default: 0 }, // sum of allocatedAmounts
-    totalSpent: { type: Number, default: 0 },     // sum of expenses
-    totalAmount: { type: Number, default: 0 },    // totalAllocated - totalSpent
+    // Totals (auto-calculated)
+    totalAllocated: { type: Number, default: 0 },
+    totalSpent: { type: Number, default: 0 },
+    totalAmount: { type: Number, default: 0 }, // remaining
   },
   { timestamps: true }
 );
 
-// Automatically calculate totals before saving
+// Pre-save hook to calculate totals automatically
 PettyCashSchema.pre("save", function (next) {
+  // Sum allocated amounts
   const totalAllocated = (this.allocatedAmounts || []).reduce(
-    (acc, item) => acc + (item.amount || 0),
+    (acc, alloc) => acc + (alloc.amount || 0),
     0
   );
+
+  // Sum spent amounts
   const totalSpent = (this.expenses || []).reduce(
-    (acc, item) => acc + (item.spentAmount || 0),
+    (acc, exp) => acc + (exp.spentAmount || 0),
     0
   );
+
   this.totalAllocated = totalAllocated;
   this.totalSpent = totalSpent;
   this.totalAmount = totalAllocated - totalSpent;
+
   next();
 });
 
+// Avoid recompilation errors in Next.js
 delete mongoose.models.PettyCash;
 export default mongoose.models.PettyCash ||
   mongoose.model("PettyCash", PettyCashSchema);
