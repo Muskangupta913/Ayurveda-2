@@ -58,6 +58,8 @@
 //   }
 // }
 
+
+
 // import jwt from "jsonwebtoken";
 // import dbConnect from "../../../lib/database";
 // import PettyCash from "../../../models/PettyCash";
@@ -138,6 +140,7 @@
 //   },
 // };
 
+
 import jwt from "jsonwebtoken";
 import dbConnect from "../../../lib/database";
 import PettyCash from "../../../models/PettyCash";
@@ -177,13 +180,12 @@ export default async function handler(req, res) {
     await runMiddleware(req, res, upload.array("receipts"));
 
     // Access fields from req.body safely
-    const pettyCashId = req.body.pettyCashId;
+    const pettyCashId = req.body ? req.body.pettyCashId : undefined;
     const description = req.body.description;
     const spentAmount = req.body.spentAmount;
 
     // Validate required fields
     if (
-      !pettyCashId ||
       !description ||
       spentAmount === undefined ||
       spentAmount === ""
@@ -203,16 +205,39 @@ export default async function handler(req, res) {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const pettyCash = await PettyCash.findById(pettyCashId);
-    if (!pettyCash)
-      return res.status(404).json({ message: "Petty cash record not found" });
+    let pettyCash = null;
+    if (pettyCashId) {
+      pettyCash = await PettyCash.findById(pettyCashId);
+      if (!pettyCash)
+        return res
+          .status(404)
+          .json({ message: "Petty cash record not found" });
 
-    if (pettyCash.staffId.toString() !== staffId.toString()) {
-      return res
-        .status(403)
-        .json({
-          message: "You are not authorized to add expense to this record",
+      if (pettyCash.staffId.toString() !== staffId.toString()) {
+        return res
+          .status(403)
+          .json({ message: "You are not authorized to add expense to this record" });
+      }
+    } else {
+      // Not based on patient: use/find a general petty cash record per staff
+      pettyCash = await PettyCash.findOne({
+        staffId,
+        patientName: "General",
+        patientEmail: "-",
+        patientPhone: "-",
+      });
+
+      if (!pettyCash) {
+        pettyCash = await PettyCash.create({
+          staffId,
+          patientName: "General",
+          patientEmail: "-",
+          patientPhone: "-",
+          note: "Auto-created general petty cash for staff-level expenses",
+          allocatedAmounts: [],
+          expenses: [],
         });
+      }
     }
 
     // Upload receipts to Cloudinary

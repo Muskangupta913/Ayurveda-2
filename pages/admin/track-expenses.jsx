@@ -1,341 +1,624 @@
+// components/PettyCashAndExpense.jsx
 import React, { useState, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight, Eye, X, User, Wallet } from "lucide-react";
-import AdminLayout from "../../components/AdminLayout";
-import withAdminAuth from "../../components/withAdminAuth";
+import axios from "axios";
 
-function AllPettyCashAdmin() {
-  const [data, setData] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [staffList, setStaffList] = useState([]);
-  const [filters, setFilters] = useState({ staff: "", start: "", end: "", search: "" });
-  const [loading, setLoading] = useState(false);
-  const [receipts, setReceipts] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [page, setPage] = useState(1);
-  const [toast, setToast] = useState(null);
-  const perPage = 20;
+export default function PettyCashAndExpense() {
+  const [form, setForm] = useState({
+    patientName: "",
+    patientEmail: "",
+    patientPhone: "",
+    note: "",
+    allocatedAmounts: [""],
+  });
+  const [expenseForm, setExpenseForm] = useState({
+    description: "",
+    spentAmount: "",
+  });
 
-  const showToast = (msg, type = "info") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+  const [message, setMessage] = useState("");
+  const [expenseMsg, setExpenseMsg] = useState("");
+  const [pettyCashList, setPettyCashList] = useState([]);
+  const [search, setSearch] = useState("");
+
+ 
+
+
+  // Date filter and global data
+  const toInputDate = (d) => {
+    const dt = new Date(d);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const [selectedDate, setSelectedDate] = useState(toInputDate(new Date()));
+  const [globalData, setGlobalData] = useState({
+    globalAllocated: 0,
+    globalSpent: 0,
+    globalRemaining: 0,
+    patients: [],
+  });
+
+   const isTodaySelected = selectedDate === new Date().toISOString().split("T")[0];
+  
+  // Filtered expenses based on selected date
+  const [filteredExpenses, setFilteredExpenses] = useState([]);
+
+  const staffToken =
+    typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+
+  // Fetch petty cash list
+  const fetchPettyCash = async (query = "") => {
+    try {
+      const res = await axios.get(
+        `/api/pettycash/getpettyCash${query ? `?search=${query}` : ""}`,
+        { headers: { Authorization: `Bearer ${staffToken}` } }
+      );
+      setPettyCashList(res.data.pettyCashList);
+      // Filter expenses based on selected date after fetching
+      filterExpensesByDate(res.data.pettyCashList, selectedDate);
+    } catch (error) {
+      console.error("Error fetching petty cash:", error);
+    }
   };
 
-  const getToday = () => new Date().toISOString().split('T')[0];
+  // Filter expenses by date
+  const filterExpensesByDate = (cashList, dateStr) => {
+    const targetDate = new Date(dateStr);
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const { staff, start, end } = filters;
-      let s = start, e = end;
-
-      if (!s && !e) {
-        s = e = getToday();
-        setFilters(prev => ({ ...prev, start: s, end: e }));
-      } else if (s && !e) {
-        e = s;
-        setFilters(prev => ({ ...prev, end: s }));
-      } else if (!s && e) {
-        s = e;
-        setFilters(prev => ({ ...prev, start: e }));
-      }
-
-      const params = new URLSearchParams({ startDate: s, endDate: e });
-      if (staff) params.append("staffName", staff);
-
-      const token = localStorage.getItem("adminToken");
-      const res = await fetch(`/api/admin/getAllPettyCash?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+    const allExpenses = [];
+    cashList.forEach((record) => {
+      record.expenses.forEach((expense) => {
+        const expDate = new Date(expense.date);
+        if (expDate >= targetDate && expDate < nextDay) {
+          allExpenses.push({
+            ...expense,
+            patientName: record.patientName,
+            patientEmail: record.patientEmail,
+          });
+        }
       });
+    });
+    setFilteredExpenses(allExpenses);
+  };
 
-      if (!res.ok) throw new Error("Failed to fetch");
-      const json = await res.json();
-
-      setData(json.data || []);
-      setFiltered(json.data || []);
-      if (json.staffList && !staffList.length) setStaffList(json.staffList);
-      showToast("Data loaded", "success");
+  // Fetch global totals for selectedDate
+  const fetchGlobalTotals = async (dateStr) => {
+    try {
+      const res = await axios.get(
+        `/api/pettycash/getTotalAmount${dateStr ? `?date=${dateStr}` : ""}`,
+        { headers: { Authorization: `Bearer ${staffToken}` } }
+      );
+      if (res.data.success) {
+        setGlobalData({
+          globalAllocated: res.data.globalAllocated || 0,
+          globalSpent: res.data.globalSpent || 0,
+          globalRemaining: res.data.globalRemaining || 0,
+          patients: res.data.patients || [],
+        });
+      }
     } catch (err) {
-      showToast(err.message || "Error loading data", "error");
-    } finally {
-      setLoading(false);
+      console.error("Error fetching global totals:", err);
     }
   };
 
   useEffect(() => {
-    const today = getToday();
-    setFilters({ staff: "", start: today, end: today, search: "" });
-    fetchData();
+    fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Whenever selectedDate changes, refetch and filter
   useEffect(() => {
-    const result = data.filter(item =>
-      filters.search === "" ||
-      item.staff.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      item.staff.email.toLowerCase().includes(filters.search.toLowerCase()) ||
-      item.patients.some(p =>
-        p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        p.phone.includes(filters.search)
-      )
+    fetchGlobalTotals(selectedDate);
+    filterExpensesByDate(pettyCashList, selectedDate);
+  }, [selectedDate]);
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleAmountChange = (index, value) => {
+    const updated = [...form.allocatedAmounts];
+    updated[index] = value;
+    setForm({ ...form, allocatedAmounts: updated });
+  };
+
+  const addAmountField = () =>
+    setForm({ ...form, allocatedAmounts: [...form.allocatedAmounts, ""] });
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setMessage("");
+
+  try {
+    // 🧾 Build FormData (because we now support receipts upload)
+    const formData = new FormData();
+    formData.append("patientName", form.patientName);
+    formData.append("patientEmail", form.patientEmail);
+    formData.append("patientPhone", form.patientPhone);
+    formData.append("note", form.note);
+    formData.append(
+      "allocatedAmounts",
+      JSON.stringify(form.allocatedAmounts.filter((a) => a !== ""))
     );
-    setFiltered(result);
-    setPage(1);
-  }, [filters.search, data]);
 
-  const totalPages = Math.ceil(filtered.length / perPage);
-  const currentData = filtered.slice((page - 1) * perPage, page * perPage);
+    // ✅ Append receipt files if any
+    if (form.receipts && form.receipts.length > 0) {
+      Array.from(form.receipts).forEach((file) =>
+        formData.append("receipts", file)
+      );
+    }
 
-  const isImage = (url) => /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-  const isPDF = (url) => /\.pdf$/i.test(url);
-  const formatDateTime = (d) => {
-    const date = new Date(d);
-    return date.toLocaleString('en-IN', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
+    // 🧠 Send to API
+    const res = await axios.post("/api/pettycash/add", formData, {
+      headers: {
+        Authorization: `Bearer ${staffToken}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    setMessage(res.data.message);
+
+    // 🧹 Reset Form
+    setForm({
+      patientName: "",
+      patientEmail: "",
+      patientPhone: "",
+      note: "",
+      allocatedAmounts: [""],
+      receipts: [],
+    });
+
+    fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+  } catch (error) {
+    console.error(error);
+    setMessage(error.response?.data?.message || "Error adding petty cash");
+  }
+};
+
+
+  const handleExpenseChange = (e) =>
+    setExpenseForm({ ...expenseForm, [e.target.name]: e.target.value });
+
+const handleExpenseSubmit = async (e) => {
+  e.preventDefault();
+  setExpenseMsg("");
+
+  try {
+    if (pettyCashList.length === 0) {
+      setExpenseMsg("No petty cash record found. Please add one first.");
+      return;
+    }
+
+    const pettyCashId = pettyCashList[0]._id;
+
+    // Build FormData
+    const formData = new FormData();
+    formData.append("pettyCashId", pettyCashId);
+    formData.append("description", expenseForm.description);
+    formData.append("spentAmount", expenseForm.spentAmount);
+
+    // Append multiple receipts if any
+    if (expenseForm.receipts) {
+      Array.from(expenseForm.receipts).forEach((file) => {
+        formData.append("receipts", file);
+      });
+    }
+
+    const res = await axios.post("/api/pettycash/add-expense", formData, {
+      headers: {
+        Authorization: `Bearer ${staffToken}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    setExpenseMsg(res.data.message);
+    setExpenseForm({ description: "", spentAmount: "", receipts: [] });
+    fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+  } catch (error) {
+    console.error(error);
+    setExpenseMsg(
+      error.response?.data?.message || "Error adding expense record"
+    );
+  }
+};
+
+
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearch(value);
+    fetchPettyCash(value);
+  };
+
+  // Filter petty cash records by selected date
+  const getFilteredPettyCashRecords = () => {
+    const targetDate = new Date(selectedDate);
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
+
+    return pettyCashList.filter((record) => {
+      const hasAllocations = record.allocatedAmounts.some((alloc) => {
+        const allocDate = new Date(alloc.date);
+        return allocDate >= targetDate && allocDate < nextDay;
+      });
+      const hasExpenses = record.expenses.some((exp) => {
+        const expDate = new Date(exp.date);
+        return expDate >= targetDate && expDate < nextDay;
+      });
+      return hasAllocations || hasExpenses;
     });
   };
 
+  const filteredRecords = getFilteredPettyCashRecords();
+
+
+  const handleDeletePatient = async (pettyCashId) => {
+  if (!confirm("Are you sure you want to delete this patient record?")) return;
+
+  try {
+    await axios.delete("/api/pettycash/delete-pattycash", {
+      headers: { Authorization: `Bearer ${staffToken}` },
+      data: { type: "patient", pettyCashId },
+    });
+    fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || "Error deleting patient");
+  }
+};
+
+const handleDeleteExpense = async (expenseId) => {
+  if (pettyCashList.length === 0) return;
+  const pettyCashId = pettyCashList[0]._id;
+  if (!confirm("Delete this expense?")) return;
+
+  try {
+    await axios.delete("/api/pettycash/delete-pattycash", {
+      headers: { Authorization: `Bearer ${staffToken}` },
+      data: { type: "expense", pettyCashId, expenseId },
+    });
+    fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || "Error deleting expense");
+  }
+};
+
+
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-6">
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-white ${
-          toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
-        }`}>
-          {toast.msg}
-        </div>
-      )}
+    <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg p-6">
+      <h2 className="text-xl font-bold mb-6 text-center">
+        Petty Cash Management
+      </h2>
 
-      {/* Header */}
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Petty Cash Records</h1>
-
-      {/* Filters */}
-      <div className="bg-white rounded shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="lg:col-span-2 relative">
-            <Search className="absolute left-3 top-3 text-gray-900 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search staff or patient..."
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-9 pr-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
-            />
-          </div>
-          
-          <select
-            value={filters.staff}
-            onChange={(e) => setFilters(prev => ({ ...prev, staff: e.target.value }))}
-            className="px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
-          >
-            <option value="">All Staff</option>
-            {staffList.map(name => <option key={name} value={name}>{name}</option>)}
-          </select>
-
-          <input
-            type="date"
-            value={filters.start}
-            onChange={(e) => setFilters(prev => ({ ...prev, start: e.target.value }))}
-            className="px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
-          />
-
-          <input
-            type="date"
-            value={filters.end}
-            onChange={(e) => setFilters(prev => ({ ...prev, end: e.target.value }))}
-            className="px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
-          />
-        </div>
-
-        <button
-          onClick={fetchData}
-          className="mt-3 bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700"
-        >
-          Apply
-        </button>
+      {/* Date filter */}
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <label className="font-medium">Select Date:</label>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="border p-2 rounded"
+        />
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-        </div>
-      ) : currentData.length > 0 ? (
-        <>
-          {/* Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
-            {currentData.map(item => (
-              <div key={item.staff._id} className="bg-white rounded shadow">
-                {/* Header */}
-                <div className="bg-blue-600 text-white p-4 flex items-center gap-3">
-                  <User className="w-8 h-8" />
-                  <div>
-                    <h3 className="font-bold">{item.staff.name}</h3>
-                    <p className="text-sm opacity-90">{item.staff.email}</p>
-                  </div>
-                </div>
+      {/* Two forms side-by-side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* LEFT: Add Expense Form */}
+        <div className="border rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-3 text-blue-700">
+            Add Expense
+          </h3>
+          {/* Expense Form */}
+<form onSubmit={handleExpenseSubmit} className="space-y-3">
+  <input
+    type="text"
+    name="description"
+    placeholder="Expense Description"
+    value={expenseForm.description}
+    onChange={handleExpenseChange}
+    className="w-full border p-2 rounded"
+    required
+  />
 
-                {/* Summary */}
-                <div className="grid grid-cols-3 gap-2 p-4 bg-gray-50 text-center">
-                  <div>
-                    <p className="text-xs text-gray-800">Total Allocated</p>
-                    <p className="font-bold text-gray-900">₹{item.totalAllocated}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-800">Spent</p>
-                    <p className="font-bold text-gray-900">₹{item.totalSpent}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-800">Balance</p>
-                    <p className="font-bold text-gray-900">₹{item.totalAmount}</p>
-                  </div>
-                </div>
+  <input
+    type="number"
+    name="spentAmount"
+    placeholder="Spent Amount"
+    value={expenseForm.spentAmount}
+    onChange={handleExpenseChange}
+    className="w-full border p-2 rounded"
+    required
+  />
 
-                {/* Patients */}
-                <div className="p-4 border-t">
-                  <h4 className="font-semibold text-gray-900 mb-2">Patients ({item.patients.length})</h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {item.patients.map((p, i) => (
-                      <div key={i} className="bg-gray-50 rounded p-2 text-sm border">
-                        <p className="font-semibold text-gray-900">{p.name}</p>
-                        <p className="text-gray-800 text-xs">{p.phone} • {p.email}</p>
-                        <div className="mt-2 space-y-2">
-                          {p.allocatedAmounts.map((a, j) => (
-                            <div key={j} className="bg-white rounded p-2 border-l-2 border-green-500">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="font-medium text-gray-900">Allocated: ₹{a.amount}</p>
-                                  <p className="text-xs text-gray-800 mt-1">{formatDateTime(a.date)}</p>
-                                </div>
-                                {a.receipts?.length > 0 && (
-                                  <button
-                                    onClick={() => { setReceipts(a.receipts); setShowModal(true); }}
-                                    className="text-blue-600 hover:underline flex items-center gap-1 text-xs"
-                                  >
-                                    <Eye className="w-3 h-3" /> View
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+  <input
+    type="file"
+    name="receipts"
+    multiple
+    onChange={(e) => setExpenseForm({ ...expenseForm, receipts: e.target.files })}
+    className="w-full border p-2 rounded"
+  />
 
-                {/* Expenses */}
-                {item.expenses.length > 0 && (
-                  <div className="p-4 border-t">
-                    <h4 className="font-semibold text-gray-900 mb-2">Expenses ({item.expenses.length})</h4>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {item.expenses.map((e, i) => (
-                        <div key={i} className="bg-red-50 rounded p-2 text-sm border border-red-200">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-gray-900">{e.description}</p>
-                              <p className="text-gray-900 font-semibold mt-1">Spent: ₹{e.spentAmount}</p>
-                              <p className="text-xs text-gray-800 mt-1">{formatDateTime(e.date)}</p>
-                            </div>
-                            {e.receipts?.length > 0 && (
-                              <button
-                                onClick={() => { setReceipts(e.receipts); setShowModal(true); }}
-                                className="text-blue-600 hover:underline flex items-center gap-1 text-xs"
-                              >
-                                <Eye className="w-3 h-3" /> View
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+  <button
+    type="submit"
+    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+  >
+    Add Expense
+  </button>
+</form>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="bg-white rounded shadow p-4 flex justify-between items-center">
-              <p className="text-sm text-gray-900">
-                {(page - 1) * perPage + 1}-{Math.min(page * perPage, filtered.length)} of {filtered.length}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="p-2 border rounded disabled:opacity-50"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPage(i + 1)}
-                    className={`px-3 py-1 rounded ${page === i + 1 ? 'bg-blue-600 text-white' : 'border text-gray-900'}`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="p-2 border rounded disabled:opacity-50"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+          {expenseMsg && (
+            <p className="text-center text-green-600 mt-3">{expenseMsg}</p>
           )}
-        </>
-      ) : (
-        <div className="bg-white rounded shadow p-12 text-center">
-          <Wallet className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-900 text-lg">No records found</p>
-        </div>
-      )}
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-bold text-gray-900">Receipts</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-900 hover:text-gray-800">
-                <X className="w-5 h-5" />
-              </button>
+          {/* Show expenses for selected date */}
+          <div className="mt-6">
+            <h4 className="text-md font-semibold mb-2">
+              Expenses on {selectedDate}
+            </h4>
+            {filteredExpenses.length > 0 ? (
+              <ul className="space-y-2">
+                {filteredExpenses.map((ex) => (
+                  <li
+                    key={ex._id}
+                    className="border rounded p-2 text-sm"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{ex.description}</span>
+                      <span className="font-semibold text-blue-600">
+                        ₹{ex.spentAmount}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 text-sm">No expenses for this date.</p>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT: Add Petty Cash Form */}
+        <div className="border rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-3 text-blue-700">
+            Add Petty Cash
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              type="text"
+              name="patientName"
+              placeholder="Patient Name"
+              value={form.patientName}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+            <input
+              type="email"
+              name="patientEmail"
+              placeholder="Patient Email"
+              value={form.patientEmail}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+            <input
+              type="text"
+              name="patientPhone"
+              placeholder="Patient Phone"
+              value={form.patientPhone}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+            <textarea
+              name="note"
+              placeholder="Note (optional)"
+              value={form.note}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+            ></textarea>
+           
+            <input
+  type="file"
+  name="receipts"
+  multiple
+  onChange={(e) => setForm({ ...form, receipts: e.target.files })}
+  className="w-full border p-2 rounded"
+/>
+
+
+            {form.allocatedAmounts.map((amt, idx) => (
+              <input
+                key={idx}
+                type="number"
+                placeholder={`Allocated Amount ${idx + 1}`}
+                value={amt}
+                onChange={(e) => handleAmountChange(idx, e.target.value)}
+                className="w-full border p-2 rounded"
+                required
+              />
+            ))}
+
+            <button
+              type="button"
+              onClick={addAmountField}
+              className="w-full border text-blue-600 border-blue-600 py-2 rounded hover:bg-blue-50"
+            >
+              + Add More Allocations
+            </button>
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            >
+              Add Petty Cash
+            </button>
+          </form>
+          {message && (
+            <p className="text-center text-green-600 mt-3">{message}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Search and Table */}
+      <div className="mt-8">
+        <input
+          type="text"
+          placeholder="Search by Name or Email..."
+          value={search}
+          onChange={handleSearch}
+          className="w-full border p-2 rounded mb-4"
+        />
+
+        <h3 className="text-lg font-semibold mb-2">
+          Petty Cash Records for {selectedDate}
+        </h3>
+        {filteredRecords.length === 0 ? (
+          <p className="text-gray-500">No records found for this date.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border p-2">Patient Name</th>
+                  <th className="border p-2">Email</th>
+                  <th className="border p-2">Phone</th>
+                  <th className="border p-2">Allocated (This Date)</th>
+                  <th className="border p-2">Note</th>
+                </tr>
+              </thead>
+             <tbody>
+  {filteredRecords.map((item) => {
+    const targetDate = new Date(selectedDate);
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
+
+    const allocForDate = item.allocatedAmounts.filter((alloc) => {
+      const allocDate = new Date(alloc.date);
+      return allocDate >= targetDate && allocDate < nextDay;
+    });
+
+    return (
+      <tr key={item._id} className="text-center">
+        <td className="border p-2">{item.patientName}</td>
+        <td className="border p-2">{item.patientEmail}</td>
+        <td className="border p-2">{item.patientPhone}</td>
+        <td className="border p-2">
+          {allocForDate.length > 0 ? (
+            allocForDate.map((a, idx) => <div key={idx}>₹{a.amount}</div>)
+          ) : (
+            <span className="text-gray-400">-</span>
+          )}
+        </td>
+        <td className="border p-2">{item.note || "-"}</td>
+        {/* ✅ DELETE PATIENT BUTTON */}
+        <td className="border p-2">
+          {isTodaySelected && (
+  <button
+    onClick={() => handleDeletePatient(item._id)}
+    className="text-red-600 hover:text-red-800 ml-2"
+  >
+    Delete
+  </button>
+)}
+
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
+
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* All Expenses for selected date */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-2">
+          All Expenses for {selectedDate}
+        </h3>
+        {filteredExpenses.length === 0 ? (
+          <p className="text-gray-500">No expenses for this date.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border p-2">Description</th>
+                  <th className="border p-2">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+             {filteredExpenses.map((ex) => (
+  <li key={ex._id} className="border rounded p-2 text-sm">
+    <div className="flex justify-between items-center">
+      <div>
+        <div className="font-medium">{ex.description}</div>
+       
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-blue-600">
+          ₹{ex.spentAmount}
+        </span>
+        {/* ✅ DELETE EXPENSE BUTTON */}
+       {isTodaySelected && (
+  <button
+    onClick={() => handleDeleteExpense(ex._id)}
+    className="text-red-600 hover:text-red-800 ml-2 text-xs"
+  >
+    Delete
+  </button>
+)}
+
+      </div>
+    </div>
+  </li>
+))}
+
+
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Global totals for selected date */}
+      <div className="mt-8 border rounded-lg p-4 bg-blue-50">
+        <h3 className="text-lg font-semibold mb-3">
+          Global Totals for {selectedDate}
+        </h3>
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-sm text-gray-600">Total Allocated</div>
+            <div className="text-2xl font-bold text-blue-700">
+              ₹{globalData.globalAllocated}
             </div>
-            <div className="overflow-y-auto p-4 space-y-3">
-              {receipts.map((file, i) => (
-                <div key={i} className="border rounded p-3">
-                  {isImage(file) ? (
-                    <img src={file} alt={`Receipt ${i + 1}`} className="w-full max-h-80 object-contain" />
-                  ) : isPDF(file) ? (
-                    <iframe src={file} title={`Receipt ${i + 1}`} className="w-full h-80" />
-                  ) : (
-                    <a href={file} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                      Open File {i + 1}
-                    </a>
-                  )}
-                </div>
-              ))}
+          </div>
+          <div>
+            <div className="text-sm text-gray-600">Total Spent</div>
+            <div className="text-2xl font-bold text-red-600">
+              ₹{globalData.globalSpent}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600">Total Remaining</div>
+            <div className="text-2xl font-bold text-green-600">
+              ₹{globalData.globalRemaining}
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
-
-AllPettyCashAdmin.getLayout = function PageLayout(page) {
-  return <AdminLayout>{page}</AdminLayout>;
-};
-
-const ProtectedDashboard = withAdminAuth(AllPettyCashAdmin);
-ProtectedDashboard.getLayout = AllPettyCashAdmin.getLayout;
-
-export default ProtectedDashboard;
