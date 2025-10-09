@@ -1,18 +1,6 @@
 // models/PettyCash.js
 import mongoose from "mongoose";
-
-const AllocSchema = new mongoose.Schema({
-  amount: { type: Number, required: true },
-  date: { type: Date, default: Date.now },
-  receipts: [{ type: String }], // array of Cloudinary URLs
-});
-
-const ExpenseSchema = new mongoose.Schema({
-  description: { type: String, required: true },
-  spentAmount: { type: Number, required: true },
-  receipts: [{ type: String }], // array of Cloudinary URLs
-  date: { type: Date, default: Date.now },
-});
+// adjust path if needed
 
 const PettyCashSchema = new mongoose.Schema(
   {
@@ -40,14 +28,25 @@ const PettyCashSchema = new mongoose.Schema(
       default: "",
     },
 
-    allocatedAmounts: [AllocSchema],
+    allocatedAmounts: [
+      {
+        amount: { type: Number, required: true },
+        date: { type: Date, default: Date.now },
+      },
+    ],
 
-    expenses: [ExpenseSchema],
+    expenses: [
+      {
+        description: { type: String, required: true },
+        spentAmount: { type: Number, required: true },
+        date: { type: Date, default: Date.now },
+      },
+    ],
 
     // Per-record aggregates (kept updated automatically)
     totalAllocated: { type: Number, default: 0 }, // sum of allocatedAmounts
-    totalSpent: { type: Number, default: 0 }, // sum of expenses
-    totalAmount: { type: Number, default: 0 }, // totalAllocated - totalSpent
+    totalSpent: { type: Number, default: 0 },     // sum of expenses
+    totalAmount: { type: Number, default: 0 },    // totalAllocated - totalSpent
   },
   { timestamps: true }
 );
