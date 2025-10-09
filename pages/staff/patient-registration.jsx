@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Calendar, User, DollarSign, FileText, AlertCircle, Search, CheckCircle, XCircle, AlertTriangle, X } from "lucide-react";
 import ClinicLayout from '../../components/staffLayout';
 import withClinicAuth from '../../components/withStaffAuth';
+import { useRouter } from "next/router";   
 // Toast Component
 const Toast = ({ message, type, onClose }) => {
   const icons = {
@@ -262,40 +263,48 @@ const InvoiceManagementSystem = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData, usedEMRNumbers]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!validateForm()) {
-      showToast("Please fix validation errors", "error");
-      return;
-    }
+const router = useRouter(); // <-- inside your component
 
-    setConfirmModal({
-      isOpen: true,
-      title: "Save Invoice",
-      message: "Are you sure you want to save this invoice? Please verify all details are correct.",
-      type: "info",
-      action: async () => {
-        try {
-          const token = localStorage.getItem("userToken");
-          const res = await fetch("/api/staff/patient-registration", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ ...formData, ...autoFields, userId: currentUser._id, calculatedFields })
-          });
-          const data = await res.json();
-          
-          if (res.ok && data.success) {
-            showToast("Invoice saved successfully!", "success");
-            resetForm();
-          } else {
-            showToast(data.message || "Failed to save invoice", "error");
-          }
-        } catch {
-          showToast("Network error. Please try again", "error");
+const handleSubmit = useCallback(async () => {
+  if (!validateForm()) {
+    showToast("Please fix validation errors", "error");
+    return;
+  }
+
+  setConfirmModal({
+    isOpen: true,
+    title: "Save Invoice",
+    message: "Are you sure you want to save this invoice? Please verify all details are correct.",
+    type: "info",
+    action: async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+        const res = await fetch("/api/staff/patient-registration", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json", 
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({ ...formData, ...autoFields, userId: currentUser._id, calculatedFields })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+          showToast("Invoice saved successfully!", "success");
+          resetForm();
+
+          // Redirect to patient information page
+          router.push("/staff/patient-information"); 
+        } else {
+          showToast(data.message || "Failed to save invoice", "error");
         }
-        setConfirmModal({ isOpen: false, action: null });
+      } catch {
+        showToast("Network error. Please try again", "error");
       }
-    });
-  }, [formData, autoFields, currentUser, calculatedFields, validateForm, showToast]);
+      setConfirmModal({ isOpen: false, action: null });
+    }
+  });
+}, [formData, autoFields, currentUser, calculatedFields, validateForm, showToast, router]);
 
   const resetForm = useCallback(() => {
     setConfirmModal({
@@ -439,7 +448,7 @@ const InvoiceManagementSystem = () => {
                   Patient Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
+                  {[{ name: "emrNumber", label: "EMR Number", required: true },
                     { name: "firstName", label: "First Name", required: true },
                     { name: "lastName", label: "Last Name", required: true },
                     { name: "email", label: "Email", type: "email", required: true },
