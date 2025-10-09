@@ -1,21 +1,90 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Calendar, User, DollarSign, FileText, AlertCircle } from "lucide-react";
+import { Calendar, User, DollarSign, FileText, X, CheckCircle, AlertCircle } from "lucide-react";
+import ClinicLayout from '../../../components/staffLayout';
+import withClinicAuth from '../../../components/withStaffAuth';
+
 const paymentMethods = ["Cash", "Card", "BT", "Tabby", "Tamara"];
 
+// Toast Component
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const styles = {
+    success: "bg-green-50 border-green-200 text-green-800",
+    error: "bg-red-50 border-red-200 text-red-800",
+    warning: "bg-yellow-50 border-yellow-200 text-yellow-800"
+  };
+
+  const icons = {
+    success: <CheckCircle className="w-5 h-5 text-green-600" />,
+    error: <AlertCircle className="w-5 h-5 text-red-600" />,
+    warning: <AlertCircle className="w-5 h-5 text-yellow-600" />
+  };
+
+  return (
+    <div className={`fixed top-4 right-4 left-4 sm:left-auto sm:right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg ${styles[type]} animate-slide-in max-w-md`}>
+      {icons[type]}
+      <span className="font-medium text-sm flex-1">{message}</span>
+      <button onClick={onClose} className="ml-2 hover:opacity-70 flex-shrink-0">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+// Confirmation Modal
+const ConfirmModal = ({ isOpen, onConfirm, onCancel, title, message }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-xl shadow-2xl p-5 sm:p-6 max-w-md w-full animate-scale-in">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">{title}</h3>
+        <p className="text-sm sm:text-base text-gray-700 mb-5 sm:mb-6">{message}</p>
+        <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            className="w-full sm:w-auto px-5 py-2 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50 transition-colors text-sm sm:text-base"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="w-full sm:w-auto px-5 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors text-sm sm:text-base"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const InvoiceUpdateSystem = () => {
+  const router = useRouter();
+  const { id } = router.query;
   const [currentUser] = useState({ name: "Admin User", role: "Staff" });
   const [invoiceInfo, setInvoiceInfo] = useState(null);
   const [formData, setFormData] = useState({});
   const [calculatedFields, setCalculatedFields] = useState({ pending: 0, needToPay: 0 });
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
-  const router = useRouter();
-  const { id } = router.query;
+  const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null });
 
-  // ----------------------------
-  // Fetch invoice + patient info
-  // ----------------------------
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
+
+  const showConfirm = (title, message, onConfirm) => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm });
+  };
+
   useEffect(() => {
     if (!id) return;
 
@@ -30,9 +99,11 @@ const InvoiceUpdateSystem = () => {
         const data = await res.json();
         setInvoiceInfo(data);
         setFormData(data);
+        showToast("Invoice loaded successfully", "success");
       } catch (err) {
         console.error(err);
         setFetchError(err.message || "Failed to fetch data");
+        showToast(err.message || "Failed to fetch data", "error");
       } finally {
         setLoading(false);
       }
@@ -41,28 +112,18 @@ const InvoiceUpdateSystem = () => {
     fetchInvoice();
   }, [id]);
 
-  // ----------------------------
-  // Calculations
-  // ----------------------------
   const calculatePending = useCallback(() => {
     const amount = parseFloat(formData.amount) || 0;
     const paid = parseFloat(formData.paid) || 0;
     const advance = parseFloat(formData.advance) || 0;
-
-    setCalculatedFields((prev) => ({
-      ...prev,
-      pending: Math.max(0, amount - (paid + advance)),
-    }));
+    setCalculatedFields((prev) => ({ ...prev, pending: Math.max(0, amount - (paid + advance)) }));
   }, [formData.amount, formData.paid, formData.advance]);
 
   const calculateNeedToPay = useCallback(() => {
     if (formData.insurance === "Yes" && formData.coPayPercent) {
       const amount = parseFloat(formData.amount) || 0;
       const coPayPercent = parseFloat(formData.coPayPercent) || 0;
-      setCalculatedFields((prev) => ({
-        ...prev,
-        needToPay: Math.max(0, (amount * (100 - coPayPercent)) / 100),
-      }));
+      setCalculatedFields((prev) => ({ ...prev, needToPay: Math.max(0, (amount * (100 - coPayPercent)) / 100) }));
     } else {
       setCalculatedFields((prev) => ({ ...prev, needToPay: 0 }));
     }
@@ -73,55 +134,53 @@ const InvoiceUpdateSystem = () => {
     calculateNeedToPay();
   }, [calculatePending, calculateNeedToPay]);
 
-  // ----------------------------
-  // Handle input change
-  // ----------------------------
-  const handlePaymentChange = useCallback(
-    (e) => {
-      const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    },
-    []
-  );
+  const handlePaymentChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }, []);
 
-  // ----------------------------
-  // Update payment
-  // ----------------------------
   const handleUpdatePayment = useCallback(async () => {
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      alert("Amount should be valid");
+      showToast("Amount should be valid", "error");
       return;
     }
     if (!formData.paymentMethod) {
-      alert("Please select payment method");
+      showToast("Please select payment method", "error");
       return;
     }
 
-    try {
-      const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
-      const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: formData.amount,
-          paid: formData.paid,
-          advance: formData.advance,
-          paymentMethod: formData.paymentMethod,
-        }),
-      });
+    showConfirm(
+      "Confirm Payment Update",
+      "Are you sure you want to update the payment details?",
+      async () => {
+        try {
+          const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
+          const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: formData.amount,
+              paid: formData.paid,
+              advance: formData.advance,
+              paymentMethod: formData.paymentMethod,
+            }),
+          });
 
-      const result = await res.json();
-      if (res.ok) {
-        alert("Payment updated successfully!");
-        setInvoiceInfo(result.updatedInvoice);
-        setFormData(result.updatedInvoice);
-      } else {
-        alert(`Error: ${result.message || "Failed to update payment"}`);
+          const result = await res.json();
+          if (res.ok) {
+            showToast("Payment updated successfully!", "success");
+            setInvoiceInfo(result.updatedInvoice);
+            setFormData(result.updatedInvoice);
+          } else {
+            showToast(result.message || "Failed to update payment", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("Network error. Try again later.", "error");
+        }
+        setConfirmModal({ isOpen: false });
       }
-    } catch (err) {
-      console.error(err);
-      alert("Network error. Try again later.");
-    }
+    );
   }, [formData, invoiceInfo]);
 
   const canViewMobileNumber = useMemo(
@@ -129,371 +188,252 @@ const InvoiceUpdateSystem = () => {
     [currentUser.role]
   );
 
-  // ----------------------------
-  // Render
-  // ----------------------------
-  if (loading) return <div className="p-8 text-gray-600">Loading invoice details...</div>;
-  if (fetchError) return <div className="p-8 text-red-600">{fetchError}</div>;
+  const InfoCard = ({ icon: Icon, title, children, bgColor = "bg-white" }) => (
+    <div className={`${bgColor} rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6 hover:shadow-md transition-shadow`}>
+      <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
+        <span className="break-words">{title}</span>
+      </h2>
+      {children}
+    </div>
+  );
+
+  const InfoField = ({ label, value, required, restricted }) => (
+    <div className="min-w-0">
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+        {restricted && <span className="text-gray-500 text-xs ml-1">(Restricted)</span>}
+      </label>
+      <p className="text-sm sm:text-base text-gray-700 font-medium break-words">{value || "-"}</p>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-800 font-medium">Loading invoice details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="text-center bg-white rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full">
+          <AlertCircle className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-sm sm:text-base text-red-600 font-semibold">{fetchError}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                <FileText className="text-indigo-600" />
-                Invoice Details
-              </h1>
-              <p className="text-gray-600 mt-2">View and update payment details only</p>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-600">Logged in as:</div>
-              <div className="font-semibold text-indigo-600">{currentUser.name}</div>
-              <div className="text-xs text-gray-500">{currentUser.role}</div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-3 sm:p-4 md:p-6 lg:p-8">
+      <style jsx global>{`
+        @keyframes slide-in {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes scale-in {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-slide-in { animation: slide-in 0.3s ease-out; }
+        .animate-scale-in { animation: scale-in 0.2s ease-out; }
+      `}</style>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal({ isOpen: false })} />
+
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="w-full sm:w-auto">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+                  <FileText className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" />
+                  Invoice Management
+                </h1>
+                <p className="text-indigo-100 mt-1 text-xs sm:text-sm">View and update payment information</p>
+              </div>
+              <div className="w-full sm:w-auto text-left sm:text-right bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 sm:px-4">
+                <div className="text-xs text-indigo-200">Logged in as</div>
+                <div className="font-bold text-sm sm:text-base">{currentUser.name}</div>
+                <div className="text-xs text-indigo-200">{currentUser.role}</div>
+              </div>
             </div>
           </div>
 
-          {/* Patient Info */}
-        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border-l-4 border-indigo-500">
-  <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-    <Calendar className="w-5 h-5 text-indigo-600" />
-    Invoice Information
-  </h2>
+          <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-5 md:space-y-6">
+            {/* Invoice Info */}
+            <InfoCard icon={Calendar} title="Invoice Information" bgColor="bg-gradient-to-br from-blue-50 to-indigo-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                <InfoField label="Invoice Number" value={formData.invoiceNumber} />
+                <InfoField label="Invoiced Date" value={formData.invoicedDate ? new Date(formData.invoicedDate).toLocaleString() : null} />
+                <InfoField label="Invoiced By" value={formData.invoicedBy} />
+              </div>
+            </InfoCard>
 
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    {/* Invoice Number */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Invoice Number
-      </label>
-      <p className="font-mono font-semibold text-gray-800">
-        {formData.invoiceNumber || "-"}
-      </p>
-    </div>
+            {/* Patient Info */}
+            <InfoCard icon={User} title="Patient Information" bgColor="bg-gradient-to-br from-green-50 to-emerald-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                <InfoField label="EMR Number" value={formData.emrNumber} required />
+                <InfoField label="First Name" value={formData.firstName} required />
+                <InfoField label="Last Name" value={formData.lastName} required />
+                <InfoField label="Email" value={formData.email} required />
+                <InfoField 
+                  label="Mobile Number" 
+                  value={canViewMobileNumber ? formData.mobileNumber : "Admin access required"} 
+                  restricted={!canViewMobileNumber}
+                />
+                <InfoField label="Gender" value={formData.gender} required />
+                <InfoField label="Patient Type" value={formData.patientType} required />
+                <InfoField label="Referred By" value={formData.referredBy} />
+              </div>
+            </InfoCard>
 
-    {/* Invoiced Date */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Invoiced Date
-      </label>
-      <p className="text-gray-800">
-        {formData.invoicedDate
-          ? new Date(formData.invoicedDate).toLocaleString()
-          : "-"}
-      </p>
-    </div>
+            {/* Medical Details */}
+            <InfoCard icon={FileText} title="Medical Details" bgColor="bg-gradient-to-br from-purple-50 to-pink-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                <InfoField label="Doctor" value={formData.doctor} required />
+                <InfoField label="Service" value={formData.service} required />
+                {formData.service === "Package" && <InfoField label="Package" value={formData.package} required />}
+                {formData.service === "Treatment" && <InfoField label="Treatment" value={formData.treatment} required />}
+              </div>
+            </InfoCard>
 
-    {/* Invoiced By */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Invoiced By
-      </label>
-      <p className="text-gray-800">{formData.invoicedBy || "-"}</p>
-    </div>
-  </div>
-</div>
-
-
-<div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-  <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-    <User className="w-5 h-5 text-blue-600" />
-    Patient Information
-  </h2>
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        EMR Number <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.emrNumber || "-"}</p>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        First Name <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.firstName || "-"}</p>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Last Name <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.lastName || "-"}</p>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Email <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.email || "-"}</p>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Mobile Number {!canViewMobileNumber && "(Restricted)"}
-      </label>
-      <p>
-        {canViewMobileNumber ? formData.mobileNumber || "-" : "Admin access required"}
-      </p>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Gender <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.gender || "-"}</p>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Patient Type <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.patientType || "-"}</p>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Referred By
-      </label>
-      <p>{formData.referredBy || "-"}</p>
-    </div>
-
-  </div>
-</div>
-
-<div className="bg-green-50 rounded-lg p-6 border border-green-200">
-  <h2 className="text-lg font-semibold text-gray-700 mb-4">Medical Details</h2>
-
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    {/* Doctor */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Doctor <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.doctor || "-"}</p>
-    </div>
-
-    {/* Service */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Service <span className="text-red-500">*</span>
-      </label>
-      <p>{formData.service || "-"}</p>
-    </div>
-
-    {/* Conditional Package */}
-    {formData.service === "Package" && (
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Package <span className="text-red-500">*</span>
-        </label>
-        <p>{formData.package || "-"}</p>
-      </div>
-    )}
-
-    {/* Conditional Treatment */}
-    {formData.service === "Treatment" && (
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Treatment <span className="text-red-500">*</span>
-        </label>
-        <p>{formData.treatment || "-"}</p>
-      </div>
-    )}
-
-  </div>
-  
-</div>
-
-
-          {/* Payment Section */}
-   
- <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200 mt-6">
-  <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-    <DollarSign className="w-5 h-5 text-yellow-600" />
-    Payment Details
-  </h2>
-
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    {/* Amount */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Amount <span className="text-red-500">*</span>
-      </label>
-      <input
-        type="number"
-        name="amount"
-        value={formData.amount || ""}
-        onChange={handlePaymentChange}
-        placeholder="0.00"
-        step="0.01"
-        min="0"
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-      />
-    </div>
-
-    {/* Paid */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Paid</label>
-      <input
-        type="number"
-        name="paid"
-        value={formData.paid || ""}
-        onChange={handlePaymentChange}
-        placeholder="0.00"
-        step="0.01"
-        min="0"
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-      />
-    </div>
-
-    {/* Advance */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Advance</label>
-      <input
-        type="number"
-        name="advance"
-        value={formData.advance || ""}
-        onChange={handlePaymentChange}
-        placeholder="0.00"
-        step="0.01"
-        min="0"
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-      />
-    </div>
-
-    {/* Pending (Auto) */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Pending (Auto)</label>
-      <input
-        type="text"
-        value={`₹ ${calculatedFields.pending.toFixed(2)}`}
-        disabled
-        className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold cursor-not-allowed"
-      />
-    </div>
-
-    {/* Need to Pay (Auto) */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay (Auto)</label>
-      <input
-        type="text"
-        value={`₹ ${calculatedFields.needToPay.toFixed(2)}`}
-        disabled
-        className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold cursor-not-allowed"
-      />
-    </div>
-
-    {/* Payment Method */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Payment Method <span className="text-red-500">*</span>
-      </label>
-      <select
-        name="paymentMethod"
-        value={formData.paymentMethod || ""}
-        onChange={handlePaymentChange}
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-      >
-        <option value="">Select payment method</option>
-        {paymentMethods.map((method, idx) => (
-          <option key={idx} value={method}>
-            {method}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
-
-  {/* Update Button */}
-  <div className="flex justify-end pt-4">
-    <button
-      type="button"
-      onClick={handleUpdatePayment}
-      className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-lg"
-    >
-      Update Payment
-    </button>
-  </div>
-</div>
-
-
-
-
-  <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-  <h2 className="text-lg font-semibold text-gray-700 mb-4">Insurance Details</h2>
-
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    {/* Insurance */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Insurance</label>
-      <p>{formData.insurance || "-"}</p>
-    </div>
-
-    {formData.insurance === "Yes" && (
-      <>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Advance Given Amount
-          </label>
-          <p>{formData.advanceGivenAmount != null ? `₹ ${formData.advanceGivenAmount.toFixed(2)}` : "-"}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Co-Pay %</label>
-          <p>{formData.coPayPercent != null ? `${formData.coPayPercent}%` : "-"}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay Amount (Auto)</label>
-          <p>{calculatedFields.needToPay != null ? `₹ ${calculatedFields.needToPay.toFixed(2)}` : "-"}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Advance Claim Status</label>
-          <p
-            className={`px-4 py-2 rounded-lg font-semibold inline-block ${
-              formData.advanceClaimStatus === "Released"
-                ? "bg-green-100 text-green-800"
-                : "bg-yellow-100 text-yellow-800"
-            }`}
-          >
-            {formData.advanceClaimStatus || "-"}
-          </p>
-        </div>
-
-        {(formData.advanceClaimReleaseDate || formData.advanceClaimReleasedBy) && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Advance Claim Release Date (Auto)
-              </label>
-              <p>
-                {formData.advanceClaimReleaseDate
-                  ? new Date(formData.advanceClaimReleaseDate).toLocaleString()
-                  : "-"}
-              </p>
+            {/* Payment Details */}
+            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                Payment Details
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
+                    Amount <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="amount"
+                    value={formData.amount || ""}
+                    onChange={handlePaymentChange}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Paid</label>
+                  <input
+                    type="number"
+                    name="paid"
+                    value={formData.paid || ""}
+                    onChange={handlePaymentChange}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Advance</label>
+                  <input
+                    type="number"
+                    name="advance"
+                    value={formData.advance || ""}
+                    onChange={handlePaymentChange}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Pending (Auto)</label>
+                  <input
+                    type="text"
+                    value={`₹ ${calculatedFields.pending.toFixed(2)}`}
+                    disabled
+                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Need to Pay (Auto)</label>
+                  <input
+                    type="text"
+                    value={`₹ ${calculatedFields.needToPay.toFixed(2)}`}
+                    disabled
+                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
+                    Payment Method <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="paymentMethod"
+                    value={formData.paymentMethod || ""}
+                    onChange={handlePaymentChange}
+                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+                  >
+                    <option value="">Select method</option>
+                    {paymentMethods.map((method) => (
+                      <option key={method} value={method}>{method}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleUpdatePayment}
+                  className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  Update Payment
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Advance Claim Released By (Auto)
-              </label>
-              <p>{formData.advanceClaimReleasedBy || "-"}</p>
-            </div>
-          </>
-        )}
-      </>
-    )}
-  </div>
-</div>
 
-
+            {/* Insurance Details */}
+            {formData.insurance === "Yes" && (
+              <InfoCard icon={FileText} title="Insurance Details" bgColor="bg-gradient-to-br from-cyan-50 to-blue-50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                  <InfoField label="Insurance" value={formData.insurance} />
+                  <InfoField label="Advance Given Amount" value={formData.advanceGivenAmount != null ? `₹ ${formData.advanceGivenAmount.toFixed(2)}` : null} />
+                  <InfoField label="Co-Pay %" value={formData.coPayPercent != null ? `${formData.coPayPercent}%` : null} />
+                  <InfoField label="Need to Pay Amount (Auto)" value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} />
+                  <div>
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">Advance Claim Status</label>
+                    <span className={`inline-block px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold ${formData.advanceClaimStatus === "Released" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                      {formData.advanceClaimStatus || "-"}
+                    </span>
+                  </div>
+                  {formData.advanceClaimReleaseDate && (
+                    <InfoField label="Advance Claim Release Date (Auto)" value={new Date(formData.advanceClaimReleaseDate).toLocaleString()} />
+                  )}
+                  {formData.advanceClaimReleasedBy && (
+                    <InfoField label="Advance Claim Released By (Auto)" value={formData.advanceClaimReleasedBy} />
+                  )}
+                </div>
+              </InfoCard>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default InvoiceUpdateSystem;
+InvoiceUpdateSystem.getLayout = function PageLayout(page) {
+  return <ClinicLayout>{page}</ClinicLayout>;
+};
+
+const ProtectedDashboard = withClinicAuth(InvoiceUpdateSystem);
+ProtectedDashboard.getLayout = InvoiceUpdateSystem.getLayout;
+
+export default ProtectedDashboard;
