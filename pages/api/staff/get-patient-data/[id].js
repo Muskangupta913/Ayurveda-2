@@ -1,3 +1,4 @@
+// pages/api/staff/get-patient-data/[id].js
 import dbConnect from "../../../../lib/database";
 import PatientRegistration from "../../../../models/PatientRegistration";
 import mongoose from "mongoose";
@@ -16,10 +17,9 @@ export default async function handler(req, res) {
     // -------------------------------
     if (req.method === "GET") {
       const invoice = await PatientRegistration.findById(id).lean();
-
       if (!invoice) return res.status(404).json({ message: "Invoice not found" });
 
-      const invoiceData = {
+      return res.status(200).json({
         ...invoice,
         _id: invoice._id.toString(),
         userId: invoice.userId.toString(),
@@ -27,44 +27,47 @@ export default async function handler(req, res) {
         createdAt: invoice.createdAt?.toISOString(),
         updatedAt: invoice.updatedAt?.toISOString(),
         advanceClaimReleaseDate: invoice.advanceClaimReleaseDate?.toISOString(),
-      };
-
-      return res.status(200).json(invoiceData);
+      });
     }
 
     // -------------------------------
-    // PUT: Update ONLY payment fields
+    // PUT: Update Payment & Track History
     // -------------------------------
     if (req.method === "PUT") {
       const { amount, paid, advance, paymentMethod } = req.body;
 
-      const updateFields = {};
-      if (amount !== undefined) updateFields.amount = amount;
-      if (paid !== undefined) updateFields.paid = paid;
-      if (advance !== undefined) updateFields.advance = advance;
-      if (paymentMethod !== undefined) updateFields.paymentMethod = paymentMethod;
+      const invoice = await PatientRegistration.findById(id);
+      if (!invoice) return res.status(404).json({ message: "Invoice not found" });
 
-      const updatedInvoice = await PatientRegistration.findByIdAndUpdate(
-        id,
-        updateFields,
-        { new: true }
-      ).lean();
+      // Backup old payment details
+      invoice.paymentHistory.push({
+        amount: invoice.amount ?? 0,
+        paid: invoice.paid ?? 0,
+        advance: invoice.advance ?? 0,
+        pending: invoice.pending ?? 0,
+        paymentMethod: invoice.paymentMethod || "",
+        updatedAt: new Date(),
+      });
 
-      if (!updatedInvoice) return res.status(404).json({ message: "Invoice not found" });
+      // Update payment fields
+      if (amount !== undefined) invoice.amount = amount;
+      if (paid !== undefined) invoice.paid = paid;
+      if (advance !== undefined) invoice.advance = advance;
+      if (paymentMethod !== undefined) invoice.paymentMethod = paymentMethod;
 
-      const updatedData = {
-        ...updatedInvoice,
-        _id: updatedInvoice._id.toString(),
-        userId: updatedInvoice.userId.toString(),
-        invoicedDate: updatedInvoice.invoicedDate?.toISOString(),
-        createdAt: updatedInvoice.createdAt?.toISOString(),
-        updatedAt: updatedInvoice.updatedAt?.toISOString(),
-        advanceClaimReleaseDate: updatedInvoice.advanceClaimReleaseDate?.toISOString(),
-      };
+      await invoice.save();
 
       return res.status(200).json({
         message: "Payment updated successfully",
-        updatedInvoice: updatedData,
+        updatedInvoice: {
+          ...invoice.toObject(),
+          _id: invoice._id.toString(),
+          userId: invoice.userId.toString(),
+          invoicedDate: invoice.invoicedDate?.toISOString(),
+          createdAt: invoice.createdAt?.toISOString(),
+          updatedAt: invoice.updatedAt?.toISOString(),
+          advanceClaimReleaseDate: invoice.advanceClaimReleaseDate?.toISOString(),
+        },
       });
     }
 

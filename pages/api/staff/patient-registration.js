@@ -1,143 +1,118 @@
-// pages/api/staff/patient-registration.js
-import dbConnect from "../../../lib/database";
-import jwt from "jsonwebtoken";
 import PatientRegistration from "../../../models/PatientRegistration";
-import User from "../../../models/Users";
-
-// Helper: verify JWT and get user
-async function getUserFromToken(req) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.split(" ")[1];
-  if (!token) throw { status: 401, message: "No token provided" };
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId || decoded.id).select("-password");
-    if (!user) throw { status: 401, message: "User not found" };
-    return user;
-  } catch (err) {
-    throw { status: 401, message: "Invalid or expired token" };
-  }
-}
-
-// Check if user has required role
-function requireRole(user, roles = []) {
-  return roles.includes(user.role);
-}
-
+import dbConnect from "../../../lib/database"; // your DB connection
+import { requireRole } from "../lead-ms/auth"
 export default async function handler(req, res) {
   await dbConnect();
+  const user = req.user;
 
-  let user;
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, message: "Method not allowed" });
+  }
+
+  if (!requireRole(user, ["clinic", "staff", "admin"])) {
+    return res.status(403).json({ success: false, message: "Access denied" });
+  }
+
   try {
-    user = await getUserFromToken(req);
-  } catch (err) {
-    return res.status(err.status || 401).json({ success: false, message: err.message });
-  }
+    const {
+      invoiceNumber,
+      invoicedBy,
+      emrNumber,
+      firstName,
+      lastName,
+      gender,
+      email,
+      mobileNumber,
+      referredBy,
+      patientType,
+      doctor,
+      service,
+      treatment,
+      package: packageName,
+      amount,
+      paid,
+      advance,
+      paymentMethod,
+      insurance,
+      advanceGivenAmount,
+      coPayPercent,
+      advanceClaimStatus,
+      advanceClaimReleasedBy,
+      notes,
+    } = req.body;
 
-  // ---------------- GET: return current user's name and role ----------------
-  if (req.method === "GET") {
-    return res.status(200).json({
-      success: true,
-      data: {
-        name: user.name,
-        role: user.role,
-        _id: user._id,
-      },
-    });
-  }
-
-  // ---------------- POST: create a new patient ----------------
-  if (req.method === "POST") {
-    if (!requireRole(user, ["clinic", "staff", "admin"])) {
-      return res.status(403).json({ success: false, message: "Access denied" });
+    // Validation
+    if (!invoiceNumber || !firstName || !gender || !mobileNumber || !doctor || !service || !amount || !paid || !paymentMethod) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    try {
-      const {
-        invoiceNumber,
-        invoicedBy,
-        emrNumber,
-        firstName,
-        lastName,
-        gender,
-        email,
-        mobileNumber,
-        referredBy,
-        patientType,
-        doctor,
-        service,
-        treatment,
-        package: packageName,
+    // Check if patient already exists
+    const existingPatient = await PatientRegistration.findOne({ invoiceNumber });
+
+    if (existingPatient) {
+      // Append new payment to paymentHistory
+      const newPending = Math.max(0, amount - (paid + advance));
+      existingPatient.paymentHistory.push({
         amount,
         paid,
         advance,
+        pending: newPending,
         paymentMethod,
-        insurance,
-        advanceGivenAmount,
-        coPayPercent,
-        advanceClaimStatus,
-        advanceClaimReleasedBy,
-        notes,
-      } = req.body;
-
-      // Validation
-      if (
-        !invoiceNumber ||
-        !firstName ||
-        !gender ||
-        !mobileNumber ||
-        !doctor ||
-        !service ||
-        !amount ||
-        !paid ||
-        !paymentMethod
-      ) {
-        return res.status(400).json({ success: false, message: "Missing required fields" });
-      }
-
-      // Check duplicate invoice
-      const existing = await PatientRegistration.findOne({ invoiceNumber });
-      if (existing) {
-        return res.status(400).json({ success: false, message: "Invoice number already exists" });
-      }
-
-      // Create patient
-      const patient = await PatientRegistration.create({
-        invoiceNumber,
-        invoicedBy,
-        userId: user._id,
-        emrNumber,
-        firstName,
-        lastName,
-        gender,
-        email,
-        mobileNumber,
-        referredBy,
-        patientType,
-        doctor,
-        service,
-        treatment,
-        package: packageName,
-        amount,
-        paid,
-        advance,
-        paymentMethod,
-        insurance,
-        advanceGivenAmount,
-        coPayPercent,
-        advanceClaimStatus,
-        advanceClaimReleasedBy,
-        notes,
+        updatedAt: new Date(),
       });
 
-      return res.status(201).json({ success: true, message: "Patient registered successfully", data: patient });
-    } catch (err) {
-      console.error("POST error:", err);
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
-  }
+      // Update totals
+      existingPatient.amount += amount;
+      existingPatient.paid += paid;
+      existingPatient.advance += advance;
+      existingPatient.pending = Math.max(0, existingPatient.amount - (existingPatient.paid + existingPatient.advance));
 
-  // ---------------- Other methods ----------------
-  return res.status(405).json({ success: false, message: "Method not allowed" });
+      await existingPatient.save();
+      return res.status(200).json({ success: true, message: "Payment added to existing patient", data: existingPatient });
+    }
+
+    // Create new patient with initial payment
+    const patient = await PatientRegistration.create({
+      invoiceNumber,
+      invoicedBy,
+      userId: user._id,
+      emrNumber,
+      firstName,
+      lastName,
+      gender,
+      email,
+      mobileNumber,
+      referredBy,
+      patientType,
+      doctor,
+      service,
+      treatment,
+      package: packageName,
+      amount,
+      paid,
+      advance,
+      paymentMethod,
+      insurance,
+      advanceGivenAmount,
+      coPayPercent,
+      advanceClaimStatus,
+      advanceClaimReleasedBy,
+      notes,
+      paymentHistory: [
+        {
+          amount,
+          paid,
+          advance,
+          pending: Math.max(0, amount - (paid + advance)),
+          paymentMethod,
+          updatedAt: new Date(),
+        },
+      ],
+    });
+
+    return res.status(201).json({ success: true, message: "Patient registered successfully", data: patient });
+  } catch (err) {
+    console.error("POST error:", err);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
 }

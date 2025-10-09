@@ -134,10 +134,35 @@ const InvoiceUpdateSystem = () => {
     calculateNeedToPay();
   }, [calculatePending, calculateNeedToPay]);
 
-  const handlePaymentChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  }, []);
+  // const handlePaymentChange = useCallback((e) => {
+  //   const { name, value } = e.target;
+  //   setFormData((prev) => ({ ...prev, [name]: value }));
+  // }, []);
+
+const handlePaymentChange = useCallback((e) => {
+  const { name, value } = e.target;
+  setFormData((prev) => {
+    const updated = { ...prev, [name]: value };
+
+    // Recalculate pending
+    const amount = parseFloat(updated.amount) || 0;
+    const paid = parseFloat(updated.paid) || 0;
+    const advance = parseFloat(updated.advance) || 0;
+    updated.pending = Math.max(0, amount - (paid + advance));
+
+    // Recalculate needToPay if insurance
+    if (updated.insurance === "Yes") {
+      const coPayPercent = parseFloat(updated.coPayPercent) || 0;
+      updated.needToPay = Math.max(0, (amount * (100 - coPayPercent)) / 100 - (updated.advanceGivenAmount || 0));
+    } else {
+      updated.needToPay = updated.pending;
+    }
+
+    return updated;
+  });
+}, []);
+
+
 
   const handleUpdatePayment = useCallback(async () => {
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
@@ -363,15 +388,7 @@ const InvoiceUpdateSystem = () => {
                     className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Need to Pay (Auto)</label>
-                  <input
-                    type="text"
-                    value={`₹ ${calculatedFields.needToPay.toFixed(2)}`}
-                    disabled
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
-                  />
-                </div>
+               
                 <div>
                   <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
                     Payment Method <span className="text-red-500">*</span>

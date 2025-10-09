@@ -118,7 +118,7 @@ const PatientCard = ({ patient, onUpdate, onComplete }) => (
       <button onClick={() => onUpdate(patient._id)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
         <Edit3 className="w-4 h-4" /> Update
       </button>
-      <button onClick={() => onComplete(patient._id)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors">
+      <button onClick={() => onComplete(patient)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors">
         <CheckCircle className="w-4 h-4" /> Complete
       </button>
     </div>
@@ -133,7 +133,7 @@ function PatientFilterUI() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState([]);
-  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, id: null });
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, patient: null });
   const pageSize = 12;
 
   const addToast = (message, type = "info") => setToasts(prev => [...prev, { id: Date.now(), message, type }]);
@@ -142,8 +142,7 @@ function PatientFilterUI() {
 
   const filteredPatients = patients.filter(item =>
     search.trim() === "" ||
-    `${item.firstName} ${item.lastName} ${item.emrNumber} ${item.invoiceNumber} ${item.mobileNumber}`
-      .toLowerCase().includes(search.trim().toLowerCase())
+    `${item.firstName} ${item.lastName} ${item.emrNumber} ${item.invoiceNumber} ${item.mobileNumber}`.toLowerCase().includes(search.trim().toLowerCase())
   );
   const totalPages = Math.ceil(filteredPatients.length / pageSize);
   const displayedPatients = filteredPatients.slice((page - 1) * pageSize, page * pageSize);
@@ -172,10 +171,19 @@ function PatientFilterUI() {
 
   const handleUpdate = (id) => router.push(`/staff/update-patient-info/${id}`);
 
-  const handleComplete = async (id) => {
+  const handleComplete = async (patient) => {
     if (!token) return addToast("Session expired. Please login again.", "error");
+
+    if (patient.claimStatus === "Pending") return addToast("Cannot complete: claim status is still Pending", "error");
+    if (patient.pendingAmount > 0) return addToast(`Cannot complete: pending amount ₹${patient.pendingAmount} exists`, "error");
+
     try {
-      await axios.put("/api/staff/get-patient-registrations", { id, status: "Completed" }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(
+        "/api/staff/get-patient-registrations",
+        { id: patient._id, status: "Completed" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       addToast("Status updated successfully", "success");
       fetchPatients();
     } catch (err) {
@@ -194,18 +202,18 @@ function PatientFilterUI() {
       `}</style>
 
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
-        onClose={() => setConfirmDialog({ isOpen: false, id: null })}
-        onConfirm={() => { handleComplete(confirmDialog.id); setConfirmDialog({ isOpen: false, id: null }); }}
+        onClose={() => setConfirmDialog({ isOpen: false, patient: null })}
+        onConfirm={() => { handleComplete(confirmDialog.patient); setConfirmDialog({ isOpen: false, patient: null }); }}
         title="Mark as Completed"
         message="Are you sure you want to mark this patient's status as completed?"
       />
 
       <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
-          
-          {/* Header */}
+            {/* Header */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -271,8 +279,13 @@ function PatientFilterUI() {
             ) : displayedPatients.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayedPatients.map(patient => (
-                  <PatientCard key={patient._id} patient={patient} onUpdate={handleUpdate} onComplete={(id) => setConfirmDialog({ isOpen: true, id })} />
-                ))}
+           <PatientCard 
+  key={patient._id} 
+  patient={patient} 
+  onUpdate={handleUpdate} 
+  onComplete={(patient) => setConfirmDialog({ isOpen: true, patient })} 
+/>
+      ))}
               </div>
             ) : (
               <div className="bg-white rounded-lg border border-gray-200 p-12 flex flex-col items-center gap-2">
