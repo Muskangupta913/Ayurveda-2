@@ -164,9 +164,21 @@ const uploadToCloudinary = async (files) => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   try {
+    // 1️⃣ Upload receipts to Cloudinary first
     const uploadedReceiptUrls = await uploadToCloudinary(form.receipts);
 
+    // 2️⃣ Prepare payload
+    const payload = {
+      patientName: form.patientName,
+      patientEmail: form.patientEmail,
+      patientPhone: form.patientPhone,
+      note: form.note,
+      allocatedAmounts: form.allocatedAmounts,
+      receipts: uploadedReceiptUrls,
+    };
+
     if (editMode && editType === "allocated") {
+      // Update existing
       await axios.put(
         "/api/pettycash/update",
         {
@@ -181,31 +193,49 @@ const handleSubmit = async (e) => {
         { headers: { Authorization: `Bearer ${staffToken}` } }
       );
     } else {
-      await axios.post(
-        "/api/pettycash/add",
-        { ...form, receipts: uploadedReceiptUrls },
-        { headers: { Authorization: `Bearer ${staffToken}` } }
-      );
+      // Add new
+      await axios.post("/api/pettycash/add", payload, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+      });
     }
 
     setEditMode(false);
     setEditingId(null);
+    setForm({
+      patientName: "",
+      patientEmail: "",
+      patientPhone: "",
+      note: "",
+      allocatedAmounts: [""],
+      receipts: [],
+    });
     fetchPettyCash();
     alert(editMode ? "Record updated successfully!" : "Petty Cash added!");
   } catch (err) {
     console.error("Error submitting petty cash:", err);
-    alert("Something went wrong!");
+    alert(err.response?.data?.message || "Something went wrong!");
   }
 };
 
 // ---------- SUBMIT EXPENSE ----------
+// ---------- SUBMIT EXPENSE ----------
 const handleExpenseSubmit = async (e) => {
   e.preventDefault();
   try {
-    const uploadedExpenseUrls =
-      expenseForm.receipts && expenseForm.receipts.length > 0
-        ? await uploadToCloudinary(expenseForm.receipts, setExpenseReceiptUrls)
-        : [];
+    // ✅ Check if new files were uploaded
+    const hasNewFiles = expenseForm.receipts && 
+                        expenseForm.receipts instanceof FileList && 
+                        expenseForm.receipts.length > 0;
+
+    let uploadedExpenseUrls = [];
+    
+    if (hasNewFiles) {
+      // Upload new files
+      uploadedExpenseUrls = await uploadToCloudinary(expenseForm.receipts);
+    } else if (Array.isArray(expenseForm.receipts)) {
+      // Keep existing URLs if no new files uploaded
+      uploadedExpenseUrls = expenseForm.receipts;
+    }
 
     if (editMode && editType === "expense") {
       await axios.put(
@@ -214,10 +244,10 @@ const handleExpenseSubmit = async (e) => {
           id: editingId, // pettyCash id
           type: "expense",
           data: {
-            expenseId: expenseForm.expenseId, // 👈 send expense id too
+            expenseId: expenseForm.expenseId,
             description: expenseForm.description,
             spentAmount: Number(expenseForm.spentAmount),
-            receipts: uploadedExpenseUrls,
+            receipts: uploadedExpenseUrls, // ✅ Will preserve old URLs if no new upload
           },
         },
         { headers: { Authorization: `Bearer ${staffToken}` } }
@@ -230,12 +260,20 @@ const handleExpenseSubmit = async (e) => {
       );
     }
 
+    // ✅ Reset form properly
+    setExpenseForm({
+      description: "",
+      spentAmount: "",
+      receipts: [],
+    });
     setEditMode(false);
     setEditingId(null);
     fetchPettyCash();
+    fetchGlobalTotals(selectedDate);
     alert(editMode ? "Expense updated successfully!" : "Expense added!");
   } catch (err) {
     console.error("Error updating expense:", err);
+    alert("Error: " + (err.response?.data?.message || "Something went wrong"));
   }
 };
 
@@ -605,20 +643,17 @@ const handleEdit = (item, type, pettyCashId = null) => {
 
                 {/* Delete Button */}
                 <td className="border p-2">
-                 {isTodaySelected && (
+               {isTodaySelected && (
   <>
-   <button
-  onClick={() => {
-    // Find the petty cash record that contains this expense
-    const parent = pettyCashList.find(record =>
-      record.expenses.some(e => e._id === ex._id)
-    );
-    handleEdit(ex, "expense", parent?._id);
-  }}
-  className="text-blue-600 hover:text-blue-800 mr-2 text-xs"
->
-  ✏️
-</button>
+    {/* Edit Petty Cash / Allocated */}
+    <button
+      onClick={() => handleEdit(item, "allocated")}
+      className="text-blue-600 hover:text-blue-800 mr-2 text-xs"
+    >
+      ✏️
+    </button>
+
+    {/* Delete Patient */}
     <button
       onClick={() => handleDeletePatient(item._id)}
       className="text-red-600 hover:text-red-800 ml-2"
@@ -627,6 +662,7 @@ const handleEdit = (item, type, pettyCashId = null) => {
     </button>
   </>
 )}
+
 
                 </td>
               </tr>

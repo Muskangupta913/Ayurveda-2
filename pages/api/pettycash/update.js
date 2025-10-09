@@ -10,16 +10,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ✅ Authenticate
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== "staff" && decoded.role !== "admin") {
+    if (!["staff", "admin"].includes(decoded.role)) {
       return res.status(403).json({ message: "Forbidden" });
     }
 
+    // ✅ Extract payload
     const { id, type, data } = req.body;
 
     if (!id || !type || !data) {
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: "Petty Cash record not found" });
     }
 
-    // Check if editable today only
+    // ✅ Allow editing only today
     const today = new Date();
     const recordDate = new Date(pettyCash.createdAt);
     if (today.toDateString() !== recordDate.toDateString()) {
@@ -40,44 +40,59 @@ export default async function handler(req, res) {
         .json({ message: "You can only edit today's records" });
     }
 
+    // ---------- ALLOCATED ----------
     if (type === "allocated") {
-      // Update allocated amounts & note
-      if (data.newAmount) {
-        pettyCash.allocatedAmounts.push({
-          amount: data.newAmount,
-          receipts: data.receipts || [],
+      const { newAmount, receipts, note } = data;
+
+      if (newAmount === undefined || newAmount === null) {
+        return res.status(400).json({ message: "Allocated amount is required" });
+      }
+
+      pettyCash.allocatedAmounts.push({
+        amount: newAmount,
+        receipts: receipts || [],
+        date: new Date(),
+      });
+
+      if (note !== undefined) {
+        pettyCash.note = note;
+      }
+
+    // ---------- EXPENSE ----------
+    } else if (type === "expense") {
+      const { expenseId, description, spentAmount, receipts } = data;
+
+      if (!description) {
+        return res.status(400).json({ message: "Expense description is required" });
+      }
+
+      if (spentAmount === undefined || spentAmount === null) {
+        return res.status(400).json({ message: "Expense amount is required" });
+      }
+
+      if (expenseId) {
+        // 🔹 Update existing expense
+        const expense = pettyCash.expenses.id(expenseId);
+        if (!expense) {
+          return res.status(404).json({ message: "Expense not found in record" });
+        }
+
+        expense.description = description;
+        expense.spentAmount = spentAmount;
+        expense.receipts = receipts || [];
+        expense.date = new Date();
+      } else {
+        // 🔹 Add new expense
+        pettyCash.expenses.push({
+          description,
+          spentAmount,
+          receipts: receipts || [],
           date: new Date(),
         });
       }
-
-      if (data.note !== undefined) {
-        pettyCash.note = data.note;
-      }
-   } else if (type === "expense") {
-  const { expenseId, description, spentAmount, receipts } = data;
-
-  if (expenseId) {
-    // 🔹 Find and update existing expense
-    const expense = pettyCash.expenses.id(expenseId);
-    if (expense) {
-      expense.description = description;
-      expense.spentAmount = spentAmount;
-      expense.receipts = receipts || [];
-      expense.date = new Date();
     } else {
-      return res.status(404).json({ message: "Expense not found in record" });
+      return res.status(400).json({ message: "Invalid type provided" });
     }
-  } else {
-    // 🔹 Add new expense
-    pettyCash.expenses.push({
-      description,
-      spentAmount,
-      receipts: receipts || [],
-      date: new Date(),
-    });
-  }
-}
-
 
     await pettyCash.save();
 
