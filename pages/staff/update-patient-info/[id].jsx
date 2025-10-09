@@ -262,7 +262,7 @@ const InvoiceUpdateSystem = () => {
               </div>
               <div className="w-full sm:w-auto text-left sm:text-right bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 sm:px-4">
                 <div className="text-xs text-indigo-200">Logged in as</div>
-                <div className="font-bold text-sm sm:text-base">{currentUser.name}</div>
+                {/* <div className="font-bold text-sm sm:text-base">{currentUser.name}</div> */}
                 <div className="text-xs text-indigo-200">{currentUser.role}</div>
               </div>
             </div>
