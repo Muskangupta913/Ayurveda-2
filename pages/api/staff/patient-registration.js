@@ -2,6 +2,7 @@ import dbConnect from "../../../lib/database";
 import jwt from "jsonwebtoken";
 import PatientRegistration from "../../../models/PatientRegistration";
 import User from "../../../models/Users";
+import PettyCash from "../../../models/PettyCash";
 
 // ---------------- Helper: verify JWT and get user ----------------
 async function getUserFromToken(req) {
@@ -22,6 +23,54 @@ async function getUserFromToken(req) {
 // ---------------- Check user role ----------------
 function requireRole(user, roles = []) {
   return roles.includes(user.role);
+}
+
+// ---------------- Add to PettyCash if payment method is Cash ----------------
+async function addToPettyCashIfCash(user, patient, paidAmount) {
+  if (patient.paymentMethod === "Cash" && paidAmount > 0) {
+    try {
+      // Check if there's already a PettyCash record for this staff member today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      let pettyCashRecord = await PettyCash.findOne({
+        staffId: user._id,
+        createdAt: { $gte: today, $lt: tomorrow }
+      });
+
+      if (!pettyCashRecord) {
+        // Create new PettyCash record
+        pettyCashRecord = await PettyCash.create({
+          staffId: user._id,
+          patientName: `${patient.firstName} ${patient.lastName}`,
+          patientEmail: patient.email,
+          patientPhone: patient.mobileNumber,
+          note: `Auto-added from patient registration - Invoice: ${patient.invoiceNumber}`,
+          allocatedAmounts: [{
+            amount: paidAmount,
+            receipts: [],
+            date: new Date()
+          }],
+          expenses: []
+        });
+      } else {
+        // Add to existing record
+        pettyCashRecord.allocatedAmounts.push({
+          amount: paidAmount,
+          receipts: [],
+          date: new Date()
+        });
+        await pettyCashRecord.save();
+      }
+      
+      console.log(`Added ₹${paidAmount} to PettyCash for staff ${user.name}`);
+    } catch (error) {
+      console.error("Error adding to PettyCash:", error);
+      // Don't throw error to avoid breaking patient registration
+    }
+  }
 }
 
 // ---------------- API Handler ----------------
@@ -70,7 +119,6 @@ export default async function handler(req, res) {
         notes,
       } = req.body;
 
-      // Derive invoicedBy if not provided (model requires it)
       const computedInvoicedBy =
         invoicedBy ||
         user.name ||
@@ -80,20 +128,28 @@ export default async function handler(req, res) {
         user.mobileNumber ||
         String(user._id);
 
-      // ✅ Validation
-      if (!invoiceNumber || !firstName || !gender || !mobileNumber || !doctor || !service || amount === undefined || paid === undefined || !paymentMethod) {
+      if (
+        !invoiceNumber ||
+        !firstName ||
+        !gender ||
+        !mobileNumber ||
+        !doctor ||
+        !service ||
+        amount === undefined ||
+        paid === undefined ||
+        !paymentMethod
+      ) {
         return res.status(400).json({ success: false, message: "Missing required fields" });
       }
 
-      // ---------------- Check if patient already exists ----------------
       const existingPatient = await PatientRegistration.findOne({ invoiceNumber });
 
       if (existingPatient) {
-        // Append new payment to paymentHistory
         const normalizedAmount = Number(amount) || 0;
         const normalizedPaid = Number(paid) || 0;
         const normalizedAdvance = Number(advance) || 0;
         const newPending = Math.max(0, normalizedAmount - (normalizedPaid + normalizedAdvance));
+
         existingPatient.paymentHistory.push({
           amount: normalizedAmount,
           paid: normalizedPaid,
@@ -103,17 +159,22 @@ export default async function handler(req, res) {
           updatedAt: new Date(),
         });
 
-        // Update totals
         existingPatient.amount += normalizedAmount;
         existingPatient.paid += normalizedPaid;
         existingPatient.advance += normalizedAdvance;
-        // pending/advance/needToPay will be recomputed by pre-save hook rules
 
         await existingPatient.save();
-        return res.status(200).json({ success: true, message: "Payment added to existing patient", data: existingPatient });
+
+        // Add to PettyCash if payment method is Cash
+        await addToPettyCashIfCash(user, existingPatient, normalizedPaid);
+
+        return res.status(200).json({
+          success: true,
+          message: "Payment added to existing patient",
+          data: existingPatient,
+        });
       }
 
-      // ---------------- Create new patient ----------------
       const patient = await PatientRegistration.create({
         invoiceNumber,
         invoicedBy: computedInvoicedBy,
@@ -146,14 +207,24 @@ export default async function handler(req, res) {
             amount: Number(amount) || 0,
             paid: Number(paid) || 0,
             advance: Number(advance) || 0,
-            pending: Math.max(0, (Number(amount) || 0) - ((Number(paid) || 0) + (Number(advance) || 0))),
+            pending: Math.max(
+              0,
+              (Number(amount) || 0) - ((Number(paid) || 0) + (Number(advance) || 0))
+            ),
             paymentMethod,
             updatedAt: new Date(),
           },
         ],
       });
 
-      return res.status(201).json({ success: true, message: "Patient registered successfully", data: patient });
+      // Add to PettyCash if payment method is Cash
+      await addToPettyCashIfCash(user, patient, Number(paid) || 0);
+
+      return res.status(201).json({
+        success: true,
+        message: "Patient registered successfully",
+        data: patient,
+      });
     } catch (err) {
       console.error("POST error:", err);
       return res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -168,7 +239,6 @@ export default async function handler(req, res) {
 
     try {
       const { emrNumber, invoiceNumber, name, phone, claimStatus, applicationStatus } = req.query;
-
       const query = { userId: user._id };
 
       if (emrNumber) query.emrNumber = { $regex: emrNumber, $options: "i" };
@@ -176,7 +246,6 @@ export default async function handler(req, res) {
       if (phone) query.mobileNumber = { $regex: phone, $options: "i" };
       if (claimStatus) query.advanceClaimStatus = claimStatus;
       if (applicationStatus) query.status = applicationStatus;
-
       if (name) {
         query.$or = [
           { firstName: { $regex: name, $options: "i" } },
@@ -185,7 +254,9 @@ export default async function handler(req, res) {
       }
 
       const patients = await PatientRegistration.find(query).sort({ createdAt: -1 });
-      return res.status(200).json({ success: true, count: patients.length, data: patients });
+      return res
+        .status(200)
+        .json({ success: true, count: patients.length, data: patients });
     } catch (err) {
       console.error("GET error:", err);
       return res.status(500).json({ success: false, message: "Failed to fetch patients" });
@@ -205,18 +276,26 @@ export default async function handler(req, res) {
       }
 
       const patient = await PatientRegistration.findOne({ _id: id, userId: user._id });
-      if (!patient) return res.status(404).json({ success: false, message: "Patient not found or unauthorized" });
+      if (!patient)
+        return res.status(404).json({ success: false, message: "Patient not found or unauthorized" });
 
       patient.status = status;
       await patient.save();
 
-      return res.status(200).json({ success: true, message: `Patient status updated to ${status}`, data: patient });
+      return res.status(200).json({
+        success: true,
+        message: `Patient status updated to ${status}`,
+        data: patient,
+      });
     } catch (err) {
       console.error("PUT error:", err);
       return res.status(500).json({ success: false, message: "Failed to update patient status" });
     }
   }
 
+  // ---------------- Default response for unsupported methods ----------------
   res.setHeader("Allow", ["GET", "POST", "PUT"]);
-  return res.status(405).json({ success: false, message: `Method ${req.method} Not Allowed` });
+  return res
+    .status(405)
+    .json({ success: false, message: `Method ${req.method} Not Allowed` });
 }

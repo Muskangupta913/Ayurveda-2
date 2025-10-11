@@ -183,6 +183,7 @@ export default async function handler(req, res) {
     const pettyCashId = req.body ? req.body.pettyCashId : undefined;
     const description = req.body.description;
     const spentAmount = req.body.spentAmount;
+    const vendor = req.body.vendor;
 
     // Validate required fields
     if (
@@ -268,6 +269,7 @@ export default async function handler(req, res) {
     pettyCash.expenses.push({
       description,
       spentAmount: Number(spentAmount),
+      vendor: vendor || null,
       receipts: receiptUrls,
       date: new Date(),
     });

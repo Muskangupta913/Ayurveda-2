@@ -58,7 +58,7 @@ function Modal({ isOpen, onClose, children }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {children}
       </div>
@@ -109,7 +109,7 @@ function CreateUserForm({ onClose, onSuccess, addToast }) {
       const token = localStorage.getItem("adminToken");
       
       const response = await axios.post(
-        "/api/admin/create-user",
+        "/api/admin/create-staff",
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

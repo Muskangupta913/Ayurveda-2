@@ -12,6 +12,7 @@ const AllocSchema = new mongoose.Schema({
 const ExpenseSchema = new mongoose.Schema({
   description: { type: String, required: true },
   spentAmount: { type: Number, required: true },
+  vendor: { type: String, default: null }, // vendor ID reference
   receipts: [{ type: String }], // array of Cloudinary URLs
   date: { type: Date, default: Date.now },
 });

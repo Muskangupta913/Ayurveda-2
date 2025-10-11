@@ -6,11 +6,11 @@ import clsx from 'clsx';
 
 interface NavItem {
   label: string;
-  path?: string; // ✅ Made optional
+  path?: string; 
   icon: string;
   description?: string; // ✅ Made optional
   badge?: number;
-  children?: NavItem[]; // ✅ Allow nested nav items
+  children?: NavItem[]; 
 }
 
 const navItems: NavItem[] = [

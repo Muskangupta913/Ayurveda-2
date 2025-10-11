@@ -43,7 +43,19 @@ export default async function handler(req, res) {
       return res.status(404).json({ success: false, message: "Patient not found" });
     }
 
-    return res.status(200).json({ success: true, data: patient });
+    // Calculate total advance amount for this EMR number across all records
+    const allPatientsWithSameEMR = await PatientRegistration.find({ emrNumber });
+    const totalAdvanceAmount = allPatientsWithSameEMR.reduce((total, p) => {
+      return total + (parseFloat(p.advance) || 0);
+    }, 0);
+
+    return res.status(200).json({ 
+      success: true, 
+      data: {
+        ...patient.toObject(),
+        totalAdvanceAmount: totalAdvanceAmount
+      }
+    });
   } catch (err) {
     console.error("GET by EMR error:", err);
     return res.status(500).json({ success: false, message: "Internal Server Error" });
