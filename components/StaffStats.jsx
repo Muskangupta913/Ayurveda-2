@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Legend, Label } from "recharts";
+import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 export default function MyClaims() {
   const [loading, setLoading] = useState(true);
@@ -47,36 +47,35 @@ export default function MyClaims() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading claims data...</p>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-gray-700 text-xs sm:text-sm font-medium">Loading claims...</p>
         </div>
       </div>
     );
 
   if (error)
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-4">
-        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl max-w-md w-full">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-500 text-3xl font-bold">✕</span>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 max-w-sm w-full text-center">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </div>
-          <p className="text-center text-red-600 font-semibold text-lg">{error}</p>
+          <p className="text-gray-800 text-sm sm:text-base font-medium">{error}</p>
         </div>
       </div>
     );
 
   const claimStatusData = [
-    { name: "Released", value: stats.releasedClaims || 0, color: "#10b981", percentage: 0 },
-    { name: "Pending", value: stats.pendingClaims || 0, color: "#f59e0b", percentage: 0 },
-    { name: "Cancelled", value: stats.cancelledClaims || 0, color: "#ef4444", percentage: 0 },
+    { name: "Released", value: stats.releasedClaims || 0, color: "#10b981" },
+    { name: "Pending", value: stats.pendingClaims || 0, color: "#f59e0b" },
+    { name: "Cancelled", value: stats.cancelledClaims || 0, color: "#ef4444" },
   ];
 
   const total = claimStatusData.reduce((sum, item) => sum + item.value, 0);
-  claimStatusData.forEach(item => {
-    item.percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
-  });
 
   const barChartData = [
     { name: "Total", value: stats.totalPatients || 0, color: "#3b82f6" },
@@ -86,153 +85,155 @@ export default function MyClaims() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 p-3 sm:p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
+      <div className="w-full max-w-[1400px] mx-auto px-3 xs:px-4 sm:px-5 md:px-6 lg:px-8 py-4 xs:py-5 sm:py-6 md:py-8">
+        
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-1 sm:mb-2">
+        <div className="mb-4 xs:mb-5 sm:mb-6 md:mb-8">
+          <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
             Claims Dashboard
           </h1>
-          <p className="text-sm sm:text-base text-slate-600">Comprehensive overview of claims and performance metrics</p>
+          <p className="text-xs xs:text-sm md:text-base text-gray-600">Monitor your claims and performance metrics</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3 mb-6 sm:mb-8">
-          {/* Total Patients */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">👥</span>
-              <span>Total Patients</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.totalPatients || 0}
-            </div>
-          </div>
-
-          {/* Released */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">✓</span>
-              <span>Released</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.releasedClaims || 0}
-            </div>
-          </div>
-
-          {/* Pending */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">⏱</span>
-              <span>Pending</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.pendingClaims || 0}
-            </div>
-          </div>
-
-          {/* Cancelled */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">✕</span>
-              <span>Cancelled</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.cancelledClaims || 0}
-            </div>
-          </div>
-
-          {/* Total CoPayment */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">₹</span>
-              <span>Total CoPayment</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-lg sm:text-xl">
-              {formatCurrency(stats.totalCoPayment)}
-            </div>
-          </div>
-
-          {/* CoPayment Count */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">📊</span>
-              <span>CoPayment Count</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.totalCoPaymentCount || 0}
+        {/* Stats Grid - Fully Responsive */}
+        <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 xs:gap-2.5 sm:gap-3 md:gap-4 mb-4 xs:mb-5 sm:mb-6 md:mb-8">
+          <StatCard
+            icon="👥"
+            label="Total Patients"
+            value={stats.totalPatients || 0}
+            color="blue"
+          />
+          <StatCard
+            icon="✓"
+            label="Released"
+            value={stats.releasedClaims || 0}
+            color="green"
+          />
+          <StatCard
+            icon="⏱"
+            label="Pending"
+            value={stats.pendingClaims || 0}
+            color="amber"
+          />
+          <StatCard
+            icon="✕"
+            label="Cancelled"
+            value={stats.cancelledClaims || 0}
+            color="red"
+          />
+          <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-2">
+            <div className="bg-white rounded-lg border border-gray-200 p-3 xs:p-3.5 sm:p-4 h-full">
+              <div className="flex items-center gap-1.5 xs:gap-2 mb-1.5 xs:mb-2">
+                <span className="text-base xs:text-lg">₹</span>
+                <span className="text-xs xs:text-sm md:text-base text-gray-700 font-medium">Total CoPayment</span>
+              </div>
+              <div className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 break-all">
+                {formatCurrency(stats.totalCoPayment)}
+              </div>
+              <div className="mt-1.5 xs:mt-2 pt-1.5 xs:pt-2 border-t border-gray-100">
+                <span className="text-xs sm:text-sm text-gray-600">{stats.totalCoPaymentCount || 0} payments</span>
+              </div>
             </div>
           </div>
         </div>
 
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Charts - Stack on small, side-by-side on large */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 xs:gap-4 sm:gap-5 md:gap-6 mb-4 xs:mb-5 sm:mb-6 md:mb-8">
+          
           {/* Bar Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-4 flex items-center">
-              <span className="w-1 h-6 bg-blue-500 rounded mr-3"></span>
+          <div className="bg-white rounded-lg border border-gray-200 p-3 xs:p-4 sm:p-5 md:p-6">
+            <h2 className="text-sm xs:text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-3 xs:mb-4">
               Claims Overview
             </h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={barChartData} margin={{ top: 20, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  stroke="#64748b"
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
-                />
-                <YAxis
-                  stroke="#64748b"
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
-                />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} label={{ position: 'top', fill: '#334155', fontSize: 12, fontWeight: 'bold' }}>
-                  {barChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Custom Pie Chart Display */}
-          <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-4 flex items-center">
-              <span className="w-1 h-6 bg-purple-500 rounded mr-3"></span>
-              Status Distribution
-            </h2>
-            <div className="flex flex-col items-center">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={claimStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {claimStatusData.map((entry, index) => (
+            <div className="w-full h-[200px] xs:h-[220px] sm:h-[260px] md:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={barChartData} 
+                  margin={{ 
+                    top: 10, 
+                    right: 5, 
+                    left: -25, 
+                    bottom: 5 
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: '#6b7280', fontSize: 10 }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                    tickLine={{ stroke: '#d1d5db' }}
+                  />
+                  <YAxis
+                    tick={{ fill: '#6b7280', fontSize: 10 }}
+                    axisLine={{ stroke: '#d1d5db' }}
+                    tickLine={{ stroke: '#d1d5db' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      padding: '6px 10px'
+                    }}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                    {barChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
-                  </Pie>
-                </PieChart>
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
+            </div>
+          </div>
 
-              {/* Legend with Data */}
-              <div className="w-full mt-4 space-y-3">
+          {/* Pie Chart */}
+          <div className="bg-white rounded-lg border border-gray-200 p-3 xs:p-4 sm:p-5 md:p-6">
+            <h2 className="text-sm xs:text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-3 xs:mb-4">
+              Status Distribution
+            </h2>
+            <div className="flex flex-col sm:flex-row items-center gap-3 xs:gap-4">
+              <div className="w-full sm:w-[45%] md:w-1/2 h-[160px] xs:h-[180px] sm:h-[200px] md:h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={claimStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="40%"
+                      outerRadius="70%"
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {claimStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        padding: '6px 10px'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-full sm:w-[55%] md:w-1/2 space-y-1.5 xs:space-y-2">
                 {claimStatusData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: item.color }}></div>
-                      <span className="font-semibold text-slate-700 text-sm sm:text-base">{item.name}</span>
+                  <div key={index} className="flex items-center justify-between p-2 xs:p-2.5 sm:p-3 bg-gray-50 rounded">
+                    <div className="flex items-center gap-1.5 xs:gap-2 min-w-0">
+                      <div className="w-2.5 h-2.5 xs:w-3 xs:h-3 rounded flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-xs xs:text-sm md:text-base font-medium text-gray-700 truncate">{item.name}</span>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-slate-800 text-sm sm:text-base">{item.value}</div>
-                      <div className="text-xs text-slate-500">{item.percentage}%</div>
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <div className="text-xs xs:text-sm md:text-base font-semibold text-gray-900">{item.value}</div>
+                      <div className="text-[10px] xs:text-xs text-gray-500">
+                        {total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -241,111 +242,29 @@ export default function MyClaims() {
           </div>
         </div>
 
-        {/* Claims Table */}
-        {/* <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center">
-              <span className="w-1 h-6 bg-indigo-500 rounded mr-3"></span>
-              All Claims Records
-            </h2>
-          </div>
-
-          {patients.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-slate-400 text-3xl sm:text-4xl">📋</span>
-              </div>
-              <p className="text-slate-500 font-medium">No claims found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-max">
-                <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
-                  <tr>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Created Date
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Release Date
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Released By
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      CoPayment
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
-                  {patients.map((p, idx) => (
-                    <tr key={p._id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-700 font-medium">
-                        {new Date(p.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 sm:px-3 py-1 text-xs font-bold rounded-full ${p.advanceClaimStatus === "Released"
-                              ? "bg-green-100 text-green-700"
-                              : p.advanceClaimStatus === "Cancelled"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-amber-100 text-amber-700"
-                            }`}
-                        >
-                          {p.advanceClaimStatus || "Pending"}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-700">
-                        {p.advanceClaimReleaseDate
-                          ? new Date(p.advanceClaimReleaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : "-"}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-700">
-                        {p.advanceClaimReleasedBy || "-"}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right font-bold text-slate-900">
-                        {formatCurrency(p.advanceGivenAmount || 0)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div> */}
       </div>
     </div>
   );
 }
 
-function StatCard({ title, value, icon, gradient, isLarge = false }) {
+function StatCard({ icon, label, value, color }) {
+  const colorMap = {
+    blue: 'bg-blue-50 text-blue-600',
+    green: 'bg-green-50 text-green-600',
+    amber: 'bg-amber-50 text-amber-600',
+    red: 'bg-red-50 text-red-600',
+  };
+
   return (
-    <div className={`relative bg-white rounded-xl shadow-md border border-slate-200 p-5 overflow-hidden ${isLarge ? 'col-span-2 lg:col-span-1' : ''}`}>
-      {/* Top accent line */}
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient}`}></div>
-
-      {/* Icon background decoration */}
-      <div className={`absolute -right-4 -top-4 w-24 h-24 bg-gradient-to-br ${gradient} opacity-5 rounded-full`}></div>
-
-      <div className="relative">
-        {/* Icon and label row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className={`w-12 h-12 bg-gradient-to-br ${gradient} rounded-lg flex items-center justify-center shadow-sm`}>
-            <span className="text-2xl">{icon}</span>
-          </div>
-        </div>
-
-        {/* Value */}
-        <div className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 break-words leading-tight">
-          {value}
-        </div>
-
-        {/* Title */}
-        <div className="text-xs sm:text-sm text-slate-600 font-medium tracking-wide">
-          {title}
-        </div>
+    <div className="bg-white rounded-lg border border-gray-200 p-2.5 xs:p-3 sm:p-3.5 md:p-4 h-full min-h-[90px] xs:min-h-[100px] sm:min-h-[110px]">
+      <div className={`inline-flex items-center justify-center w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 rounded-lg ${colorMap[color]} mb-1.5 xs:mb-2`}>
+        <span className="text-sm xs:text-base">{icon}</span>
+      </div>
+      <div className="text-base xs:text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-0.5 break-all leading-tight">
+        {value}
+      </div>
+      <div className="text-[10px] xs:text-xs sm:text-sm text-gray-600 font-medium leading-tight">
+        {label}
       </div>
     </div>
   );

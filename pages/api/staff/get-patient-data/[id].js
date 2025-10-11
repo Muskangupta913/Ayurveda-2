@@ -61,6 +61,7 @@ export default async function handler(req, res) {
       invoice.advance = newAdvance;
       invoice.paymentMethod = newPaymentMethod;
 
+<<<<<<< HEAD
       // Update claim status fields if provided
       if (advanceClaimStatus !== undefined) {
         invoice.advanceClaimStatus = advanceClaimStatus;
@@ -75,6 +76,8 @@ export default async function handler(req, res) {
         invoice.advanceClaimReleasedBy = advanceClaimReleasedBy;
       }
 
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
       // Append new snapshot to history
       invoice.paymentHistory.push({
         amount: newAmount,
@@ -82,8 +85,11 @@ export default async function handler(req, res) {
         advance: newAdvance,
         pending: newPending,
         paymentMethod: newPaymentMethod,
+<<<<<<< HEAD
         advanceClaimStatus: invoice.advanceClaimStatus,
         advanceClaimCancellationRemark: invoice.advanceClaimCancellationRemark,
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
         updatedAt: new Date(),
       });
 

@@ -4,7 +4,11 @@ import axios from "axios";
 import ClinicLayout from '../../components/staffLayout';
 import withClinicAuth from '../../components/withStaffAuth';
 
+<<<<<<< HEAD
 function PettyCashAndExpense() {
+=======
+export default function PettyCashAndExpense() {
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
   // ---------- STATE ----------
   const [form, setForm] = useState({
     patientName: "",
@@ -30,11 +34,14 @@ function PettyCashAndExpense() {
   const [editType, setEditType] = useState(""); // "allocated" or "expense"
   const [receiptUrls, setReceiptUrls] = useState([]);
   const [expenseReceiptUrls, setExpenseReceiptUrls] = useState([]);
+<<<<<<< HEAD
   // UI state
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showPettyModal, setShowPettyModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", tone: "success" });
   const [expenseSearch, setExpenseSearch] = useState("");
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
   // Local previews before submit
   const [pettyPreviews, setPettyPreviews] = useState([]); // array of { url, file }
   const [expensePreviews, setExpensePreviews] = useState([]); // array of { url, file }
@@ -219,6 +226,7 @@ function PettyCashAndExpense() {
       }
 
       if (editMode && editType === "allocated") {
+<<<<<<< HEAD
         // Update existing allocated amount. If new files selected, upload and include receipts
         let receiptsForUpdate = [];
         const hasNewFiles = Array.isArray(form.receipts) && form.receipts.length > 0 && form.receipts[0] instanceof File;
@@ -228,6 +236,9 @@ function PettyCashAndExpense() {
           receiptsForUpdate = form.receipts; // assume they are urls
         }
 
+=======
+        // Update existing (keep JSON API for updates)
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
         await axios.put(
           "/api/pettycash/update",
           {
@@ -235,7 +246,11 @@ function PettyCashAndExpense() {
             type: "allocated",
             data: {
               newAmount: Number(form.allocatedAmounts[0]),
+<<<<<<< HEAD
               receipts: receiptsForUpdate,
+=======
+              // No file changes on edit here; images managed via update endpoint if needed
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
               note: form.note,
             },
           },
@@ -263,9 +278,12 @@ function PettyCashAndExpense() {
       });
       setPettyPreviews([]);
       fetchPettyCash();
+<<<<<<< HEAD
       fetchGlobalTotals(selectedDate);
       // Close modal on success
       setShowPettyModal(false);
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
       alert(editMode ? "Record updated successfully!" : "Petty Cash added!");
     } catch (err) {
       console.error("Error submitting petty cash:", err);
@@ -334,8 +352,11 @@ function PettyCashAndExpense() {
       setEditingId(null);
       fetchPettyCash();
       fetchGlobalTotals(selectedDate);
+<<<<<<< HEAD
       // Close modal on success
       setShowExpenseModal(false);
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
       alert(editMode ? "Expense updated successfully!" : "Expense added!");
     } catch (err) {
       console.error("Error updating expense:", err);
@@ -421,8 +442,11 @@ function PettyCashAndExpense() {
         allocatedAmounts: [item.allocatedAmounts?.[0]?.amount || ""],
         receipts: item.allocatedAmounts?.[0]?.receipts || [],
       });
+<<<<<<< HEAD
       // Open petty cash modal for editing allocated amount
       setShowPettyModal(true);
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
     } else if (type === "expense") {
       // ✅ Validation: Find parent if not provided
       if (!pettyCashId) {
@@ -445,8 +469,11 @@ function PettyCashAndExpense() {
         receipts: item.receipts || [],
       });
       setExpenseReceiptUrls(item.receipts || []);
+<<<<<<< HEAD
       // Open expense modal for editing
       setShowExpenseModal(true);
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
     }
   };
 
@@ -496,6 +523,7 @@ function PettyCashAndExpense() {
         />
       </div>
 
+<<<<<<< HEAD
       {/* Modals */}
       {showExpenseModal && (
         <div className="fixed inset-0 z-40 p-4">
@@ -547,6 +575,113 @@ function PettyCashAndExpense() {
                       >
                         ×
                       </button>
+=======
+      {/* Two forms side-by-side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* LEFT: Add Expense Form */}
+        <div className="border rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-3 text-blue-700">
+            Add Expense
+          </h3>
+          {/* Expense Form */}
+          <form onSubmit={handleExpenseSubmit} className="space-y-3">
+            <input
+              type="text"
+              name="description"
+              placeholder="Expense Description"
+              value={expenseForm.description}
+              onChange={handleExpenseChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+
+            <input
+              type="number"
+              name="spentAmount"
+              placeholder="Spent Amount"
+              value={expenseForm.spentAmount}
+              onChange={handleExpenseChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+
+            <input
+              type="file"
+              name="receipts"
+              multiple
+              onChange={handleExpenseFilesChange}
+              className="w-full border p-2 rounded"
+            />
+
+            {/* Previews for newly selected expense receipts (before submit) */}
+            {expensePreviews.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {expensePreviews.map((p, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
+                    <button
+                      type="button"
+                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
+                      onClick={() => removeExpensePreviewAt(idx)}
+                      aria-label="Remove receipt"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {editMode && editType === "expense" && expenseReceiptUrls?.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {expenseReceiptUrls.map((url, idx) => (
+                  <a
+                    key={idx}
+                    href={url.url || url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img
+                      src={url.url || url}
+                      alt={`Receipt ${idx + 1}`}
+                      className="w-full h-20 object-cover rounded border"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+            >
+              Add Expense
+            </button>
+          </form>
+
+          {expenseMsg && (
+            <p className="text-center text-green-600 mt-3">{expenseMsg}</p>
+          )}
+
+          {/* Show expenses for selected date */}
+          <div className="mt-6">
+            <h4 className="text-md font-semibold mb-2">
+              Expenses on {selectedDate}
+            </h4>
+            {filteredExpenses.length > 0 ? (
+              <ul className="space-y-2">
+                {filteredExpenses.map((ex) => (
+                  <li
+                    key={ex._id}
+                    className="border rounded p-2 text-sm"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{ex.description}</span>
+                      <span className="font-semibold text-blue-600">
+                        ₹{ex.spentAmount}
+                      </span>
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
                     </div>
                   ))}
                 </div>
@@ -711,7 +846,112 @@ function PettyCashAndExpense() {
             )}
           </div>
         </div>
+<<<<<<< HEAD
       )}
+=======
+
+        {/* RIGHT: Add Petty Cash Form */}
+        <div className="border rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-3 text-blue-700">
+            Add Petty Cash
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              type="text"
+              name="patientName"
+              placeholder="Patient Name"
+              value={form.patientName}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+            <input
+              type="email"
+              name="patientEmail"
+              placeholder="Patient Email"
+              value={form.patientEmail}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+            <input
+              type="text"
+              name="patientPhone"
+              placeholder="Patient Phone"
+              value={form.patientPhone}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+              required
+            />
+            <textarea
+              name="note"
+              placeholder="Note (optional)"
+              value={form.note}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+            ></textarea>
+
+            <input
+              type="file"
+              name="receipts"
+              multiple
+              onChange={handlePettyFilesChange}
+              className="w-full border p-2 rounded"
+            />
+
+            {/* Previews for newly selected petty cash receipts (before submit) */}
+            {pettyPreviews.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {pettyPreviews.map((p, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
+                    <button
+                      type="button"
+                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
+                      onClick={() => removePettyPreviewAt(idx)}
+                      aria-label="Remove receipt"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+
+            {form.allocatedAmounts.map((amt, idx) => (
+              <input
+                key={idx}
+                type="number"
+                placeholder={`Allocated Amount ${idx + 1}`}
+                value={amt}
+                onChange={(e) => handleAmountChange(idx, e.target.value)}
+                className="w-full border p-2 rounded"
+
+              />
+            ))}
+
+            <button
+              type="button"
+              onClick={addAmountField}
+              className="w-full border text-blue-600 border-blue-600 py-2 rounded hover:bg-blue-50"
+            >
+              + Add More Allocations
+            </button>
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            >
+              Add Petty Cash
+            </button>
+          </form>
+          {message && (
+            <p className="text-center text-green-600 mt-3">{message}</p>
+          )}
+        </div>
+      </div>
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
 
       {/* Search and Table */}
       {/* Petty Cash Records for selected date */}
@@ -891,13 +1131,21 @@ function PettyCashAndExpense() {
                             </button>
                           </>
                         )}
+<<<<<<< HEAD
 
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
+=======
+>>>>>>> 77f529264ff6f3af7fb6e055e980f8c1693a09e5
 
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         )}

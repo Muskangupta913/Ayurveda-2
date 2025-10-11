@@ -1,7 +1,93 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { CheckCircle, AlertCircle, Trash2, Edit3, Plus, X, Search, Mail, Phone, MapPin, Percent } from "lucide-react";
+import { CheckCircle, AlertCircle, Trash2, Edit3, Plus, X, Search, Mail, Phone, MapPin, Percent, Info, AlertTriangle } from "lucide-react";
+
+// Toast Component
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircle className="w-5 h-5 flex-shrink-0" />,
+    error: <AlertCircle className="w-5 h-5 flex-shrink-0" />,
+    info: <Info className="w-5 h-5 flex-shrink-0" />,
+    warning: <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+  };
+
+  const styles = {
+    success: "bg-green-100 text-green-700 border-green-200",
+    error: "bg-red-100 text-red-700 border-red-200",
+    info: "bg-blue-100 text-blue-700 border-blue-200",
+    warning: "bg-yellow-100 text-yellow-700 border-yellow-200"
+  };
+
+  return (
+    <div className="fixed top-4 right-4 z-[60] animate-in slide-in-from-top duration-300">
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border ${styles[type]} min-w-[300px] max-w-md`}>
+        {icons[type]}
+        <span className="text-sm font-medium flex-1">{message}</span>
+        <button onClick={onClose} className="hover:opacity-70 transition-opacity">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Confirmation Dialog Component
+const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", cancelText = "Cancel", type = "danger" }) => {
+  if (!isOpen) return null;
+
+  const buttonStyles = {
+    danger: "bg-red-600 hover:bg-red-700",
+    warning: "bg-yellow-600 hover:bg-yellow-700",
+    info: "bg-blue-600 hover:bg-blue-700"
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      {/* Blurred Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/20 backdrop-blur-md"
+        onClick={onClose}
+      ></div>
+
+      {/* Dialog Content */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-start gap-4">
+          <div className={`p-3 rounded-full ${type === 'danger' ? 'bg-red-100' : type === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'}`}>
+            <AlertTriangle className={`w-6 h-6 ${type === 'danger' ? 'text-red-600' : type === 'warning' ? 'text-yellow-600' : 'text-blue-600'}`} />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+            <p className="text-sm text-gray-600">{message}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-all font-medium ${buttonStyles[type]}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function VendorForm() {
   const [formData, setFormData] = useState({
@@ -16,9 +102,10 @@ export default function VendorForm() {
   const [vendors, setVendors] = useState([]);
   const [filteredVendors, setFilteredVendors] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [toast, setToast] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, vendorId: null });
 
   useEffect(() => {
     fetchVendors();
@@ -33,6 +120,10 @@ export default function VendorForm() {
     setFilteredVendors(filtered);
   }, [searchQuery, vendors]);
 
+  const showToast = (message, type = "info") => {
+    setToast({ message, type });
+  };
+
   const fetchVendors = async () => {
     try {
       const res = await axios.get("/api/admin/get-vendors");
@@ -42,6 +133,7 @@ export default function VendorForm() {
       }
     } catch (err) {
       console.error("Error fetching vendors:", err);
+      showToast("Failed to fetch vendors", "error");
     }
   };
 
@@ -67,7 +159,7 @@ export default function VendorForm() {
           config
         );
         if (res.data.success) {
-          setMessage({ type: "success", text: "Vendor updated successfully!" });
+          showToast("Vendor updated successfully!", "success");
         }
       } else {
         const res = await axios.post(
@@ -76,7 +168,7 @@ export default function VendorForm() {
           config
         );
         if (res.data.success) {
-          setMessage({ type: "success", text: "Vendor created successfully!" });
+          showToast("Vendor created successfully!", "success");
         }
       }
 
@@ -91,34 +183,25 @@ export default function VendorForm() {
       setEditId(null);
       setIsModalOpen(false);
       fetchVendors();
-      
-      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
     } catch (err) {
       console.error("Error submitting vendor form:", err);
-      setMessage({
-        type: "error",
-        text: err.response?.data?.message || "Error saving vendor!",
-      });
-      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
+      showToast(err.response?.data?.message || "Error saving vendor!", "error");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this vendor?")) return;
     try {
       const token = localStorage.getItem("userToken");
       const res = await axios.delete(`/api/admin/delete-vendor?id=${id}`, {
         headers: { Authorization: token ? `Bearer ${token}` : "" },
       });
       if (res.data.success) {
-        setMessage({ type: "success", text: "Vendor deleted successfully!" });
+        showToast("Vendor deleted successfully!", "success");
         fetchVendors();
-        setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       }
     } catch (err) {
       console.error(err);
-      setMessage({ type: "error", text: "Failed to delete vendor!" });
-      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
+      showToast("Failed to delete vendor!", "error");
     }
   };
 
@@ -179,22 +262,13 @@ export default function VendorForm() {
           </button>
         </div>
 
-        {/* Success/Error Message */}
-        {message.text && (
-          <div
-            className={`mb-6 flex items-center gap-2 p-4 rounded-lg shadow-md ${
-              message.type === "success"
-                ? "bg-green-100 text-green-700 border border-green-200"
-                : "bg-red-100 text-red-700 border border-red-200"
-            }`}
-          >
-            {message.type === "success" ? (
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            )}
-            <span className="text-sm sm:text-base">{message.text}</span>
-          </div>
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         )}
 
         {/* Search Bar */}
@@ -233,7 +307,7 @@ export default function VendorForm() {
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(vendor._id)}
+                      onClick={() => setConfirmDialog({ isOpen: true, vendorId: vendor._id })}
                       className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
                       title="Delete Vendor"
                     >
@@ -295,12 +369,24 @@ export default function VendorForm() {
           </div>
         )}
 
+        {/* Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog({ isOpen: false, vendorId: null })}
+          onConfirm={() => handleDelete(confirmDialog.vendorId)}
+          title="Delete Vendor"
+          message="Are you sure you want to delete this vendor? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+          type="danger"
+        />
+
         {/* Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
             {/* Backdrop with blur */}
             <div
-              className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/20 backdrop-blur-md"
               onClick={closeModal}
             ></div>
 
