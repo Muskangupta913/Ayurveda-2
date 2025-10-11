@@ -78,7 +78,7 @@ const INITIAL_FORM_DATA = {
   mobileNumber: "", gender: "", doctor: "", service: "", treatment: "",
   package: "", patientType: "", referredBy: "", amount: "", paid: "",
   advance: "", paymentMethod: "", insurance: "No", advanceGivenAmount: "",
-  coPayPercent: "", advanceClaimStatus: "Pending"
+  coPayPercent: "", advanceClaimStatus: "Pending", insuranceType: "Paid"
 };
 
 const InvoiceManagementSystem = () => {
@@ -140,35 +140,48 @@ const InvoiceManagementSystem = () => {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          setFetchedTreatments(data.data.filter(i => i.treatment).map(i => ({ _id: i._id, name: i.treatment })));
-          setFetchedPackages(data.data.filter(i => i.package).map(i => ({ _id: i._id, name: i.package })));
+          setFetchedTreatments(data.data.filter(i => i.treatment).map(i => ({ _id: i._id, name: i.treatment, price: i.treatmentPrice })));
+          setFetchedPackages(data.data.filter(i => i.package).map(i => ({ _id: i._id, name: i.package, price: i.packagePrice })));
         }
       })
       .catch(() => showToast("Failed to fetch treatments", "error"));
   }, [showToast]);
 
+  // When insurance is Yes, advanceGivenAmount equals full amount
   useEffect(() => {
     if (formData.insurance === "Yes") {
-      const total = (parseFloat(formData.paid) || 0) + (parseFloat(formData.advance) || 0);
-      setFormData(prev => ({ ...prev, advanceGivenAmount: total.toFixed(2) }));
+      const amt = parseFloat(formData.amount) || 0;
+      setFormData(prev => ({ ...prev, advanceGivenAmount: amt.toFixed(2) }));
     }
-  }, [formData.paid, formData.advance, formData.insurance]);
+  }, [formData.amount, formData.insurance]);
 
   useEffect(() => generateInvoiceNumber(), []);
 
   useEffect(() => {
     const amount = parseFloat(formData.amount) || 0;
     const paid = parseFloat(formData.paid) || 0;
-    const advance = parseFloat(formData.advance) || 0;
-    setCalculatedFields(prev => ({ ...prev, pending: Math.max(0, amount - (paid + advance)) }));
-  }, [formData.amount, formData.paid, formData.advance]);
+    let pending = 0;
+    let advance = 0;
+    if (paid >= amount) {
+      advance = paid - amount;
+      pending = 0;
+    } else {
+      advance = 0;
+      pending = amount - paid;
+    }
+    setFormData(prev => ({ ...prev, advance: advance.toFixed(2) }));
+    setCalculatedFields(prev => ({ ...prev, pending }));
+  }, [formData.amount, formData.paid]);
 
   useEffect(() => {
-    if (formData.insurance === "Yes" && formData.coPayPercent) {
-      const needToPay = (parseFloat(formData.amount) || 0) * ((parseFloat(formData.coPayPercent) || 0) / 100);
-      setCalculatedFields(prev => ({ ...prev, needToPay: Math.max(0, needToPay) }));
+    if (formData.insurance === "Yes" && formData.coPayPercent !== "") {
+      const amount = parseFloat(formData.amount) || 0;
+      const coPayPercent = parseFloat(formData.coPayPercent) || 0;
+      const coPayAmount = (amount * coPayPercent) / 100;
+      const needToPay = Math.max(0, amount - coPayAmount);
+      setCalculatedFields(prev => ({ ...prev, needToPay }));
     } else {
-      setCalculatedFields(prev => ({ ...prev, needToPay: 0 }));
+      setCalculatedFields(prev => ({ ...prev, needToPay: calculatedFields.pending }));
     }
   }, [formData.amount, formData.coPayPercent, formData.insurance]);
 
@@ -197,6 +210,27 @@ const InvoiceManagementSystem = () => {
       }));
     }
   }, [errors]);
+
+  // Auto-set amount when treatment/package selected; show price in dropdowns
+  const handleServiceLinkedChange = useCallback((e) => {
+    const { name, value } = e.target;
+    if (name === "service") {
+      setFormData(prev => ({ ...prev, service: value, treatment: "", package: "", amount: "" }));
+      return;
+    }
+    if (name === "treatment") {
+      const selected = fetchedTreatments.find(t => t.name === value);
+      const price = selected?.price ?? "";
+      setFormData(prev => ({ ...prev, treatment: value, amount: price !== "" ? String(price) : prev.amount }));
+      return;
+    }
+    if (name === "package") {
+      const selected = fetchedPackages.find(p => p.name === value);
+      const price = selected?.price ?? "";
+      setFormData(prev => ({ ...prev, package: value, amount: price !== "" ? String(price) : prev.amount }));
+      return;
+    }
+  }, [fetchedTreatments, fetchedPackages]);
 
   const fetchEMRData = useCallback(async () => {
     if (!formData.emrNumber.trim()) {
@@ -517,7 +551,7 @@ const handleSubmit = useCallback(async () => {
                     <select
                       name="service"
                       value={formData.service}
-                      onChange={handleInputChange}
+                      onChange={handleServiceLinkedChange}
                       className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${errors.service ? "border-red-500 bg-red-50" : "border-gray-300"}`}
                     >
                       <option value="">Select Service</option>
@@ -529,9 +563,9 @@ const handleSubmit = useCallback(async () => {
                   {formData.service === "Package" && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Package <span className="text-red-500">*</span></label>
-                      <select name="package" value={formData.package} onChange={handleInputChange} className={`w-full px-4 py-2 border rounded-lg ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
+                      <select name="package" value={formData.package} onChange={handleServiceLinkedChange} className={`w-full px-4 py-2 border rounded-lg ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
                         <option value="">Select Package</option>
-                        {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}</option>)}
+                        {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - ₹${p.price.toFixed(2)}` : ''}</option>)}
                       </select>
                       {errors.package && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.package}</p>}
                     </div>
@@ -539,12 +573,50 @@ const handleSubmit = useCallback(async () => {
                   {formData.service === "Treatment" && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Treatment <span className="text-red-500">*</span></label>
-                      <select name="treatment" value={formData.treatment} onChange={handleInputChange} className={`w-full px-4 py-2 border rounded-lg ${errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
+                      <select name="treatment" value={formData.treatment} onChange={handleServiceLinkedChange} className={`w-full px-4 py-2 border rounded-lg ${errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
                         <option value="">Select Treatment</option>
-                        {fetchedTreatments.map(t => <option key={t._id} value={t.name}>{t.name}</option>)}
+                        {fetchedTreatments.map(t => <option key={t._id} value={t.name}>{t.name}{typeof t.price === 'number' ? ` - ₹${t.price.toFixed(2)}` : ''}</option>)}
                       </select>
                       {errors.treatment && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.treatment}</p>}
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Insurance (moved above payment) */}
+              <div className="text-gray-800 bg-purple-50 rounded-lg p-6 border border-purple-200">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Insurance Details</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Insurance</label>
+                    <select name="insurance" value={formData.insurance} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                      <option value="No">No</option>
+                      <option value="Yes">Yes</option>
+                    </select>
+                  </div>
+                  {formData.insurance === 'Yes' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                        <select name="insuranceType" value={formData.insuranceType} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                          <option value="Paid">Paid</option>
+                          <option value="Advance">Advance</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Advance Given Amount (Auto)</label>
+                        <input type="number" name="advanceGivenAmount" value={formData.advanceGivenAmount} disabled className="w-full px-4 py-2 border rounded-lg bg-gray-100" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Co-Pay % <span className="text-red-500">*</span></label>
+                        <input type="number" name="coPayPercent" value={formData.coPayPercent} onChange={handleInputChange} className={`w-full px-4 py-2 border rounded-lg ${errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} placeholder="0-100" min="0" max="100" />
+                        {errors.coPayPercent && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.coPayPercent}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay (Auto)</label>
+                        <input type="text" value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} disabled className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold" />
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -556,10 +628,9 @@ const handleSubmit = useCallback(async () => {
                   Payment Details
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    { name: "amount", label: "Amount", required: true, type: "number" },
+                  {[{ name: "amount", label: "Amount (Auto from selection)", required: true, type: "number" },
                     { name: "paid", label: "Paid", type: "number" },
-                    { name: "advance", label: "Advance", type: "number" }
+                    { name: "advance", label: "Advance (Auto)", type: "number", disabled: true }
                   ].map(f => (
                     <div key={f.name}>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -570,7 +641,8 @@ const handleSubmit = useCallback(async () => {
                         name={f.name}
                         value={formData[f.name]}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg ${errors[f.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                        disabled={f.disabled}
+                        className={`w-full px-4 py-2 border rounded-lg ${errors[f.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'} ${f.disabled ? 'bg-gray-100' : ''}`}
                         placeholder="0.00"
                         step="0.01"
                       />
@@ -589,61 +661,6 @@ const handleSubmit = useCallback(async () => {
                     </select>
                     {errors.paymentMethod && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.paymentMethod}</p>}
                   </div>
-                </div>
-              </div>
-
-              {/* Insurance */}
-              <div className="text-gray-800 bg-purple-50 rounded-lg p-6 border border-purple-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Insurance Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Insurance</label>
-                    <select name="insurance" value={formData.insurance} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                      <option value="No">No</option>
-                      <option value="Yes">Yes</option>
-                    </select>
-                  </div>
-                  {formData.insurance === 'Yes' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Advance Given Amount <span className="text-red-500">*</span></label>
-                        <input type="number" name="advanceGivenAmount" value={formData.advanceGivenAmount} disabled className="w-full px-4 py-2 border rounded-lg bg-gray-100" />
-                        {errors.advanceGivenAmount && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.advanceGivenAmount}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Co-Pay % <span className="text-red-500">*</span></label>
-                        <input type="number" name="coPayPercent" value={formData.coPayPercent} onChange={handleInputChange} className={`w-full px-4 py-2 border rounded-lg ${errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} placeholder="0-100" min="0" max="100" />
-                        {errors.coPayPercent && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.coPayPercent}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay (Auto)</label>
-                        <input type="text" value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} disabled className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Advance Claim Status</label>
-                        <div className="flex gap-2">
-                          <input type="text" value={formData.advanceClaimStatus} disabled className={`flex-1 px-4 py-2 border rounded-lg font-semibold ${formData.advanceClaimStatus === 'Released' ? 'bg-green-100 border-green-400 text-green-800' : 'bg-yellow-100 border-yellow-400 text-yellow-800'}`} />
-                          {formData.advanceClaimStatus === "Pending" && (
-                            <button type="button" onClick={() => showToast("Doctor approval required", "warning")} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-md font-semibold">
-                              Release
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {autoFields.advanceClaimReleaseDate && (
-                        <>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Release Date (Auto)</label>
-                            <input type="text" value={new Date(autoFields.advanceClaimReleaseDate).toLocaleString()} disabled className="w-full px-4 py-2 bg-gray-100 border border-gray-400 rounded-lg text-gray-700" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Released By (Auto)</label>
-                            <input type="text" value={autoFields.advanceClaimReleasedBy || ''} disabled className="w-full px-4 py-2 bg-gray-100 border border-gray-400 rounded-lg text-gray-700" />
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
                 </div>
               </div>
 

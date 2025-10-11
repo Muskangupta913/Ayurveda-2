@@ -4,6 +4,8 @@ const StaffTreatmentSchema = new mongoose.Schema(
   {
     package: { type: String, trim: true, required: false },   // optional
     treatment: { type: String, trim: true, required: false }, // optional
+    packagePrice: { type: Number, required: false },
+    treatmentPrice: { type: Number, required: false },
   },
   { timestamps: true, collection: "staff_treatment" }
 );

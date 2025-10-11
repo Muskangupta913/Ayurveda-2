@@ -33,10 +33,27 @@ function PatientsPage() {
   const [checklist, setChecklist] = useState({});
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [currentUser, setCurrentUser] = useState({ role: "", _id: "" });
+  const [doctorList, setDoctorList] = useState([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState("");
+
+  useEffect(() => {
+    // Fetch current user and doctor list
+    const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    axios.get("/api/staff/patient-registration", { headers })
+      .then(res => {
+        if (res.data?.success) setCurrentUser(res.data.data);
+      })
+      .catch(() => {});
+    axios.get("/api/admin/get-all-doctor-staff")
+      .then(res => { if (res.data?.success) setDoctorList(res.data.data); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchPatients();
-  }, []);
+  }, [selectedDoctorId]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -50,7 +67,10 @@ function PatientsPage() {
   const fetchPatients = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/staff/pending-claims", { headers: getAuthHeader() });
+      const params = {};
+      // For staff/admin/clinic, require a doctor filter; for doctorStaff, API will infer
+      if (selectedDoctorId) params.doctorId = selectedDoctorId;
+      const res = await axios.get("/api/staff/pending-claims", { headers: getAuthHeader(), params });
       setPatients(res.data.data || []);
     } catch (err) {
       console.error("Fetch error:", err.response?.data || err.message);
@@ -136,9 +156,10 @@ function PatientsPage() {
     }
   };
 
-  const tabs = ["Pending", "Released", "Cancelled"];
+  const tabs = ["Pending", "Approved by doctor", "Released", "Cancelled"];
   const tabCounts = {
     Pending: patients.filter((p) => p.advanceClaimStatus === "Pending").length,
+    "Approved by doctor": patients.filter((p) => p.advanceClaimStatus === "Approved by doctor").length,
     Released: patients.filter((p) => p.advanceClaimStatus === "Released").length,
     Cancelled: patients.filter((p) => p.advanceClaimStatus === "Cancelled").length,
   };
@@ -182,8 +203,19 @@ function PatientsPage() {
           ))}
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6">
+        {/* Filters */}
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {(currentUser.role === "staff" || currentUser.role === "admin" || currentUser.role === "clinic") && (
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">Doctor</label>
+              <select value={selectedDoctorId} onChange={(e) => setSelectedDoctorId(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                <option value="">Select Doctor</option>
+                {doctorList.map(d => (
+                  <option key={d._id} value={d._id}>{d.name} ({d.role})</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="relative">
             <input
               type="text"
@@ -249,6 +281,18 @@ function PatientsPage() {
                           </div>
                         </>
                       )}
+                      {activeTab === "Approved by doctor" && (
+                        <>
+                          <div>
+                            <span className="text-gray-500 block text-xs">Approved On</span>
+                            <span className="text-gray-800 font-medium">{p.advanceClaimReleaseDate ? new Date(p.advanceClaimReleaseDate).toLocaleDateString() : "-"}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block text-xs">Approved By</span>
+                            <span className="text-gray-800 font-medium truncate block">{p.advanceClaimReleasedBy || "-"}</span>
+                          </div>
+                        </>
+                      )}
                       {activeTab === "Released" && (
                         <>
                           <div>
@@ -286,6 +330,14 @@ function PatientsPage() {
                           Cancel
                         </button>
                       </>
+                    )}
+                    {activeTab === "Approved by doctor" && (
+                      <button
+                        onClick={() => doCancel(p)}
+                        className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
                     )}
                     {activeTab === "Released" && (
                       <button

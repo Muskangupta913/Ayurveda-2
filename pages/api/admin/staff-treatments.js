@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     // POST → Add a new staff treatment
     // -------------------------------
     if (req.method === "POST") {
-      const { package: pkg, treatment } = req.body;
+      const { package: pkg, treatment, packagePrice, treatmentPrice } = req.body;
 
       // Must provide at least one field
       if (!pkg?.trim() && !treatment?.trim()) {
@@ -32,6 +32,14 @@ export default async function handler(req, res) {
       const dataToInsert = {};
       if (pkg?.trim()) dataToInsert.package = pkg.trim();
       if (treatment?.trim()) dataToInsert.treatment = treatment.trim(); 
+      if (packagePrice !== undefined && packagePrice !== null && packagePrice !== "") {
+        const parsedPackagePrice = Number(packagePrice);
+        if (!Number.isNaN(parsedPackagePrice)) dataToInsert.packagePrice = parsedPackagePrice;
+      }
+      if (treatmentPrice !== undefined && treatmentPrice !== null && treatmentPrice !== "") {
+        const parsedTreatmentPrice = Number(treatmentPrice);
+        if (!Number.isNaN(parsedTreatmentPrice)) dataToInsert.treatmentPrice = parsedTreatmentPrice;
+      }
 
       const newTreatment = await StaffTreatment.create(dataToInsert);
 
@@ -46,7 +54,7 @@ export default async function handler(req, res) {
     // PUT → Update existing treatment
     // -------------------------------
     if (req.method === "PUT") {
-      const { id, package: pkg, treatment } = req.body;
+      const { id, package: pkg, treatment, packagePrice, treatmentPrice } = req.body;
 
       if (!id) {
         return res.status(400).json({ success: false, message: "Missing treatment ID" });
@@ -55,6 +63,22 @@ export default async function handler(req, res) {
       const dataToUpdate = {};
       if (pkg !== undefined) dataToUpdate.package = pkg?.trim() || "";
       if (treatment !== undefined) dataToUpdate.treatment = treatment?.trim() || "";
+      if (packagePrice !== undefined) {
+        if (packagePrice === null || packagePrice === "") {
+          dataToUpdate.packagePrice = undefined;
+        } else {
+          const parsedPackagePrice = Number(packagePrice);
+          if (!Number.isNaN(parsedPackagePrice)) dataToUpdate.packagePrice = parsedPackagePrice;
+        }
+      }
+      if (treatmentPrice !== undefined) {
+        if (treatmentPrice === null || treatmentPrice === "") {
+          dataToUpdate.treatmentPrice = undefined;
+        } else {
+          const parsedTreatmentPrice = Number(treatmentPrice);
+          if (!Number.isNaN(parsedTreatmentPrice)) dataToUpdate.treatmentPrice = parsedTreatmentPrice;
+        }
+      }
 
       const updated = await StaffTreatment.findByIdAndUpdate(id, dataToUpdate, { new: true });
 

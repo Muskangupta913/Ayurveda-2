@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // ✅ Only staff, doctor, or doctorStaff can add EOD note
+    // ✅ Only staff or doctorStaff can add EOD note
     if (!["staff", "doctorStaff"].includes(user.role)) {
       return res
         .status(403)

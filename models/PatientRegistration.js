@@ -47,12 +47,14 @@ const patientRegistrationSchema = new mongoose.Schema(
 
     // Insurance Section
     insurance: { type: String, enum: ["Yes", "No"], default: "No" },
+    insuranceType: { type: String, enum: ["Paid", "Advance"], default: "Paid" },
     advanceGivenAmount: { type: Number, default: 0, min: 0 },
     coPayPercent: { type: Number, default: 0, min: 0, max: 100 },
     needToPay: { type: Number, default: 0, min: 0 },
-    advanceClaimStatus: { type: String, enum: ["Pending", "Released", "Cancelled"], default: "Pending" },
+    advanceClaimStatus: { type: String, enum: ["Pending", "Released", "Cancelled"], default: function() { return this.insurance === "Yes" ? "Pending" : null; } },
     advanceClaimReleaseDate: { type: Date },
     advanceClaimReleasedBy: { type: String, trim: true },
+    advanceClaimCancellationRemark: { type: String, trim: true },
 
     // Status & Notes
     status: { type: String, enum: ["Active", "Cancelled", "Completed"], default: "Active" },
@@ -63,19 +65,28 @@ const patientRegistrationSchema = new mongoose.Schema(
 
 // 🔹 Pre-save hook: calculate pending & needToPay
 patientRegistrationSchema.pre("save", function (next) {
-  this.amount = this.amount ?? 0;
-  this.paid = this.paid ?? 0;
-  this.advance = this.advance ?? 0;
-  this.advanceGivenAmount = this.advanceGivenAmount ?? 0;
-  this.coPayPercent = this.coPayPercent ?? 0;
+  this.amount = Number(this.amount ?? 0);
+  this.paid = Number(this.paid ?? 0);
+  this.advance = Number(this.advance ?? 0);
+  this.advanceGivenAmount = Number(this.advanceGivenAmount ?? 0);
+  this.coPayPercent = Number(this.coPayPercent ?? 0);
 
-  // Calculate pending
-  this.pending = Math.max(0, this.amount - (this.paid + this.advance));
+  // Normalize advance/pending from paid vs amount
+  if (this.paid >= this.amount) {
+    this.advance = this.paid - this.amount;
+    this.pending = 0;
+  } else {
+    this.advance = 0;
+    this.pending = this.amount - this.paid;
+  }
 
-  // Calculate needToPay for insurance
+  // Calculate insurance fields
   if (this.insurance === "Yes") {
-    const insuranceCover = (this.amount * this.coPayPercent) / 100;
-    this.needToPay = Math.max(0, this.amount - insuranceCover - this.advanceGivenAmount);
+    // Advance given amount equals full amount for insurance flow
+    this.advanceGivenAmount = this.amount;
+    const coPayAmount = (this.amount * this.coPayPercent) / 100;
+    // Need to pay is amount after deducting co-pay percent
+    this.needToPay = Math.max(0, this.amount - coPayAmount);
   } else {
     this.needToPay = this.pending;
   }

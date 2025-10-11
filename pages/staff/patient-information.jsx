@@ -101,12 +101,15 @@ const PatientCard = ({ patient, onUpdate, onComplete }) => (
     </div>
 
     <div className="mb-3 flex gap-2 flex-wrap">
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
-        patient.advanceClaimStatus === 'Released' ? 'bg-emerald-100 text-emerald-700' :
-        patient.advanceClaimStatus === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
-      }`}>
-        Claim: {patient.advanceClaimStatus}
-      </span>
+      {patient.insurance === "Yes" && patient.advanceClaimStatus && (
+        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
+          patient.advanceClaimStatus === 'Released' ? 'bg-emerald-100 text-emerald-700' :
+          patient.advanceClaimStatus === 'Approved by doctor' ? 'bg-blue-100 text-blue-700' :
+          patient.advanceClaimStatus === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+        }`}>
+          Claim: {patient.advanceClaimStatus}
+        </span>
+      )}
       {patient.patientType && (
         <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-purple-100 text-purple-700">
           {patient.patientType}

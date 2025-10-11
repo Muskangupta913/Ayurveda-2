@@ -26,10 +26,23 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     try {
       const user = await getUserFromToken(req);
-      if (user.role !== "doctorStaff") {
+      const { doctorId } = req.query;
+
+      let query = {};
+      if (user.role === "doctorStaff") {
+        // Show only this doctor's patients
+        query.doctor = user._id.toString();
+      } else if (user.role === "staff" || user.role === "admin" || user.role === "clinic") {
+        // Staff must specify which doctor's patients to view
+        if (!doctorId) {
+          return res.status(200).json({ success: true, data: [] });
+        }
+        query.doctor = doctorId;
+      } else {
         return res.status(403).json({ success: false, message: "Access denied" });
       }
-      const patients = await PatientRegistration.find().sort({ createdAt: -1 });
+
+      const patients = await PatientRegistration.find(query).sort({ createdAt: -1 });
       return res.status(200).json({ success: true, data: patients });
     } catch (err) {
       console.error("GET /api/patients error:", err);
@@ -85,12 +98,12 @@ export default async function handler(req, res) {
           });
         }
 
-        patient.advanceClaimStatus = "Released";
+        patient.advanceClaimStatus = "Approved by doctor";
         patient.advanceClaimReleaseDate = new Date();
         patient.advanceClaimReleasedBy = user.name || user.email || user._id.toString();
         await patient.save();
 
-        return res.status(200).json({ success: true, message: "Claim released", data: patient });
+        return res.status(200).json({ success: true, message: "Claim approved by doctor", data: patient });
       } else if (action === "cancel") {
         patient.advanceClaimStatus = "Cancelled";
         // Clearing release info when cancelling

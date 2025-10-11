@@ -31,29 +31,61 @@ export default async function handler(req, res) {
     }
 
     // -------------------------------
-    // PUT: Update Payment & Track History
+    // PUT: Update Payment & Track History (append new snapshot)
     // -------------------------------
     if (req.method === "PUT") {
-      const { amount, paid, advance, paymentMethod } = req.body;
+      const { 
+        amount, 
+        paid, 
+        advance, 
+        paymentMethod, 
+        advanceClaimStatus, 
+        advanceClaimCancellationRemark, 
+        advanceClaimReleaseDate, 
+        advanceClaimReleasedBy 
+      } = req.body;
 
       const invoice = await PatientRegistration.findById(id);
       if (!invoice) return res.status(404).json({ message: "Invoice not found" });
 
-      // Backup old payment details
+      // Determine new values (fallback to existing if not provided)
+      const newAmount = amount !== undefined ? Number(amount) : (invoice.amount ?? 0);
+      const newPaid = paid !== undefined ? Number(paid) : (invoice.paid ?? 0);
+      const newAdvance = advance !== undefined ? Number(advance) : (invoice.advance ?? 0);
+      const newPaymentMethod = paymentMethod !== undefined ? paymentMethod : (invoice.paymentMethod || "");
+      const newPending = Math.max(0, newAmount - (newPaid + newAdvance));
+
+      // Update invoice fields
+      invoice.amount = newAmount;
+      invoice.paid = newPaid;
+      invoice.advance = newAdvance;
+      invoice.paymentMethod = newPaymentMethod;
+
+      // Update claim status fields if provided
+      if (advanceClaimStatus !== undefined) {
+        invoice.advanceClaimStatus = advanceClaimStatus;
+      }
+      if (advanceClaimCancellationRemark !== undefined) {
+        invoice.advanceClaimCancellationRemark = advanceClaimCancellationRemark;
+      }
+      if (advanceClaimReleaseDate !== undefined) {
+        invoice.advanceClaimReleaseDate = advanceClaimReleaseDate ? new Date(advanceClaimReleaseDate) : null;
+      }
+      if (advanceClaimReleasedBy !== undefined) {
+        invoice.advanceClaimReleasedBy = advanceClaimReleasedBy;
+      }
+
+      // Append new snapshot to history
       invoice.paymentHistory.push({
-        amount: invoice.amount ?? 0,
-        paid: invoice.paid ?? 0,
-        advance: invoice.advance ?? 0,
-        pending: invoice.pending ?? 0,
-        paymentMethod: invoice.paymentMethod || "",
+        amount: newAmount,
+        paid: newPaid,
+        advance: newAdvance,
+        pending: newPending,
+        paymentMethod: newPaymentMethod,
+        advanceClaimStatus: invoice.advanceClaimStatus,
+        advanceClaimCancellationRemark: invoice.advanceClaimCancellationRemark,
         updatedAt: new Date(),
       });
-
-      // Update payment fields
-      if (amount !== undefined) invoice.amount = amount;
-      if (paid !== undefined) invoice.paid = paid;
-      if (advance !== undefined) invoice.advance = advance;
-      if (paymentMethod !== undefined) invoice.paymentMethod = paymentMethod;
 
       await invoice.save();
 

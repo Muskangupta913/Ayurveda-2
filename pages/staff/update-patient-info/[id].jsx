@@ -65,6 +65,68 @@ const ConfirmModal = ({ isOpen, onConfirm, onCancel, title, message }) => {
   );
 };
 
+// Claim Status Modal
+const ClaimStatusModal = ({ isOpen, onClose, onConfirm, status, remark, onStatusChange, onRemarkChange }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl p-5 sm:p-6 max-w-md w-full animate-scale-in">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Update Claim Status</h3>
+        
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">
+              Claim Status <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={status}
+              onChange={(e) => onStatusChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            >
+              <option value="">Select Status</option>
+              <option value="Approved by doctor">Approved by doctor</option>
+              <option value="Released">Released</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+          
+          {status === "Cancelled" && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Cancellation Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={remark}
+                onChange={(e) => onRemarkChange(e.target.value)}
+                placeholder="Please provide a reason for cancellation..."
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto px-5 py-2 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50 transition-colors text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="w-full sm:w-auto px-5 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors text-sm"
+          >
+            Update Status
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const InvoiceUpdateSystem = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -76,6 +138,7 @@ const InvoiceUpdateSystem = () => {
   const [fetchError, setFetchError] = useState("");
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null });
+  const [claimStatusModal, setClaimStatusModal] = useState({ isOpen: false, status: "", remark: "" });
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -208,6 +271,51 @@ const handlePaymentChange = useCallback((e) => {
     );
   }, [formData, invoiceInfo]);
 
+  const handleClaimStatusUpdate = useCallback(async () => {
+    if (!claimStatusModal.status) {
+      showToast("Please select a claim status", "error");
+      return;
+    }
+    if (claimStatusModal.status === "Cancelled" && !claimStatusModal.remark.trim()) {
+      showToast("Please provide a reason for cancellation", "error");
+      return;
+    }
+
+    showConfirm(
+      "Confirm Claim Status Update",
+      `Are you sure you want to update the claim status to ${claimStatusModal.status}?`,
+      async () => {
+        try {
+          const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
+          const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              advanceClaimStatus: claimStatusModal.status,
+              advanceClaimCancellationRemark: claimStatusModal.status === "Cancelled" ? claimStatusModal.remark : null,
+              advanceClaimReleaseDate: (claimStatusModal.status === "Released" || claimStatusModal.status === "Approved by doctor") ? new Date().toISOString() : formData.advanceClaimReleaseDate,
+              advanceClaimReleasedBy: (claimStatusModal.status === "Released" || claimStatusModal.status === "Approved by doctor") ? currentUser.name : formData.advanceClaimReleasedBy,
+            }),
+          });
+
+          const result = await res.json();
+          if (res.ok) {
+            showToast("Claim status updated successfully!", "success");
+            setInvoiceInfo(result.updatedInvoice);
+            setFormData(result.updatedInvoice);
+            setClaimStatusModal({ isOpen: false, status: "", remark: "" });
+          } else {
+            showToast(result.message || "Failed to update claim status", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("Network error. Try again later.", "error");
+        }
+        setConfirmModal({ isOpen: false });
+      }
+    );
+  }, [claimStatusModal, invoiceInfo, currentUser.name, formData.advanceClaimReleaseDate, formData.advanceClaimReleasedBy]);
+
   const canViewMobileNumber = useMemo(
     () => ["Admin", "Super Admin"].includes(currentUser.role),
     [currentUser.role]
@@ -272,6 +380,15 @@ const handlePaymentChange = useCallback((e) => {
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal({ isOpen: false })} />
+      <ClaimStatusModal
+        isOpen={claimStatusModal.isOpen}
+        onClose={() => setClaimStatusModal({ isOpen: false, status: "", remark: "" })}
+        onConfirm={handleClaimStatusUpdate}
+        status={claimStatusModal.status}
+        remark={claimStatusModal.remark}
+        onStatusChange={(status) => setClaimStatusModal(prev => ({ ...prev, status }))}
+        onRemarkChange={(remark) => setClaimStatusModal(prev => ({ ...prev, remark }))}
+      />
 
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
@@ -426,15 +543,32 @@ const handlePaymentChange = useCallback((e) => {
                   <InfoField label="Need to Pay Amount (Auto)" value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} />
                   <div>
                     <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">Advance Claim Status</label>
-                    <span className={`inline-block px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold ${formData.advanceClaimStatus === "Released" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                      {formData.advanceClaimStatus || "-"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold ${
+                        formData.advanceClaimStatus === "Released" ? "bg-green-100 text-green-800" : 
+                        formData.advanceClaimStatus === "Approved by doctor" ? "bg-blue-100 text-blue-800" :
+                        formData.advanceClaimStatus === "Cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+                      }`}>
+                        {formData.advanceClaimStatus || "-"}
+                      </span>
+                      {formData.advanceClaimStatus === "Pending" && (
+                        <button
+                          onClick={() => setClaimStatusModal({ isOpen: true, status: "", remark: "" })}
+                          className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                          Update
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {formData.advanceClaimReleaseDate && (
                     <InfoField label="Advance Claim Release Date (Auto)" value={new Date(formData.advanceClaimReleaseDate).toLocaleString()} />
                   )}
                   {formData.advanceClaimReleasedBy && (
                     <InfoField label="Advance Claim Released By (Auto)" value={formData.advanceClaimReleasedBy} />
+                  )}
+                  {formData.advanceClaimCancellationRemark && (
+                    <InfoField label="Cancellation Reason" value={formData.advanceClaimCancellationRemark} />
                   )}
                 </div>
               </InfoCard>

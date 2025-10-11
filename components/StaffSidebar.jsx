@@ -56,6 +56,12 @@ const Sidebar = () => {
         description: "Overview & analytics" 
       },
       { 
+        label: "Add Service", 
+        path: "/staff/add-service", 
+        icon: "💆", 
+        description: "Add package/treatment" 
+      },
+      { 
         label: "Patient Registration", 
         path: "/staff/patient-registration", 
         icon: "📅", 
@@ -101,6 +107,12 @@ const Sidebar = () => {
         path: "/staff/pending-claims", 
         icon: "🧑‍⚕️", 
         description: "View & Manage Patients" 
+      },
+      { 
+        label: "EOD Notes", 
+        path: "/staff/eodNotes", 
+        icon: "📝", 
+        description: "End of Day Notes" 
       },
       
     ];
