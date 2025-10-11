@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Legend, Label } from "recharts";
+import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, LabelList } from "recharts";
 
 export default function MyClaims() {
   const [loading, setLoading] = useState(true);
@@ -38,45 +38,42 @@ export default function MyClaims() {
     fetchClaims();
   }, []);
 
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(value || 0);
+  // Format large numbers with K/M/B suffix
+  const formatLargeNumber = (value) => {
+    if (!value) return 0;
+    if (value >= 1e9) return (value / 1e9).toFixed(2) + "B";
+    if (value >= 1e6) return (value / 1e6).toFixed(2) + "M";
+    if (value >= 1e3) return (value / 1e3).toFixed(2) + "K";
+    return value;
+  };
 
   if (loading)
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading claims data...</p>
+          <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-gray-600 text-sm sm:text-base">Loading claims...</p>
         </div>
       </div>
     );
 
   if (error)
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-4">
-        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl max-w-md w-full">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-500 text-3xl font-bold">✕</span>
-          </div>
-          <p className="text-center text-red-600 font-semibold text-lg">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="bg-white p-6 rounded-lg shadow-sm max-w-sm w-full text-center">
+          <div className="text-red-500 text-4xl mb-3">⚠</div>
+          <p className="text-red-600 font-medium text-sm sm:text-base">{error}</p>
         </div>
       </div>
     );
 
   const claimStatusData = [
-    { name: "Released", value: stats.releasedClaims || 0, color: "#10b981", percentage: 0 },
-    { name: "Pending", value: stats.pendingClaims || 0, color: "#f59e0b", percentage: 0 },
-    { name: "Cancelled", value: stats.cancelledClaims || 0, color: "#ef4444", percentage: 0 },
+    { name: "Released", value: stats.releasedClaims || 0, color: "#10b981" },
+    { name: "Pending", value: stats.pendingClaims || 0, color: "#f59e0b" },
+    { name: "Cancelled", value: stats.cancelledClaims || 0, color: "#ef4444" },
   ];
 
   const total = claimStatusData.reduce((sum, item) => sum + item.value, 0);
-  claimStatusData.forEach(item => {
-    item.percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
-  });
 
   const barChartData = [
     { name: "Total", value: stats.totalPatients || 0, color: "#3b82f6" },
@@ -86,266 +83,105 @@ export default function MyClaims() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
+
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-1 sm:mb-2">
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
             Claims Dashboard
           </h1>
-          <p className="text-sm sm:text-base text-slate-600">Comprehensive overview of claims and performance metrics</p>
+          <p className="text-xs sm:text-sm md:text-base text-gray-600">
+            Overview of your claims and metrics
+          </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3 mb-6 sm:mb-8">
-          {/* Total Patients */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">👥</span>
-              <span>Total Patients</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.totalPatients || 0}
-            </div>
-          </div>
-
-          {/* Released */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">✓</span>
-              <span>Released</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.releasedClaims || 0}
-            </div>
-          </div>
-
-          {/* Pending */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">⏱</span>
-              <span>Pending</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.pendingClaims || 0}
-            </div>
-          </div>
-
-          {/* Cancelled */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">✕</span>
-              <span>Cancelled</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.cancelledClaims || 0}
-            </div>
-          </div>
-
-          {/* Total CoPayment */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">₹</span>
-              <span>Total CoPayment</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-lg sm:text-xl">
-              {formatCurrency(stats.totalCoPayment)}
-            </div>
-          </div>
-
-          {/* CoPayment Count */}
-          <div className="flex flex-col justify-center rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow transition-all duration-200">
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <span className="text-lg">📊</span>
-              <span>CoPayment Count</span>
-            </div>
-            <div className="mt-1 font-semibold text-gray-900 text-base sm:text-lg">
-              {stats.totalCoPaymentCount || 0}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 auto-rows-fr">
+          <StatCard title="Total Patients" value={stats.totalPatients || 0} />
+          <StatCard title="Released" value={stats.releasedClaims || 0} color="text-green-600" />
+          <StatCard title="Pending" value={stats.pendingClaims || 0} color="text-amber-600" />
+          <StatCard title="Cancelled" value={stats.cancelledClaims || 0} color="text-red-600" />
+          <StatCard title="Total CoPayment" value={formatLargeNumber(stats.totalCoPayment)} />
+          <StatCard title="CoPayment Count" value={stats.totalCoPaymentCount || 0} />
         </div>
 
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Bar Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-4 flex items-center">
-              <span className="w-1 h-6 bg-blue-500 rounded mr-3"></span>
-              Claims Overview
-            </h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={barChartData} margin={{ top: 20, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  stroke="#64748b"
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
-                />
-                <YAxis
-                  stroke="#64748b"
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  axisLine={{ stroke: '#cbd5e1' }}
-                />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} label={{ position: 'top', fill: '#334155', fontSize: 12, fontWeight: 'bold' }}>
+          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-lg w-full flex flex-col min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Claims Overview</h2>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis dataKey="name" stroke="#9ca3af" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                <YAxis stroke="#9ca3af" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {barChartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
+                  <LabelList dataKey="value" position="top" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Custom Pie Chart Display */}
-          <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-4 flex items-center">
-              <span className="w-1 h-6 bg-purple-500 rounded mr-3"></span>
-              Status Distribution
-            </h2>
-            <div className="flex flex-col items-center">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={claimStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {claimStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-
-              {/* Legend with Data */}
-              <div className="w-full mt-4 space-y-3">
-                {claimStatusData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: item.color }}></div>
-                      <span className="font-semibold text-slate-700 text-sm sm:text-base">{item.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-slate-800 text-sm sm:text-base">{item.value}</div>
-                      <div className="text-xs text-slate-500">{item.percentage}%</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Claims Table */}
-        {/* <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center">
-              <span className="w-1 h-6 bg-indigo-500 rounded mr-3"></span>
-              All Claims Records
-            </h2>
-          </div>
-
-          {patients.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-slate-400 text-3xl sm:text-4xl">📋</span>
-              </div>
-              <p className="text-slate-500 font-medium">No claims found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-max">
-                <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
-                  <tr>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Created Date
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Release Date
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Released By
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      CoPayment
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
-                  {patients.map((p, idx) => (
-                    <tr key={p._id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-700 font-medium">
-                        {new Date(p.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 sm:px-3 py-1 text-xs font-bold rounded-full ${p.advanceClaimStatus === "Released"
-                              ? "bg-green-100 text-green-700"
-                              : p.advanceClaimStatus === "Cancelled"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-amber-100 text-amber-700"
-                            }`}
-                        >
-                          {p.advanceClaimStatus || "Pending"}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-700">
-                        {p.advanceClaimReleaseDate
-                          ? new Date(p.advanceClaimReleaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : "-"}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-700">
-                        {p.advanceClaimReleasedBy || "-"}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right font-bold text-slate-900">
-                        {formatCurrency(p.advanceGivenAmount || 0)}
-                      </td>
-                    </tr>
+          {/* Pie Chart */}
+          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-lg w-full flex flex-col min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Status Distribution</h2>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={claimStatusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="40%"
+                  outerRadius="70%"
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {claimStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
-                </tbody>
-              </table>
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Legend */}
+            <div className="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {claimStatusData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }}></div>
+                    <span className="text-xs sm:text-sm md:text-base font-medium text-gray-700">{item.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm sm:text-base font-semibold text-gray-900">{item.value}</div>
+                    <div className="text-xs text-gray-500">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div> */}
+
+          </div>
+
+        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ title, value, icon, gradient, isLarge = false }) {
+// Simple, clean, and responsive StatCard
+function StatCard({ title, value, color = "text-gray-900", className = "" }) {
   return (
-    <div className={`relative bg-white rounded-xl shadow-md border border-slate-200 p-5 overflow-hidden ${isLarge ? 'col-span-2 lg:col-span-1' : ''}`}>
-      {/* Top accent line */}
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient}`}></div>
-
-      {/* Icon background decoration */}
-      <div className={`absolute -right-4 -top-4 w-24 h-24 bg-gradient-to-br ${gradient} opacity-5 rounded-full`}></div>
-
-      <div className="relative">
-        {/* Icon and label row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className={`w-12 h-12 bg-gradient-to-br ${gradient} rounded-lg flex items-center justify-center shadow-sm`}>
-            <span className="text-2xl">{icon}</span>
-          </div>
-        </div>
-
-        {/* Value */}
-        <div className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 break-words leading-tight">
-          {value}
-        </div>
-
-        {/* Title */}
-        <div className="text-xs sm:text-sm text-slate-600 font-medium tracking-wide">
-          {title}
-        </div>
+    <div className={`bg-white p-3 sm:p-4 md:p-5 rounded-lg ${className} flex flex-col justify-between`}>
+      <div className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold ${color}`}>
+        {value}
+      </div>
+      <div className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-500 font-medium mt-1">
+        {title}
       </div>
     </div>
   );

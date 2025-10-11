@@ -51,7 +51,7 @@ const patientRegistrationSchema = new mongoose.Schema(
     advanceGivenAmount: { type: Number, default: 0, min: 0 },
     coPayPercent: { type: Number, default: 0, min: 0, max: 100 },
     needToPay: { type: Number, default: 0, min: 0 },
-    advanceClaimStatus: { type: String, enum: ["Pending", "Released", "Cancelled"], default: function() { return this.insurance === "Yes" ? "Pending" : null; } },
+    advanceClaimStatus: { type: String, enum: ["Pending", "Released", "Cancelled","Approved by doctor"], default: function() { return this.insurance === "Yes" ? "Pending" : null; } },
     advanceClaimReleaseDate: { type: Date },
     advanceClaimReleasedBy: { type: String, trim: true },
     advanceClaimCancellationRemark: { type: String, trim: true },
