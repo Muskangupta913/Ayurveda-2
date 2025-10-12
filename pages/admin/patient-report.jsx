@@ -1,9 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { Search, FileText, FileSpreadsheet, X, ChevronLeft, ChevronRight } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
-import { Search, Download, FileText, FileSpreadsheet } from "lucide-react";
 
 const AdminPatientClaims = () => {
   const [patients, setPatients] = useState([]);
@@ -12,6 +11,9 @@ const AdminPatientClaims = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const patientsPerPage = 20;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem("adminToken") : null;
 
@@ -20,17 +22,27 @@ const AdminPatientClaims = () => {
       setLoading(true);
       const url = `/api/admin/getPatientClaims${status ? `?statusFilter=${status}` : ""}`;
 
-      const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      const patientsData = res.data.patients || [];
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to fetch patient claims');
+      }
+
+      const data = await res.json();
+      const patientsData = data.patients || [];
       setPatients(patientsData);
       setFilteredPatients(patientsData);
-      setSummary(res.data.summary || {});
+      setSummary(data.summary || {});
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Error fetching patients");
+      alert(err.message || "Error fetching patients");
     } finally {
       setLoading(false);
     }
@@ -43,23 +55,25 @@ const AdminPatientClaims = () => {
   const handleFilterChange = (e) => {
     const status = e.target.value;
     setStatusFilter(status);
-    setSearchQuery(""); // Reset search when changing filter
+    setSearchQuery("");
+    setCurrentPage(1);
     fetchPatients(status);
   };
 
   const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
     setSearchQuery(query);
+    setCurrentPage(1);
 
     if (query === "") {
       setFilteredPatients(patients);
     } else {
       const filtered = patients.filter((p) =>
-        p.patientName?.toLowerCase().includes(query) ||
+        `${p.firstName} ${p.lastName}`.toLowerCase().includes(query) ||
         p.email?.toLowerCase().includes(query) ||
         p.mobileNumber?.toLowerCase().includes(query) ||
         p.invoiceNumber?.toLowerCase().includes(query) ||
-        p.allocatedBy?.toLowerCase().includes(query) ||
+        p.emrNumber?.toLowerCase().includes(query) ||
         p.service?.toLowerCase().includes(query) ||
         p.treatment?.toLowerCase().includes(query) ||
         p.package?.toLowerCase().includes(query)
@@ -68,6 +82,12 @@ const AdminPatientClaims = () => {
     }
   };
 
+  // Pagination
+  const indexOfLastPatient = currentPage * patientsPerPage;
+  const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
+  const currentPatients = filteredPatients.slice(indexOfFirstPatient, indexOfLastPatient);
+  const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
+
   const downloadCSV = () => {
     if (filteredPatients.length === 0) {
       alert("No data to download");
@@ -75,43 +95,42 @@ const AdminPatientClaims = () => {
     }
 
     const headers = [
-      "Patient Name",
-      "Email",
-      "Mobile",
-      "Invoice #",
-      "Status",
-      "Allocated By",
-      "Amount",
-      "Paid",
-      "Advance",
-      "Pending",
-      "Co-pay %",
-      "Advance Given",
-      "Need To Pay",
-      "Service",
-      "Treatment/Package",
-      "Payment Method"
+      "Invoice Number", "EMR Number", "First Name", "Last Name", "Gender", "Email", "Mobile",
+      "Referred By", "Patient Type", "Doctor", "Service", "Treatment", "Package",
+      "Amount", "Paid", "Advance", "Pending", "Payment Method",
+      "Insurance", "Advance Given Amount", "Co-pay %", "Need To Pay",
+      "Advance Claim Status", "Status", "Invoiced Date", "Created At"
     ];
 
     const csvContent = [
       headers.join(","),
       ...filteredPatients.map(p => [
-        `"${p.patientName || ''}"`,
+        `"${p.invoiceNumber || ''}"`,
+        `"${p.emrNumber || ''}"`,
+        `"${p.firstName || ''}"`,
+        `"${p.lastName || ''}"`,
+        `"${p.gender || ''}"`,
         `"${p.email || ''}"`,
         `"${p.mobileNumber || ''}"`,
-        `"${p.invoiceNumber || ''}"`,
-        `"${p.advanceClaimStatus || ''}"`,
-        `"${p.allocatedBy || ''}"`,
+        `"${p.referredBy || ''}"`,
+        `"${p.patientType || ''}"`,
+        `"${p.doctor?.name || p.doctor || ''}"`,
+        `"${p.service || ''}"`,
+        `"${p.treatment || ''}"`,
+        `"${p.package || ''}"`,
         `"${p.amount || ''}"`,
         `"${p.paid || ''}"`,
         `"${p.advance || ''}"`,
         `"${p.pending || ''}"`,
-        `"${p.coPayPercent || ''}"`,
+        `"${p.paymentMethod || ''}"`,
+        `"${p.insurance || ''}"`,
         `"${p.advanceGivenAmount || ''}"`,
+        `"${p.coPayPercent || ''}"`,
         `"${p.needToPay || ''}"`,
-        `"${p.service || ''}"`,
-        `"${p.treatment || p.package || ''}"`,
-        `"${p.paymentMethod || ''}"`
+        `"${p.advanceClaimStatus || ''}"`,
+        `"${p.status || ''}"`,
+        `"${p.invoicedDate || ''}"`,
+        `"${p.createdAt || ''}"`
       ].join(","))
     ].join("\n");
 
@@ -143,26 +162,14 @@ const AdminPatientClaims = () => {
           body { font-family: Arial, sans-serif; padding: 20px; }
           h1 { color: #1e40af; text-align: center; margin-bottom: 10px; }
           .report-date { text-align: center; color: #6b7280; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10px; }
+          th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
           th { background-color: #3b82f6; color: white; font-weight: bold; }
           tr:nth-child(even) { background-color: #f9fafb; }
-          .status-badge { 
-            display: inline-block; 
-            padding: 2px 8px; 
-            border-radius: 12px; 
-            font-size: 10px; 
-            font-weight: bold; 
-          }
-          .status-pending { background-color: #fef3c7; color: #92400e; }
-          .status-released { background-color: #d1fae5; color: #065f46; }
-          .status-cancelled { background-color: #fee2e2; color: #991b1b; }
-          .status-copay { background-color: #dbeafe; color: #1e40af; }
-          .status-advance { background-color: #e9d5ff; color: #6b21a8; }
           @media print {
             body { padding: 10px; }
-            table { font-size: 9px; }
-            th, td { padding: 5px; }
+            table { font-size: 8px; }
+            th, td { padding: 4px; }
           }
         </style>
       </head>
@@ -173,31 +180,33 @@ const AdminPatientClaims = () => {
         <table>
           <thead>
             <tr>
+              <th>Invoice</th>
+              <th>EMR</th>
               <th>Patient Name</th>
               <th>Email</th>
               <th>Mobile</th>
-              <th>Invoice #</th>
-              <th>Status</th>
+              <th>Treatment</th>
               <th>Amount</th>
               <th>Paid</th>
               <th>Pending</th>
-              <th>Need To Pay</th>
-              <th>Service</th>
+              <th>Advance</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             ${filteredPatients.map(p => `
               <tr>
-                <td>${p.patientName || ''}</td>
+                <td>${p.invoiceNumber || ''}</td>
+                <td>${p.emrNumber || ''}</td>
+                <td>${p.firstName || ''} ${p.lastName || ''}</td>
                 <td>${p.email || ''}</td>
                 <td>${p.mobileNumber || ''}</td>
-                <td>${p.invoiceNumber || ''}</td>
-                <td><span class="status-badge status-${p.advanceClaimStatus?.toLowerCase() || ''}">${p.advanceClaimStatus || ''}</span></td>
-                <td>${p.amount || ''}</td>
-                <td>${p.paid || ''}</td>
-                <td>${p.pending || ''}</td>
-                <td>${p.needToPay || ''}</td>
-                <td>${p.service || ''}</td>
+                <td>${p.treatment || p.package || ''}</td>
+                <td>₹${p.amount || ''}</td>
+                <td>₹${p.paid || ''}</td>
+                <td>₹${p.pending || ''}</td>
+                <td>₹${p.advance || ''}</td>
+                <td>${p.advanceClaimStatus || ''}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -219,8 +228,6 @@ const AdminPatientClaims = () => {
       Pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
       Released: "bg-green-100 text-green-800 border-green-200",
       Cancelled: "bg-red-100 text-red-800 border-red-200",
-      "Co-pay": "bg-blue-100 text-blue-800 border-blue-200",
-      Advance: "bg-purple-100 text-purple-800 border-purple-200",
     };
     return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
   };
@@ -257,27 +264,25 @@ const AdminPatientClaims = () => {
                   <option value="Pending">Pending</option>
                   <option value="Released">Released</option>
                   <option value="Cancelled">Cancelled</option>
-                  <option value="Co-pay">Co-pay</option>
-                  <option value="Advance">Advance</option>
+                  <option value="co-pay">Co-pay</option>
+                  <option value="advance">Advance</option>
                 </select>
               </div>
             </div>
 
             {/* Search Bar and Export Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              {/* Search Bar */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                 <input
                   type="text"
-                  placeholder="Search by name, email, mobile, invoice, service..."
+                  placeholder="Search by name, email, mobile, invoice, EMR, service..."
                   value={searchQuery}
                   onChange={handleSearch}
                   className="text-gray-800 w-full pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
 
-              {/* Export Buttons */}
               <div className="flex gap-2 sm:gap-3">
                 <button
                   onClick={downloadCSV}
@@ -303,12 +308,12 @@ const AdminPatientClaims = () => {
         {/* Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
           {[
-            { label: "Pending", value: summary.pending || 0, color: "from-yellow-400 to-yellow-500", icon: "⏳", ring: "ring-yellow-200" },
-            { label: "Released", value: summary.released || 0, color: "from-green-400 to-green-500", icon: "✅", ring: "ring-green-200" },
-            { label: "Cancelled", value: summary.cancelled || 0, color: "from-red-400 to-red-500", icon: "❌", ring: "ring-red-200" },
-            { label: "Co-pay", value: summary.copay || 0, color: "from-blue-400 to-blue-500", icon: "💳", ring: "ring-blue-200" },
-            { label: "Advance", value: summary.advance || 0, color: "from-purple-400 to-purple-500", icon: "💰", ring: "ring-purple-200" },
-            { label: "Total", value: summary.total || 0, color: "from-gray-600 to-gray-700", icon: "📊", ring: "ring-gray-200" },
+            { label: "Pending", value: summary.pending || 0, color: "from-yellow-400 to-yellow-500", icon: "⏳" },
+            { label: "Released", value: summary.released || 0, color: "from-green-400 to-green-500", icon: "✅" },
+            { label: "Cancelled", value: summary.cancelled || 0, color: "from-red-400 to-red-500", icon: "❌" },
+            { label: "Co-pay", value: summary.copay || 0, color: "from-blue-400 to-blue-500", icon: "💳" },
+            { label: "Advance", value: summary.advance || 0, color: "from-purple-400 to-purple-500", icon: "💰" },
+            { label: "Total", value: summary.total || 0, color: "from-gray-600 to-gray-700", icon: "📊" },
           ].map((item, idx) => (
             <div
               key={idx}
@@ -357,214 +362,213 @@ const AdminPatientClaims = () => {
             </div>
           ) : (
             <>
-              {/* Desktop & Large Tablet Card View (1024px and above) */}
-              <div className="hidden lg:grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 p-4">
-                {filteredPatients.map((p, i) => (
+              {/* Patient Cards Grid - 3 cards per row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                {currentPatients.map((patient, i) => (
                   <div
                     key={i}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200"
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-5 border border-gray-200"
                   >
-                    {/* Header Section */}
-                    <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-2xl">
-                      <h3 className="text-sm xl:text-base font-bold text-gray-900">
-                        {p.patientName}
-                      </h3>
-                      <span
-                        className={`inline-flex px-2 py-1 text-[10px] xl:text-xs font-bold rounded-full border ${getStatusColor(
-                          p.advanceClaimStatus
-                        )}`}
-                      >
-                        {p.advanceClaimStatus}
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-900">
+                          {patient.firstName} {patient.lastName}
+                        </h3>
+                        <p className="text-sm text-gray-600">{patient.emrNumber}</p>
+                      </div>
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(patient.advanceClaimStatus)}`}>
+                        {patient.advanceClaimStatus}
                       </span>
                     </div>
 
-                    {/* Content Section */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 p-4 text-xs xl:text-sm">
-                      <div>
-                        <span className="font-semibold text-gray-700">Email:</span>
-                        <div className="text-gray-600 truncate" title={p.email}>{p.email}</div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Treatment:</span>
+                        <span className="font-medium text-gray-900 truncate ml-2" title={patient.treatment || patient.package}>
+                          {patient.treatment || patient.package || '-'}
+                        </span>
                       </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Mobile:</span>
-                        <div className="text-gray-600">{p.mobileNumber}</div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Amount:</span>
+                        <span className="font-medium text-gray-900">₹{patient.amount?.toLocaleString() || 0}</span>
                       </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Invoice #:</span>
-                        <div className="font-mono text-blue-600">{p.invoiceNumber}</div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Paid:</span>
+                        <span className="font-medium text-green-600">₹{patient.paid?.toLocaleString() || 0}</span>
                       </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Allocated By:</span>
-                        <div className="text-gray-600">{p.allocatedBy}</div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Pending:</span>
+                        <span className="font-medium text-red-600">₹{patient.pending?.toLocaleString() || 0}</span>
                       </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Amount:</span>
-                        <div className="font-bold text-gray-900">{p.amount}</div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Paid:</span>
-                        <div className="text-green-600 font-semibold">{p.paid}</div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Advance:</span>
-                        <div className="text-purple-600 font-semibold">{p.advance}</div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Pending:</span>
-                        <div className="text-orange-600 font-semibold">{p.pending}</div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Co-pay %:</span>
-                        <div className="text-gray-600">{p.coPayPercent}</div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Advance Given:</span>
-                        <div className="text-gray-600">{p.advanceGivenAmount}</div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Need To Pay:</span>
-                        <div className="font-bold text-red-600">{p.needToPay}</div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Service:</span>
-                        <div className="text-gray-600">{p.service}</div>
-                      </div>
-
-                      <div className="col-span-2 sm:col-span-3">
-                        <span className="font-semibold text-gray-700">Treatment / Package:</span>
-                        <div className="text-gray-600 truncate" title={p.treatment || p.package}>
-                          {p.treatment || p.package}
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="font-semibold text-gray-700">Payment Method:</span>
-                        <div className="text-gray-600">{p.paymentMethod}</div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Advance:</span>
+                        <span className="font-medium text-blue-600">₹{patient.advance?.toLocaleString() || 0}</span>
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => setSelectedPatient(patient)}
+                      className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      See Full Details
+                    </button>
                   </div>
                 ))}
               </div>
 
-              {/* Mobile & Tablet Card View (below 1024px) */}
-              <div className="lg:hidden divide-y divide-gray-200">
-                {filteredPatients.map((p, i) => (
-                  <div
-                    key={i}
-                    className="p-3 sm:p-4 md:p-6 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200"
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 p-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-base sm:text-lg font-bold text-gray-900 truncate">
-                          {p.patientName}
-                        </h4>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate" title={p.email}>
-                          {p.email}
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                          {p.mobileNumber}
-                        </p>
-                      </div>
-                      <span
-                        className={`inline-flex px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold rounded-full border ${getStatusColor(
-                          p.advanceClaimStatus
-                        )} whitespace-nowrap flex-shrink-0`}
-                      >
-                        {p.advanceClaimStatus}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Invoice #</p>
-                        <p className="text-xs sm:text-sm font-mono font-bold text-blue-600 truncate" title={p.invoiceNumber}>
-                          {p.invoiceNumber}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Allocated By</p>
-                        <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate" title={p.allocatedBy}>
-                          {p.allocatedBy}
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Amount</p>
-                        <p className="text-sm sm:text-base font-bold text-gray-900">
-                          {p.amount}
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-green-700 mb-1 font-medium">Paid</p>
-                        <p className="text-sm sm:text-base font-bold text-green-700">
-                          {p.paid}
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-purple-700 mb-1 font-medium">Advance</p>
-                        <p className="text-sm sm:text-base font-bold text-purple-700">
-                          {p.advance}
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-orange-700 mb-1 font-medium">Pending</p>
-                        <p className="text-sm sm:text-base font-bold text-orange-700">
-                          {p.pending}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Co-pay %</p>
-                        <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                          {p.coPayPercent}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Advance Given</p>
-                        <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                          {p.advanceGivenAmount}
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-red-700 mb-1 font-medium">Need To Pay</p>
-                        <p className="text-sm sm:text-base font-bold text-red-700">
-                          {p.needToPay}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Service</p>
-                        <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate" title={p.service}>
-                          {p.service}
-                        </p>
-                      </div>
-                      <div className="col-span-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Treatment/Package</p>
-                        <p className="text-xs sm:text-sm font-semibold text-gray-900 break-words">
-                          {p.treatment || p.package}
-                        </p>
-                      </div>
-                      <div className="col-span-2 bg-gray-50 rounded-lg p-2 sm:p-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-medium">Payment Method</p>
-                        <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                          {p.paymentMethod}
-                        </p>
-                      </div>
-                    </div>
+                    <ChevronLeft size={20} />
+                  </button>
+                  
+                  <div className="flex gap-1">
+                    {[...Array(Math.min(totalPages, 7))].map((_, i) => {
+                      let pageNum;
+                      if (totalPages <= 7) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 4) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 3) {
+                        pageNum = totalPages - 6 + i;
+                      } else {
+                        pageNum = currentPage - 3 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1 rounded-lg ${
+                            currentPage === pageNum
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
+
+      {/* Patient Detail Modal with Blurred Background */}
+      {selectedPatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center z-10">
+              <h2 className="text-2xl font-bold text-gray-900">Patient Details</h2>
+              <button
+                onClick={() => setSelectedPatient(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-900"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-2">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><span className="text-gray-700">Invoice Number:</span> <span className="font-medium text-gray-900">{selectedPatient.invoiceNumber || '-'}</span></div>
+                  <div><span className="text-gray-700">EMR Number:</span> <span className="font-medium text-gray-900">{selectedPatient.emrNumber || '-'}</span></div>
+                  <div><span className="text-gray-700">First Name:</span> <span className="font-medium text-gray-900">{selectedPatient.firstName || '-'}</span></div>
+                  <div><span className="text-gray-700">Last Name:</span> <span className="font-medium text-gray-900">{selectedPatient.lastName || '-'}</span></div>
+                  <div><span className="text-gray-700">Gender:</span> <span className="font-medium text-gray-900">{selectedPatient.gender || '-'}</span></div>
+                  <div><span className="text-gray-700">Email:</span> <span className="font-medium text-gray-900">{selectedPatient.email || '-'}</span></div>
+                  <div><span className="text-gray-700">Mobile:</span> <span className="font-medium text-gray-900">{selectedPatient.mobileNumber || '-'}</span></div>
+                  <div><span className="text-gray-700">Patient Type:</span> <span className="font-medium text-gray-900">{selectedPatient.patientType || '-'}</span></div>
+                </div>
+              </div>
+
+              {/* Medical Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-2">Medical Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><span className="text-gray-700">Doctor:</span> <span className="font-medium text-gray-900">{selectedPatient.doctor?.name || selectedPatient.doctor || '-'}</span></div>
+                  <div><span className="text-gray-700">Service:</span> <span className="font-medium text-gray-900">{selectedPatient.service || '-'}</span></div>
+                  <div><span className="text-gray-700">Treatment:</span> <span className="font-medium text-gray-900">{selectedPatient.treatment || '-'}</span></div>
+                  <div><span className="text-gray-700">Package:</span> <span className="font-medium text-gray-900">{selectedPatient.package || '-'}</span></div>
+                  <div><span className="text-gray-700">Referred By:</span> <span className="font-medium text-gray-900">{selectedPatient.referredBy || '-'}</span></div>
+                  <div><span className="text-gray-700">Insurance:</span> <span className="font-medium text-gray-900">{selectedPatient.insurance || '-'}</span></div>
+                </div>
+              </div>
+
+              {/* Financial Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-2">Financial Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><span className="text-gray-700">Total Amount:</span> <span className="font-medium text-gray-900">₹{selectedPatient.amount?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Paid Amount:</span> <span className="font-medium text-green-600">₹{selectedPatient.paid?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Pending Amount:</span> <span className="font-medium text-red-600">₹{selectedPatient.pending?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Advance:</span> <span className="font-medium text-blue-600">₹{selectedPatient.advance?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Advance Given:</span> <span className="font-medium text-gray-900">₹{selectedPatient.advanceGivenAmount?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Co-pay %:</span> <span className="font-medium text-gray-900">{selectedPatient.coPayPercent || 0}%</span></div>
+                  <div><span className="text-gray-700">Need to Pay:</span> <span className="font-medium text-gray-900">₹{selectedPatient.needToPay?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Payment Method:</span> <span className="font-medium text-gray-900">{selectedPatient.paymentMethod || '-'}</span></div>
+                </div>
+              </div>
+
+              {/* Claim Status */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-2">Claim Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><span className="text-gray-700">Claim Status:</span> <span className={`font-medium ${
+                    selectedPatient.advanceClaimStatus === 'Pending' ? 'text-yellow-600' :
+                    selectedPatient.advanceClaimStatus === 'Released' ? 'text-green-600' :
+                    'text-red-600'
+                  }`}>{selectedPatient.advanceClaimStatus || '-'}</span></div>
+                  <div><span className="text-gray-700">Patient Status:</span> <span className="font-medium text-gray-900">{selectedPatient.status || '-'}</span></div>
+                  <div><span className="text-gray-700">Invoiced By:</span> <span className="font-medium text-gray-900">{selectedPatient.invoicedBy || '-'}</span></div>
+                  <div><span className="text-gray-700">Released By:</span> <span className="font-medium text-gray-900">{selectedPatient.advanceClaimReleasedBy || '-'}</span></div>
+                  <div><span className="text-gray-700">Invoice Date:</span> <span className="font-medium text-gray-900">{selectedPatient.invoicedDate ? new Date(selectedPatient.invoicedDate).toLocaleDateString() : '-'}</span></div>
+                  <div><span className="text-gray-700">Created At:</span> <span className="font-medium text-gray-900">{selectedPatient.createdAt ? new Date(selectedPatient.createdAt).toLocaleString() : '-'}</span></div>
+                </div>
+              </div>
+
+              {/* Payment History */}
+              {selectedPatient.paymentHistory && selectedPatient.paymentHistory.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-2">Payment History</h3>
+                  <div className="space-y-2">
+                    {selectedPatient.paymentHistory.map((payment, idx) => (
+                      <div key={idx} className="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                        <div>
+                          <span className="text-sm text-gray-800 font-medium">Payment #{idx + 1}</span>
+                          <p className="text-xs text-gray-600">{payment.date ? new Date(payment.date).toLocaleString() : '-'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-green-600">₹{payment.amount?.toLocaleString() || 0}</p>
+                          <p className="text-xs text-gray-700">{payment.method || '-'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

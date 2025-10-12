@@ -131,9 +131,17 @@ function StaffAddServicePage() {
 
   const showConfirm = (title, message) => new Promise((resolve) => {
     setConfirmModal({
-      isOpen: true, title, message,
-      onConfirm: () => { setConfirmModal({ isOpen: false, onConfirm: null, title: "", message: "" }); resolve(true); },
-      onCancel: () => { setConfirmModal({ isOpen: false, onConfirm: null, title: "", message: "" }); resolve(false); }
+      isOpen: true, 
+      title, 
+      message,
+      onConfirm: () => { 
+        setConfirmModal({ isOpen: false, onConfirm: null, onCancel: null, title: "", message: "" }); 
+        resolve(true); 
+      },
+      onCancel: () => { 
+        setConfirmModal({ isOpen: false, onConfirm: null, onCancel: null, title: "", message: "" }); 
+        resolve(false); 
+      }
     });
   });
 
@@ -196,6 +204,11 @@ function StaffAddServicePage() {
       treatmentPrice: item.treatmentPrice ?? "",
     });
     setEditingId(item._id);
+    
+    // Scroll to form
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleUpdate = async () => {
@@ -264,6 +277,14 @@ function StaffAddServicePage() {
           <Toast key={toast.id} message={toast.message} type={toast.type} onClose={() => removeToast(toast.id)} />
         ))}
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen} 
+        onConfirm={confirmModal.onConfirm} 
+        onCancel={confirmModal.onCancel} 
+        title={confirmModal.title} 
+        message={confirmModal.message} 
+      />
 
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 sm:mb-8">
