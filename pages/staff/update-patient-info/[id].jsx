@@ -13,7 +13,7 @@ const Toast = ({ message, type, onClose }) => {
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const styles = {
+  const styles = {  
     success: "bg-green-50 border-green-200 text-green-800",
     error: "bg-red-50 border-red-200 text-red-800",
     warning: "bg-yellow-50 border-yellow-200 text-yellow-800"
@@ -127,6 +127,7 @@ const ClaimStatusModal = ({ isOpen, onClose, onConfirm, status, remark, onStatus
   );
 };
 
+
 const InvoiceUpdateSystem = () => {
   const router = useRouter();
   const { id } = router.query;
@@ -201,29 +202,46 @@ const InvoiceUpdateSystem = () => {
   //   const { name, value } = e.target;
   //   setFormData((prev) => ({ ...prev, [name]: value }));
   // }, []);
-
 const handlePaymentChange = useCallback((e) => {
   const { name, value } = e.target;
-  setFormData((prev) => {
+
+  setFormData(prev => {
     const updated = { ...prev, [name]: value };
 
-    // Recalculate pending
     const amount = parseFloat(updated.amount) || 0;
-    const paid = parseFloat(updated.paid) || 0;
-    const advance = parseFloat(updated.advance) || 0;
-    updated.pending = Math.max(0, amount - (paid + advance));
+    const currentPaid = parseFloat(updated.paid) || 0;
+    const paying = parseFloat(updated.paying) || 0;
 
-    // Recalculate needToPay if insurance
+    // Calculate total payment after this new payment
+    const totalPaid = currentPaid + paying;
+    
+    // Calculate pending amount
+    const pending = Math.max(0, amount - totalPaid);
+    
+    // Calculate advance (if paying more than remaining amount)
+    const remainingAmount = amount - currentPaid;
+    const advance = Math.max(0, paying - remainingAmount);
+
+    // Update calculated fields
+    updated.pending = pending;
+    updated.advance = advance;
+
+    // Insurance logic
     if (updated.insurance === "Yes") {
       const coPayPercent = parseFloat(updated.coPayPercent) || 0;
-      updated.needToPay = Math.max(0, (amount * (100 - coPayPercent)) / 100 - (updated.advanceGivenAmount || 0));
+      updated.needToPay = Math.max(
+        0,
+        (amount * (100 - coPayPercent)) / 100 - (updated.advanceGivenAmount || 0)
+      );
     } else {
-      updated.needToPay = updated.pending;
+      updated.needToPay = pending;
     }
 
     return updated;
   });
 }, []);
+
+
 
 
 
@@ -236,27 +254,40 @@ const handlePaymentChange = useCallback((e) => {
       showToast("Please select payment method", "error");
       return;
     }
+    if (!formData.status) {
+      showToast("Please select a status", "error");
+      return;
+    }
+    if (formData.status === "Rejected" && !formData.rejectionNote?.trim()) {
+      showToast("Please provide a rejection note for rejected status", "error");
+      return;
+    }
 
     showConfirm(
       "Confirm Payment Update",
-      "Are you sure you want to update the payment details?",
+      "Are you sure you want to update the payment details and status?",
       async () => {
         try {
           const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
+          const requestBody = {
+            updateType: "payment",
+            amount: formData.amount,
+            paying: formData.paying || 0,
+            paymentMethod: formData.paymentMethod,
+            status: formData.status,
+            rejectionNote: formData.status === "Rejected" ? formData.rejectionNote : null,
+            notes: formData.status === "Released" ? formData.notes : null,
+          };
+          
           const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              amount: formData.amount,
-              paid: formData.paid,
-              advance: formData.advance,
-              paymentMethod: formData.paymentMethod,
-            }),
+            body: JSON.stringify(requestBody),
           });
 
           const result = await res.json();
           if (res.ok) {
-            showToast("Payment updated successfully!", "success");
+            showToast("Payment and status updated successfully!", "success");
             setInvoiceInfo(result.updatedInvoice);
             setFormData(result.updatedInvoice);
           } else {
@@ -315,6 +346,7 @@ const handlePaymentChange = useCallback((e) => {
       }
     );
   }, [claimStatusModal, invoiceInfo, currentUser.name, formData.advanceClaimReleaseDate, formData.advanceClaimReleasedBy]);
+
 
   const canViewMobileNumber = useMemo(
     () => ["Admin", "Super Admin"].includes(currentUser.role),
@@ -449,89 +481,157 @@ const handlePaymentChange = useCallback((e) => {
             </InfoCard>
 
             {/* Payment Details */}
-            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-                Payment Details
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
-                    Amount <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="amount"
-                    value={formData.amount || ""}
-                    onChange={handlePaymentChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Paid</label>
-                  <input
-                    type="number"
-                    name="paid"
-                    value={formData.paid || ""}
-                    onChange={handlePaymentChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Advance</label>
-                  <input
-                    type="number"
-                    name="advance"
-                    value={formData.advance || ""}
-                    onChange={handlePaymentChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Pending (Auto)</label>
-                  <input
-                    type="text"
-                    value={`₹ ${calculatedFields.pending.toFixed(2)}`}
-                    disabled
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
-                  />
-                </div>
-               
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
-                    Payment Method <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="paymentMethod"
-                    value={formData.paymentMethod || ""}
-                    onChange={handlePaymentChange}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
-                  >
-                    <option value="">Select method</option>
-                    {paymentMethods.map((method) => (
-                      <option key={method} value={method}>{method}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  onClick={handleUpdatePayment}
-                  className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  Update Payment
-                </button>
-              </div>
-            </div>
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
+  <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+    <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+    Payment Details
+  </h2>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
+        Amount <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="number"
+        name="amount"
+        value={formData.amount || ""}
+        onChange={handlePaymentChange}
+        placeholder="0.00"
+        step="0.01"
+        min="0"
+        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Current Paid (From DB)</label>
+      <input
+        type="number"
+        name="paid"
+        value={formData.paid || ""}
+        readOnly
+        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50 text-gray-700 text-sm sm:text-base border border-gray-300 rounded-lg font-medium cursor-not-allowed"
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">New Payment</label>
+      <input
+        type="number"
+        name="paying"
+        value={formData.paying || ""}
+        onChange={handlePaymentChange}
+        placeholder="Enter new payment amount"
+        step="0.01"
+        min="0"
+        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">New Advance (Preview)</label>
+      <input
+        type="number"
+        value={formData.advance?.toFixed(2) || "0.00"}
+        readOnly
+        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-green-50 text-green-700 text-sm sm:text-base border border-green-300 rounded-lg font-medium cursor-not-allowed"
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Pending (Auto)</label>
+      <input
+        type="text"
+        value={`₹ ${formData.pending?.toFixed(2) || "0.00"}`}
+        disabled
+        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
+        Payment Method <span className="text-red-500">*</span>
+      </label>
+      <select
+        name="paymentMethod"
+        value={formData.paymentMethod || ""}
+        onChange={handlePaymentChange}
+        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+      >
+        <option value="">Select method</option>
+        {paymentMethods.map((method) => (
+          <option key={method} value={method}>{method}</option>
+        ))}
+      </select>
+    </div>
+
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
+        Status <span className="text-red-500">*</span>
+      </label>
+      <select
+        value={formData.status || ""}
+        onChange={(e) => {
+          const newStatus = e.target.value;
+          setFormData(prev => ({ ...prev, status: newStatus }));
+          if (newStatus !== "Rejected") {
+            setFormData(prev => ({ ...prev, rejectionNote: "" }));
+          }
+        }}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+      >
+        <option value="">Select Status</option>
+        <option value="Active">Active</option>
+        <option value="Completed">Completed</option>
+        <option value="Cancelled">Cancelled</option>
+        <option value="Rejected">Rejected</option>
+        <option value="Released">Released</option>
+      </select>
+    </div>
+    
+    {formData.status === "Rejected" && (
+      <div className="col-span-full">
+        <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
+          Rejection Note <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          value={formData.rejectionNote || ""}
+          onChange={(e) => setFormData(prev => ({ ...prev, rejectionNote: e.target.value }))}
+          placeholder="Please provide a reason for rejection..."
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+        />
+      </div>
+    )}
+    
+    {formData.status === "Released" && (
+      <div className="col-span-full">
+        <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Notes</label>
+        <textarea
+          value={formData.notes || ""}
+          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Optional notes..."
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+        />
+      </div>
+    )}
+  </div>
+
+  <div className="flex justify-end">
+    <button
+      onClick={handleUpdatePayment}
+      className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+    >
+      Update Payment
+    </button>
+  </div>
+</div>
+
 
             {/* Insurance Details */}
             {formData.insurance === "Yes" && (
@@ -573,9 +673,77 @@ const handlePaymentChange = useCallback((e) => {
                 </div>
               </InfoCard>
             )}
+
+            {/* Payment History */}
+            {formData.paymentHistory && formData.paymentHistory.length > 0 && (
+              <InfoCard icon={FileText} title="Payment History" bgColor="bg-gradient-to-br from-amber-50 to-orange-50">
+                <div className="space-y-4">
+                  {formData.paymentHistory.map((entry, index) => (
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="font-semibold text-gray-800">Entry #{index + 1}</h4>
+                        <span className="text-sm text-gray-500">
+                          {new Date(entry.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-600">Amount:</span>
+                          <p className="text-gray-800">₹{entry.amount?.toFixed(2) || "0.00"}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Paid:</span>
+                          <p className="text-gray-800">₹{entry.paid?.toFixed(2) || "0.00"}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Advance:</span>
+                          <p className="text-gray-800">₹{entry.advance?.toFixed(2) || "0.00"}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Pending:</span>
+                          <p className="text-gray-800">₹{entry.pending?.toFixed(2) || "0.00"}</p>
+                        </div>
+                        {entry.paying > 0 && (
+                          <div className="col-span-2 sm:col-span-4">
+                            <span className="font-medium text-gray-600">Paying Amount:</span>
+                            <p className="text-green-600 font-semibold">₹{entry.paying.toFixed(2)}</p>
+                          </div>
+                        )}
+                        <div className="col-span-2 sm:col-span-4">
+                          <span className="font-medium text-gray-600">Payment Method:</span>
+                          <p className="text-gray-800">{entry.paymentMethod || "N/A"}</p>
+                        </div>
+                        {entry.status && (
+                          <div className="col-span-2 sm:col-span-4">
+                            <span className="font-medium text-gray-600">Status:</span>
+                            <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
+                              entry.status === "Active" ? "bg-green-100 text-green-800" : 
+                              entry.status === "Completed" ? "bg-blue-100 text-blue-800" :
+                              entry.status === "Cancelled" ? "bg-red-100 text-red-800" :
+                              entry.status === "Rejected" ? "bg-red-100 text-red-800" :
+                              entry.status === "Released" ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-800"
+                            }`}>
+                              {entry.status}
+                            </span>
+                          </div>
+                        )}
+                        {entry.rejectionNote && (
+                          <div className="col-span-2 sm:col-span-4">
+                            <span className="font-medium text-gray-600">Rejection Note:</span>
+                            <p className="text-red-600 text-sm mt-1">{entry.rejectionNote}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </InfoCard>
+            )}
+
           </div>
         </div>
       </div>
+
     </div>
   );
 };

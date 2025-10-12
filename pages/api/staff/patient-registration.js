@@ -230,6 +230,26 @@ export default async function handler(req, res) {
       });
     } catch (err) {
       console.error("POST error:", err);
+      
+      // Handle validation errors
+      if (err.name === 'ValidationError') {
+        const validationErrors = Object.values(err.errors).map(e => e.message);
+        return res.status(400).json({ 
+          success: false, 
+          message: "Validation Error", 
+          errors: validationErrors 
+        });
+      }
+      
+      // Handle duplicate key errors
+      if (err.code === 11000) {
+        const field = Object.keys(err.keyPattern)[0];
+        return res.status(400).json({ 
+          success: false, 
+          message: `${field} already exists` 
+        });
+      }
+      
       return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
   }

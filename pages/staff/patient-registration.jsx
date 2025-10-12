@@ -147,43 +147,48 @@ const InvoiceManagementSystem = () => {
       .catch(() => showToast("Failed to fetch treatments", "error"));
   }, [showToast]);
 
-  // When insurance is Yes, advanceGivenAmount equals full amount
+
+  // Auto-calculate advance amount based on amount and paid
   useEffect(() => {
-    if (formData.insurance === "Yes") {
-      const amt = parseFloat(formData.amount) || 0;
-      setFormData(prev => ({ ...prev, advanceGivenAmount: amt.toFixed(2) }));
+    const amount = parseFloat(formData.amount) || 0;
+    const paid = parseFloat(formData.paid) || 0;
+    
+    if (paid > amount) {
+      // If paid is more than amount, the excess goes to advance
+      const advance = paid - amount;
+      setFormData(prev => ({ ...prev, advance: advance.toFixed(2) }));
+    } else {
+      // If paid is less than or equal to amount, no advance
+      setFormData(prev => ({ ...prev, advance: "0.00" }));
     }
-  }, [formData.amount, formData.insurance]);
+  }, [formData.amount, formData.paid]);
 
   useEffect(() => generateInvoiceNumber(), []);
 
   useEffect(() => {
     const amount = parseFloat(formData.amount) || 0;
     const paid = parseFloat(formData.paid) || 0;
-    let pending = 0;
-    let advance = 0;
-    if (paid >= amount) {
-      advance = paid - amount;
-      pending = 0;
-    } else {
-      advance = 0;
-      pending = amount - paid;
-    }
-    setFormData(prev => ({ ...prev, advance: advance.toFixed(2) }));
+    const advance = parseFloat(formData.advance) || 0;
+    
+    // Calculate pending based on total payment
+    const totalPayment = paid + advance;
+    const pending = Math.max(0, amount - totalPayment);
+    
     setCalculatedFields(prev => ({ ...prev, pending }));
-  }, [formData.amount, formData.paid]);
+  }, [formData.amount, formData.paid, formData.advance]);
 
   useEffect(() => {
-    if (formData.insurance === "Yes" && formData.coPayPercent !== "") {
+    if (formData.insurance === "Yes" && formData.insuranceType === "Advance" && formData.advanceGivenAmount && formData.coPayPercent !== "") {
       const amount = parseFloat(formData.amount) || 0;
+      const advanceGivenAmount = parseFloat(formData.advanceGivenAmount) || 0;
       const coPayPercent = parseFloat(formData.coPayPercent) || 0;
       const coPayAmount = (amount * coPayPercent) / 100;
-      const needToPay = Math.max(0, amount - coPayAmount);
+      const needToPay = Math.max(0, amount - coPayAmount - advanceGivenAmount);
       setCalculatedFields(prev => ({ ...prev, needToPay }));
     } else {
       setCalculatedFields(prev => ({ ...prev, needToPay: calculatedFields.pending }));
     }
-  }, [formData.amount, formData.coPayPercent, formData.insurance]);
+  }, [formData.amount, formData.coPayPercent, formData.insurance, formData.insuranceType, formData.advanceGivenAmount]);
 
   const generateInvoiceNumber = useCallback(() => {
     const date = new Date();
@@ -199,14 +204,22 @@ const InvoiceManagementSystem = () => {
     if (name === "insurance" && value === "No") {
       setFormData(prev => ({
         ...prev,
-        advanceGivenAmount: "",
+        advanceGivenAmount: "0",
         coPayPercent: "",
-        advanceClaimStatus: "Pending"
+        advanceClaimStatus: "Pending",
+        insuranceType: "Paid"
       }));
       setAutoFields(prev => ({
         ...prev,
         advanceClaimReleaseDate: null,
         advanceClaimReleasedBy: null
+      }));
+    }
+    
+    if (name === "insurance" && value === "Yes") {
+      setFormData(prev => ({
+        ...prev,
+        advanceGivenAmount: "0"
       }));
     }
   }, [errors]);
@@ -271,7 +284,7 @@ const InvoiceManagementSystem = () => {
 
   const validateForm = useCallback(() => {
     const newErrors = {};
-    const { invoiceNumber, emrNumber, firstName, lastName, email, gender, doctor, service, treatment, package: pkg, patientType, amount, paymentMethod, insurance, advanceGivenAmount, coPayPercent } = formData;
+    const { invoiceNumber, emrNumber, firstName, lastName, email, mobileNumber, gender, doctor, service, treatment, package: pkg, patientType, amount, paymentMethod, insurance, advanceGivenAmount, coPayPercent } = formData;
     
     if (!invoiceNumber.trim()) newErrors.invoiceNumber = "Required";
     if (!emrNumber.trim()) newErrors.emrNumber = "Required";
@@ -280,6 +293,8 @@ const InvoiceManagementSystem = () => {
     if (!lastName.trim()) newErrors.lastName = "Required";
     if (!email.trim()) newErrors.email = "Required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = "Invalid email";
+    if (!mobileNumber.trim()) newErrors.mobileNumber = "Required";
+    else if (!/^[0-9]{10}$/.test(mobileNumber)) newErrors.mobileNumber = "Enter valid 10-digit number";
     if (!gender) newErrors.gender = "Required";
     if (!patientType) newErrors.patientType = "Required";
     if (!doctor) newErrors.doctor = "Required";
@@ -288,8 +303,7 @@ const InvoiceManagementSystem = () => {
     if (service === "Package" && !pkg) newErrors.package = "Required";
     if (!amount || parseFloat(amount) <= 0) newErrors.amount = "Valid amount required";
     if (!paymentMethod) newErrors.paymentMethod = "Required";
-    if (insurance === "Yes") {
-      if (!advanceGivenAmount || parseFloat(advanceGivenAmount) <= 0) newErrors.advanceGivenAmount = "Required";
+    if (insurance === "Yes" && formData.insuranceType === "Advance") {
       if (!coPayPercent || parseFloat(coPayPercent) < 0 || parseFloat(coPayPercent) > 100) newErrors.coPayPercent = "0-100 required";
     }
     
@@ -330,7 +344,12 @@ const handleSubmit = useCallback(async () => {
           // Redirect to patient information page
           router.push("/staff/patient-information"); 
         } else {
-          showToast(data.message || "Failed to save invoice", "error");
+          // Handle validation errors
+          if (data.errors && Array.isArray(data.errors)) {
+            showToast(`Validation Error: ${data.errors.join(", ")}`, "error");
+          } else {
+            showToast(data.message || "Failed to save invoice", "error");
+          }
         }
       } catch {
         showToast("Network error. Please try again", "error");
@@ -594,30 +613,56 @@ const handleSubmit = useCallback(async () => {
                       <option value="Yes">Yes</option>
                     </select>
                   </div>
-                  {formData.insurance === 'Yes' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                        <select name="insuranceType" value={formData.insuranceType} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                          <option value="Paid">Paid</option>
-                          <option value="Advance">Advance</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Advance Given Amount (Auto)</label>
-                        <input type="number" name="advanceGivenAmount" value={formData.advanceGivenAmount} disabled className="w-full px-4 py-2 border rounded-lg bg-gray-100" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Co-Pay % <span className="text-red-500">*</span></label>
-                        <input type="number" name="coPayPercent" value={formData.coPayPercent} onChange={handleInputChange} className={`w-full px-4 py-2 border rounded-lg ${errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} placeholder="0-100" min="0" max="100" />
-                        {errors.coPayPercent && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.coPayPercent}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay (Auto)</label>
-                        <input type="text" value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} disabled className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold" />
-                      </div>
-                    </>
-                  )}
+                   {formData.insurance === 'Yes' && (
+                     <>
+                       <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                         <select name="insuranceType" value={formData.insuranceType} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                           <option value="Paid">Paid</option>
+                           <option value="Advance">Advance</option>
+                         </select>
+                       </div>
+                       {formData.insuranceType === 'Advance' && (
+                         <>
+                           <div>
+                             <label className="block text-sm font-medium text-gray-700 mb-2">Advance Payment Amount</label>
+                             <input 
+                               type="number" 
+                               name="advanceGivenAmount" 
+                               value={formData.advanceGivenAmount || "0"} 
+                               onChange={handleInputChange}
+                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" 
+                               placeholder="0"
+                               step="0.01"
+                             />
+                           </div>
+                           <div>
+                             <label className="block text-sm font-medium text-gray-700 mb-2">Co-Pay % <span className="text-red-500">*</span></label>
+                             <input 
+                               type="number" 
+                               name="coPayPercent" 
+                               value={formData.coPayPercent} 
+                               onChange={handleInputChange} 
+                               className={`w-full px-4 py-2 border rounded-lg ${errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} 
+                               placeholder="0-100" 
+                               min="0" 
+                               max="100" 
+                             />
+                             {errors.coPayPercent && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.coPayPercent}</p>}
+                           </div>
+                           <div>
+                             <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay (Auto)</label>
+                             <input 
+                               type="text" 
+                               value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} 
+                               disabled 
+                               className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold" 
+                             />
+                           </div>
+                         </>
+                       )}
+                     </>
+                   )}
                 </div>
               </div>
 
@@ -629,8 +674,7 @@ const handleSubmit = useCallback(async () => {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[{ name: "amount", label: "Amount (Auto from selection)", required: true, type: "number" },
-                    { name: "paid", label: "Paid", type: "number" },
-                    { name: "advance", label: "Advance (Auto)", type: "number", disabled: true }
+                    { name: "paid", label: "Paid", type: "number" }
                   ].map(f => (
                     <div key={f.name}>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -641,14 +685,22 @@ const handleSubmit = useCallback(async () => {
                         name={f.name}
                         value={formData[f.name]}
                         onChange={handleInputChange}
-                        disabled={f.disabled}
-                        className={`w-full px-4 py-2 border rounded-lg ${errors[f.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'} ${f.disabled ? 'bg-gray-100' : ''}`}
+                        className={`w-full px-4 py-2 border rounded-lg ${errors[f.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                         placeholder="0.00"
                         step="0.01"
                       />
                       {errors[f.name] && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors[f.name]}</p>}
                     </div>
                   ))}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Advance (Auto)</label>
+                    <input
+                      type="text"
+                      value={formData.advance || "0.00"}
+                      disabled
+                      className="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Pending (Auto)</label>
                     <input type="text" value={`₹ ${calculatedFields.pending.toFixed(2)}`} disabled className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold" />
