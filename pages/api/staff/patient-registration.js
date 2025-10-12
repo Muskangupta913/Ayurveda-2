@@ -44,9 +44,9 @@ async function addToPettyCashIfCash(user, patient, paidAmount) {
         // Create new PettyCash record
         pettyCashRecord = await PettyCash.create({
           staffId: user._id,
-          patientName: `${patient.firstName} ${patient.lastName}`,
-          patientEmail: patient.email,
-          patientPhone: patient.mobileNumber,
+          patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim(),
+          patientEmail: patient.email || '',
+          patientPhone: patient.mobileNumber || '',
           note: `Auto-added from patient registration - Invoice: ${patient.invoiceNumber}`,
           allocatedAmounts: [{
             amount: paidAmount,
@@ -64,8 +64,11 @@ async function addToPettyCashIfCash(user, patient, paidAmount) {
         });
         await pettyCashRecord.save();
       }
+
+      // Update global total amount
+      await PettyCash.updateGlobalTotalAmount(paidAmount, 'add');
       
-      console.log(`Added ₹${paidAmount} to PettyCash for staff ${user.name}`);
+      console.log(`Added ₹${paidAmount} to PettyCash for staff ${user.name} and updated global total`);
     } catch (error) {
       console.error("Error adding to PettyCash:", error);
       // Don't throw error to avoid breaking patient registration

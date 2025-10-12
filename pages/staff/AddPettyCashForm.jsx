@@ -17,13 +17,20 @@ function PettyCashAndExpense() {
   const [expenseForm, setExpenseForm] = useState({
     description: "",
     spentAmount: "",
+    vendor: "", // Add vendor field
     receipts: [], // ensure defined
+  });
+  const [manualPettyCashForm, setManualPettyCashForm] = useState({
+    note: "",
+    amount: "",
+    receipts: [],
   });
 
   const [message, setMessage] = useState("");
   const [expenseMsg, setExpenseMsg] = useState("");
   const [pettyCashList, setPettyCashList] = useState([]);
   const [search, setSearch] = useState("");
+  const [vendors, setVendors] = useState([]);
 
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -33,11 +40,13 @@ function PettyCashAndExpense() {
   // UI state
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showPettyModal, setShowPettyModal] = useState(false);
+  const [showManualPettyModal, setShowManualPettyModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", tone: "success" });
   const [expenseSearch, setExpenseSearch] = useState("");
   // Local previews before submit
   const [pettyPreviews, setPettyPreviews] = useState([]); // array of { url, file }
   const [expensePreviews, setExpensePreviews] = useState([]); // array of { url, file }
+  const [manualPettyPreviews, setManualPettyPreviews] = useState([]); // array of { url, file }
 
   // ---------- GLOBAL DATE HANDLING ----------
   const toInputDate = (d) => {
@@ -55,6 +64,15 @@ function PettyCashAndExpense() {
     globalRemaining: 0,
     patients: [],
   });
+  const [adminGlobalData, setAdminGlobalData] = useState({
+    globalAmount: 0,
+    totalAllocated: 0,
+    totalSpent: 0,
+    totalRecords: 0,
+    totalStaff: 0,
+    lastUpdated: null,
+  });
+  const [currentUser, setCurrentUser] = useState({ role: "" });
 
   const isTodaySelected =
     selectedDate === new Date().toISOString().split("T")[0];
@@ -75,6 +93,19 @@ function PettyCashAndExpense() {
       filterExpensesByDate(res.data.pettyCashList, selectedDate);
     } catch (error) {
       console.error("Error fetching petty cash:", error);
+    }
+  };
+
+  const fetchVendors = async () => {
+    try {
+      const res = await axios.get("/api/vendor/get-vendors", {
+        headers: { Authorization: `Bearer ${staffToken}` }
+      });
+      if (res.data.success) {
+        setVendors(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
     }
   };
 
@@ -119,10 +150,44 @@ function PettyCashAndExpense() {
     }
   };
 
+  const fetchAdminGlobalTotals = async () => {
+    try {
+      const res = await axios.get("/api/global-pettycash", {
+        headers: { Authorization: `Bearer ${staffToken}` }
+      });
+      if (res.data.success) {
+        setAdminGlobalData(res.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching admin global totals:", err);
+    }
+  };
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get("/api/staff/patient-registration", {
+        headers: { Authorization: `Bearer ${staffToken}` }
+      });
+      if (res.data.success) {
+        setCurrentUser(res.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching current user:", err);
+    }
+  };
+
   useEffect(() => {
     fetchPettyCash();
     fetchGlobalTotals(selectedDate);
+    fetchVendors();
+    fetchCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
+      fetchAdminGlobalTotals();
+    }
+  }, [currentUser.role]);
 
   useEffect(() => {
     fetchGlobalTotals(selectedDate);
@@ -135,6 +200,9 @@ function PettyCashAndExpense() {
 
   const handleExpenseChange = (e) =>
     setExpenseForm({ ...expenseForm, [e.target.name]: e.target.value });
+
+  const handleManualPettyCashChange = (e) =>
+    setManualPettyCashForm({ ...manualPettyCashForm, [e.target.name]: e.target.value });
 
   const handleAmountChange = (index, value) => {
     const updated = [...form.allocatedAmounts];
@@ -172,6 +240,20 @@ function PettyCashAndExpense() {
     const newFiles = (expenseForm.receipts || []).filter((_, i) => i !== index);
     setExpensePreviews(newPreviews);
     setExpenseForm({ ...expenseForm, receipts: newFiles });
+  };
+
+  const handleManualPettyFilesChange = (e) => {
+    const filesArray = Array.from(e.target.files || []);
+    const previews = filesArray.map((file) => ({ url: URL.createObjectURL(file), file }));
+    setManualPettyCashForm({ ...manualPettyCashForm, receipts: filesArray });
+    setManualPettyPreviews(previews);
+  };
+
+  const removeManualPettyPreviewAt = (index) => {
+    const newPreviews = manualPettyPreviews.filter((_, i) => i !== index);
+    const newFiles = (manualPettyCashForm.receipts || []).filter((_, i) => i !== index);
+    setManualPettyPreviews(newPreviews);
+    setManualPettyCashForm({ ...manualPettyCashForm, receipts: newFiles });
   };
 
   // ---------- CLOUDINARY UPLOAD ----------
@@ -273,7 +355,42 @@ function PettyCashAndExpense() {
     }
   };
 
-  // ---------- SUBMIT EXPENSE ----------
+  // ---------- SUBMIT MANUAL PETTY CASH ----------
+  const handleManualPettyCashSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Build multipart FormData for manual petty cash addition
+      const formData = new FormData();
+      formData.append("note", manualPettyCashForm.note || "");
+      formData.append("amount", String(manualPettyCashForm.amount));
+
+      if (manualPettyCashForm.receipts && manualPettyCashForm.receipts.length > 0) {
+        manualPettyCashForm.receipts.forEach((file) => formData.append("receipts", file));
+      }
+
+      await axios.post("/api/pettycash/add-manual", formData, {
+        headers: {
+          Authorization: `Bearer ${staffToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Reset form
+      setManualPettyCashForm({ note: "", amount: "", receipts: [] });
+      setManualPettyPreviews([]);
+      fetchPettyCash();
+      fetchGlobalTotals(selectedDate);
+      if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
+        fetchAdminGlobalTotals();
+      }
+      setShowManualPettyModal(false);
+      alert("Manual Petty Cash added successfully!");
+    } catch (err) {
+      console.error("Error submitting manual petty cash:", err);
+      alert("Error: " + (err.response?.data?.message || "Something went wrong"));
+    }
+  };
+
   // ---------- SUBMIT EXPENSE ----------
   const handleExpenseSubmit = async (e) => {
     e.preventDefault();
@@ -311,6 +428,7 @@ function PettyCashAndExpense() {
         const formData = new FormData();
         formData.append("description", expenseForm.description);
         formData.append("spentAmount", String(expenseForm.spentAmount));
+        formData.append("vendor", expenseForm.vendor || "");
 
         if (expenseForm.receipts) {
           if (Array.isArray(expenseForm.receipts)) {
@@ -334,6 +452,9 @@ function PettyCashAndExpense() {
       setEditingId(null);
       fetchPettyCash();
       fetchGlobalTotals(selectedDate);
+      if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
+        fetchAdminGlobalTotals();
+      }
       // Close modal on success
       setShowExpenseModal(false);
       alert(editMode ? "Expense updated successfully!" : "Expense added!");
@@ -357,16 +478,13 @@ function PettyCashAndExpense() {
     const nextDay = new Date(targetDate);
     nextDay.setDate(targetDate.getDate() + 1);
 
+    // Only show records that have allocated amounts (petty cash added), not expenses
     return pettyCashList.filter((record) => {
       const hasAllocations = record.allocatedAmounts.some((alloc) => {
         const allocDate = new Date(alloc.date);
         return allocDate >= targetDate && allocDate < nextDay;
       });
-      const hasExpenses = record.expenses.some((exp) => {
-        const expDate = new Date(exp.date);
-        return expDate >= targetDate && expDate < nextDay;
-      });
-      return hasAllocations || hasExpenses;
+      return hasAllocations; // Only show if it has allocated amounts
     });
   };
 
@@ -458,7 +576,7 @@ function PettyCashAndExpense() {
         <h2 className="text-2xl font-semibold text-gray-700">Petty Cash</h2>
         <div className="flex gap-2">
           <button onClick={() => setShowExpenseModal(true)} className="px-3 py-2 border rounded text-gray-700 hover:bg-gray-50">＋ Add Expense</button>
-          <button onClick={() => setShowPettyModal(true)} className="px-3 py-2 border rounded text-gray-700 hover:bg-gray-50">＋ Add Petty Cash</button>
+          <button onClick={() => setShowManualPettyModal(true)} className="px-3 py-2 border rounded text-gray-700 hover:bg-gray-50">＋ Add Petty Cash</button>
         </div>
       </div>
 
@@ -505,6 +623,20 @@ function PettyCashAndExpense() {
             </h3>
             {/* Expense Form */}
             <form onSubmit={handleExpenseSubmit} className="space-y-3">
+              <select
+                name="vendor"
+                value={expenseForm.vendor}
+                onChange={handleExpenseChange}
+                className="w-full border p-2 rounded"
+              >
+                <option value="">Select Vendor (Optional)</option>
+                {vendors.map(vendor => (
+                  <option key={vendor._id} value={vendor._id}>
+                    {vendor.name}
+                  </option>
+                ))}
+              </select>
+
               <input
                 type="text"
                 name="description"
@@ -607,6 +739,69 @@ function PettyCashAndExpense() {
                 <p className="text-gray-500 text-sm">No expenses for this date.</p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showManualPettyModal && (
+        <div className="fixed inset-0 z-40 p-4">
+          <div className="max-w-xl mx-auto bg-white border rounded-lg shadow p-4">
+            <h3 className="text-lg font-semibold mb-3 text-blue-700">
+              Add Petty Cash (Manual)
+            </h3>
+            <form onSubmit={handleManualPettyCashSubmit} className="space-y-3">
+              <textarea
+                name="note"
+                placeholder="Note/Description"
+                value={manualPettyCashForm.note}
+                onChange={handleManualPettyCashChange}
+                className="w-full border p-2 rounded"
+                required
+              />
+
+              <input
+                type="number"
+                name="amount"
+                placeholder="Amount"
+                value={manualPettyCashForm.amount}
+                onChange={handleManualPettyCashChange}
+                className="w-full border p-2 rounded"
+                required
+                step="0.01"
+              />
+
+              <input
+                type="file"
+                name="receipts"
+                multiple
+                onChange={handleManualPettyFilesChange}
+                className="w-full border p-2 rounded"
+              />
+
+              {/* Previews for newly selected manual petty cash receipts */}
+              {manualPettyPreviews.length > 0 && (
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {manualPettyPreviews.map((p, idx) => (
+                    <div key={idx} className="relative">
+                      <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
+                      <button
+                        type="button"
+                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
+                        onClick={() => removeManualPettyPreviewAt(idx)}
+                        aria-label="Remove receipt"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button type="submit" className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">Save</button>
+                <button type="button" onClick={() => setShowManualPettyModal(false)} className="px-4 py-2 border rounded text-gray-700">Close</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -725,7 +920,7 @@ function PettyCashAndExpense() {
         />
 
         <h3 className="text-lg font-semibold mb-2">
-          Petty Cash Records for {selectedDate}
+          Petty Cash Added Records for {selectedDate}
         </h3>
         {filteredRecords.length === 0 ? (
           <p className="text-gray-500">No records found for this date.</p>
@@ -853,6 +1048,11 @@ function PettyCashAndExpense() {
                   <tr key={ex._id} className="text-center">
                     <td className="border p-2">
                       <div className="font-medium">{ex.description}</div>
+                      {ex.vendorName && (
+                        <div className="text-sm text-gray-600 mt-1">
+                          Vendor: <span className="font-medium text-blue-600">{ex.vendorName}</span>
+                        </div>
+                      )}
 
                       {/* ✅ RECEIPT VIEW ADDED for Expenses */}
                       {ex.receipts && ex.receipts.length > 0 && (
@@ -906,7 +1106,7 @@ function PettyCashAndExpense() {
       {/* Global totals for selected date */}
       <div className="mt-8 border rounded-lg p-4 bg-blue-50">
         <h3 className="text-lg font-semibold mb-3">
-          Global Totals for {selectedDate}
+          Staff Totals for {selectedDate}
         </h3>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
@@ -929,6 +1129,46 @@ function PettyCashAndExpense() {
           </div>
         </div>
       </div>
+
+      {/* Admin Global Totals - All Staff Combined */}
+      {currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase()) && (
+        <div className="mt-8 border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+          <h3 className="text-lg font-semibold mb-3 text-purple-800">
+            🌐 Global Amount (All Staff Combined)
+          </h3>
+          <div className="grid grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-sm text-gray-600">Global Amount</div>
+              <div className="text-2xl font-bold text-purple-700">
+                ₹{adminGlobalData.globalAmount}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Total Allocated</div>
+              <div className="text-2xl font-bold text-blue-700">
+                ₹{adminGlobalData.totalAllocated}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Total Spent</div>
+              <div className="text-2xl font-bold text-red-600">
+                ₹{adminGlobalData.totalSpent}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Total Staff</div>
+              <div className="text-2xl font-bold text-green-600">
+                {adminGlobalData.totalStaff}
+              </div>
+            </div>
+          </div>
+          {adminGlobalData.lastUpdated && (
+            <div className="text-xs text-gray-500 mt-2 text-center">
+              Last updated: {new Date(adminGlobalData.lastUpdated).toLocaleString()}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

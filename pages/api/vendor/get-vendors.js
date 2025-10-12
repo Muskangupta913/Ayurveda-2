@@ -1,7 +1,7 @@
 import dbConnect from "../../../lib/database";
-import Vendor from "../../../models/VendorProfile";
 import jwt from "jsonwebtoken";
 import User from "../../../models/Users";
+import Vendor from "../../../models/VendorProfile";
 
 // Helper: verify JWT and get user
 async function getUserFromToken(req) {
@@ -23,26 +23,32 @@ export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method !== "GET") {
-    return res.status(405).json({ success: false, message: "Method Not Allowed" });
-  }
-
-  let user;
-  try {
-    user = await getUserFromToken(req);
-  } catch (err) {
-    return res.status(err.status || 401).json({ success: false, message: err.message });
-  }
-
-  // Check if user has permission to view vendors
-  if (!["admin", "staff", "clinic"].includes(user.role)) {
-    return res.status(403).json({ success: false, message: "Access denied" });
+    return res.status(405).json({ success: false, message: "Method not allowed" });
   }
 
   try {
-    const vendors = await Vendor.find().sort({ createdAt: -1 });
-    res.status(200).json({ success: true, data: vendors });
+    const user = await getUserFromToken(req);
+    
+    // Check if user has permission to view vendors
+    if (!["staff", "admin", "clinic"].includes(user.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied" 
+      });
+    }
+
+    const vendors = await Vendor.find({}).sort({ name: 1 });
+
+    return res.status(200).json({
+      success: true,
+      data: vendors
+    });
+
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    console.error("Error fetching vendors:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Internal server error" 
+    });
   }
 }
-

@@ -7,6 +7,7 @@ function AllPettyCashAdmin() {
   const [data, setData] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [staffList, setStaffList] = useState([]);
+  const [globalAmounts, setGlobalAmounts] = useState({ globalTotalAmount: 0, globalSpentAmount: 0, globalRemainingAmount: 0 });
   const [filters, setFilters] = useState({ staff: "", start: "", end: "", search: "" });
   const [loading, setLoading] = useState(false);
   const [receipts, setReceipts] = useState([]);
@@ -53,6 +54,7 @@ function AllPettyCashAdmin() {
       setData(json.data || []);
       setFiltered(json.data || []);
       if (json.staffList && !staffList.length) setStaffList(json.staffList);
+      if (json.globalAmounts) setGlobalAmounts(json.globalAmounts);
       showToast("Data loaded", "success");
     } catch (err) {
       showToast(err.message || "Error loading data", "error");
@@ -101,6 +103,28 @@ function AllPettyCashAdmin() {
 
       {/* Header */}
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Petty Cash Records</h1>
+
+      {/* Global Totals */}
+      <div className="bg-white rounded shadow p-6 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Global Petty Cash Summary</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">₹{globalAmounts.globalTotalAmount}</div>
+            <div className="text-sm text-green-800">Total Amount</div>
+            <div className="text-xs text-green-600 mt-1">All staff combined</div>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-red-600">₹{globalAmounts.globalSpentAmount}</div>
+            <div className="text-sm text-red-800">Total Spent</div>
+            <div className="text-xs text-red-600 mt-1">All expenses combined</div>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">₹{globalAmounts.globalRemainingAmount}</div>
+            <div className="text-sm text-blue-800">Remaining Balance</div>
+            <div className="text-xs text-blue-600 mt-1">Available for use</div>
+          </div>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="bg-white rounded shadow p-4 mb-6">

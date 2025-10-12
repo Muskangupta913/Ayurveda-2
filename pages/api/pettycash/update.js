@@ -1,5 +1,6 @@
 import dbConnect from "../../../lib/database";
 import PettyCash from "../../../models/PettyCash";
+import User from "../../../models/Users";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
@@ -15,8 +16,12 @@ export default async function handler(req, res) {
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!["staff", "admin"].includes(decoded.role)) {
-      return res.status(403).json({ message: "Forbidden" });
+    const staffId = decoded.userId;
+
+    // Get user to check role
+    const user = await User.findById(staffId);
+    if (!user || !["staff", "admin"].includes(user.role)) {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     // ✅ Extract payload
@@ -29,6 +34,11 @@ export default async function handler(req, res) {
     const pettyCash = await PettyCash.findById(id);
     if (!pettyCash) {
       return res.status(404).json({ message: "Petty Cash record not found" });
+    }
+
+    // Check if staff can only update their own records (admin can update any)
+    if (user.role === "staff" && pettyCash.staffId.toString() !== staffId.toString()) {
+      return res.status(403).json({ message: "You can only update your own records" });
     }
 
     // ✅ Allow editing only today
@@ -58,6 +68,9 @@ export default async function handler(req, res) {
         pettyCash.note = note;
       }
 
+      // Update global total amount
+      await PettyCash.updateGlobalTotalAmount(newAmount, 'add');
+
     // ---------- EXPENSE ----------
     } else if (type === "expense") {
       const { expenseId, description, spentAmount, receipts } = data;
@@ -77,6 +90,12 @@ export default async function handler(req, res) {
           return res.status(404).json({ message: "Expense not found in record" });
         }
 
+        // Calculate difference for global update
+        const amountDifference = spentAmount - expense.spentAmount;
+        if (amountDifference !== 0) {
+          await PettyCash.updateGlobalSpentAmount(amountDifference, amountDifference > 0 ? 'add' : 'subtract');
+        }
+
         expense.description = description;
         expense.spentAmount = spentAmount;
         expense.receipts = receipts || [];
@@ -89,6 +108,9 @@ export default async function handler(req, res) {
           receipts: receipts || [],
           date: new Date(),
         });
+
+        // Update global spent amount
+        await PettyCash.updateGlobalSpentAmount(spentAmount, 'add');
       }
     } else {
       return res.status(400).json({ message: "Invalid type provided" });
