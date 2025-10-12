@@ -5,11 +5,16 @@ const paymentHistorySchema = new mongoose.Schema({
   paid: { type: Number, required: true, min: 0 },
   advance: { type: Number, default: 0, min: 0 },
   pending: { type: Number, required: true, min: 0 },
+  paying: { type: Number, default: 0, min: 0 }, // Track paying amount
   paymentMethod: {
     type: String,
     enum: ["Cash", "Card", "BT", "Tabby", "Tamara"],
     required: true,
   },
+  status: { type: String, enum: ["Active", "Cancelled", "Completed", "Rejected", "Released"] },
+  rejectionNote: { type: String, trim: true },
+  advanceClaimStatus: { type: String, enum: ["Pending", "Released", "Cancelled", "Approved by doctor"] },
+  advanceClaimCancellationRemark: { type: String, trim: true },
   updatedAt: { type: Date, default: Date.now },
 });
 
@@ -27,7 +32,16 @@ const patientRegistrationSchema = new mongoose.Schema(
     lastName: { type: String, trim: true },
     gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
     email: { type: String, trim: true, lowercase: true },
-    mobileNumber: { type: String, required: true, match: [/^[0-9]{10}$/, "Enter valid 10-digit number"] },
+    mobileNumber: { 
+      type: String, 
+      required: true, 
+      validate: {
+        validator: function(v) {
+          return /^[0-9]{10}$/.test(v);
+        },
+        message: "Enter valid 10-digit number"
+      }
+    },
     referredBy: { type: String, trim: true },
     patientType: { type: String, enum: ["New", "Old"], default: "New" },
 
@@ -57,8 +71,9 @@ const patientRegistrationSchema = new mongoose.Schema(
     advanceClaimCancellationRemark: { type: String, trim: true },
 
     // Status & Notes
-    status: { type: String, enum: ["Active", "Cancelled", "Completed"], default: "Active" },
+    status: { type: String, enum: ["Active", "Cancelled", "Completed", "Rejected", "Released"], default: "Active" },
     notes: { type: String, trim: true },
+    rejectionNote: { type: String, trim: true }, // Show when status is rejected
   },
   { timestamps: true }
 );
@@ -71,13 +86,18 @@ patientRegistrationSchema.pre("save", function (next) {
   this.advanceGivenAmount = Number(this.advanceGivenAmount ?? 0);
   this.coPayPercent = Number(this.coPayPercent ?? 0);
 
-  // Normalize advance/pending from paid vs amount
-  if (this.paid >= this.amount) {
-    this.advance = this.paid - this.amount;
+  // Updated payment calculation logic
+  // Total payment = paid + advance
+  const totalPayment = this.paid + this.advance;
+  
+  if (totalPayment >= this.amount) {
+    // If total payment covers the amount, calculate pending and advance
     this.pending = 0;
+    this.advance = totalPayment - this.amount;
   } else {
+    // If total payment is less than amount, no advance, calculate pending
     this.advance = 0;
-    this.pending = this.amount - this.paid;
+    this.pending = this.amount - totalPayment;
   }
 
   // Calculate insurance fields
