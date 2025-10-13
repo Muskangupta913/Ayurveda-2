@@ -570,605 +570,372 @@ function PettyCashAndExpense() {
 
 
   return (
-    <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg p-6">
-      {/* Header + Actions */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-        <h2 className="text-2xl font-semibold text-gray-700">Petty Cash</h2>
-        <div className="flex gap-2">
-          <button onClick={() => setShowExpenseModal(true)} className="px-3 py-2 border rounded text-gray-700 hover:bg-gray-50">＋ Add Expense</button>
-          <button onClick={() => setShowManualPettyModal(true)} className="px-3 py-2 border rounded text-gray-700 hover:bg-gray-50">＋ Add Petty Cash</button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Toast Notification */}
+        {toast.show && (
+          <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${toast.tone === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white animate-fade-in`}>
+            {toast.message}
+          </div>
+        )}
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <label className="text-gray-700">Select Date:</label>
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="border p-2 rounded text-gray-700" />
-        </div>
-        <input
-          type="text"
-          value={expenseSearch}
-          onChange={(e) => {
-            setExpenseSearch(e.target.value);
-            const v = e.target.value.toLowerCase();
-            const filtered = [];
-            pettyCashList.forEach((r) => (r.expenses || []).forEach((ex) => {
-              if ((ex.description || "").toLowerCase().includes(v)) filtered.push({ ...ex });
-            }));
-            setFilteredExpenses(filtered);
-          }}
-          placeholder="Search expenses..."
-          className="border p-2 rounded w-full md:w-72 text-gray-700"
-        />
-      </div>
-
-      {/* Date filter */}
-      <div className="flex items-center justify-center gap-3 mb-6">
-        <label className="font-medium">Select Date:</label>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="border p-2 rounded"
-        />
-      </div>
-
-      {/* Modals */}
-      {showExpenseModal && (
-        <div className="fixed inset-0 z-40 p-4">
-          <div className="max-w-xl mx-auto bg-white border rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-3 text-blue-700">
-              Add Expense
-            </h3>
-            {/* Expense Form */}
-            <form onSubmit={handleExpenseSubmit} className="space-y-3">
-              <select
-                name="vendor"
-                value={expenseForm.vendor}
-                onChange={handleExpenseChange}
-                className="w-full border p-2 rounded"
-              >
-                <option value="">Select Vendor (Optional)</option>
-                {vendors.map(vendor => (
-                  <option key={vendor._id} value={vendor._id}>
-                    {vendor.name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                type="text"
-                name="description"
-                placeholder="Expense Description"
-                value={expenseForm.description}
-                onChange={handleExpenseChange}
-                className="w-full border p-2 rounded"
-                required
-              />
-
-              <input
-                type="number"
-                name="spentAmount"
-                placeholder="Spent Amount"
-                value={expenseForm.spentAmount}
-                onChange={handleExpenseChange}
-                className="w-full border p-2 rounded"
-                required
-              />
-
-              <input
-                type="file"
-                name="receipts"
-                multiple
-                onChange={handleExpenseFilesChange}
-                className="w-full border p-2 rounded"
-              />
-
-              {/* Previews for newly selected expense receipts (before submit) */}
-              {expensePreviews.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {expensePreviews.map((p, idx) => (
-                    <div key={idx} className="relative">
-                      <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
-                      <button
-                        type="button"
-                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
-                        onClick={() => removeExpensePreviewAt(idx)}
-                        aria-label="Remove receipt"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {editMode && editType === "expense" && expenseReceiptUrls?.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {expenseReceiptUrls.map((url, idx) => (
-                    <a
-                      key={idx}
-                      href={url.url || url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <img
-                        src={url.url || url}
-                        alt={`Receipt ${idx + 1}`}
-                        className="w-full h-20 object-cover rounded border"
-                      />
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">Save</button>
-                <button type="button" onClick={() => setShowExpenseModal(false)} className="px-4 py-2 border rounded text-gray-700">Close</button>
-              </div>
-            </form>
-
-            {expenseMsg && (
-              <p className="text-center text-green-600 mt-3">{expenseMsg}</p>
-            )}
-
-            {/* Show expenses for selected date */}
-            <div className="mt-6">
-              <h4 className="text-md font-semibold mb-2">
-                Expenses on {selectedDate}
-              </h4>
-              {filteredExpenses.length > 0 ? (
-                <ul className="space-y-2">
-                  {filteredExpenses.map((ex) => (
-                    <li
-                      key={ex._id}
-                      className="border rounded p-2 text-sm"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{ex.description}</span>
-                        <span className="font-semibold text-blue-600">
-                          ₹{ex.spentAmount}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 text-sm">No expenses for this date.</p>
-              )}
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Petty Cash Management</h2>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setShowExpenseModal(true)} className="flex-1 sm:flex-initial px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">+ Expense</button>
+              <button onClick={() => setShowManualPettyModal(true)} className="flex-1 sm:flex-initial px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium">+ Petty Cash</button>
             </div>
           </div>
         </div>
-      )}
 
-      {showManualPettyModal && (
-        <div className="fixed inset-0 z-40 p-4">
-          <div className="max-w-xl mx-auto bg-white border rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-3 text-blue-700">
-              Add Petty Cash (Manual)
-            </h3>
-            <form onSubmit={handleManualPettyCashSubmit} className="space-y-3">
-              <textarea
-                name="note"
-                placeholder="Note/Description"
-                value={manualPettyCashForm.note}
-                onChange={handleManualPettyCashChange}
-                className="w-full border p-2 rounded"
-                required
-              />
-
-              <input
-                type="number"
-                name="amount"
-                placeholder="Amount"
-                value={manualPettyCashForm.amount}
-                onChange={handleManualPettyCashChange}
-                className="w-full border p-2 rounded"
-                required
-                step="0.01"
-              />
-
-              <input
-                type="file"
-                name="receipts"
-                multiple
-                onChange={handleManualPettyFilesChange}
-                className="w-full border p-2 rounded"
-              />
-
-              {/* Previews for newly selected manual petty cash receipts */}
-              {manualPettyPreviews.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {manualPettyPreviews.map((p, idx) => (
-                    <div key={idx} className="relative">
-                      <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
-                      <button
-                        type="button"
-                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
-                        onClick={() => removeManualPettyPreviewAt(idx)}
-                        aria-label="Remove receipt"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">Save</button>
-                <button type="button" onClick={() => setShowManualPettyModal(false)} className="px-4 py-2 border rounded text-gray-700">Close</button>
-              </div>
-            </form>
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <label className="text-gray-800 font-medium text-sm whitespace-nowrap">Date:</label>
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="flex-1 border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <input type="text" value={search} onChange={handleSearch} placeholder="Search by name or email..." className="flex-1 border border-gray-300 px-3 py-2 rounded-lg text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
         </div>
-      )}
 
-      {showPettyModal && (
-        <div className="fixed inset-0 z-40 p-4">
-          <div className="max-w-xl mx-auto bg-white border rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-3 text-blue-700">
-              Add Petty Cash
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input
-                type="text"
-                name="patientName"
-                placeholder="Patient Name"
-                value={form.patientName}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-                required
-              />
-              <input
-                type="email"
-                name="patientEmail"
-                placeholder="Patient Email"
-                value={form.patientEmail}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-                required
-              />
-              <input
-                type="text"
-                name="patientPhone"
-                placeholder="Patient Phone"
-                value={form.patientPhone}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-                required
-              />
-              <textarea
-                name="note"
-                placeholder="Note (optional)"
-                value={form.note}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-              ></textarea>
-
-              <input
-                type="file"
-                name="receipts"
-                multiple
-                onChange={handlePettyFilesChange}
-                className="w-full border p-2 rounded"
-              />
-
-              {/* Previews for newly selected petty cash receipts (before submit) */}
-              {pettyPreviews.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {pettyPreviews.map((p, idx) => (
-                    <div key={idx} className="relative">
-                      <img src={p.url} alt={`New Receipt ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
-                      <button
-                        type="button"
-                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs"
-                        onClick={() => removePettyPreviewAt(idx)}
-                        aria-label="Remove receipt"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-
-              {form.allocatedAmounts.map((amt, idx) => (
-                <input
-                  key={idx}
-                  type="number"
-                  placeholder={`Allocated Amount ${idx + 1}`}
-                  value={amt}
-                  onChange={(e) => handleAmountChange(idx, e.target.value)}
-                  className="w-full border p-2 rounded"
-
-                />
-              ))}
-
-              <button
-                type="button"
-                onClick={addAmountField}
-                className="w-full border text-blue-600 border-blue-600 py-2 rounded hover:bg-blue-50"
-              >
-                + Add More Allocations
-              </button>
-
-              <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Save</button>
-                <button type="button" onClick={() => setShowPettyModal(false)} className="px-4 py-2 border rounded text-gray-700">Close</button>
+        {/* Expense Modal */}
+        {showExpenseModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-800">{editMode ? 'Edit Expense' : 'Add Expense'}</h3>
+                <button onClick={() => {
+                  setShowExpenseModal(false);
+                  setExpensePreviews([]);
+                  setExpenseForm({ description: "", spentAmount: "", vendor: "", receipts: [] });
+                }} className="text-gray-700 hover:text-gray-900">✕</button>
               </div>
-            </form>
-            {message && (
-              <p className="text-center text-green-600 mt-3">{message}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Search and Table */}
-      {/* Petty Cash Records for selected date */}
-      <div className="mt-8">
-        <input
-          type="text"
-          placeholder="Search by Name or Email..."
-          value={search}
-          onChange={handleSearch}
-          className="w-full border p-2 rounded mb-4"
-        />
-
-        <h3 className="text-lg font-semibold mb-2">
-          Petty Cash Added Records for {selectedDate}
-        </h3>
-        {filteredRecords.length === 0 ? (
-          <p className="text-gray-500">No records found for this date.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border text-sm">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border p-2">Patient Name</th>
-                  <th className="border p-2">Email</th>
-                  <th className="border p-2">Phone</th>
-                  <th className="border p-2">Allocated (This Date)</th>
-                  <th className="border p-2">Receipts</th> {/* ✅ new */}
-                  <th className="border p-2">Note</th>
-                  <th className="border p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRecords.map((item) => {
-                  const targetDate = new Date(selectedDate);
-                  targetDate.setHours(0, 0, 0, 0);
-                  const nextDay = new Date(targetDate);
-                  nextDay.setDate(targetDate.getDate() + 1);
-
-                  const allocForDate = item.allocatedAmounts.filter((alloc) => {
-                    const allocDate = new Date(alloc.date);
-                    return allocDate >= targetDate && allocDate < nextDay;
-                  });
-
-                  return (
-                    <tr key={item._id} className="text-center">
-                      <td className="border p-2">{item.patientName}</td>
-                      <td className="border p-2">{item.patientEmail}</td>
-                      <td className="border p-2">{item.patientPhone}</td>
-
-                      {/* Allocated Amounts */}
-                      <td className="border p-2">
-                        {allocForDate.length > 0 ? (
-                          allocForDate.map((a, idx) => (
-                            <div key={idx}>₹{a.amount}</div>
-                          ))
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-
-                      {/* ✅ RECEIPT VIEW ADDED for Allocated */}
-                      <td className="border p-2">
-                        {allocForDate.length > 0 &&
-                          allocForDate.some((a) => a.receipts?.length > 0) ? (
-                          allocForDate.map(
-                            (a, idx) =>
-                              a.receipts &&
-                              a.receipts.map((r, ridx) => (
-                                <a
-                                  key={ridx}
-                                  href={r.url || r}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block text-blue-600 underline text-xs my-1"
-                                >
-                                  View Receipt {ridx + 1}
-                                </a>
-                              ))
-                          )
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-
-                      <td className="border p-2">{item.note || "-"}</td>
-
-                      {/* Delete Button */}
-                      <td className="border p-2">
-                        {isTodaySelected && (
-                          <>
-                            {/* Edit Petty Cash / Allocated */}
-                            <button
-                              onClick={() => handleEdit(item, "allocated")}
-                              className="text-blue-600 hover:text-blue-800 mr-2 text-xs"
-                            >
-                              ✏️
-                            </button>
-
-                            {/* Delete Patient */}
-                            <button
-                              onClick={() => handleDeletePatient(item._id)}
-                              className="text-red-600 hover:text-red-800 ml-2"
-                            >
-                              🗑️
-                            </button>
-                          </>
-                        )}
-
-
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              <form onSubmit={handleExpenseSubmit} className="p-4 space-y-4">
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Vendor (Optional)</label>
+                  <select name="vendor" value={expenseForm.vendor} onChange={handleExpenseChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500">
+                    <option value="">Select Vendor</option>
+                    {vendors.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Description *</label>
+                  <input type="text" name="description" value={expenseForm.description} onChange={handleExpenseChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Amount *</label>
+                  <input type="number" name="spentAmount" value={expenseForm.spentAmount} onChange={handleExpenseChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Receipts</label>
+                  <input type="file" multiple onChange={handleExpenseFilesChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                </div>
+                {expensePreviews.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {expensePreviews.map((p, i) => (
+                      <div key={i} className="relative group">
+                        <img src={p.url} alt="" className="w-full h-20 object-cover rounded-lg border" />
+                        <button type="button" onClick={() => removeExpensePreviewAt(i)} className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {editMode && expenseReceiptUrls?.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {expenseReceiptUrls.map((url, i) => (
+                      <a key={i} href={url.url || url} target="_blank" rel="noopener noreferrer">
+                        <img src={url.url || url} alt="" className="w-full h-20 object-cover rounded-lg border hover:opacity-80 transition" />
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-medium transition">Save</button>
+                  <button type="button" onClick={() => {
+                    setShowExpenseModal(false);
+                    setExpensePreviews([]);
+                    setExpenseForm({ description: "", spentAmount: "", vendor: "", receipts: [] });
+                  }} className="px-6 bg-gray-200 text-gray-800 py-2.5 rounded-lg hover:bg-gray-300 font-medium transition">Cancel</button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
-      </div>
 
-
-      {/* All Expenses for selected date */}
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-2">
-          All Expenses for {selectedDate}
-        </h3>
-        {filteredExpenses.length === 0 ? (
-          <p className="text-gray-500">No expenses for this date.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border text-sm">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border p-2">Description</th>
-                  <th className="border p-2">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredExpenses.map((ex) => (
-                  <tr key={ex._id} className="text-center">
-                    <td className="border p-2">
-                      <div className="font-medium">{ex.description}</div>
-                      {ex.vendorName && (
-                        <div className="text-sm text-gray-600 mt-1">
-                          Vendor: <span className="font-medium text-blue-600">{ex.vendorName}</span>
-                        </div>
-                      )}
-
-                      {/* ✅ RECEIPT VIEW ADDED for Expenses */}
-                      {ex.receipts && ex.receipts.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-2 mt-1">
-                          {ex.receipts.map((r, idx) => (
-                            <a
-                              key={idx}
-                              href={r.url || r}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 underline text-xs"
-                            >
-                              View Receipt {idx + 1}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="border p-2">
-                      <div className="flex justify-center items-center gap-2">
-                        <span className="font-semibold text-blue-600">₹{ex.spentAmount}</span>
-                        {isTodaySelected && (
-                          <>
-                            <button
-                              onClick={() => handleEdit(ex, "expense")}
-                              className="text-blue-600 hover:text-blue-800 mr-2 text-xs"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => handleDeleteExpense(ex._id)}
-                              className="text-red-600 hover:text-red-800 ml-2 text-xs"
-                            >
-                              🗑️
-                            </button>
-                          </>
-                        )}
-
+        {/* Manual Petty Cash Modal */}
+        {showManualPettyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-800">Add Petty Cash</h3>
+                <button onClick={() => {
+                  setShowManualPettyModal(false);
+                  setManualPettyPreviews([]);
+                  setManualPettyCashForm({ note: "", amount: "", receipts: [] });
+                }} className="text-gray-700 hover:text-gray-900">✕</button>
+              </div>
+              <form onSubmit={handleManualPettyCashSubmit} className="p-4 space-y-4">
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Note *</label>
+                  <textarea name="note" value={manualPettyCashForm.note} onChange={handleManualPettyCashChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 h-24" required />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Amount *</label>
+                  <input type="number" name="amount" value={manualPettyCashForm.amount} onChange={handleManualPettyCashChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500" required step="0.01" />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Receipts</label>
+                  <input type="file" multiple onChange={handleManualPettyFilesChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                </div>
+                {manualPettyPreviews.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {manualPettyPreviews.map((p, i) => (
+                      <div key={i} className="relative group">
+                        <img src={p.url} alt="" className="w-full h-20 object-cover rounded-lg border" />
+                        <button type="button" onClick={() => removeManualPettyPreviewAt(i)} className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">×</button>
                       </div>
-                    </td>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-medium transition">Save</button>
+                  <button type="button" onClick={() => {
+                    setShowManualPettyModal(false);
+                    setManualPettyPreviews([]);
+                    setManualPettyCashForm({ note: "", amount: "", receipts: [] });
+                  }} className="px-6 bg-gray-200 text-gray-800 py-2.5 rounded-lg hover:bg-gray-300 font-medium transition">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Petty Cash Modal */}
+        {showPettyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-800">{editMode ? 'Edit Petty Cash' : 'Add Petty Cash'}</h3>
+                <button onClick={() => {
+                  setShowPettyModal(false);
+                  setPettyPreviews([]);
+                  setForm({ patientName: "", patientEmail: "", patientPhone: "", note: "", allocatedAmounts: [""], receipts: [] });
+                }} className="text-gray-700 hover:text-gray-900">✕</button>
+              </div>
+              <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Patient Name *</label>
+                  <input type="text" name="patientName" value={form.patientName} onChange={handleChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Email *</label>
+                  <input type="email" name="patientEmail" value={form.patientEmail} onChange={handleChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Phone *</label>
+                  <input type="text" name="patientPhone" value={form.patientPhone} onChange={handleChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Note</label>
+                  <textarea name="note" value={form.note} onChange={handleChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 h-20" />
+                </div>
+                <div>
+                  <label className="block text-gray-800 font-medium mb-2 text-sm">Receipts</label>
+                  <input type="file" multiple onChange={handlePettyFilesChange} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                </div>
+                {pettyPreviews.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {pettyPreviews.map((p, i) => (
+                      <div key={i} className="relative group">
+                        <img src={p.url} alt="" className="w-full h-20 object-cover rounded-lg border" />
+                        <button type="button" onClick={() => removePettyPreviewAt(i)} className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {form.allocatedAmounts.map((amt, i) => (
+                  <div key={i}>
+                    <label className="block text-gray-800 font-medium mb-2 text-sm">Allocated Amount {i + 1} *</label>
+                    <input type="number" value={amt} onChange={(e) => handleAmountChange(i, e.target.value)} className="w-full border border-gray-300 px-3 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                ))}
+                <button type="button" onClick={addAmountField} className="w-full border-2 border-dashed border-blue-400 text-blue-700 py-2.5 rounded-lg hover:bg-blue-50 font-medium transition">+ Add More</button>
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-medium transition">Save</button>
+                  <button type="button" onClick={() => {
+                    setShowPettyModal(false);
+                    setPettyPreviews([]);
+                    setForm({ patientName: "", patientEmail: "", patientPhone: "", note: "", allocatedAmounts: [""], receipts: [] });
+                  }} className="px-6 bg-gray-200 text-gray-800 py-2.5 rounded-lg hover:bg-gray-300 font-medium transition">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Petty Cash Records Table */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Petty Cash Records - {selectedDate}</h3>
+          {filteredRecords.length === 0 ? (
+            <p className="text-gray-700 text-center py-8">No records found</p>
+          ) : (
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full min-w-[640px]">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-bold text-gray-800">Patient</th>
+                    <th className="px-3 py-3 text-left text-xs font-bold text-gray-800">Contact</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-gray-800">Allocated</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-gray-800">Receipts</th>
+                    <th className="px-3 py-3 text-left text-xs font-bold text-gray-800">Note</th>
+                    {isTodaySelected && <th className="px-3 py-3 text-center text-xs font-bold text-gray-800">Actions</th>}
                   </tr>
-                ))}
-              </tbody>
-
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Global totals for selected date */}
-      <div className="mt-8 border rounded-lg p-4 bg-blue-50">
-        <h3 className="text-lg font-semibold mb-3">
-          Staff Totals for {selectedDate}
-        </h3>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-sm text-gray-600">Total Allocated</div>
-            <div className="text-2xl font-bold text-blue-700">
-              ₹{globalData.globalAllocated}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-600">Total Spent</div>
-            <div className="text-2xl font-bold text-red-600">
-              ₹{globalData.globalSpent}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-600">Total Remaining</div>
-            <div className="text-2xl font-bold text-green-600">
-              ₹{globalData.globalRemaining}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Admin Global Totals - All Staff Combined */}
-      {currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase()) && (
-        <div className="mt-8 border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
-          <h3 className="text-lg font-semibold mb-3 text-purple-800">
-            🌐 Global Amount (All Staff Combined)
-          </h3>
-          <div className="grid grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-sm text-gray-600">Global Amount</div>
-              <div className="text-2xl font-bold text-purple-700">
-                ₹{adminGlobalData.globalAmount}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600">Total Allocated</div>
-              <div className="text-2xl font-bold text-blue-700">
-                ₹{adminGlobalData.totalAllocated}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600">Total Spent</div>
-              <div className="text-2xl font-bold text-red-600">
-                ₹{adminGlobalData.totalSpent}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600">Total Staff</div>
-              <div className="text-2xl font-bold text-green-600">
-                {adminGlobalData.totalStaff}
-              </div>
-            </div>
-          </div>
-          {adminGlobalData.lastUpdated && (
-            <div className="text-xs text-gray-500 mt-2 text-center">
-              Last updated: {new Date(adminGlobalData.lastUpdated).toLocaleString()}
+                </thead>
+                <tbody className="divide-y">
+                  {filteredRecords.map((item) => {
+                    const targetDate = new Date(selectedDate);
+                    targetDate.setHours(0, 0, 0, 0);
+                    const nextDay = new Date(targetDate);
+                    nextDay.setDate(targetDate.getDate() + 1);
+                    const allocForDate = item.allocatedAmounts.filter((alloc) => {
+                      const allocDate = new Date(alloc.date);
+                      return allocDate >= targetDate && allocDate < nextDay;
+                    });
+                    return (
+                      <tr key={item._id} className="hover:bg-gray-50">
+                        <td className="px-3 py-3 text-sm">
+                          <div className="font-medium text-gray-800">{item.patientName}</div>
+                        </td>
+                        <td className="px-3 py-3 text-sm">
+                          <div className="text-gray-700">{item.patientEmail}</div>
+                          <div className="text-gray-700 text-xs">{item.patientPhone}</div>
+                        </td>
+                        <td className="px-3 py-3 text-center text-sm">
+                          {allocForDate.length > 0 ? allocForDate.map((a, i) => <div key={i} className="font-semibold text-gray-800">₹{a.amount}</div>) : <span className="text-gray-700">-</span>}
+                        </td>
+                        <td className="px-3 py-3 text-center text-sm">
+                          {allocForDate.some((a) => a.receipts?.length > 0) ? allocForDate.map((a) => a.receipts?.map((r, i) => <a key={i} href={r.url || r} target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:underline text-xs">View {i + 1}</a>)) : <span className="text-gray-700">-</span>}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-gray-700">{item.note || "-"}</td>
+                        {isTodaySelected && (
+                          <td className="px-3 py-3 text-center">
+                            <button onClick={() => handleEdit(item, "allocated")} className="text-blue-600 hover:text-blue-800 mr-3 text-lg">✏️</button>
+                            <button onClick={() => {
+                              if (confirm('Delete this record?')) handleDeletePatient(item._id);
+                            }} className="text-red-600 hover:text-red-800 text-lg">🗑️</button>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
-      )}
+
+        {/* Expenses Table */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Expenses - {selectedDate}</h3>
+          {filteredExpenses.length === 0 ? (
+            <p className="text-gray-700 text-center py-8">No expenses found</p>
+          ) : (
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full min-w-[640px]">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-bold text-gray-800">Description</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-gray-800">Amount</th>
+                    {isTodaySelected && <th className="px-3 py-3 text-center text-xs font-bold text-gray-800">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredExpenses.map((ex) => (
+                    <tr key={ex._id} className="hover:bg-gray-50">
+                      <td className="px-3 py-3 text-sm">
+                        <div className="font-medium text-gray-800">{ex.description}</div>
+                        {ex.vendorName && <div className="text-xs text-gray-700 mt-1">Vendor: {ex.vendorName}</div>}
+                        {ex.receipts?.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {ex.receipts.map((r, i) => <a key={i} href={r.url || r} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">Receipt {i + 1}</a>)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className="font-bold text-gray-800 text-sm">₹{ex.spentAmount}</span>
+                      </td>
+                      {isTodaySelected && (
+                        <td className="px-3 py-3 text-center">
+                          <button onClick={() => handleEdit(ex, "expense")} className="text-blue-600 hover:text-blue-800 mr-3 text-lg">✏️</button>
+                          <button onClick={() => {
+                            if (confirm('Delete this expense?')) handleDeleteExpense(ex._id);
+                          }} className="text-red-600 hover:text-red-800 text-lg">🗑️</button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Staff Totals */}
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg shadow-sm p-4 sm:p-6 mb-4">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Staff Totals - {selectedDate}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg p-4 text-center">
+              <div className="text-sm text-gray-700 mb-1">Allocated</div>
+              <div className="text-2xl font-bold text-blue-600">₹{globalData.globalAllocated}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 text-center">
+              <div className="text-sm text-gray-700 mb-1">Spent</div>
+              <div className="text-2xl font-bold text-red-600">₹{globalData.globalSpent}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 text-center">
+              <div className="text-sm text-gray-700 mb-1">Remaining</div>
+              <div className="text-2xl font-bold text-green-600">₹{globalData.globalRemaining}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Admin Global Totals */}
+        {currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase()) && (
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg shadow-sm p-4 sm:p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">🌐 Global Totals (All Staff)</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white rounded-lg p-4 text-center">
+                <div className="text-xs sm:text-sm text-gray-700 mb-1">Global Amount</div>
+                <div className="text-xl sm:text-2xl font-bold text-purple-600">₹{adminGlobalData.globalAmount}</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 text-center">
+                <div className="text-xs sm:text-sm text-gray-700 mb-1">Total Allocated</div>
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">₹{adminGlobalData.totalAllocated}</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 text-center">
+                <div className="text-xs sm:text-sm text-gray-700 mb-1">Total Spent</div>
+                <div className="text-xl sm:text-2xl font-bold text-red-600">₹{adminGlobalData.totalSpent}</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 text-center">
+                <div className="text-xs sm:text-sm text-gray-700 mb-1">Total Staff</div>
+                <div className="text-xl sm:text-2xl font-bold text-green-600">{adminGlobalData.totalStaff}</div>
+              </div>
+            </div>
+            {adminGlobalData.lastUpdated && <div className="text-xs text-gray-700 text-center mt-3">Updated: {new Date(adminGlobalData.lastUpdated).toLocaleString()}</div>}
+          </div>
+        )}
+      </div>
+
+      <style jsx>{`
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in { animation: fade-in 0.3s ease-out; }
+    `}</style>
     </div>
   );
 }

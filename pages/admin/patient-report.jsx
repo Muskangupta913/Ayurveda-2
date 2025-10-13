@@ -24,7 +24,7 @@ const AdminPatientClaims = () => {
 
       const res = await fetch(url, {
         method: 'GET',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
@@ -152,7 +152,7 @@ const AdminPatientClaims = () => {
     }
 
     const printWindow = window.open("", "_blank");
-    
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -217,7 +217,7 @@ const AdminPatientClaims = () => {
 
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-    
+
     setTimeout(() => {
       printWindow.print();
     }, 250);
@@ -320,7 +320,7 @@ const AdminPatientClaims = () => {
               className="bg-white rounded-lg sm:rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-3 sm:p-4 md:p-5 transform hover:-translate-y-1 cursor-pointer ring-1 ring-gray-100 hover:ring-2"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xl sm:text-2xl md:text-3xl">{item.icon}</span>
+                <span className="text-xl sm:text-xl md:text-xl">{item.icon}</span>
                 <div className={`bg-gradient-to-br ${item.color} w-2 h-2 rounded-full shadow-sm`}></div>
               </div>
               <div className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 truncate">
@@ -426,7 +426,7 @@ const AdminPatientClaims = () => {
                   >
                     <ChevronLeft size={20} />
                   </button>
-                  
+
                   <div className="flex gap-1">
                     {[...Array(Math.min(totalPages, 7))].map((_, i) => {
                       let pageNum;
@@ -439,16 +439,15 @@ const AdminPatientClaims = () => {
                       } else {
                         pageNum = currentPage - 3 + i;
                       }
-                      
+
                       return (
                         <button
                           key={i}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-1 rounded-lg ${
-                            currentPage === pageNum
+                          className={`px-3 py-1 rounded-lg ${currentPage === pageNum
                               ? 'bg-blue-600 text-white'
                               : 'border border-gray-300 hover:bg-gray-50'
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -472,7 +471,7 @@ const AdminPatientClaims = () => {
 
       {/* Patient Detail Modal with Blurred Background */}
       {selectedPatient && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center z-10">
               <h2 className="text-2xl font-bold text-gray-900">Patient Details</h2>
@@ -532,11 +531,10 @@ const AdminPatientClaims = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-2">Claim Status</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><span className="text-gray-700">Claim Status:</span> <span className={`font-medium ${
-                    selectedPatient.advanceClaimStatus === 'Pending' ? 'text-yellow-600' :
-                    selectedPatient.advanceClaimStatus === 'Released' ? 'text-green-600' :
-                    'text-red-600'
-                  }`}>{selectedPatient.advanceClaimStatus || '-'}</span></div>
+                  <div><span className="text-gray-700">Claim Status:</span> <span className={`font-medium ${selectedPatient.advanceClaimStatus === 'Pending' ? 'text-yellow-600' :
+                      selectedPatient.advanceClaimStatus === 'Released' ? 'text-green-600' :
+                        'text-red-600'
+                    }`}>{selectedPatient.advanceClaimStatus || '-'}</span></div>
                   <div><span className="text-gray-700">Patient Status:</span> <span className="font-medium text-gray-900">{selectedPatient.status || '-'}</span></div>
                   <div><span className="text-gray-700">Invoiced By:</span> <span className="font-medium text-gray-900">{selectedPatient.invoicedBy || '-'}</span></div>
                   <div><span className="text-gray-700">Released By:</span> <span className="font-medium text-gray-900">{selectedPatient.advanceClaimReleasedBy || '-'}</span></div>

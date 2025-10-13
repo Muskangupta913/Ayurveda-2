@@ -48,14 +48,29 @@ export default async function handler(req, res) {
         ];
       }
 
-      const patients = await PatientRegistration.find(query).sort({ createdAt: -1 });
+      // 🔹 Populate doctor info
+      const patients = await PatientRegistration.find(query)
+        .populate({
+          path: "doctor",
+          model: "User",
+          select: "name role",
+          match: { role: "doctorStaff" }, // optional if you only want doctorStaff
+        })
+        .sort({ createdAt: -1 });
 
-      return res.status(200).json({ success: true, count: patients.length, data: patients });
+      // 🔹 Map doctor name
+      const patientDetails = patients.map((p) => ({
+        ...p._doc,
+        doctor: p.doctor ? p.doctor.name : "-", // replace doctor id with name
+      }));
+
+      return res.status(200).json({ success: true, count: patients.length, data: patientDetails });
     } catch (err) {
       console.error("GET error:", err);
       return res.status(err.status || 500).json({ success: false, message: err.message || "Server error" });
     }
   }
+
 
   // ---------------- PUT: update status ----------------
   if (req.method === "PUT") {
