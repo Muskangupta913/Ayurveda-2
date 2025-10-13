@@ -181,17 +181,26 @@ const InvoiceManagementSystem = () => {
     const advanceGivenAmount = parseFloat(formData.advanceGivenAmount) || 0;
     const coPayPercentNum = parseFloat(formData.coPayPercent);
 
-    if (formData.insurance === "Yes" && !Number.isNaN(coPayPercentNum)) {
-      const coPayAmount = (amount * coPayPercentNum) / 100;
-      const needToPay = Math.max(0, amount - coPayAmount - advanceGivenAmount);
+    if (formData.insurance === "Yes" && formData.insuranceType === "Advance" && !Number.isNaN(coPayPercentNum)) {
+      // Requirement: base the calculation ONLY on Advance Payment Amount (ignore package price)
+      // needToPay = advanceGivenAmount * (100 - coPay%) / 100
+      const needToPay = Math.max(0, (advanceGivenAmount * (100 - coPayPercentNum)) / 100);
       setCalculatedFields(prev => ({ ...prev, needToPay }));
+
+      // Also reflect this value in the Payment Details Amount field (only in this mode)
+      const currentAmountStr = String(formData.amount ?? "");
+      const needToPayStr = needToPay.toFixed(2);
+      if (currentAmountStr !== needToPayStr) {
+        setFormData(prev => ({ ...prev, amount: needToPayStr }));
+      }
     } else {
+      // Default: pending = amount - (paid + advance)
       const paid = parseFloat(formData.paid) || 0;
       const advance = parseFloat(formData.advance) || 0;
       const pending = Math.max(0, amount - (paid + advance));
       setCalculatedFields(prev => ({ ...prev, needToPay: pending }));
     }
-  }, [formData.amount, formData.coPayPercent, formData.insurance, formData.advanceGivenAmount, formData.paid, formData.advance]);
+  }, [formData.amount, formData.coPayPercent, formData.insurance, formData.insuranceType, formData.advanceGivenAmount, formData.paid, formData.advance]);
 
   const generateInvoiceNumber = useCallback(() => {
     const date = new Date();
