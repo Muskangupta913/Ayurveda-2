@@ -85,6 +85,8 @@ const InvoiceManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState({ name: "", role: "" });
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [manualAdvance, setManualAdvance] = useState(false);
+  const [emrAdvanceMode, setEmrAdvanceMode] = useState(false);
+  const [emrAdvanceBase, setEmrAdvanceBase] = useState(0);
   const [autoFields, setAutoFields] = useState({
     invoicedDate: new Date().toISOString(),
     invoicedBy: " ",
@@ -165,16 +167,27 @@ const InvoiceManagementSystem = () => {
   useEffect(() => generateInvoiceNumber(), []);
 
   useEffect(() => {
+    if (emrAdvanceMode) return; // EMR-advance mode has its own pending calc
     const amount = parseFloat(formData.amount) || 0;
     const paid = parseFloat(formData.paid) || 0;
     const advance = parseFloat(formData.advance) || 0;
-    
-    // Calculate pending based on total payment
     const totalPayment = paid + advance;
     const pending = Math.max(0, amount - totalPayment);
-    
     setCalculatedFields(prev => ({ ...prev, pending }));
-  }, [formData.amount, formData.paid, formData.advance]);
+  }, [formData.amount, formData.paid, formData.advance, emrAdvanceMode]);
+
+  // EMR advance mode: remaining advance and pending derive from base advance and paid
+  useEffect(() => {
+    if (!emrAdvanceMode) return;
+    const base = Number(emrAdvanceBase) || 0;
+    const amount = parseFloat(formData.amount) || 0;
+    const paid = parseFloat(formData.paid) || 0;
+    const usedFromAdvance = Math.min(paid, base);
+    const remainingAdvance = Math.max(0, base - paid);
+    const pending = Math.max(0, amount - usedFromAdvance);
+    setFormData(prev => ({ ...prev, advance: remainingAdvance.toFixed(2) }));
+    setCalculatedFields(prev => ({ ...prev, pending }));
+  }, [emrAdvanceMode, emrAdvanceBase, formData.amount, formData.paid]);
 
   useEffect(() => {
     const amount = parseFloat(formData.amount) || 0;
@@ -273,6 +286,10 @@ const InvoiceManagementSystem = () => {
 
         if (res.ok && data.success && data.data) {
           const f = data.data;
+          // Enable EMR advance mode before setting advance so auto-calc doesn't override it
+          setManualAdvance(true);
+          setEmrAdvanceMode(true);
+          setEmrAdvanceBase(typeof f.advanceOnlyAmount === 'number' ? Number(f.advanceOnlyAmount) : 0);
           setFormData(prev => ({
             ...prev,
             firstName: f.firstName || "",
@@ -282,11 +299,8 @@ const InvoiceManagementSystem = () => {
             gender: f.gender || "",
             patientType: f.patientType || "",
             referredBy: f.referredBy || "",
-            advance: typeof f.advanceOnlyAmount === 'number' ? String(f.advanceOnlyAmount.toFixed(2)) : prev.advance
+            advance: typeof f.advanceOnlyAmount === 'number' ? String(f.advanceOnlyAmount.toFixed(2)) : "0.00"
           }));
-          if (typeof f.advanceOnlyAmount === 'number') {
-            setManualAdvance(true);
-          }
         showToast("Patient details loaded successfully", "success");
       } else {
         showToast("Patient not found. Fill details manually", "warning");

@@ -47,6 +47,10 @@ function PettyCashAndExpense() {
   const [pettyPreviews, setPettyPreviews] = useState([]); // array of { url, file }
   const [expensePreviews, setExpensePreviews] = useState([]); // array of { url, file }
   const [manualPettyPreviews, setManualPettyPreviews] = useState([]); // array of { url, file }
+  // Submit loading states
+  const [isSubmittingPetty, setIsSubmittingPetty] = useState(false);
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+  const [isSubmittingManualPetty, setIsSubmittingManualPetty] = useState(false);
 
   // ---------- GLOBAL DATE HANDLING ----------
   const toInputDate = (d) => {
@@ -285,6 +289,7 @@ function PettyCashAndExpense() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsSubmittingPetty(true);
       // Build multipart FormData to match API (multer with bodyParser disabled)
       const formData = new FormData();
       formData.append("patientName", form.patientName);
@@ -352,6 +357,8 @@ function PettyCashAndExpense() {
     } catch (err) {
       console.error("Error submitting petty cash:", err);
       alert(err.response?.data?.message || "Something went wrong!");
+    } finally {
+      setIsSubmittingPetty(false);
     }
   };
 
@@ -359,6 +366,7 @@ function PettyCashAndExpense() {
   const handleManualPettyCashSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsSubmittingManualPetty(true);
       // Build multipart FormData for manual petty cash addition
       const formData = new FormData();
       formData.append("note", manualPettyCashForm.note || "");
@@ -388,6 +396,8 @@ function PettyCashAndExpense() {
     } catch (err) {
       console.error("Error submitting manual petty cash:", err);
       alert("Error: " + (err.response?.data?.message || "Something went wrong"));
+    } finally {
+      setIsSubmittingManualPetty(false);
     }
   };
 
@@ -395,6 +405,7 @@ function PettyCashAndExpense() {
   const handleExpenseSubmit = async (e) => {
     e.preventDefault();
     try {
+      setIsSubmittingExpense(true);
       // For edit mode, continue using JSON update API
       if (editMode && editType === "expense") {
         const hasNewFiles =
@@ -461,6 +472,8 @@ function PettyCashAndExpense() {
     } catch (err) {
       console.error("Error updating expense:", err);
       alert("Error: " + (err.response?.data?.message || "Something went wrong"));
+    } finally {
+      setIsSubmittingExpense(false);
     }
   };
 
@@ -653,12 +666,14 @@ function PettyCashAndExpense() {
                   </div>
                 )}
                 <div className="flex gap-3 pt-2">
-                  <button type="submit" className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-medium transition">Save</button>
-                  <button type="button" onClick={() => {
+                  <button type="submit" disabled={isSubmittingExpense} className={`flex-1 py-2.5 rounded-lg font-medium transition ${isSubmittingExpense ? 'bg-green-400 cursor-not-allowed text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}>
+                    {isSubmittingExpense ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" disabled={isSubmittingExpense} onClick={() => {
                     setShowExpenseModal(false);
                     setExpensePreviews([]);
                     setExpenseForm({ description: "", spentAmount: "", vendor: "", receipts: [] });
-                  }} className="px-6 bg-gray-200 text-gray-800 py-2.5 rounded-lg hover:bg-gray-300 font-medium transition">Cancel</button>
+                  }} className={`px-6 py-2.5 rounded-lg font-medium transition ${isSubmittingExpense ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>Cancel</button>
                 </div>
               </form>
             </div>
@@ -701,12 +716,14 @@ function PettyCashAndExpense() {
                   </div>
                 )}
                 <div className="flex gap-3 pt-2">
-                  <button type="submit" className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-medium transition">Save</button>
-                  <button type="button" onClick={() => {
+                  <button type="submit" disabled={isSubmittingManualPetty} className={`flex-1 py-2.5 rounded-lg font-medium transition ${isSubmittingManualPetty ? 'bg-green-400 cursor-not-allowed text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}>
+                    {isSubmittingManualPetty ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" disabled={isSubmittingManualPetty} onClick={() => {
                     setShowManualPettyModal(false);
                     setManualPettyPreviews([]);
                     setManualPettyCashForm({ note: "", amount: "", receipts: [] });
-                  }} className="px-6 bg-gray-200 text-gray-800 py-2.5 rounded-lg hover:bg-gray-300 font-medium transition">Cancel</button>
+                  }} className={`px-6 py-2.5 rounded-lg font-medium transition ${isSubmittingManualPetty ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>Cancel</button>
                 </div>
               </form>
             </div>
@@ -764,12 +781,14 @@ function PettyCashAndExpense() {
                 ))}
                 <button type="button" onClick={addAmountField} className="w-full border-2 border-dashed border-blue-400 text-blue-700 py-2.5 rounded-lg hover:bg-blue-50 font-medium transition">+ Add More</button>
                 <div className="flex gap-3 pt-2">
-                  <button type="submit" className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-medium transition">Save</button>
-                  <button type="button" onClick={() => {
+                  <button type="submit" disabled={isSubmittingPetty} className={`flex-1 py-2.5 rounded-lg font-medium transition ${isSubmittingPetty ? 'bg-blue-400 cursor-not-allowed text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                    {isSubmittingPetty ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" disabled={isSubmittingPetty} onClick={() => {
                     setShowPettyModal(false);
                     setPettyPreviews([]);
                     setForm({ patientName: "", patientEmail: "", patientPhone: "", note: "", allocatedAmounts: [""], receipts: [] });
-                  }} className="px-6 bg-gray-200 text-gray-800 py-2.5 rounded-lg hover:bg-gray-300 font-medium transition">Cancel</button>
+                  }} className={`px-6 py-2.5 rounded-lg font-medium transition ${isSubmittingPetty ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>Cancel</button>
                 </div>
               </form>
             </div>

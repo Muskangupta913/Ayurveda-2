@@ -121,8 +121,18 @@ if (startDate && !endDate) {
 
     const finalData = Object.values(groupedData);
 
-    // Get global amounts
-    const globalAmounts = await PettyCash.getGlobalAmounts();
+    // Compute date-filtered global amounts from the filtered allocations/expenses
+    let globalTotalAllocated = 0;
+    let globalTotalSpent = 0;
+    finalData.forEach((item) => {
+      globalTotalAllocated += item.totalAllocated;
+      globalTotalSpent += item.totalSpent;
+    });
+    const globalAmounts = {
+      globalTotalAmount: globalTotalAllocated,
+      globalSpentAmount: globalTotalSpent,
+      globalRemainingAmount: Math.max(0, globalTotalAllocated - globalTotalSpent)
+    };
 
     return res.status(200).json({
       success: true,
