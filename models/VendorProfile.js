@@ -21,11 +21,9 @@ const VendorSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    commissionPercentage: {
-      type: Number,
-      required: [true, "Commission percentage is required"],
-      min: 0,
-      max: 100,
+    trnNumber: {
+      type: String,
+      default: "", // ✅ Added TRN number field
     },
     note: {
       type: String,
@@ -37,8 +35,13 @@ const VendorSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt automatically
+    timestamps: true,
   }
 );
 
-export default mongoose.models.Vendor || mongoose.model("Vendor", VendorSchema);
+// 🔥 Important fix for Next.js hot-reload
+if (mongoose.models.Vendor) {
+  delete mongoose.models.Vendor;
+}
+
+export default mongoose.model("Vendor", VendorSchema);

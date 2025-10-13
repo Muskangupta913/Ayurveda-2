@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { CheckCircle, AlertCircle, Trash2, Edit3, Plus, X, Search, Mail, Phone, MapPin, Percent, Info, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertCircle, Trash2, Edit3, Plus, X, Search, Mail, Phone, MapPin, Hash, Info, AlertTriangle } from "lucide-react";
 
 // Toast Component
 const Toast = ({ message, type, onClose }) => {
@@ -95,7 +95,7 @@ export default function VendorForm() {
     email: "",
     phone: "",
     address: "",
-    commissionPercentage: "",
+    trnNumber: "", // ✅ new field
     note: "",
   });
 
@@ -212,7 +212,7 @@ export default function VendorForm() {
       email: vendor.email,
       phone: vendor.phone,
       address: vendor.address,
-      commissionPercentage: vendor.commissionPercentage,
+      trnNumber: vendor.trnNumber, // ✅ updated field
       note: vendor.note,
     });
     setIsModalOpen(true);
@@ -225,7 +225,7 @@ export default function VendorForm() {
       email: "",
       phone: "",
       address: "",
-      commissionPercentage: "",
+      trnNumber: "", // ✅ updated field
       note: "",
     });
     setIsModalOpen(true);
@@ -239,10 +239,11 @@ export default function VendorForm() {
       email: "",
       phone: "",
       address: "",
-      commissionPercentage: "",
+      trnNumber: "", // ✅ updated field
       note: "",
     });
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
@@ -332,11 +333,12 @@ export default function VendorForm() {
                     </div>
                   )}
                   <div className="flex items-center gap-3 text-gray-800">
-                    <Percent className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                    <Hash className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                     <span className="text-sm font-medium">
-                      Commission: {vendor.commissionPercentage}%
+                      TRN Number: {vendor.trnNumber || "N/A"}
                     </span>
                   </div>
+
                   {vendor.note && (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <p className="text-xs text-gray-800 italic line-clamp-2">
@@ -453,13 +455,13 @@ export default function VendorForm() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Commission % *
+                      TRN Number
                     </label>
                     <input
-                      type="number"
-                      name="commissionPercentage"
-                      placeholder="10"
-                      value={formData.commissionPercentage}
+                      type="text"
+                      name="trnNumber"
+                      placeholder="Enter TRN Number"
+                      value={formData.trnNumber}
                       onChange={handleChange}
                       required
                       min="0"

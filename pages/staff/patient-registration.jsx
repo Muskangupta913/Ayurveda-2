@@ -384,353 +384,366 @@ const handleSubmit = useCallback(async () => {
 
   const canViewMobile = useMemo(() => ["Admin", "Super Admin"].includes(currentUser.role), [currentUser.role]);
 
-  return (
-    <>
-      <style>{`
-        @keyframes slide-in {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes scale-in {
-          from { transform: scale(0.9); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-slide-in { animation: slide-in 0.3s ease-out; }
-        .animate-scale-in { animation: scale-in 0.2s ease-out; }
-      `}</style>
+return (
+  <>
+    <style>{`
+      @keyframes slide-in {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes scale-in {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      .animate-slide-in { animation: slide-in 0.3s ease-out; }
+      .animate-scale-in { animation: scale-in 0.2s ease-out; }
+    `}</style>
 
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal({ isOpen: false, action: null })} onConfirm={confirmModal.action} />
+    <ToastContainer toasts={toasts} removeToast={removeToast} />
+    <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal({ isOpen: false, action: null })} onConfirm={confirmModal.action} />
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-lg shadow-xl p-8">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                  <FileText className="text-indigo-600" />
-                  Medical Invoice Management
-                </h1>
-                <p className="text-gray-700 mt-1">Complete invoice and patient details</p>
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 md:p-8">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 pb-4 border-b border-gray-200">
+            <div className="mb-3 sm:mb-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+                Patient Registration
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-700 mt-1">Complete patient and invoice details</p>
+            </div>
+            {autoFields.invoicedBy && (
+              <div className="text-left sm:text-right">
+                <div className="text-xs text-gray-700">Logged in as:</div>
+                <div className="font-semibold text-sm text-indigo-600">{autoFields.invoicedBy}</div>
+                {currentUser.role && <div className="text-xs text-gray-700">{currentUser.role}</div>}
               </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-700">Logged in as:</div>
-                <div className="font-semibold text-indigo-600">{autoFields.invoicedBy || "Loading..."}</div>
-                <div className="text-xs text-gray-700">{currentUser.role || "Loading..."}</div>
+            )}
+          </div>
+
+          <div className="space-y-5">
+            
+            {/* Invoice Information */}
+            <div className="bg-white rounded-lg p-4 sm:p-5 border border-gray-200">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                Invoice Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">
+                    Invoice Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="invoiceNumber"
+                    value={formData.invoiceNumber}
+                    onChange={handleInputChange}
+                    className={`text-gray-900 w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors.invoiceNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                  />
+                  {errors.invoiceNumber && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />{errors.invoiceNumber}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Invoiced Date</label>
+                  <input
+                    type="text"
+                    value={new Date(autoFields.invoicedDate).toLocaleString()}
+                    disabled
+                    className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-md text-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Invoiced By</label>
+                  <input
+                    type="text"
+                    value={autoFields.invoicedBy}
+                    disabled
+                    className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-md text-gray-700"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-6">
-              {/* Invoice Info */}
-              <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border-l-4 border-indigo-500">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
-                  Invoice Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Invoice Number <span className="text-red-500">*</span>
+            {/* EMR Search */}
+            <div className="bg-indigo-50 rounded-lg p-4 sm:p-5 border border-indigo-200">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                Search Patient by EMR
+              </h2>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                <input
+                  type="text"
+                  name="emrNumber"
+                  value={formData.emrNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter EMR Number"
+                  className="flex-1 px-3 py-2.5 text-sm border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                />
+                <button
+                  type="button"
+                  onClick={fetchEMRData}
+                  disabled={fetching || !formData.emrNumber.trim()}
+                  className={`px-4 py-2.5 rounded-md text-white text-sm font-medium transition flex items-center justify-center gap-2 whitespace-nowrap ${fetching || !formData.emrNumber.trim() ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+                >
+                  <Search className="w-4 h-4" />
+                  {fetching ? "Searching..." : "Search"}
+                </button>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-800 mt-2">💡 Search by EMR to auto-fill or enter manually below</p>
+            </div>
+
+            {/* Patient Information */}
+            <div className="bg-white rounded-lg p-4 sm:p-5 border border-gray-200">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                Patient Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {[{ name: "emrNumber", label: "EMR Number", required: true },
+                  { name: "firstName", label: "First Name", required: true },
+                  { name: "lastName", label: "Last Name", required: true },
+                  { name: "email", label: "Email", type: "email", required: true },
+                  { name: "mobileNumber", label: canViewMobile ? "Mobile Number" : "Mobile (Restricted)", type: "number" },
+                  { name: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Other"], required: true },
+                  { name: "patientType", label: "Patient Type", type: "select", options: ["New", "Old"], required: true },
+                  { name: "referredBy", label: "Referred By" }
+                ].map(field => (
+                  <div key={field.name}>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
-                    <input
-                      type="text"
-                      name="invoiceNumber"
-                      value={formData.invoiceNumber}
-                      onChange={handleInputChange}
-                      className={`text-gray-800 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono font-semibold ${errors.invoiceNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                    />
-                    {errors.invoiceNumber && (
+                    {field.type === "select" ? (
+                      <select
+                        name={field.name}
+                        value={formData[field.name]}
+                        onChange={handleInputChange}
+                        className={`text-gray-900 w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-indigo-500 ${errors[field.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type || "text"}
+                        name={field.name}
+                        value={formData[field.name]}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900 ${errors[field.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                        placeholder={field.label}
+                      />
+                    )}
+                    {errors[field.name] && (
                       <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />{errors.invoiceNumber}
+                        <AlertCircle className="w-3 h-3" />{errors[field.name]}
                       </p>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoiced Date</label>
-                    <input
-                      type="text"
-                      value={new Date(autoFields.invoicedDate).toLocaleString()}
-                      disabled
-                      className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoiced By</label>
-                    <input
-                      type="text"
-                      value={autoFields.invoicedBy}
-                      disabled
-                      className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700"
-                    />
-                  </div>
-                </div>
+                ))}
               </div>
+            </div>
 
-              {/* EMR Search */}
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Search className="w-5 h-5 text-blue-600" />
-                  Search Patient by EMR
-                </h2>
-                <div className="flex items-center gap-3">
+            {/* Medical Details */}
+            <div className="bg-white rounded-lg p-4 sm:p-5 border border-gray-200">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Medical Details</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">
+                    Doctor <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="doctor"
+                    value={formData.doctor}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900 ${errors.doctor ? "border-red-500 bg-red-50" : "border-gray-300"}`}
+                  >
+                    <option value="">Select Doctor</option>
+                    {doctorList.map(d => <option key={d._id} value={d._id}>{d.name} ({d.role})</option>)}
+                  </select>
+                  {errors.doctor && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.doctor}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">
+                    Service <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="service"
+                    value={formData.service}
+                    onChange={handleServiceLinkedChange}
+                    className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900 ${errors.service ? "border-red-500 bg-red-50" : "border-gray-300"}`}
+                  >
+                    <option value="">Select Service</option>
+                    <option value="Package">Package</option>
+                    <option value="Treatment">Treatment</option>
+                  </select>
+                  {errors.service && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.service}</p>}
+                </div>
+                {formData.service === "Package" && (
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Package <span className="text-red-500">*</span></label>
+                    <select name="package" value={formData.package} onChange={handleServiceLinkedChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
+                      <option value="">Select Package</option>
+                      {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - ₹${p.price.toFixed(2)}` : ''}</option>)}
+                    </select>
+                    {errors.package && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.package}</p>}
+                  </div>
+                )}
+                {formData.service === "Treatment" && (
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Treatment <span className="text-red-500">*</span></label>
+                    <select name="treatment" value={formData.treatment} onChange={handleServiceLinkedChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
+                      <option value="">Select Treatment</option>
+                      {fetchedTreatments.map(t => <option key={t._id} value={t.name}>{t.name}{typeof t.price === 'number' ? ` - ₹${t.price.toFixed(2)}` : ''}</option>)}
+                    </select>
+                    {errors.treatment && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.treatment}</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Insurance Details */}
+            <div className="bg-white rounded-lg p-4 sm:p-5 border border-gray-200">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Insurance Details</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Insurance</label>
+                  <select name="insurance" value={formData.insurance} onChange={handleInputChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+                {formData.insurance === 'Yes' && (
+                  <>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Type</label>
+                      <select name="insuranceType" value={formData.insuranceType} onChange={handleInputChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900">
+                        <option value="Paid">Paid</option>
+                        <option value="Advance">Advance</option>
+                      </select>
+                    </div>
+                    {formData.insuranceType === 'Advance' && (
+                      <>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Advance Payment Amount</label>
+                          <input 
+                            type="number" 
+                            name="advanceGivenAmount" 
+                            value={formData.advanceGivenAmount || "0"} 
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900" 
+                            placeholder="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Co-Pay % <span className="text-red-500">*</span></label>
+                          <input 
+                            type="number" 
+                            name="coPayPercent" 
+                            value={formData.coPayPercent} 
+                            onChange={handleInputChange} 
+                            className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} 
+                            placeholder="0-100" 
+                            min="0" 
+                            max="100" 
+                          />
+                          {errors.coPayPercent && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.coPayPercent}</p>}
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Need to Pay (Auto)</label>
+                          <input 
+                            type="text" 
+                            value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} 
+                            disabled 
+                            className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-md text-gray-900 font-semibold" 
+                          />
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Details */}
+            <div className="bg-white rounded-lg p-4 sm:p-5 border border-gray-200">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                Payment Details
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {[{ name: "amount", label: "Amount", required: true, type: "number" },
+                  { name: "paid", label: "Paid", type: "number" }
+                ].map(f => (
+                  <div key={f.name}>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">
+                      {f.label} {f.required && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type={f.type}
+                      name={f.name}
+                      value={formData[f.name]}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors[f.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                      placeholder="0.00"
+                      step="0.01"
+                    />
+                    {errors[f.name] && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors[f.name]}</p>}
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Advance (Auto)</label>
                   <input
                     type="text"
-                    name="emrNumber"
-                    value={formData.emrNumber}
-                    onChange={handleInputChange}
-                    placeholder="Enter EMR Number to auto-fill patient details"
-                    className="flex-1 px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-500"
+                    value={formData.advance || "0.00"}
+                    disabled
+                    className="w-full px-3 py-2 text-sm border rounded-md bg-gray-50 text-gray-700"
                   />
-                  <button
-                    type="button"
-                    onClick={fetchEMRData}
-                    disabled={fetching || !formData.emrNumber.trim()}
-                    className={`px-6 py-3 rounded-lg text-white font-semibold transition flex items-center gap-2 ${fetching || !formData.emrNumber.trim() ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-md"}`}
-                  >
-                    <Search className="w-5 h-5" />
-                    {fetching ? "Searching..." : "Search"}
-                  </button>
                 </div>
-                <p className="text-sm text-gray-700 mt-2">💡 Search by EMR to auto-fill patient information or enter manually below</p>
-              </div>
-
-              {/* Patient Info */}
-              <div className="text-gray-800 bg-blue-50 rounded-lg p-6 border border-blue-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-600" />
-                  Patient Information
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[{ name: "emrNumber", label: "EMR Number", required: true },
-                    { name: "firstName", label: "First Name", required: true },
-                    { name: "lastName", label: "Last Name", required: true },
-                    { name: "email", label: "Email", type: "email", required: true },
-                    { name: "mobileNumber", label: canViewMobile ? "Mobile Number" : "Mobile (Restricted)", type: "number" },
-                    { name: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Other"], required: true },
-                    { name: "patientType", label: "Patient Type", type: "select", options: ["New", "Old"], required: true },
-                    { name: "referredBy", label: "Referred By" }
-                  ].map(field => (
-                    <div key={field.name}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {field.label} {field.required && <span className="text-red-500">*</span>}
-                      </label>
-                      {field.type === "select" ? (
-                        <select
-                          name={field.name}
-                          value={formData[field.name]}
-                          onChange={handleInputChange}
-                          className={`text-gray-800 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${errors[field.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                        >
-                          <option value="">Select {field.label}</option>
-                          {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                      ) : (
-                        <input
-                          type={field.type || "text"}
-                          name={field.name}
-                          value={formData[field.name]}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${errors[field.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                          placeholder={field.label}
-                        />
-                      )}
-                      {errors[field.name] && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />{errors[field.name]}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Pending (Auto)</label>
+                  <input type="text" value={`₹ ${calculatedFields.pending.toFixed(2)}`} disabled className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-md text-gray-900 font-semibold" />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Payment Method <span className="text-red-500">*</span></label>
+                  <select name="paymentMethod" value={formData.paymentMethod} onChange={handleInputChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.paymentMethod ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
+                    <option value="">Select Method</option>
+                    {paymentMethods.map((m, i) => <option key={i} value={m}>{m}</option>)}
+                  </select>
+                  {errors.paymentMethod && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.paymentMethod}</p>}
                 </div>
               </div>
+            </div>
 
-              {/* Medical Details */}
-              <div className="text-gray-800 bg-green-50 rounded-lg p-6 border border-green-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Medical Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Doctor <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="doctor"
-                      value={formData.doctor}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${errors.doctor ? "border-red-500 bg-red-50" : "border-gray-300"}`}
-                    >
-                      <option value="">Select Doctor</option>
-                      {doctorList.map(d => <option key={d._id} value={d._id}>{d.name} ({d.role})</option>)}
-                    </select>
-                    {errors.doctor && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.doctor}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Service <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="service"
-                      value={formData.service}
-                      onChange={handleServiceLinkedChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${errors.service ? "border-red-500 bg-red-50" : "border-gray-300"}`}
-                    >
-                      <option value="">Select Service</option>
-                      <option value="Package">Package</option>
-                      <option value="Treatment">Treatment</option>
-                    </select>
-                    {errors.service && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.service}</p>}
-                  </div>
-                  {formData.service === "Package" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Package <span className="text-red-500">*</span></label>
-                      <select name="package" value={formData.package} onChange={handleServiceLinkedChange} className={`w-full px-4 py-2 border rounded-lg ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
-                        <option value="">Select Package</option>
-                        {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - ₹${p.price.toFixed(2)}` : ''}</option>)}
-                      </select>
-                      {errors.package && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.package}</p>}
-                    </div>
-                  )}
-                  {formData.service === "Treatment" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Treatment <span className="text-red-500">*</span></label>
-                      <select name="treatment" value={formData.treatment} onChange={handleServiceLinkedChange} className={`w-full px-4 py-2 border rounded-lg ${errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
-                        <option value="">Select Treatment</option>
-                        {fetchedTreatments.map(t => <option key={t._id} value={t.name}>{t.name}{typeof t.price === 'number' ? ` - ₹${t.price.toFixed(2)}` : ''}</option>)}
-                      </select>
-                      {errors.treatment && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.treatment}</p>}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Insurance (moved above payment) */}
-              <div className="text-gray-800 bg-purple-50 rounded-lg p-6 border border-purple-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Insurance Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Insurance</label>
-                    <select name="insurance" value={formData.insurance} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                      <option value="No">No</option>
-                      <option value="Yes">Yes</option>
-                    </select>
-                  </div>
-                   {formData.insurance === 'Yes' && (
-                     <>
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                         <select name="insuranceType" value={formData.insuranceType} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                           <option value="Paid">Paid</option>
-                           <option value="Advance">Advance</option>
-                         </select>
-                       </div>
-                       {formData.insuranceType === 'Advance' && (
-                         <>
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-2">Advance Payment Amount</label>
-                             <input 
-                               type="number" 
-                               name="advanceGivenAmount" 
-                               value={formData.advanceGivenAmount || "0"} 
-                               onChange={handleInputChange}
-                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" 
-                               placeholder="0"
-                               step="0.01"
-                             />
-                           </div>
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-2">Co-Pay % <span className="text-red-500">*</span></label>
-                             <input 
-                               type="number" 
-                               name="coPayPercent" 
-                               value={formData.coPayPercent} 
-                               onChange={handleInputChange} 
-                               className={`w-full px-4 py-2 border rounded-lg ${errors.coPayPercent ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} 
-                               placeholder="0-100" 
-                               min="0" 
-                               max="100" 
-                             />
-                             {errors.coPayPercent && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.coPayPercent}</p>}
-                           </div>
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-2">Need to Pay (Auto)</label>
-                             <input 
-                               type="text" 
-                               value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} 
-                               disabled 
-                               className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold" 
-                             />
-                           </div>
-                         </>
-                       )}
-                     </>
-                   )}
-                </div>
-              </div>
-
-              {/* Payment */}
-              <div className="text-gray-800 bg-yellow-50 rounded-lg p-6 border border-yellow-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-yellow-600" />
-                  Payment Details
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[{ name: "amount", label: "Amount (Auto from selection)", required: true, type: "number" },
-                    { name: "paid", label: "Paid", type: "number" }
-                  ].map(f => (
-                    <div key={f.name}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {f.label} {f.required && <span className="text-red-500">*</span>}
-                      </label>
-                      <input
-                        type={f.type}
-                        name={f.name}
-                        value={formData[f.name]}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg ${errors[f.name] ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                        placeholder="0.00"
-                        step="0.01"
-                      />
-                      {errors[f.name] && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors[f.name]}</p>}
-                    </div>
-                  ))}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Advance (Auto)</label>
-                    <input
-                      type="text"
-                      value={formData.advance || "0.00"}
-                      disabled
-                      className="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pending (Auto)</label>
-                    <input type="text" value={`₹ ${calculatedFields.pending.toFixed(2)}`} disabled className="w-full px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-400 rounded-lg text-gray-900 font-bold" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method <span className="text-red-500">*</span></label>
-                    <select name="paymentMethod" value={formData.paymentMethod} onChange={handleInputChange} className={`w-full px-4 py-2 border rounded-lg ${errors.paymentMethod ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
-                      <option value="">Select Method</option>
-                      {paymentMethods.map((m, i) => <option key={i} value={m}>{m}</option>)}
-                    </select>
-                    {errors.paymentMethod && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.paymentMethod}</p>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-4 pt-4">
-                <button type="button" onClick={resetForm} className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-semibold">
-                  Reset Form
-                </button>
-                <button type="button" onClick={handleSubmit} className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold shadow-lg hover:shadow-xl">
-                  Save Invoice
-                </button>
-              </div>
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
+              <button 
+                type="button" 
+                onClick={resetForm} 
+                className="w-full sm:w-auto px-5 py-2.5 border border-gray-300 rounded-md text-gray-800 hover:bg-gray-50 transition text-sm font-medium"
+              >
+                Reset Form
+              </button>
+              <button 
+                type="button" 
+                onClick={handleSubmit} 
+                className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition text-sm font-medium shadow-sm"
+              >
+                Save Invoice
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </>
-  );
+    </div>
+  </>
+);
 };
 
 InvoiceManagementSystem.getLayout = function PageLayout(page) {

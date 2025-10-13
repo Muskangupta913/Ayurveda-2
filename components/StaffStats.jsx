@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, LabelList } from "recharts";
+import { BarChart, Bar, LineChart, Line, AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, LabelList, Cell } from "recharts";
 
 export default function MyClaims() {
   const [loading, setLoading] = useState(true);
@@ -38,7 +38,6 @@ export default function MyClaims() {
     fetchClaims();
   }, []);
 
-  // Format large numbers with K/M/B suffix
   const formatLargeNumber = (value) => {
     if (!value) return 0;
     if (value >= 1e9) return (value / 1e9).toFixed(2) + "B";
@@ -50,9 +49,9 @@ export default function MyClaims() {
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-600 text-sm sm:text-base">Loading claims...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -60,129 +59,233 @@ export default function MyClaims() {
   if (error)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-        <div className="bg-white p-6 rounded-lg shadow-sm max-w-sm w-full text-center">
-          <div className="text-red-500 text-4xl mb-3">⚠</div>
-          <p className="text-red-600 font-medium text-sm sm:text-base">{error}</p>
+        <div className="bg-white p-6 rounded-lg border border-gray-200 max-w-sm w-full text-center">
+          <p className="text-sm text-gray-900">{error}</p>
         </div>
       </div>
     );
 
-  const claimStatusData = [
+  const totalClaims = (stats.releasedClaims || 0) + (stats.pendingClaims || 0) + (stats.cancelledClaims || 0);
+  const releasedPercent = totalClaims > 0 ? ((stats.releasedClaims || 0) / totalClaims * 100).toFixed(1) : 0;
+  const pendingPercent = totalClaims > 0 ? ((stats.pendingClaims || 0) / totalClaims * 100).toFixed(1) : 0;
+  const cancelledPercent = totalClaims > 0 ? ((stats.cancelledClaims || 0) / totalClaims * 100).toFixed(1) : 0;
+
+  const statusData = [
     { name: "Released", value: stats.releasedClaims || 0, color: "#10b981" },
     { name: "Pending", value: stats.pendingClaims || 0, color: "#f59e0b" },
     { name: "Cancelled", value: stats.cancelledClaims || 0, color: "#ef4444" },
   ];
 
-  const total = claimStatusData.reduce((sum, item) => sum + item.value, 0);
+  const trendData = [
+    { name: "Total", value: stats.totalPatients || 0 },
+    { name: "Released", value: stats.releasedClaims || 0 },
+    { name: "Pending", value: stats.pendingClaims || 0 },
+    { name: "Cancelled", value: stats.cancelledClaims || 0 },
+  ];
 
-  const barChartData = [
-    { name: "Total", value: stats.totalPatients || 0, color: "#3b82f6" },
+  const comparisonData = [
+    { name: "Patients", value: stats.totalPatients || 0 },
+    { name: "Claims", value: totalClaims },
+    { name: "CoPayments", value: stats.totalCoPaymentCount || 0 },
+  ];
+
+  const pieData = [
     { name: "Released", value: stats.releasedClaims || 0, color: "#10b981" },
     { name: "Pending", value: stats.pendingClaims || 0, color: "#f59e0b" },
     { name: "Cancelled", value: stats.cancelledClaims || 0, color: "#ef4444" },
+  ];
+
+  const coPaymentData = [
+    { name: "Total Amount", value: parseFloat((stats.totalCoPayment || 0) / 1000) || 0 },
+    { name: "Count", value: stats.totalCoPaymentCount || 0 },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
 
         {/* Header */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
-            Claims Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600">
-            Overview of your claims and metrics
-          </p>
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Claims Dashboard</h1>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 auto-rows-fr">
-          <StatCard title="Total Patients" value={stats.totalPatients || 0} />
-          <StatCard title="Released" value={stats.releasedClaims || 0} color="text-green-600" />
-          <StatCard title="Pending" value={stats.pendingClaims || 0} color="text-amber-600" />
-          <StatCard title="Cancelled" value={stats.cancelledClaims || 0} color="text-red-600" />
-          <StatCard title="Total CoPayment" value={formatLargeNumber(stats.totalCoPayment)} />
-          <StatCard title="CoPayment Count" value={stats.totalCoPaymentCount || 0} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          
+          <StatCard label="Total Patients" value={stats.totalPatients || 0} />
+          <StatCard label="Released" value={stats.releasedClaims || 0} percent={releasedPercent} />
+          <StatCard label="Pending" value={stats.pendingClaims || 0} percent={pendingPercent} />
+          <StatCard label="Cancelled" value={stats.cancelledClaims || 0} percent={cancelledPercent} />
+          <StatCard label="Total CoPayment" value={formatLargeNumber(stats.totalCoPayment)} />
+          <StatCard label="CoPayment Count" value={stats.totalCoPaymentCount || 0} />
+          
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-
-          {/* Bar Chart */}
-          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-lg w-full flex flex-col min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Claims Overview</h2>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="name" stroke="#9ca3af" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                <YAxis stroke="#9ca3af" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {barChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                  <LabelList dataKey="value" position="top" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          
+          {/* Bar Chart - Status Breakdown */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Status Breakdown</h2>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={statusData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={100}>
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                    <LabelList 
+                      dataKey="value" 
+                      position="top" 
+                      style={{ fontSize: 14, fontWeight: 600, fill: '#111827' }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {/* Pie Chart */}
-          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-lg w-full flex flex-col min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-4">Status Distribution</h2>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={claimStatusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="40%"
-                  outerRadius="70%"
-                  paddingAngle={2}
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
-                >
-                  {claimStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Legend */}
-            <div className="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {claimStatusData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-xs sm:text-sm md:text-base font-medium text-gray-700">{item.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm sm:text-base font-semibold text-gray-900">{item.value}</div>
-                    <div className="text-xs text-gray-500">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%</div>
-                  </div>
-                </div>
-              ))}
+          {/* Line Chart - Trend */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Claims Trend</h2>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    dot={{ fill: '#3b82f6', r: 4 }}
+                  >
+                    <LabelList 
+                      dataKey="value" 
+                      position="top" 
+                      style={{ fontSize: 14, fontWeight: 600, fill: '#111827' }}
+                      offset={10}
+                    />
+                  </Line>
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-
           </div>
 
         </div>
+
+        {/* Additional Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* Area Chart - Overall Comparison */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Overall Comparison</h2>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={comparisonData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill="url(#colorValue)"
+                  >
+                    <LabelList 
+                      dataKey="value" 
+                      position="top" 
+                      style={{ fontSize: 14, fontWeight: 600, fill: '#111827' }}
+                      offset={10}
+                    />
+                  </Area>
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Horizontal Bar Chart - CoPayment Analysis */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">CoPayment Analysis</h2>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={coPaymentData} layout="vertical" margin={{ top: 20, right: 30, left: 80, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                  <XAxis 
+                    type="number"
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <YAxis 
+                    type="category"
+                    dataKey="name" 
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    stroke="#e5e7eb"
+                  />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[0, 6, 6, 0]}>
+                    <LabelList 
+                      dataKey="value" 
+                      position="right" 
+                      style={{ fontSize: 14, fontWeight: 600, fill: '#111827' }}
+                      formatter={(value) => value >= 1000 ? formatLargeNumber(value * 1000) : value}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 text-xs text-gray-500">
+              <p>Total Amount shows in K/M/B format. Count shows number of payments.</p>
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </div>
   );
 }
 
-// Simple, clean, and responsive StatCard
-function StatCard({ title, value, color = "text-gray-900", className = "" }) {
+function StatCard({ label, value, percent }) {
   return (
-    <div className={`bg-white p-3 sm:p-4 md:p-5 rounded-lg ${className} flex flex-col justify-between`}>
-      <div className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold ${color}`}>
-        {value}
-      </div>
-      <div className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-500 font-medium mt-1">
-        {title}
-      </div>
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="text-xs text-gray-500 mb-2">{label}</div>
+      <div className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-1">{value}</div>
+      {percent !== undefined && (
+        <div className="text-xs text-gray-600">{percent}% of total</div>
+      )}
     </div>
   );
 }

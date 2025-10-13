@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     try {
       let createdBy = req.body.createdBy;
 
-      // ✅ Option 1: extract from JWT if you send it
+      // ✅ Option 1: extract from JWT if provided
       if (!createdBy && req.headers.authorization) {
         try {
           const token = req.headers.authorization.split(" ")[1];
@@ -23,6 +23,7 @@ export default async function handler(req, res) {
       // ✅ Option 2: fallback if still empty
       if (!createdBy) createdBy = "System";
 
+      // commissionPercentage removed — rest stays same
       const vendor = new Vendor({
         ...req.body,
         createdBy,
