@@ -194,10 +194,12 @@ function AllPettyCashAdmin() {
 
                 {/* Summary */}
                 <div className="grid grid-cols-3 gap-2 p-4 bg-gray-50 text-center">
-                  <div>
-                    <p className="text-xs text-gray-800">Allocated</p>
-                    <p className="font-bold text-gray-900">₹{item.totalAllocated}</p>
-                  </div>
+                  {item.totalAllocated > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-800">Allocated</p>
+                      <p className="font-bold text-gray-900">₹{item.totalAllocated}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-gray-800">Spent</p>
                     <p className="font-bold text-gray-900">₹{item.totalSpent}</p>
@@ -208,30 +210,37 @@ function AllPettyCashAdmin() {
                   </div>
                 </div>
 
-                {/* Patients */}
+                {/* Patients (only show those with allocated amounts) */}
                 <div className="p-4 border-t">
-                  <h4 className="font-semibold text-gray-900 mb-2">Patients ({item.patients.length})</h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {item.patients.map((p, i) => (
-                      <div key={i} className="bg-gray-50 rounded p-2 text-sm">
-                        <p className="font-semibold text-gray-900">{p.name}</p>
-                        <p className="text-gray-800">{p.phone} • {p.email}</p>
-                        {p.allocatedAmounts.map((a, j) => (
-                          <div key={j} className="flex justify-between items-center mt-1 pt-1 border-t">
-                            <span className="text-gray-900">₹{a.amount} • {formatDate(a.date)}</span>
-                            {a.receipts?.length > 0 && (
-                              <button
-                                onClick={() => { setReceipts(a.receipts); setShowModal(true); }}
-                                className="text-blue-600 hover:underline flex items-center gap-1"
-                              >
-                                <Eye className="w-3 h-3" /> View
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                  {(() => {
+                    const patientsWithAlloc = item.patients.filter(p => Array.isArray(p.allocatedAmounts) && p.allocatedAmounts.length > 0);
+                    return (
+                      <>
+                        <h4 className="font-semibold text-gray-900 mb-2">Allocated ({patientsWithAlloc.length})</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {patientsWithAlloc.map((p, i) => (
+                            <div key={i} className="bg-gray-50 rounded p-2 text-sm">
+                              <p className="font-semibold text-gray-900">{p.name}</p>
+                              <p className="text-gray-800">{p.phone} • {p.email}</p>
+                              {p.allocatedAmounts.map((a, j) => (
+                                <div key={j} className="flex justify-between items-center mt-1 pt-1 border-t">
+                                  <span className="text-gray-900">₹{a.amount} • {formatDate(a.date)}</span>
+                                  {a.receipts?.length > 0 && (
+                                    <button
+                                      onClick={() => { setReceipts(a.receipts); setShowModal(true); }}
+                                      className="text-blue-600 hover:underline flex items-center gap-1"
+                                    >
+                                      <Eye className="w-3 h-3" /> View
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Expenses */}
