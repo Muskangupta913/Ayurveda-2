@@ -86,18 +86,15 @@ patientRegistrationSchema.pre("save", function (next) {
   this.advanceGivenAmount = Number(this.advanceGivenAmount ?? 0);
   this.coPayPercent = Number(this.coPayPercent ?? 0);
 
-  // Updated payment calculation logic
-  // Total payment = paid + advance
-  const totalPayment = this.paid + this.advance;
-  
-  if (totalPayment >= this.amount) {
-    // If total payment covers the amount, calculate pending and advance
+  // Updated payment calculation logic (avoid double-counting advance)
+  // Treat `paid` as the total money received so far
+  // Derive `advance` and `pending` purely from `paid` vs `amount`
+  if (this.paid >= this.amount) {
     this.pending = 0;
-    this.advance = totalPayment - this.amount;
+    this.advance = this.paid - this.amount;
   } else {
-    // If total payment is less than amount, no advance, calculate pending
     this.advance = 0;
-    this.pending = this.amount - totalPayment;
+    this.pending = this.amount - this.paid;
   }
 
   // Calculate insurance fields

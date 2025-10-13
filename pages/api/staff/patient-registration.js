@@ -128,22 +128,27 @@ export default async function handler(req, res) {
 
       if (existingPatient) {
         const normalizedAmount = Number(amount) || 0;
-        const normalizedPaid = Number(paid) || 0;
-        const normalizedAdvance = Number(advance) || 0;
-        const newPending = Math.max(0, normalizedAmount - (normalizedPaid + normalizedAdvance));
+        const normalizedPaidIncrement = Number(paid) || 0;
 
+        // Apply increments
+        existingPatient.amount += normalizedAmount;
+        existingPatient.paid += normalizedPaidIncrement;
+
+        // Derive correct advance/pending from paid vs amount (avoid double counting)
+        const derivedAdvance = Math.max(0, existingPatient.paid - existingPatient.amount);
+        const derivedPending = Math.max(0, existingPatient.amount - existingPatient.paid);
+        existingPatient.advance = derivedAdvance;
+        existingPatient.pending = derivedPending;
+
+        // Record history snapshot after applying the change
         existingPatient.paymentHistory.push({
-          amount: normalizedAmount,
-          paid: normalizedPaid,
-          advance: normalizedAdvance,
-          pending: newPending,
+          amount: existingPatient.amount,
+          paid: existingPatient.paid,
+          advance: existingPatient.advance,
+          pending: existingPatient.pending,
           paymentMethod,
           updatedAt: new Date(),
         });
-
-        existingPatient.amount += normalizedAmount;
-        existingPatient.paid += normalizedPaid;
-        existingPatient.advance += normalizedAdvance;
 
         await existingPatient.save();
 
@@ -156,6 +161,11 @@ export default async function handler(req, res) {
           data: existingPatient,
         });
       }
+
+      const normalizedAmount = Number(amount) || 0;
+      const normalizedPaid = Number(paid) || 0;
+      const derivedAdvanceOnCreate = Math.max(0, normalizedPaid - normalizedAmount);
+      const derivedPendingOnCreate = Math.max(0, normalizedAmount - normalizedPaid);
 
       const patient = await PatientRegistration.create({
         invoiceNumber,
@@ -173,9 +183,9 @@ export default async function handler(req, res) {
         service,
         treatment,
         package: packageName,
-        amount: Number(amount) || 0,
-        paid: Number(paid) || 0,
-        advance: Number(advance) || 0,
+        amount: normalizedAmount,
+        paid: normalizedPaid,
+        advance: derivedAdvanceOnCreate,
         paymentMethod,
         insurance,
         insuranceType,
@@ -186,13 +196,10 @@ export default async function handler(req, res) {
         notes,
         paymentHistory: [
           {
-            amount: Number(amount) || 0,
-            paid: Number(paid) || 0,
-            advance: Number(advance) || 0,
-            pending: Math.max(
-              0,
-              (Number(amount) || 0) - ((Number(paid) || 0) + (Number(advance) || 0))
-            ),
+            amount: normalizedAmount,
+            paid: normalizedPaid,
+            advance: derivedAdvanceOnCreate,
+            pending: derivedPendingOnCreate,
             paymentMethod,
             updatedAt: new Date(),
           },

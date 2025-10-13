@@ -29,13 +29,8 @@ function requireRole(user, roles = []) {
 
 // ---------------- Add to PettyCash if payment method is Cash ----------------
 async function addToPettyCashIfCash(user, patient, paidAmount) {
-  console.log(`addToPettyCashIfCash called - Payment Method: ${patient.paymentMethod}, Amount: ${paidAmount}`);
-  
   if (patient.paymentMethod === "Cash" && paidAmount > 0) {
     try {
-      console.log(`Creating petty cash record for patient: ${patient.firstName} ${patient.lastName}, Amount: ${paidAmount}`);
-      
-      // Create a separate PettyCash record for each patient
       const pettyCashRecord = await PettyCash.create({
         staffId: user._id,
         patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim(),
@@ -50,19 +45,10 @@ async function addToPettyCashIfCash(user, patient, paidAmount) {
         expenses: []
       });
 
-      console.log(`Petty cash record created with ID: ${pettyCashRecord._id}`);
-
-      // Update global total amount
-      const newGlobalTotal = await PettyCash.updateGlobalTotalAmount(paidAmount, 'add');
-      console.log(`Global total updated to: ${newGlobalTotal}`);
-      
-      console.log(`✅ Successfully added ₹${paidAmount} to PettyCash for staff ${user.name} and updated global total - Patient: ${patient.firstName} ${patient.lastName}`);
+      await PettyCash.updateGlobalTotalAmount(paidAmount, 'add');
     } catch (error) {
-      console.error("❌ Error adding to PettyCash:", error);
-      // Don't throw error to avoid breaking patient update
+      // Swallow petty cash errors to avoid breaking patient update
     }
-  } else {
-    console.log(`❌ Not adding to petty cash - Payment Method: ${patient.paymentMethod}, Amount: ${paidAmount}`);
   }
 }
 
@@ -110,9 +96,26 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, message: "Access denied" });
       }
 
-      const { updateType } = req.body; // 'payment' or 'advanceClaim'
+      const { updateType } = req.body; // 'payment' | 'status' | 'advanceClaim'
       const invoice = await PatientRegistration.findById(id);
       if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+
+      // Small helper to record a consistent, validated snapshot
+      const pushHistorySnapshot = (extra = {}) => {
+        const amountNum = Number(invoice.amount ?? 0);
+        const paidNum = Number(invoice.paid ?? 0);
+        const advanceNum = Number(invoice.advance ?? 0);
+        const pendingNum = Math.max(0, amountNum - paidNum);
+        invoice.paymentHistory.push({
+          amount: amountNum,
+          paid: paidNum,
+          advance: advanceNum,
+          pending: pendingNum,
+          paymentMethod: invoice.paymentMethod || "",
+          updatedAt: new Date(),
+          ...extra,
+        });
+      };
 
       // -------------------------------
       // OPTION 1: Payment Update
@@ -122,68 +125,53 @@ export default async function handler(req, res) {
 
         const currentAmount = invoice.amount ?? 0;
         const currentPaid = invoice.paid ?? 0;
-        const currentAdvance = invoice.advance ?? 0;
 
-        amount = amount !== undefined ? Number(amount) : currentAmount;
+        // Only update amount if it's explicitly provided and different from current
+        // For payment updates, we usually just want to add payment, not change invoice amount
+        const newAmount = amount !== undefined ? Number(amount) : currentAmount;
         paying = paying !== undefined ? Number(paying) : 0;
         paymentMethod = paymentMethod || invoice.paymentMethod || "";
 
         // New payment logic: Add the paying amount to existing paid amount
         const newPaid = currentPaid + paying;
-        const newAdvance = Math.max(0, newPaid - amount);
-        const finalPending = Math.max(0, amount - newPaid);
+        
+        // Calculate advance correctly: total advance should be total paid minus invoice amount
+        const totalAdvance = Math.max(0, (newPaid - currentAmount) / 2);
+        const newAdvance = totalAdvance;
+        
+        const finalPending = Math.max(0, currentAmount - newPaid);
 
-        invoice.amount = amount;
+        // Only update amount if it's actually changing
+        if (newAmount !== currentAmount) {
+          invoice.amount = newAmount;
+        }
         invoice.paid = newPaid; // Update paid to current + new payment
         invoice.advance = newAdvance; // Calculate advance automatically
         invoice.pending = finalPending;
+        
+        // Defensive recompute to avoid any downstream double-counting from hooks or stale values
+        invoice.advance = Math.max(0, (invoice.paid - invoice.amount) / 2);
+        invoice.pending = Math.max(0, invoice.amount - invoice.paid);
         invoice.paymentMethod = paymentMethod;
 
         // Add to payment history with the new payment
-        invoice.paymentHistory.push({
-          amount,
-          paid: newPaid,
-          advance: newAdvance,
-          pending: finalPending,
-          paymentMethod,
-          paying: paying, // Track the paying amount
-          updatedAt: new Date(),
-        });
+        pushHistorySnapshot({ paying });
 
         // Add to PettyCash if payment method is Cash and there's a new payment
-        console.log(`Payment Update - Previous Paid: ${currentPaid}, New Payment: ${paying}, Total New Paid: ${newPaid}, Method: ${paymentMethod}`);
-        
         if (paying > 0 && paymentMethod === "Cash") {
           await addToPettyCashIfCash(user, invoice, paying);
         }
-      }
-
-      // -------------------------------
-      // OPTION 2: Status Update
-      // -------------------------------
-      else if (updateType === "status") {
+      } else if (updateType === "status") {
         const { status, rejectionNote } = req.body;
 
         if (status !== undefined) invoice.status = status;
         if (rejectionNote !== undefined) invoice.rejectionNote = rejectionNote;
 
+        // Re-derive pending strictly from amount vs paid
+        invoice.pending = Math.max(0, invoice.amount - invoice.paid);
         // Add snapshot to payment history
-        invoice.paymentHistory.push({
-          amount: invoice.amount,
-          paid: invoice.paid,
-          advance: invoice.advance,
-          pending: Math.max(0, invoice.amount - (invoice.paid + invoice.advance)),
-          paymentMethod: invoice.paymentMethod,
-          status: invoice.status,
-          rejectionNote: invoice.rejectionNote,
-          updatedAt: new Date(),
-        });
-      }
-
-      // -------------------------------
-      // OPTION 3: Advance Claim Status Update
-      // -------------------------------
-      else if (updateType === "advanceClaim") {
+        pushHistorySnapshot({ status: invoice.status, rejectionNote: invoice.rejectionNote });
+      } else if (updateType === "advanceClaim") {
         const {
           advanceClaimStatus,
           advanceClaimCancellationRemark,
@@ -206,52 +194,40 @@ export default async function handler(req, res) {
           invoice.advanceClaimReleasedBy = advanceClaimReleasedBy;
 
         // Add snapshot to payment history
-        invoice.paymentHistory.push({
-          amount: invoice.amount,
-          paid: invoice.paid,
-          advance: invoice.advance,
-          pending: Math.max(0, invoice.amount - (invoice.paid + invoice.advance)),
-          paymentMethod: invoice.paymentMethod,
+        pushHistorySnapshot({
           advanceClaimStatus: invoice.advanceClaimStatus,
           advanceClaimCancellationRemark: invoice.advanceClaimCancellationRemark,
-          updatedAt: new Date(),
         });
-      } 
-      
-      // -------------------------------
-      // OPTION 4: Status Update
-      // -------------------------------
-      else if (updateType === "status") {
-        const { status, rejectionNote } = req.body;
-
-        if (status !== undefined) {
-          invoice.status = status;
-        }
-
-        if (rejectionNote !== undefined) {
-          // Only set rejection note if status is Rejected, otherwise clear it
-          if (status === "Rejected") {
-            invoice.rejectionNote = rejectionNote;
-          } else {
-            invoice.rejectionNote = null;
-          }
-        }
-
-        // Add snapshot to payment history
-        invoice.paymentHistory.push({
-          amount: invoice.amount,
-          paid: invoice.paid,
-          advance: invoice.advance,
-          pending: Math.max(0, invoice.amount - (invoice.paid + invoice.advance)),
-          paymentMethod: invoice.paymentMethod,
-          status: invoice.status,
-          rejectionNote: invoice.rejectionNote,
-          updatedAt: new Date(),
-        });
-      }
-      
-      else {
+      } else {
         return res.status(400).json({ message: "Invalid update type" });
+      }
+
+      // Sanitize legacy history entries to satisfy schema requirements
+      if (Array.isArray(invoice.paymentHistory)) {
+        const amt = Number(invoice.amount ?? 0);
+        const pd = Number(invoice.paid ?? 0);
+        invoice.paymentHistory = invoice.paymentHistory.map((h) => {
+          const safe = { ...h };
+          if (safe.amount === undefined || safe.amount === null || Number.isNaN(Number(safe.amount))) {
+            safe.amount = amt;
+          }
+          if (safe.paid === undefined || safe.paid === null || Number.isNaN(Number(safe.paid))) {
+            safe.paid = pd;
+          }
+          if (safe.advance === undefined || safe.advance === null || Number.isNaN(Number(safe.advance))) {
+            safe.advance = Math.max(0, pd - amt);
+          }
+          if (safe.pending === undefined || safe.pending === null || Number.isNaN(Number(safe.pending))) {
+            safe.pending = Math.max(0, amt - pd);
+          }
+          if (!safe.paymentMethod) {
+            safe.paymentMethod = invoice.paymentMethod || "Cash";
+          }
+          if (!safe.updatedAt) {
+            safe.updatedAt = new Date();
+          }
+          return safe;
+        });
       }
 
       await invoice.save();
@@ -281,7 +257,6 @@ export default async function handler(req, res) {
     res.setHeader("Allow", ["GET", "PUT"]);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err?.message || "Server error" });
   }
 }

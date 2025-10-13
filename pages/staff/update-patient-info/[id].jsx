@@ -203,47 +203,26 @@ const InvoiceUpdateSystem = () => {
     calculateNeedToPay();
   }, [calculatePending, calculateNeedToPay]);
 
+  // Fast derived previews to avoid stale values and extra state churn
+  const previewValues = useMemo(() => {
+    const amountNum = parseFloat(formData.amount) || 0;
+    const paidNum = parseFloat(formData.paid) || 0;
+    const payingNum = parseFloat(formData.paying) || 0;
+    const totalPaid = paidNum + payingNum;
+    return {
+      totalPaid,
+      advance: Math.max(0, totalPaid - amountNum),
+      pending: Math.max(0, amountNum - totalPaid)
+    };
+  }, [formData.amount, formData.paid, formData.paying]);
+
   // const handlePaymentChange = useCallback((e) => {
   //   const { name, value } = e.target;
   //   setFormData((prev) => ({ ...prev, [name]: value }));
   // }, []);
 const handlePaymentChange = useCallback((e) => {
   const { name, value } = e.target;
-
-  setFormData(prev => {
-    const updated = { ...prev, [name]: value };
-
-    const amount = parseFloat(updated.amount) || 0;
-    const currentPaid = parseFloat(updated.paid) || 0;
-    const paying = parseFloat(updated.paying) || 0;
-
-    // Calculate total payment after this new payment
-    const totalPaid = currentPaid + paying;
-    
-    // Calculate pending amount
-    const pending = Math.max(0, amount - totalPaid);
-    
-    // Calculate advance (if paying more than remaining amount)
-    const remainingAmount = amount - currentPaid;
-    const advance = Math.max(0, paying - remainingAmount);
-
-    // Update calculated fields
-    updated.pending = pending;
-    updated.advance = advance;
-
-    // Insurance logic
-    if (updated.insurance === "Yes") {
-      const coPayPercent = parseFloat(updated.coPayPercent) || 0;
-      updated.needToPay = Math.max(
-        0,
-        (amount * (100 - coPayPercent)) / 100 - (updated.advanceGivenAmount || 0)
-      );
-    } else {
-      updated.needToPay = pending;
-    }
-
-    return updated;
-  });
+  setFormData(prev => ({ ...prev, [name]: value }));
 }, []);
 
 
@@ -268,21 +247,33 @@ const handlePaymentChange = useCallback((e) => {
       return;
     }
 
+    // Validate that paying amount is provided when adding new payment
+    const payingAmount = parseFloat(formData.paying) || 0;
+    if (payingAmount <= 0) {
+      showToast("Please enter a valid payment amount", "error");
+      return;
+    }
+
     showConfirm(
       "Confirm Payment Update",
-      "Are you sure you want to update the payment details and status?",
+      `Are you sure you want to add ₹${payingAmount.toFixed(2)} to the existing payment of ₹${parseFloat(formData.paid || 0).toFixed(2)}?`,
       async () => {
         try {
           const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
           const requestBody = {
             updateType: "payment",
             amount: formData.amount,
-            paying: formData.paying || 0,
+            paying: payingAmount, // Send the new payment amount
             paymentMethod: formData.paymentMethod,
             status: formData.status,
             rejectionNote: formData.status === "Rejected" ? formData.rejectionNote : null,
             notes: formData.status === "Released" ? formData.notes : null,
           };
+          
+          console.log("Sending payment update request:", requestBody);
+          console.log("Frontend Debug - Amount being sent:", formData.amount);
+          console.log("Frontend Debug - Current paid:", formData.paid);
+          console.log("Frontend Debug - New payment:", payingAmount);
           
           const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
             method: "PUT",
@@ -295,9 +286,12 @@ const handlePaymentChange = useCallback((e) => {
 
           const result = await res.json();
           if (res.ok) {
-            showToast("Payment and status updated successfully!", "success");
+            showToast(`Payment updated successfully! Added ₹${payingAmount.toFixed(2)} to existing payment.`, "success");
+            // Update the form data with the response from backend
             setInvoiceInfo(result.updatedInvoice);
             setFormData(result.updatedInvoice);
+            // Clear the paying field after successful update
+            setFormData(prev => ({ ...prev, paying: "" }));
           } else {
             showToast(result.message || "Failed to update payment", "error");
           }
@@ -308,7 +302,7 @@ const handlePaymentChange = useCallback((e) => {
         setConfirmModal({ isOpen: false });
       }
     );
-  }, [formData, invoiceInfo]);
+  }, [formData, invoiceInfo, staffToken]);
 
   const handleClaimStatusUpdate = useCallback(async () => {
     if (!claimStatusModal.status) {
@@ -516,7 +510,7 @@ const handlePaymentChange = useCallback((e) => {
     </div>
 
     <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Current Paid (From DB)</label>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Current Paid Amount</label>
       <input
         type="number"
         name="paid"
@@ -524,30 +518,44 @@ const handlePaymentChange = useCallback((e) => {
         readOnly
         className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50 text-gray-700 text-sm sm:text-base border border-gray-300 rounded-lg font-medium cursor-not-allowed"
       />
+      <p className="text-xs text-gray-500 mt-1">This is the total amount already paid</p>
     </div>
 
     <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">New Payment</label>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">New Payment to Add</label>
       <input
         type="number"
         name="paying"
         value={formData.paying || ""}
         onChange={handlePaymentChange}
-        placeholder="Enter new payment amount"
+        placeholder="Enter new payment amount to add"
         step="0.01"
         min="0"
         className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
       />
+      <p className="text-xs text-gray-500 mt-1">This amount will be added to the current paid amount</p>
+    </div>
+
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Total Paid After Update (Preview)</label>
+      <input
+        type="number"
+        value={previewValues.totalPaid.toFixed(2)}
+        readOnly
+        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-50 text-blue-700 text-sm sm:text-base border border-blue-300 rounded-lg font-medium cursor-not-allowed"
+      />
+      <p className="text-xs text-gray-500 mt-1">Current paid + new payment</p>
     </div>
 
     <div>
       <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">New Advance (Preview)</label>
       <input
         type="number"
-        value={formData.advance?.toFixed(2) || "0.00"}
+        value={previewValues.advance.toFixed(2)}
         readOnly
         className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-green-50 text-green-700 text-sm sm:text-base border border-green-300 rounded-lg font-medium cursor-not-allowed"
       />
+      <p className="text-xs text-gray-500 mt-1">Amount over the total invoice amount</p>
     </div>
 
     <div>
