@@ -52,7 +52,7 @@ const patientRegistrationSchema = new mongoose.Schema(
     package: { type: String, trim: true },
 
     // Payment Details
-    amount: { type: Number, required: true, min: 0 },
+    amount: { type: Number, min: 0 },
     paid: { type: Number, required: true, min: 0 },
     advance: { type: Number, default: 0, min: 0 },
     pending: { type: Number, default: 0, min: 0 },
