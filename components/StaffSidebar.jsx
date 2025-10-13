@@ -11,6 +11,7 @@ const Sidebar = () => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isDesktopHidden, setIsDesktopHidden] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [cancelledClaims, setCancelledClaims] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem("userToken");
@@ -19,6 +20,36 @@ const Sidebar = () => {
       setRole(decoded.role); // "staff" or "doctor"
     }
   }, []);
+
+  // Fetch cancelled advance claims count for doctorStaff
+  const fetchCancelledClaimsCount = async () => {
+    if (role !== "doctorStaff") return;
+    
+    try {
+      const token = localStorage.getItem("userToken");
+      const response = await fetch('/api/staff/cancelled-claims', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCancelledClaims(data.data || []);
+      } else {
+        console.error('Failed to fetch cancelled claims count');
+      }
+    } catch (error) {
+      console.error('Error fetching cancelled claims count:', error);
+    }
+  };
+
+  // Fetch cancelled claims count when role is doctorStaff
+  useEffect(() => {
+    if (role === "doctorStaff") {
+      fetchCancelledClaimsCount();
+    }
+  }, [role]);
 
   // Handle escape key to close mobile menu
   useEffect(() => {
@@ -113,6 +144,13 @@ const Sidebar = () => {
         path: "/staff/eodNotes", 
         icon: "📝", 
         description: "End of Day Notes" 
+      },
+      { 
+        label: "Cancelled Claims", 
+        path: "/staff/cancelled-claims", 
+        icon: "❌", 
+        description: `View Cancelled Claims (${cancelledClaims.length})`,
+        badge: cancelledClaims.length > 0 ? cancelledClaims.length : null
       },
       
     ];
@@ -229,6 +267,7 @@ const Sidebar = () => {
                 const isActive = router.pathname === item.path;
                 const isHovered = hoveredItem === item.path;
 
+                // Regular navigation items
                 return (
                   <Link key={item.path} href={item.path}>
                     <div
@@ -357,6 +396,7 @@ const Sidebar = () => {
                 {navItems.map((item) => {
                   const isActive = router.pathname === item.path;
 
+                  // Regular navigation items for mobile
                   return (
                     <Link key={item.path} href={item.path}>
                       <div

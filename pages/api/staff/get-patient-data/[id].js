@@ -154,8 +154,15 @@ export default async function handler(req, res) {
         invoice.pending = Math.max(0, invoice.amount - invoice.paid);
         invoice.paymentMethod = paymentMethod;
 
-        // Add to payment history with the new payment
-        pushHistorySnapshot({ paying });
+        // Add to payment history with full (unhalved) advance snapshot
+        pushHistorySnapshot({
+          amount: newAmount,
+          paid: newPaid,
+          advance: Math.max(0, newPaid - newAmount),
+          pending: Math.max(0, newAmount - newPaid),
+          paymentMethod,
+          paying,
+        });
 
         // Add to PettyCash if payment method is Cash and there's a new payment
         if (paying > 0 && paymentMethod === "Cash") {
@@ -200,34 +207,6 @@ export default async function handler(req, res) {
         });
       } else {
         return res.status(400).json({ message: "Invalid update type" });
-      }
-
-      // Sanitize legacy history entries to satisfy schema requirements
-      if (Array.isArray(invoice.paymentHistory)) {
-        const amt = Number(invoice.amount ?? 0);
-        const pd = Number(invoice.paid ?? 0);
-        invoice.paymentHistory = invoice.paymentHistory.map((h) => {
-          const safe = { ...h };
-          if (safe.amount === undefined || safe.amount === null || Number.isNaN(Number(safe.amount))) {
-            safe.amount = amt;
-          }
-          if (safe.paid === undefined || safe.paid === null || Number.isNaN(Number(safe.paid))) {
-            safe.paid = pd;
-          }
-          if (safe.advance === undefined || safe.advance === null || Number.isNaN(Number(safe.advance))) {
-            safe.advance = Math.max(0, pd - amt);
-          }
-          if (safe.pending === undefined || safe.pending === null || Number.isNaN(Number(safe.pending))) {
-            safe.pending = Math.max(0, amt - pd);
-          }
-          if (!safe.paymentMethod) {
-            safe.paymentMethod = invoice.paymentMethod || "Cash";
-          }
-          if (!safe.updatedAt) {
-            safe.updatedAt = new Date();
-          }
-          return safe;
-        });
       }
 
       await invoice.save();
