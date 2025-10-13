@@ -259,10 +259,8 @@ const handlePaymentChange = useCallback((e) => {
       showToast("Please select payment method", "error");
       return;
     }
-    if (!formData.status) {
-      showToast("Please select a status", "error");
-      return;
-    }
+    // Status selection is now applied to advanceClaimStatus (not invoice.status)
+    // If Rejected/Cancelled is picked, rejectionNote must be provided
     if (formData.status === "Rejected" && !formData.rejectionNote?.trim()) {
       showToast("Please provide a rejection note for rejected status", "error");
       return;
@@ -279,9 +277,6 @@ const handlePaymentChange = useCallback((e) => {
             amount: formData.amount,
             paying: formData.paying || 0,
             paymentMethod: formData.paymentMethod,
-            status: formData.status,
-            rejectionNote: formData.status === "Rejected" ? formData.rejectionNote : null,
-            notes: formData.status === "Released" ? formData.notes : null,
           };
           
           const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
@@ -295,9 +290,46 @@ const handlePaymentChange = useCallback((e) => {
 
           const result = await res.json();
           if (res.ok) {
-            showToast("Payment and status updated successfully!", "success");
-            setInvoiceInfo(result.updatedInvoice);
-            setFormData(result.updatedInvoice);
+            // After successful payment update, apply advanceClaimStatus mapping if any status was chosen
+            const updated = result.updatedInvoice;
+            setInvoiceInfo(updated);
+            setFormData(updated);
+
+            // Map UI status selection to advanceClaimStatus update
+            // Rejected or Cancelled => advanceClaimStatus = "Cancelled" with remark
+            // Released => advanceClaimStatus = "Released"
+            if (formData.status === "Rejected" || formData.status === "Cancelled" || formData.status === "Released") {
+              const advanceBody = {
+                updateType: "advanceClaim",
+                advanceClaimStatus: formData.status === "Released" ? "Released" : "Cancelled",
+                advanceClaimCancellationRemark: (formData.status === "Rejected" || formData.status === "Cancelled") ? (formData.rejectionNote || null) : null,
+                advanceClaimReleaseDate: formData.status === "Released" ? new Date().toISOString() : updated.advanceClaimReleaseDate,
+                advanceClaimReleasedBy: formData.status === "Released" ? (currentUser.name) : updated.advanceClaimReleasedBy,
+              };
+
+              try {
+                const res2 = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${staffToken}`
+                  },
+                  body: JSON.stringify(advanceBody),
+                });
+                const result2 = await res2.json();
+                if (res2.ok) {
+                  setInvoiceInfo(result2.updatedInvoice);
+                  setFormData(result2.updatedInvoice);
+                  showToast("Payment updated and claim status saved.", "success");
+                } else {
+                  showToast(result2.message || "Failed to update claim status", "error");
+                }
+              } catch (e) {
+                showToast("Network error while saving claim status", "error");
+              }
+            } else {
+              showToast("Payment updated successfully!", "success");
+            }
           } else {
             showToast(result.message || "Failed to update payment", "error");
           }
