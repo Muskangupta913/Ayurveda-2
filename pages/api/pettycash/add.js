@@ -104,6 +104,10 @@ export default async function handler(req, res) {
 
     await newPettyCash.save();
 
+    // Update global total amount
+    const totalAmount = formattedAllocations.reduce((sum, alloc) => sum + alloc.amount, 0);
+    await PettyCash.updateGlobalTotalAmount(totalAmount, 'add');
+
     res.status(201).json({
       success: true,
       message: "Petty cash entry added successfully",

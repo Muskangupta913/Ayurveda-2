@@ -145,6 +145,7 @@ import jwt from "jsonwebtoken";
 import dbConnect from "../../../lib/database";
 import PettyCash from "../../../models/PettyCash";
 import User from "../../../models/Users";
+import Vendor from "../../../models/VendorProfile";
 import multer from "multer";
 import FormData from "form-data";
 import fetch from "node-fetch";
@@ -220,25 +221,13 @@ export default async function handler(req, res) {
           .json({ message: "You are not authorized to add expense to this record" });
       }
     } else {
-      // Not based on patient: use/find a general petty cash record per staff
-      pettyCash = await PettyCash.findOne({
+      // Create a new PettyCash record for each expense entry
+      pettyCash = await PettyCash.create({
         staffId,
-        patientName: "General",
-        patientEmail: "-",
-        patientPhone: "-",
+        note: `Expense: ${description}`,
+        allocatedAmounts: [],
+        expenses: [],
       });
-
-      if (!pettyCash) {
-        pettyCash = await PettyCash.create({
-          staffId,
-          patientName: "General",
-          patientEmail: "-",
-          patientPhone: "-",
-          note: "Auto-created general petty cash for staff-level expenses",
-          allocatedAmounts: [],
-          expenses: [],
-        });
-      }
     }
 
     // Upload receipts to Cloudinary
@@ -265,16 +254,27 @@ export default async function handler(req, res) {
       if (data.secure_url) receiptUrls.push(data.secure_url);
     }
 
+    // Get vendor name if vendor ID is provided
+    let vendorName = null;
+    if (vendor) {
+      const vendorDoc = await Vendor.findById(vendor);
+      vendorName = vendorDoc ? vendorDoc.name : null;
+    }
+
     // Add expense
     pettyCash.expenses.push({
       description,
       spentAmount: Number(spentAmount),
       vendor: vendor || null,
+      vendorName: vendorName,
       receipts: receiptUrls,
       date: new Date(),
     });
 
     await pettyCash.save();
+
+    // Update global spent amount
+    await PettyCash.updateGlobalSpentAmount(Number(spentAmount), 'add');
 
     res.status(200).json({
       message: "Expense added successfully",

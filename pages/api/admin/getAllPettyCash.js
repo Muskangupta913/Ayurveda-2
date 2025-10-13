@@ -121,10 +121,14 @@ if (startDate && !endDate) {
 
     const finalData = Object.values(groupedData);
 
+    // Get global amounts
+    const globalAmounts = await PettyCash.getGlobalAmounts();
+
     return res.status(200).json({
       success: true,
       data: finalData,
       staffList: staffUsers.map((s) => s.name),
+      globalAmounts: globalAmounts,
     });
   } catch (error) {
     console.error("Error fetching petty cash:", error);

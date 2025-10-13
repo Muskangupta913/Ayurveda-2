@@ -29,43 +29,25 @@ function requireRole(user, roles = []) {
 async function addToPettyCashIfCash(user, patient, paidAmount) {
   if (patient.paymentMethod === "Cash" && paidAmount > 0) {
     try {
-      // Check if there's already a PettyCash record for this staff member today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-
-      let pettyCashRecord = await PettyCash.findOne({
+      // Create a separate PettyCash record for each patient
+      const pettyCashRecord = await PettyCash.create({
         staffId: user._id,
-        createdAt: { $gte: today, $lt: tomorrow }
-      });
-
-      if (!pettyCashRecord) {
-        // Create new PettyCash record
-        pettyCashRecord = await PettyCash.create({
-          staffId: user._id,
-          patientName: `${patient.firstName} ${patient.lastName}`,
-          patientEmail: patient.email,
-          patientPhone: patient.mobileNumber,
-          note: `Auto-added from patient registration - Invoice: ${patient.invoiceNumber}`,
-          allocatedAmounts: [{
-            amount: paidAmount,
-            receipts: [],
-            date: new Date()
-          }],
-          expenses: []
-        });
-      } else {
-        // Add to existing record
-        pettyCashRecord.allocatedAmounts.push({
+        patientName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim(),
+        patientEmail: patient.email || '',
+        patientPhone: patient.mobileNumber || '',
+        note: `Auto-added from patient registration - Invoice: ${patient.invoiceNumber}`,
+        allocatedAmounts: [{
           amount: paidAmount,
           receipts: [],
           date: new Date()
-        });
-        await pettyCashRecord.save();
-      }
+        }],
+        expenses: []
+      });
+
+      // Update global total amount
+      await PettyCash.updateGlobalTotalAmount(paidAmount, 'add');
       
-      console.log(`Added ₹${paidAmount} to PettyCash for staff ${user.name}`);
+      console.log(`Added ₹${paidAmount} to PettyCash for staff ${user.name} and updated global total - Patient: ${patient.firstName} ${patient.lastName}`);
     } catch (error) {
       console.error("Error adding to PettyCash:", error);
       // Don't throw error to avoid breaking patient registration

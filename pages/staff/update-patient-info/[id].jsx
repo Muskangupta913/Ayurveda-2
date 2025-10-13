@@ -141,6 +141,9 @@ const InvoiceUpdateSystem = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null });
   const [claimStatusModal, setClaimStatusModal] = useState({ isOpen: false, status: "", remark: "" });
 
+  // Get staff token for API calls
+  const staffToken = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+
   const showToast = (message, type = "success") => {
     setToast({ message, type });
   };
@@ -157,7 +160,9 @@ const InvoiceUpdateSystem = () => {
       setFetchError("");
 
       try {
-        const res = await fetch(`/api/staff/get-patient-data/${id}`);
+        const res = await fetch(`/api/staff/get-patient-data/${id}`, {
+          headers: { Authorization: `Bearer ${staffToken}` }
+        });
         if (!res.ok) throw new Error("Invoice not found");
 
         const data = await res.json();
@@ -281,7 +286,10 @@ const handlePaymentChange = useCallback((e) => {
           
           const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${staffToken}`
+            },
             body: JSON.stringify(requestBody),
           });
 
@@ -320,7 +328,10 @@ const handlePaymentChange = useCallback((e) => {
           const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
           const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${staffToken}`
+            },
             body: JSON.stringify({
               advanceClaimStatus: claimStatusModal.status,
               advanceClaimCancellationRemark: claimStatusModal.status === "Cancelled" ? claimStatusModal.remark : null,
