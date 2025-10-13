@@ -89,37 +89,37 @@ const Sidebar = () => {
       { 
         label: "Add Service", 
         path: "/staff/add-service", 
-        icon: "💆", 
+        icon: "➕", 
         description: "Add package/treatment" 
       },
       { 
         label: "Patient Registration", 
         path: "/staff/patient-registration", 
-        icon: "📅", 
+        icon: "🧍‍♂️", 
         description: "Manage Clinic" 
       },
       { 
         label: "Patient Information", 
         path: "/staff/patient-information", 
-        icon: "📅", 
+        icon: "📋", 
         description: "Manage Clinic" 
       },
       { 
         label: "Add EOD Task", 
         path: "/staff/eodNotes", 
-        icon: "📅", 
+        icon: "✅", 
         description: "Manage Clinic" 
       },
       { 
         label: "Add Expense", 
         path: "/staff/AddPettyCashForm", 
-        icon: "📅", 
+        icon: "💸", 
         description: "Add Petty Cash Entry" 
       },
        { 
         label: " Add Vendor", 
         path: "/staff/add-vendor", 
-        icon: "📅", 
+        icon: "🧑‍💼", 
         description: "Manage vendor" 
       },
     ];

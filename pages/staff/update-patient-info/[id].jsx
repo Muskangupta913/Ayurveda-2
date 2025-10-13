@@ -26,7 +26,7 @@ const Toast = ({ message, type, onClose }) => {
   };
 
   return (
-    <div className={`fixed top-4 right-4 left-4 sm:left-auto sm:right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg ${styles[type]} animate-slide-in max-w-md`}>
+    <div className={`fixed top-4 right-4 left-4 sm:left-auto sm:right-4 sm:w-96 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg ${styles[type]} animate-slide-in`}>
       {icons[type]}
       <span className="font-medium text-sm flex-1">{message}</span>
       <button onClick={onClose} className="ml-2 hover:opacity-70 flex-shrink-0">
@@ -43,20 +43,14 @@ const ConfirmModal = ({ isOpen, onConfirm, onCancel, title, message }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-white rounded-xl shadow-2xl p-5 sm:p-6 max-w-md w-full animate-scale-in">
-        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">{title}</h3>
-        <p className="text-sm sm:text-base text-gray-700 mb-5 sm:mb-6">{message}</p>
-        <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
-          <button
-            onClick={onCancel}
-            className="w-full sm:w-auto px-5 py-2 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50 transition-colors text-sm sm:text-base"
-          >
+      <div className="relative bg-white rounded-xl shadow-2xl p-4 sm:p-6 max-w-md w-full animate-scale-in">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">{title}</h3>
+        <p className="text-sm text-gray-700 mb-4 sm:mb-6">{message}</p>
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
+          <button onClick={onCancel} className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50 transition-colors text-sm">
             Cancel
           </button>
-          <button
-            onClick={onConfirm}
-            className="w-full sm:w-auto px-5 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors text-sm sm:text-base"
-          >
+          <button onClick={onConfirm} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors text-sm">
             Confirm
           </button>
         </div>
@@ -72,7 +66,7 @@ const ClaimStatusModal = ({ isOpen, onClose, onConfirm, status, remark, onStatus
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gray-900/20 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl p-5 sm:p-6 max-w-md w-full animate-scale-in">
+      <div className="relative bg-white rounded-xl shadow-2xl p-4 sm:p-6 max-w-md w-full animate-scale-in">
         <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Update Claim Status</h3>
         
         <div className="space-y-4 mb-6">
@@ -80,11 +74,7 @@ const ClaimStatusModal = ({ isOpen, onClose, onConfirm, status, remark, onStatus
             <label className="block text-sm font-semibold text-gray-800 mb-2">
               Claim Status <span className="text-red-500">*</span>
             </label>
-            <select
-              value={status}
-              onChange={(e) => onStatusChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-            >
+            <select value={status} onChange={(e) => onStatusChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
               <option value="">Select Status</option>
               <option value="Approved by doctor">Approved by doctor</option>
               <option value="Released">Released</option>
@@ -97,28 +87,16 @@ const ClaimStatusModal = ({ isOpen, onClose, onConfirm, status, remark, onStatus
               <label className="block text-sm font-semibold text-gray-800 mb-2">
                 Cancellation Reason <span className="text-red-500">*</span>
               </label>
-              <textarea
-                value={remark}
-                onChange={(e) => onRemarkChange(e.target.value)}
-                placeholder="Please provide a reason for cancellation..."
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
-              />
+              <textarea value={remark} onChange={(e) => onRemarkChange(e.target.value)} placeholder="Please provide a reason for cancellation..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none" />
             </div>
           )}
         </div>
 
-        <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50 transition-colors text-sm"
-          >
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
+          <button onClick={onClose} className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50 transition-colors text-sm">
             Cancel
           </button>
-          <button
-            onClick={onConfirm}
-            className="w-full sm:w-auto px-5 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors text-sm"
-          >
+          <button onClick={onConfirm} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors text-sm">
             Update Status
           </button>
         </div>
@@ -126,7 +104,6 @@ const ClaimStatusModal = ({ isOpen, onClose, onConfirm, status, remark, onStatus
     </div>
   );
 };
-
 
 const InvoiceUpdateSystem = () => {
   const router = useRouter();
@@ -141,12 +118,9 @@ const InvoiceUpdateSystem = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null });
   const [claimStatusModal, setClaimStatusModal] = useState({ isOpen: false, status: "", remark: "" });
 
-  // Get staff token for API calls
   const staffToken = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-  };
+  const showToast = (message, type = "success") => setToast({ message, type });
 
   const showConfirm = (title, message, onConfirm) => {
     setConfirmModal({ isOpen: true, title, message, onConfirm });
@@ -179,7 +153,7 @@ const InvoiceUpdateSystem = () => {
     };
 
     fetchInvoice();
-  }, [id]);
+  }, [id, staffToken]);
 
   const calculatePending = useCallback(() => {
     const amount = parseFloat(formData.amount) || 0;
@@ -203,7 +177,6 @@ const InvoiceUpdateSystem = () => {
     calculateNeedToPay();
   }, [calculatePending, calculateNeedToPay]);
 
-  // Fast derived previews to avoid stale values and extra state churn
   const previewValues = useMemo(() => {
     const amountNum = parseFloat(formData.amount) || 0;
     const paidNum = parseFloat(formData.paid) || 0;
@@ -216,18 +189,10 @@ const InvoiceUpdateSystem = () => {
     };
   }, [formData.amount, formData.paid, formData.paying]);
 
-  // const handlePaymentChange = useCallback((e) => {
-  //   const { name, value } = e.target;
-  //   setFormData((prev) => ({ ...prev, [name]: value }));
-  // }, []);
-const handlePaymentChange = useCallback((e) => {
-  const { name, value } = e.target;
-  setFormData(prev => ({ ...prev, [name]: value }));
-}, []);
-
-
-
-
+  const handlePaymentChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  }, []);
 
   const handleUpdatePayment = useCallback(async () => {
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
@@ -238,37 +203,30 @@ const handlePaymentChange = useCallback((e) => {
       showToast("Please select payment method", "error");
       return;
     }
-    // Status selection is now applied to advanceClaimStatus (not invoice.status)
-    // If Rejected/Cancelled is picked, rejectionNote must be provided
     if (formData.status === "Rejected" && !formData.rejectionNote?.trim()) {
       showToast("Please provide a rejection note for rejected status", "error");
       return;
     }
 
-    // Validate that paying amount is provided when adding new payment
+    // REMOVED validation for "paying" field - allow submission even if empty/zero
     const payingAmount = parseFloat(formData.paying) || 0;
-    if (payingAmount <= 0) {
-      showToast("Please enter a valid payment amount", "error");
-      return;
-    }
 
     showConfirm(
       "Confirm Payment Update",
-      `Are you sure you want to add ₹${payingAmount.toFixed(2)} to the existing payment of ₹${parseFloat(formData.paid || 0).toFixed(2)}?`,
+      payingAmount > 0 
+        ? `Are you sure you want to add ₹${payingAmount.toFixed(2)} to the existing payment of ₹${parseFloat(formData.paid || 0).toFixed(2)}?`
+        : `Are you sure you want to update the payment details without adding any new payment?`,
       async () => {
         try {
           const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
           const requestBody = {
             updateType: "payment",
             amount: formData.amount,
-            paying: payingAmount, // Send the new payment amount
+            paying: payingAmount,
             paymentMethod: formData.paymentMethod,
           };
           
           console.log("Sending payment update request:", requestBody);
-          console.log("Frontend Debug - Amount being sent:", formData.amount);
-          console.log("Frontend Debug - Current paid:", formData.paid);
-          console.log("Frontend Debug - New payment:", payingAmount);
           
           const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
             method: "PUT",
@@ -281,14 +239,10 @@ const handlePaymentChange = useCallback((e) => {
 
           const result = await res.json();
           if (res.ok) {
-            // After successful payment update, apply advanceClaimStatus mapping if any status was chosen
             const updated = result.updatedInvoice;
             setInvoiceInfo(updated);
             setFormData(updated);
 
-            // Map UI status selection to advanceClaimStatus update
-            // Rejected or Cancelled => advanceClaimStatus = "Cancelled" with remark
-            // Released => advanceClaimStatus = "Released"
             if (formData.status === "Rejected" || formData.status === "Cancelled" || formData.status === "Released") {
               const advanceBody = {
                 updateType: "advanceClaim",
@@ -331,7 +285,7 @@ const handlePaymentChange = useCallback((e) => {
         setConfirmModal({ isOpen: false });
       }
     );
-  }, [formData, invoiceInfo, staffToken]);
+  }, [formData, invoiceInfo, staffToken, currentUser.name]);
 
   const handleClaimStatusUpdate = useCallback(async () => {
     if (!claimStatusModal.status) {
@@ -379,7 +333,7 @@ const handlePaymentChange = useCallback((e) => {
         setConfirmModal({ isOpen: false });
       }
     );
-  }, [claimStatusModal, invoiceInfo, currentUser.name, formData.advanceClaimReleaseDate, formData.advanceClaimReleasedBy]);
+  }, [claimStatusModal, invoiceInfo, currentUser.name, formData.advanceClaimReleaseDate, formData.advanceClaimReleasedBy, staffToken]);
 
   const handleSaveClaimStatus = useCallback(async () => {
     const selection = formData.status;
@@ -398,11 +352,7 @@ const handlePaymentChange = useCallback((e) => {
       return;
     }
 
-    const advanceClaimStatus = isReleased
-      ? "Released"
-      : isApproved
-      ? "Approved by doctor"
-      : "Cancelled"; // map Rejected/Cancelled to Cancelled
+    const advanceClaimStatus = isReleased ? "Released" : isApproved ? "Approved by doctor" : "Cancelled";
 
     const body = {
       updateType: "advanceClaim",
@@ -444,16 +394,12 @@ const handlePaymentChange = useCallback((e) => {
     );
   }, [formData.status, formData.rejectionNote, formData.advanceClaimReleaseDate, formData.advanceClaimReleasedBy, invoiceInfo, staffToken, currentUser.name]);
 
-
-  const canViewMobileNumber = useMemo(
-    () => ["Admin", "Super Admin"].includes(currentUser.role),
-    [currentUser.role]
-  );
+  const canViewMobileNumber = useMemo(() => ["Admin", "Super Admin"].includes(currentUser.role), [currentUser.role]);
 
   const InfoCard = ({ icon: Icon, title, children, bgColor = "bg-white" }) => (
-    <div className={`${bgColor} rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6 hover:shadow-md transition-shadow`}>
-      <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
+    <div className={`${bgColor} rounded-xl shadow-sm border border-gray-200 p-4 md:p-5 lg:p-6 hover:shadow-md transition-shadow`}>
+      <h2 className="text-base md:text-lg font-bold text-gray-900 mb-3 md:mb-4 flex items-center gap-2">
+        <Icon className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 flex-shrink-0" />
         <span className="break-words">{title}</span>
       </h2>
       {children}
@@ -462,11 +408,11 @@ const handlePaymentChange = useCallback((e) => {
 
   const InfoField = ({ label, value, required, restricted }) => (
     <div className="min-w-0">
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+      <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
         {restricted && <span className="text-gray-500 text-xs ml-1">(Restricted)</span>}
       </label>
-      <p className="text-sm sm:text-base text-gray-700 font-medium break-words">{value || "-"}</p>
+      <p className="text-sm md:text-base text-gray-700 font-medium break-words">{value || "-"}</p>
     </div>
   );
 
@@ -474,8 +420,8 @@ const handlePaymentChange = useCallback((e) => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm sm:text-base text-gray-800 font-medium">Loading invoice details...</p>
+          <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm md:text-base text-gray-800 font-medium">Loading invoice details...</p>
         </div>
       </div>
     );
@@ -484,16 +430,16 @@ const handlePaymentChange = useCallback((e) => {
   if (fetchError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <div className="text-center bg-white rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full">
-          <AlertCircle className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-4" />
-          <p className="text-sm sm:text-base text-red-600 font-semibold">{fetchError}</p>
+        <div className="text-center bg-white rounded-xl shadow-lg p-6 md:p-8 max-w-md w-full">
+          <AlertCircle className="w-12 h-12 md:w-16 md:h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-sm md:text-base text-red-600 font-semibold">{fetchError}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-3 md:p-4 lg:p-6 xl:p-8">
       <style jsx global>{`
         @keyframes slide-in {
           from { transform: translateX(100%); opacity: 0; }
@@ -520,29 +466,28 @@ const handlePaymentChange = useCallback((e) => {
       />
 
       <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl md:rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 md:px-6 lg:px-8 py-4 md:py-5 lg:py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
               <div className="w-full sm:w-auto">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2 sm:gap-3">
-                  <FileText className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" />
+                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-2 md:gap-3">
+                  <FileText className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8" />
                   Invoice Management
                 </h1>
-                <p className="text-indigo-100 mt-1 text-xs sm:text-sm">View and update payment information</p>
+                <p className="text-indigo-100 mt-1 text-xs md:text-sm">View and update payment information</p>
               </div>
-              <div className="w-full sm:w-auto text-left sm:text-right bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 sm:px-4">
+              <div className="w-full sm:w-auto text-left sm:text-right bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
                 <div className="text-xs text-indigo-200">Logged in as</div>
-                {/* <div className="font-bold text-sm sm:text-base">{currentUser.name}</div> */}
                 <div className="text-xs text-indigo-200">{currentUser.role}</div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-5 md:space-y-6">
+          <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-5 lg:space-y-6">
             {/* Invoice Info */}
             <InfoCard icon={Calendar} title="Invoice Information" bgColor="bg-gradient-to-br from-blue-50 to-indigo-50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                 <InfoField label="Invoice Number" value={formData.invoiceNumber} />
                 <InfoField label="Invoiced Date" value={formData.invoicedDate ? new Date(formData.invoicedDate).toLocaleString() : null} />
                 <InfoField label="Invoiced By" value={formData.invoicedBy} />
@@ -551,7 +496,7 @@ const handlePaymentChange = useCallback((e) => {
 
             {/* Patient Info */}
             <InfoCard icon={User} title="Patient Information" bgColor="bg-gradient-to-br from-green-50 to-emerald-50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                 <InfoField label="EMR Number" value={formData.emrNumber} required />
                 <InfoField label="First Name" value={formData.firstName} required />
                 <InfoField label="Last Name" value={formData.lastName} required />
@@ -569,7 +514,7 @@ const handlePaymentChange = useCallback((e) => {
 
             {/* Medical Details */}
             <InfoCard icon={FileText} title="Medical Details" bgColor="bg-gradient-to-br from-purple-50 to-pink-50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                 <InfoField label="Doctor" value={formData.doctor} required />
                 <InfoField label="Service" value={formData.service} required />
                 {formData.service === "Package" && <InfoField label="Package" value={formData.package} required />}
@@ -578,189 +523,187 @@ const handlePaymentChange = useCallback((e) => {
             </InfoCard>
 
             {/* Payment Details */}
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6">
-  <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-    <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-    Payment Details
-  </h2>
+            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-sm border border-gray-200 p-4 md:p-5 lg:p-6">
+              <h2 className="text-base md:text-lg font-bold text-gray-900 mb-3 md:mb-4 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />
+                Payment Details
+              </h2>
 
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
-        Amount <span className="text-red-500">*</span>
-      </label>
-      <input
-        type="number"
-        name="amount"
-        value={formData.amount || ""}
-        onChange={handlePaymentChange}
-        placeholder="0.00"
-        step="0.01"
-        min="0"
-        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
-      />
-    </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6 mb-4 md:mb-5 lg:mb-6">
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">
+                    Amount <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="amount"
+                    value={formData.amount || ""}
+                    onChange={handlePaymentChange}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+                  />
+                </div>
 
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Current Paid Amount</label>
-      <input
-        type="number"
-        name="paid"
-        value={formData.paid || ""}
-        readOnly
-        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50 text-gray-700 text-sm sm:text-base border border-gray-300 rounded-lg font-medium cursor-not-allowed"
-      />
-      <p className="text-xs text-gray-500 mt-1">This is the total amount already paid</p>
-    </div>
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">Current Paid Amount</label>
+                  <input
+                    type="number"
+                    name="paid"
+                    value={formData.paid || ""}
+                    readOnly
+                    className="w-full px-3 py-2 bg-gray-50 text-gray-700 text-sm md:text-base border border-gray-300 rounded-lg font-medium cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Total amount already paid</p>
+                </div>
 
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">New Payment to Add</label>
-      <input
-        type="number"
-        name="paying"
-        value={formData.paying || ""}
-        onChange={handlePaymentChange}
-        placeholder="Enter new payment amount to add"
-        step="0.01"
-        min="0"
-        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
-      />
-      <p className="text-xs text-gray-500 mt-1">This amount will be added to the current paid amount</p>
-    </div>
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">New Payment to Add (Optional)</label>
+                  <input
+                    type="number"
+                    name="paying"
+                    value={formData.paying || ""}
+                    onChange={handlePaymentChange}
+                    placeholder="Enter amount to add (optional)"
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Leave empty if no payment to add</p>
+                </div>
 
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Total Paid After Update (Preview)</label>
-      <input
-        type="number"
-        value={previewValues.totalPaid.toFixed(2)}
-        readOnly
-        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-50 text-blue-700 text-sm sm:text-base border border-blue-300 rounded-lg font-medium cursor-not-allowed"
-      />
-      <p className="text-xs text-gray-500 mt-1">Current paid + new payment</p>
-    </div>
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">Total Paid After Update (Preview)</label>
+                  <input
+                    type="number"
+                    value={previewValues.totalPaid.toFixed(2)}
+                    readOnly
+                    className="w-full px-3 py-2 bg-blue-50 text-blue-700 text-sm md:text-base border border-blue-300 rounded-lg font-medium cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Current paid + new payment</p>
+                </div>
 
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">New Advance (Preview)</label>
-      <input
-        type="number"
-        value={previewValues.advance.toFixed(2)}
-        readOnly
-        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-green-50 text-green-700 text-sm sm:text-base border border-green-300 rounded-lg font-medium cursor-not-allowed"
-      />
-      <p className="text-xs text-gray-500 mt-1">Amount over the total invoice amount</p>
-    </div>
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">New Advance (Preview)</label>
+                  <input
+                    type="number"
+                    value={previewValues.advance.toFixed(2)}
+                    readOnly
+                    className="w-full px-3 py-2 bg-green-50 text-green-700 text-sm md:text-base border border-green-300 rounded-lg font-medium cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Amount over invoice total</p>
+                </div>
 
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Pending (Auto)</label>
-      <input
-        type="text"
-        value={`₹ ${formData.pending?.toFixed(2) || "0.00"}`}
-        disabled
-        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
-      />
-    </div>
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">Pending (Auto)</label>
+                  <input
+                    type="text"
+                    value={`₹ ${formData.pending?.toFixed(2) || "0.00"}`}
+                    disabled
+                    className="w-full px-3 py-2 text-sm md:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
+                  />
+                </div>
 
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
-        Payment Method <span className="text-red-500">*</span>
-      </label>
-      <select
-        name="paymentMethod"
-        value={formData.paymentMethod || ""}
-        onChange={handlePaymentChange}
-        className="w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
-      >
-        <option value="">Select method</option>
-        {paymentMethods.map((method) => (
-          <option key={method} value={method}>{method}</option>
-        ))}
-      </select>
-    </div>
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">
+                    Payment Method <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="paymentMethod"
+                    value={formData.paymentMethod || ""}
+                    onChange={handlePaymentChange}
+                    className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium"
+                  >
+                    <option value="">Select method</option>
+                    {paymentMethods.map((method) => (
+                      <option key={method} value={method}>{method}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6 mb-4 md:mb-5 lg:mb-6">
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">
+                    Claim Status <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.status || ""}
+                    onChange={(e) => {
+                      const newStatus = e.target.value;
+                      setFormData(prev => ({ ...prev, status: newStatus }));
+                      if (newStatus !== "Rejected") {
+                        setFormData(prev => ({ ...prev, rejectionNote: "" }));
+                      }
+                    }}
+                    className="text-gray-700 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  >
+                    <option value="">Select Status</option>
+                    <option value="Released">Released</option>
+                    {/* <option value="Approved by doctor">Approved by doctor</option> */}
+                    {/* <option value="Cancelled">Cancelled</option> */}
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+                
+                {formData.status === "Rejected" && (
+                  <div className="col-span-full">
+                    <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">
+                      Rejection Note <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={formData.rejectionNote || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, rejectionNote: e.target.value }))}
+                      placeholder="Please provide a reason for rejection..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+                    />
+                  </div>
+                )}
+                
+                {formData.status === "Released" && (
+                  <div className="col-span-full">
+                    <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">Notes</label>
+                    <textarea
+                      value={formData.notes || ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Optional notes..."
+                      rows={3}
+                      className="text-gray-800 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+                    />
+                  </div>
+                )}
+              </div>
 
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
-    <div>
-      <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
-        Claim Status <span className="text-red-500">*</span>
-      </label>
-      <select
-        value={formData.status || ""}
-        onChange={(e) => {
-          const newStatus = e.target.value;
-          setFormData(prev => ({ ...prev, status: newStatus }));
-          if (newStatus !== "Rejected") {
-            setFormData(prev => ({ ...prev, rejectionNote: "" }));
-          }
-        }}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-      >
-        <option value="">Select Status</option>
-        <option value="Released">Released</option>
-        <option value="Approved by doctor">Approved by doctor</option>
-        <option value="Cancelled">Cancelled</option>
-        <option value="Rejected">Rejected</option>
-      </select>
-    </div>
-    
-    {formData.status === "Rejected" && (
-      <div className="col-span-full">
-        <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
-          Rejection Note <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          value={formData.rejectionNote || ""}
-          onChange={(e) => setFormData(prev => ({ ...prev, rejectionNote: e.target.value }))}
-          placeholder="Please provide a reason for rejection..."
-          rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
-        />
-      </div>
-    )}
-    
-    {formData.status === "Released" && (
-      <div className="col-span-full">
-        <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">Notes</label>
-        <textarea
-          value={formData.notes || ""}
-          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-          placeholder="Optional notes..."
-          rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
-        />
-      </div>
-    )}
-  </div>
-
-  <div className="flex flex-col sm:flex-row justify-end gap-3">
-    <button
-      onClick={handleSaveClaimStatus}
-      className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-    >
-      Save Claim Status
-    </button>
-    <button
-      onClick={handleUpdatePayment}
-      className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-    >
-      Update Payment
-    </button>
-  </div>
-</div>
-
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                <button
+                  onClick={handleSaveClaimStatus}
+                  className="w-full sm:w-auto px-5 md:px-6 lg:px-8 py-2 md:py-2.5 lg:py-3 text-sm md:text-base bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  Save Claim Status
+                </button>
+                <button
+                  onClick={handleUpdatePayment}
+                  className="w-full sm:w-auto px-5 md:px-6 lg:px-8 py-2 md:py-2.5 lg:py-3 text-sm md:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  Update Payment
+                </button>
+              </div>
+            </div>
 
             {/* Insurance Details */}
             {formData.insurance === "Yes" && (
               <InfoCard icon={FileText} title="Insurance Details" bgColor="bg-gradient-to-br from-cyan-50 to-blue-50">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                   <InfoField label="Insurance" value={formData.insurance} />
                   <InfoField label="Advance Given Amount" value={formData.advanceGivenAmount != null ? `₹ ${formData.advanceGivenAmount.toFixed(2)}` : null} />
                   <InfoField label="Co-Pay %" value={formData.coPayPercent != null ? `${formData.coPayPercent}%` : null} />
                   <InfoField label="Need to Pay Amount (Auto)" value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} />
                   <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1">Advance Claim Status</label>
+                    <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-1">Advance Claim Status</label>
                     <div className="flex items-center gap-2">
-                      <span className={`inline-block px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold ${
+                      <span className={`inline-block px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm rounded-lg font-semibold ${
                         formData.advanceClaimStatus === "Released" ? "bg-green-100 text-green-800" : 
                         formData.advanceClaimStatus === "Approved by doctor" ? "bg-blue-100 text-blue-800" :
                         formData.advanceClaimStatus === "Cancelled" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
@@ -793,16 +736,16 @@ const handlePaymentChange = useCallback((e) => {
             {/* Payment History */}
             {formData.paymentHistory && formData.paymentHistory.length > 0 && (
               <InfoCard icon={FileText} title="Payment History" bgColor="bg-gradient-to-br from-amber-50 to-orange-50">
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {formData.paymentHistory.map((entry, index) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <h4 className="font-semibold text-gray-800">Entry #{index + 1}</h4>
-                        <span className="text-sm text-gray-500">
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 md:p-4">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
+                        <h4 className="font-semibold text-gray-800 text-sm md:text-base">Entry #{index + 1}</h4>
+                        <span className="text-xs md:text-sm text-gray-500">
                           {new Date(entry.updatedAt).toLocaleString()}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 text-xs md:text-sm">
                         <div>
                           <span className="font-medium text-gray-600">Amount:</span>
                           <p className="text-gray-800">₹{entry.amount?.toFixed(2) || "0.00"}</p>
@@ -846,7 +789,7 @@ const handlePaymentChange = useCallback((e) => {
                         {entry.rejectionNote && (
                           <div className="col-span-2 sm:col-span-4">
                             <span className="font-medium text-gray-600">Rejection Note:</span>
-                            <p className="text-red-600 text-sm mt-1">{entry.rejectionNote}</p>
+                            <p className="text-red-600 text-xs md:text-sm mt-1">{entry.rejectionNote}</p>
                           </div>
                         )}
                       </div>
@@ -855,11 +798,9 @@ const handlePaymentChange = useCallback((e) => {
                 </div>
               </InfoCard>
             )}
-
           </div>
         </div>
       </div>
-
     </div>
   );
 };

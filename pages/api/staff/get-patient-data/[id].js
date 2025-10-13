@@ -65,18 +65,30 @@ export default async function handler(req, res) {
     // GET: Fetch Invoice + Patient Info
     // -------------------------------
     if (req.method === "GET") {
-      const invoice = await PatientRegistration.findById(id).lean();
+      const invoice = await PatientRegistration.findById(id)
+        .populate({
+          path: "doctor",
+          model: "User",
+          select: "name role",
+          match: { role: "doctorStaff" }, // ✅ only populate if doctorStaff
+        })
+        .lean();
+
       if (!invoice) return res.status(404).json({ message: "Invoice not found" });
 
-      return res.status(200).json({
+      // 🔹 Replace doctor ID with doctor name
+      const invoiceWithDoctor = {
         ...invoice,
+        doctor: invoice.doctor ? invoice.doctor.name : "-", // doctor name or placeholder
         _id: invoice._id.toString(),
         userId: invoice.userId?.toString(),
         invoicedDate: invoice.invoicedDate?.toISOString(),
         createdAt: invoice.createdAt?.toISOString(),
         updatedAt: invoice.updatedAt?.toISOString(),
         advanceClaimReleaseDate: invoice.advanceClaimReleaseDate?.toISOString(),
-      });
+      };
+
+      return res.status(200).json(invoiceWithDoctor);
     }
 
     // -------------------------------
@@ -126,35 +138,26 @@ export default async function handler(req, res) {
         const currentAmount = invoice.amount ?? 0;
         const currentPaid = invoice.paid ?? 0;
 
-        // Only update amount if it's explicitly provided and different from current
-        // For payment updates, we usually just want to add payment, not change invoice amount
         const newAmount = amount !== undefined ? Number(amount) : currentAmount;
         paying = paying !== undefined ? Number(paying) : 0;
         paymentMethod = paymentMethod || invoice.paymentMethod || "";
 
-        // New payment logic: Add the paying amount to existing paid amount
         const newPaid = currentPaid + paying;
-        
-        // Calculate advance correctly: total advance should be total paid minus invoice amount
         const totalAdvance = Math.max(0, (newPaid - currentAmount) / 2);
         const newAdvance = totalAdvance;
-        
         const finalPending = Math.max(0, currentAmount - newPaid);
 
-        // Only update amount if it's actually changing
         if (newAmount !== currentAmount) {
           invoice.amount = newAmount;
         }
-        invoice.paid = newPaid; // Update paid to current + new payment
-        invoice.advance = newAdvance; // Calculate advance automatically
+        invoice.paid = newPaid;
+        invoice.advance = newAdvance;
         invoice.pending = finalPending;
-        
-        // Defensive recompute to avoid any downstream double-counting from hooks or stale values
+
         invoice.advance = Math.max(0, (invoice.paid - invoice.amount) / 2);
         invoice.pending = Math.max(0, invoice.amount - invoice.paid);
         invoice.paymentMethod = paymentMethod;
 
-        // Add to payment history with full (unhalved) advance snapshot
         pushHistorySnapshot({
           amount: newAmount,
           paid: newPaid,
@@ -164,21 +167,26 @@ export default async function handler(req, res) {
           paying,
         });
 
-        // Add to PettyCash if payment method is Cash and there's a new payment
         if (paying > 0 && paymentMethod === "Cash") {
           await addToPettyCashIfCash(user, invoice, paying);
         }
-      } else if (updateType === "status") {
+      } 
+      // -------------------------------
+      // OPTION 2: Status Update
+      // -------------------------------
+      else if (updateType === "status") {
         const { status, rejectionNote } = req.body;
 
         if (status !== undefined) invoice.status = status;
         if (rejectionNote !== undefined) invoice.rejectionNote = rejectionNote;
 
-        // Re-derive pending strictly from amount vs paid
         invoice.pending = Math.max(0, invoice.amount - invoice.paid);
-        // Add snapshot to payment history
         pushHistorySnapshot({ status: invoice.status, rejectionNote: invoice.rejectionNote });
-      } else if (updateType === "advanceClaim") {
+      } 
+      // -------------------------------
+      // OPTION 3: Advance Claim Update
+      // -------------------------------
+      else if (updateType === "advanceClaim") {
         const {
           advanceClaimStatus,
           advanceClaimCancellationRemark,
@@ -200,12 +208,12 @@ export default async function handler(req, res) {
         if (advanceClaimReleasedBy !== undefined)
           invoice.advanceClaimReleasedBy = advanceClaimReleasedBy;
 
-        // Add snapshot to payment history
         pushHistorySnapshot({
           advanceClaimStatus: invoice.advanceClaimStatus,
           advanceClaimCancellationRemark: invoice.advanceClaimCancellationRemark,
         });
-      } else {
+      } 
+      else {
         return res.status(400).json({ message: "Invalid update type" });
       }
 
