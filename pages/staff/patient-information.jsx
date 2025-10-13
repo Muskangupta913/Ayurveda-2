@@ -132,6 +132,12 @@ const PatientCard = ({ patient, onUpdate, onViewDetails }) => (
       <div><p className="text-gray-700">Insurance</p><p className="font-medium text-gray-900">{patient.insurance || 'No'}</p></div>
       <div><p className="text-gray-700">Payment Type</p><p className="font-medium text-gray-900">{patient.paymentMethod || 'N/A'}</p></div>
     </div>
+    {patient.notes && (
+      <div className="mb-3 text-xs">
+        <p className="text-gray-700">Notes</p>
+        <p className="font-medium text-gray-900 break-words">{patient.notes}</p>
+      </div>
+    )}
     <div className="mb-3 flex gap-2 flex-wrap">
       {patient.patientType && <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-purple-100 text-purple-700">{patient.patientType}</span>}
     </div>

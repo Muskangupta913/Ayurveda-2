@@ -1,7 +1,7 @@
-import dbConnect from "../../../lib/database";
+import dbConnect from "../../lib/database";
 import jwt from "jsonwebtoken";
-import User from "../../../models/Users";
-import PettyCash from "../../../models/PettyCash";
+import User from "../../models/Users";
+import PettyCash from "../../models/PettyCash";
 
 // Helper: verify JWT and get user
 async function getUserFromToken(req) {

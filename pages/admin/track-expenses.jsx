@@ -240,7 +240,7 @@ function AllPettyCashAdmin() {
                         </div>
                       </>
                     );
-                  })()}
+                  })()}  
                 </div>
 
                 {/* Expenses */}

@@ -265,6 +265,32 @@ const EditModal = ({ claim, onClose, onSave, saving }) => {
 
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Ensure all fields are prefilled: derive first/last from patientName if missing
+  useEffect(() => {
+    if (!claim) return;
+    const patientName = (claim.patientName || "").trim();
+    let derivedFirst = form.firstName;
+    let derivedLast = form.lastName;
+    if ((!derivedFirst || !derivedLast) && patientName) {
+      const parts = patientName.split(/\s+/);
+      derivedFirst = derivedFirst || parts[0] || "";
+      derivedLast = derivedLast || (parts.slice(1).join(" ") || "");
+    }
+
+    setForm({
+      firstName: claim.firstName || derivedFirst || "",
+      lastName: claim.lastName || derivedLast || "",
+      email: claim.email || "",
+      mobileNumber: claim.mobileNumber || "",
+      referredBy: claim.referredBy || "",
+      service: claim.service || "",
+      treatment: claim.treatment || "",
+      package: claim.package || "",
+      notes: claim.notes || "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claim]);
+
   const handleSubmit = () => {
     setShowConfirm(true);
   };
