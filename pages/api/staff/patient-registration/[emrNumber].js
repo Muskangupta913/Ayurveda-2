@@ -53,7 +53,8 @@ export default async function handler(req, res) {
       success: true, 
       data: {
         ...patient.toObject(),
-        totalAdvanceAmount: totalAdvanceAmount
+        totalAdvanceAmount: totalAdvanceAmount,
+        advanceOnlyAmount: Math.max(0, Number(patient.advance) || 0)
       }
     });
   } catch (err) {

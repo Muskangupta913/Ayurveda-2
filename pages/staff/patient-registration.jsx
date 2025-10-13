@@ -84,6 +84,7 @@ const INITIAL_FORM_DATA = {
 const InvoiceManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState({ name: "", role: "" });
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const [manualAdvance, setManualAdvance] = useState(false);
   const [autoFields, setAutoFields] = useState({
     invoicedDate: new Date().toISOString(),
     invoicedBy: " ",
@@ -148,20 +149,18 @@ const InvoiceManagementSystem = () => {
   }, [showToast]);
 
 
-  // Auto-calculate advance amount based on amount and paid
+  // Auto-calculate advance amount based on amount and paid (skip when set from EMR)
   useEffect(() => {
+    if (manualAdvance) return;
     const amount = parseFloat(formData.amount) || 0;
     const paid = parseFloat(formData.paid) || 0;
-    
     if (paid > amount) {
-      // If paid is more than amount, the excess goes to advance
       const advance = paid - amount;
       setFormData(prev => ({ ...prev, advance: advance.toFixed(2) }));
     } else {
-      // If paid is less than or equal to amount, no advance
       setFormData(prev => ({ ...prev, advance: "0.00" }));
     }
-  }, [formData.amount, formData.paid]);
+  }, [formData.amount, formData.paid, manualAdvance]);
 
   useEffect(() => generateInvoiceNumber(), []);
 
@@ -178,17 +177,21 @@ const InvoiceManagementSystem = () => {
   }, [formData.amount, formData.paid, formData.advance]);
 
   useEffect(() => {
-    if (formData.insurance === "Yes" && formData.insuranceType === "Advance" && formData.advanceGivenAmount && formData.coPayPercent !== "") {
-      const amount = parseFloat(formData.amount) || 0;
-      const advanceGivenAmount = parseFloat(formData.advanceGivenAmount) || 0;
-      const coPayPercent = parseFloat(formData.coPayPercent) || 0;
-      const coPayAmount = (amount * coPayPercent) / 100;
+    const amount = parseFloat(formData.amount) || 0;
+    const advanceGivenAmount = parseFloat(formData.advanceGivenAmount) || 0;
+    const coPayPercentNum = parseFloat(formData.coPayPercent);
+
+    if (formData.insurance === "Yes" && !Number.isNaN(coPayPercentNum)) {
+      const coPayAmount = (amount * coPayPercentNum) / 100;
       const needToPay = Math.max(0, amount - coPayAmount - advanceGivenAmount);
       setCalculatedFields(prev => ({ ...prev, needToPay }));
     } else {
-      setCalculatedFields(prev => ({ ...prev, needToPay: calculatedFields.pending }));
+      const paid = parseFloat(formData.paid) || 0;
+      const advance = parseFloat(formData.advance) || 0;
+      const pending = Math.max(0, amount - (paid + advance));
+      setCalculatedFields(prev => ({ ...prev, needToPay: pending }));
     }
-  }, [formData.amount, formData.coPayPercent, formData.insurance, formData.insuranceType, formData.advanceGivenAmount]);
+  }, [formData.amount, formData.coPayPercent, formData.insurance, formData.advanceGivenAmount, formData.paid, formData.advance]);
 
   const generateInvoiceNumber = useCallback(() => {
     const date = new Date();
@@ -259,18 +262,22 @@ const InvoiceManagementSystem = () => {
       });
       const data = await res.json();
 
-      if (res.ok && data.success && data.data) {
-        const f = data.data;
-        setFormData(prev => ({
-          ...prev,
-          firstName: f.firstName || "",
-          lastName: f.lastName || "",
-          email: f.email || "",
-          mobileNumber: f.mobileNumber || "",
-          gender: f.gender || "",
-          patientType: f.patientType || "",
-          referredBy: f.referredBy || ""
-        }));
+        if (res.ok && data.success && data.data) {
+          const f = data.data;
+          setFormData(prev => ({
+            ...prev,
+            firstName: f.firstName || "",
+            lastName: f.lastName || "",
+            email: f.email || "",
+            mobileNumber: f.mobileNumber || "",
+            gender: f.gender || "",
+            patientType: f.patientType || "",
+            referredBy: f.referredBy || "",
+            advance: typeof f.advanceOnlyAmount === 'number' ? String(f.advanceOnlyAmount.toFixed(2)) : prev.advance
+          }));
+          if (typeof f.advanceOnlyAmount === 'number') {
+            setManualAdvance(true);
+          }
         showToast("Patient details loaded successfully", "success");
       } else {
         showToast("Patient not found. Fill details manually", "warning");
@@ -634,7 +641,7 @@ return (
                           <input 
                             type="number" 
                             name="advanceGivenAmount" 
-                            value={formData.advanceGivenAmount || "0"} 
+                            value={formData.advanceGivenAmount || ""} 
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900" 
                             placeholder="0"
