@@ -381,6 +381,69 @@ const handlePaymentChange = useCallback((e) => {
     );
   }, [claimStatusModal, invoiceInfo, currentUser.name, formData.advanceClaimReleaseDate, formData.advanceClaimReleasedBy]);
 
+  const handleSaveClaimStatus = useCallback(async () => {
+    const selection = formData.status;
+    if (!selection) {
+      showToast("Please select a claim status", "error");
+      return;
+    }
+
+    const isReleased = selection === "Released";
+    const isApproved = selection === "Approved by doctor";
+    const isRejected = selection === "Rejected";
+    const isCancelled = selection === "Cancelled";
+
+    if ((isRejected || isCancelled) && !formData.rejectionNote?.trim()) {
+      showToast("Please provide a reason", "error");
+      return;
+    }
+
+    const advanceClaimStatus = isReleased
+      ? "Released"
+      : isApproved
+      ? "Approved by doctor"
+      : "Cancelled"; // map Rejected/Cancelled to Cancelled
+
+    const body = {
+      updateType: "advanceClaim",
+      advanceClaimStatus,
+      advanceClaimCancellationRemark: (isRejected || isCancelled) ? (formData.rejectionNote || null) : null,
+      advanceClaimReleaseDate: (isReleased || isApproved) ? new Date().toISOString() : formData.advanceClaimReleaseDate,
+      advanceClaimReleasedBy: (isReleased || isApproved) ? currentUser.name : formData.advanceClaimReleasedBy,
+    };
+
+    showConfirm(
+      "Confirm Claim Status Update",
+      `Are you sure you want to set claim status to ${selection}?`,
+      async () => {
+        try {
+          const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
+          const res = await fetch(`/api/staff/get-patient-data/${invoiceId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${staffToken}`
+            },
+            body: JSON.stringify(body),
+          });
+
+          const result = await res.json();
+          if (res.ok) {
+            showToast("Claim status updated successfully!", "success");
+            setInvoiceInfo(result.updatedInvoice);
+            setFormData(result.updatedInvoice);
+          } else {
+            showToast(result.message || "Failed to update claim status", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("Network error. Try again later.", "error");
+        }
+        setConfirmModal({ isOpen: false });
+      }
+    );
+  }, [formData.status, formData.rejectionNote, formData.advanceClaimReleaseDate, formData.advanceClaimReleasedBy, invoiceInfo, staffToken, currentUser.name]);
+
 
   const canViewMobileNumber = useMemo(
     () => ["Admin", "Super Admin"].includes(currentUser.role),
@@ -619,7 +682,7 @@ const handlePaymentChange = useCallback((e) => {
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
     <div>
       <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-2">
-        Status <span className="text-red-500">*</span>
+        Claim Status <span className="text-red-500">*</span>
       </label>
       <select
         value={formData.status || ""}
@@ -633,11 +696,10 @@ const handlePaymentChange = useCallback((e) => {
         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
       >
         <option value="">Select Status</option>
-        <option value="Active">Active</option>
-        <option value="Completed">Completed</option>
+        <option value="Released">Released</option>
+        <option value="Approved by doctor">Approved by doctor</option>
         <option value="Cancelled">Cancelled</option>
         <option value="Rejected">Rejected</option>
-        <option value="Released">Released</option>
       </select>
     </div>
     
@@ -670,7 +732,13 @@ const handlePaymentChange = useCallback((e) => {
     )}
   </div>
 
-  <div className="flex justify-end">
+  <div className="flex flex-col sm:flex-row justify-end gap-3">
+    <button
+      onClick={handleSaveClaimStatus}
+      className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+    >
+      Save Claim Status
+    </button>
     <button
       onClick={handleUpdatePayment}
       className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
