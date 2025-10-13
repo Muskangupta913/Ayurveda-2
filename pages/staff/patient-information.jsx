@@ -127,7 +127,7 @@ const PatientCard = ({ patient, onUpdate, onViewDetails }) => (
       <div><p className="text-gray-700">Invoice No</p><p className="font-medium text-gray-900">{patient.invoiceNumber}</p></div>
       <div><p className="text-gray-700">Total Amount</p><p className="font-semibold text-gray-900">₹{patient.amount?.toLocaleString() || 0}</p></div>
       <div><p className="text-gray-700">Paid Amount</p><p className="font-semibold text-emerald-600">₹{patient.paid?.toLocaleString() || 0}</p></div>
-      <div><p className="text-gray-700">Advance Payment</p><p className="font-semibold text-blue-600">₹{patient.advanceGivenAmount?.toLocaleString() || 0}</p></div>
+      <div><p className="text-gray-700">Advance Payment</p><p className="font-semibold text-blue-600">₹{patient.advance?.toLocaleString() || 0}</p></div>
       <div><p className="text-gray-700">Amount Pending</p><p className="font-semibold text-rose-600">₹{patient.pending?.toLocaleString() || 0}</p></div>
       <div><p className="text-gray-700">Insurance</p><p className="font-medium text-gray-900">{patient.insurance || 'No'}</p></div>
       <div><p className="text-gray-700">Payment Type</p><p className="font-medium text-gray-900">{patient.paymentMethod || 'N/A'}</p></div>
