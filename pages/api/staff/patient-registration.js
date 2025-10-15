@@ -99,6 +99,7 @@ export default async function handler(req, res) {
         advanceClaimStatus,
         advanceClaimReleasedBy,
         notes,
+        membership,
       } = req.body;
 
       const computedInvoicedBy =
@@ -134,6 +135,11 @@ export default async function handler(req, res) {
         existingPatient.amount += normalizedAmount;
         existingPatient.paid += normalizedPaidIncrement;
 
+        // Update membership if provided
+        if (typeof membership === "string" && (membership === "Yes" || membership === "No")) {
+          existingPatient.membership = membership;
+        }
+
         // Derive correct advance/pending from paid vs amount (avoid double counting)
         const derivedAdvance = Math.max(0, existingPatient.paid - existingPatient.amount);
         const derivedPending = Math.max(0, existingPatient.amount - existingPatient.paid);
@@ -153,7 +159,7 @@ export default async function handler(req, res) {
         await existingPatient.save();
 
         // Add to PettyCash if payment method is Cash
-        await addToPettyCashIfCash(user, existingPatient, normalizedPaid);
+        await addToPettyCashIfCash(user, existingPatient, normalizedPaidIncrement);
 
         return res.status(200).json({
           success: true,
@@ -194,6 +200,7 @@ export default async function handler(req, res) {
         advanceClaimStatus,
         advanceClaimReleasedBy,
         notes,
+        membership: membership === "Yes" ? "Yes" : "No",
         paymentHistory: [
           {
             amount: normalizedAmount,
@@ -272,28 +279,34 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---------------- PUT: update patient status ----------------
+  // ---------------- PUT: update patient status/membership ----------------
   if (req.method === "PUT") {
     if (!requireRole(user, ["staff", "admin"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
     try {
-      const { id, status } = req.body;
-      if (!id || !status) {
-        return res.status(400).json({ success: false, message: "id and status required" });
+      const { id, status, membership } = req.body;
+      if (!id) {
+        return res.status(400).json({ success: false, message: "id is required" });
       }
 
       const patient = await PatientRegistration.findOne({ _id: id, userId: user._id });
       if (!patient)
         return res.status(404).json({ success: false, message: "Patient not found or unauthorized" });
 
-      patient.status = status;
+      if (typeof status === "string") {
+        patient.status = status;
+      }
+
+      if (typeof membership === "string" && (membership === "Yes" || membership === "No")) {
+        patient.membership = membership;
+      }
       await patient.save();
 
       return res.status(200).json({
         success: true,
-        message: `Patient status updated to ${status}`,
+        message: "Patient updated successfully",
         data: patient,
       });
     } catch (err) {

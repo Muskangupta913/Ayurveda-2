@@ -78,7 +78,7 @@ const INITIAL_FORM_DATA = {
   mobileNumber: "", gender: "", doctor: "", service: "", treatment: "",
   package: "", patientType: "", referredBy: "", amount: "", paid: "",
   advance: "", paymentMethod: "", insurance: "No", advanceGivenAmount: "",
-  coPayPercent: "", advanceClaimStatus: "Pending", insuranceType: "Paid"
+  coPayPercent: "", advanceClaimStatus: "Pending", insuranceType: "Paid", membership: "No"
 };
 
 const InvoiceManagementSystem = () => {
@@ -543,7 +543,8 @@ return (
                   { name: "mobileNumber", label: canViewMobile ? "Mobile Number" : "Mobile (Restricted)", type: "number" },
                   { name: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Other"], required: true },
                   { name: "patientType", label: "Patient Type", type: "select", options: ["New", "Old"], required: true },
-                  { name: "referredBy", label: "Referred By" }
+                  { name: "referredBy", label: "Referred By" },
+                  { name: "membership", label: "Membership", type: "select", options: ["Yes", "No"], required: true }
                 ].map(field => (
                   <div key={field.name}>
                     <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">

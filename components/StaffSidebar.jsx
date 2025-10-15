@@ -122,6 +122,12 @@ const Sidebar = () => {
         icon: "🧑‍💼", 
         description: "Manage vendor" 
       },
+      { 
+        label: " Membership", 
+        path: "/staff/membership",
+        icon: "🧑‍💼", 
+        description: "Manage membership" 
+      },
     ];
   }
 

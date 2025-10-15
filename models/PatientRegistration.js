@@ -71,7 +71,7 @@ const patientRegistrationSchema = new mongoose.Schema(
     advanceClaimCancellationRemark: { type: String, trim: true },
 
     // Status & Notes
-    
+    membership: { type: String, enum: ["Yes", "No"], default: "No" },
     notes: { type: String, trim: true },
     rejectionNote: { type: String, trim: true }, // Show when status is rejected
   },
