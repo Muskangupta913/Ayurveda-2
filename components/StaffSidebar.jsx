@@ -123,11 +123,12 @@ const Sidebar = () => {
         description: "Manage vendor" 
       },
       { 
-        label: " Membership", 
-        path: "/staff/membership",
+        label: "Membership", 
+        path: "/staff/membership", 
         icon: "🧑‍💼", 
-        description: "Manage membership" 
+        description: "Manage Membership" 
       },
+      
     ];
   }
 

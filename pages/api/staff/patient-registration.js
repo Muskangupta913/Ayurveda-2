@@ -99,7 +99,6 @@ export default async function handler(req, res) {
         advanceClaimStatus,
         advanceClaimReleasedBy,
         notes,
-        membership,
       } = req.body;
 
       const computedInvoicedBy =
@@ -135,10 +134,7 @@ export default async function handler(req, res) {
         existingPatient.amount += normalizedAmount;
         existingPatient.paid += normalizedPaidIncrement;
 
-        // Update membership if provided
-        if (typeof membership === "string" && (membership === "Yes" || membership === "No")) {
-          existingPatient.membership = membership;
-        }
+        // Membership removed
 
         // Derive correct advance/pending from paid vs amount (avoid double counting)
         const derivedAdvance = Math.max(0, existingPatient.paid - existingPatient.amount);
@@ -200,7 +196,6 @@ export default async function handler(req, res) {
         advanceClaimStatus,
         advanceClaimReleasedBy,
         notes,
-        membership: membership === "Yes" ? "Yes" : "No",
         paymentHistory: [
           {
             amount: normalizedAmount,
