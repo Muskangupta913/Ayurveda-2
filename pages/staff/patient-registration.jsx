@@ -76,9 +76,14 @@ const paymentMethods = ["Cash", "Card", "BT", "Tabby", "Tamara"];
 const INITIAL_FORM_DATA = {
   invoiceNumber: "", emrNumber: "", firstName: "", lastName: "", email: "",
   mobileNumber: "", gender: "", doctor: "", service: "", treatment: "",
-  package: "", patientType: "", referredBy: "", amount: "", paid: "",
+  package: "", packageUnits: "1", usedSession: "0", userTreatmentName: "", patientType: "", referredBy: "", amount: "", paid: "",
   advance: "", paymentMethod: "", insurance: "No", advanceGivenAmount: "",
+<<<<<<< HEAD
   coPayPercent: "", advanceClaimStatus: "Pending", insuranceType: "Paid"
+=======
+  coPayPercent: "", advanceClaimStatus: "Pending", insuranceType: "Paid", membership: "No",
+  membershipStartDate: "", membershipEndDate: ""
+>>>>>>> 5e60680574fbd897b8389dd361f61e04965f3048
 };
 
 const InvoiceManagementSystem = () => {
@@ -144,7 +149,7 @@ const InvoiceManagementSystem = () => {
       .then(data => {
         if (data.success) {
           setFetchedTreatments(data.data.filter(i => i.treatment).map(i => ({ _id: i._id, name: i.treatment, price: i.treatmentPrice })));
-          setFetchedPackages(data.data.filter(i => i.package).map(i => ({ _id: i._id, name: i.package, price: i.packagePrice })));
+          setFetchedPackages(data.data.filter(i => i.package).map(i => ({ _id: i._id, name: i.package, price: i.packagePrice, units: i.packageUnits || 1 })));
         }
       })
       .catch(() => showToast("Failed to fetch treatments", "error"));
@@ -265,10 +270,51 @@ const InvoiceManagementSystem = () => {
     if (name === "package") {
       const selected = fetchedPackages.find(p => p.name === value);
       const price = selected?.price ?? "";
-      setFormData(prev => ({ ...prev, package: value, amount: price !== "" ? String(price) : prev.amount }));
+      const units = selected?.units ?? 1;
+      const totalAmount = price !== "" ? price * units : "";
+      setFormData(prev => ({ 
+        ...prev, 
+        package: value, 
+        packageUnits: String(units),
+        usedSession: "0",
+        amount: totalAmount !== "" ? String(totalAmount) : prev.amount 
+      }));
       return;
     }
   }, [fetchedTreatments, fetchedPackages]);
+
+  // Handle package units change
+  const handlePackageUnitsChange = useCallback((e) => {
+    const { value } = e.target;
+    const units = parseFloat(value) || 1;
+    const selectedPackage = fetchedPackages.find(p => p.name === formData.package);
+    const pricePerUnit = selectedPackage?.price ?? 0;
+    const totalAmount = pricePerUnit * units;
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      packageUnits: value,
+      amount: totalAmount > 0 ? String(totalAmount) : prev.amount 
+    }));
+  }, [fetchedPackages, formData.package]);
+
+  // Handle used session change with deduction logic
+  const handleUsedSessionChange = useCallback((e) => {
+    const { value } = e.target;
+    const usedSessions = parseFloat(value) || 0;
+    const selectedPackage = fetchedPackages.find(p => p.name === formData.package);
+    const pricePerUnit = selectedPackage?.price ?? 0;
+    const totalUnits = parseFloat(formData.packageUnits) || 1;
+    const totalAmount = pricePerUnit * totalUnits;
+    const deductedAmount = pricePerUnit * usedSessions;
+    const finalAmount = Math.max(0, totalAmount - deductedAmount);
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      usedSession: value,
+      amount: finalAmount > 0 ? String(finalAmount) : "0"
+    }));
+  }, [fetchedPackages, formData.package, formData.packageUnits]);
 
   const fetchEMRData = useCallback(async () => {
     if (!formData.emrNumber.trim()) {
@@ -314,7 +360,7 @@ const InvoiceManagementSystem = () => {
 
   const validateForm = useCallback(() => {
     const newErrors = {};
-    const { invoiceNumber, emrNumber, firstName, lastName, email, mobileNumber, gender, doctor, service, treatment, package: pkg, patientType, amount, paymentMethod, insurance, advanceGivenAmount, coPayPercent } = formData;
+    const { invoiceNumber, emrNumber, firstName, lastName, email, mobileNumber, gender, doctor, service, treatment, package: pkg, packageUnits, patientType, amount, paymentMethod, insurance, advanceGivenAmount, coPayPercent } = formData;
     
     if (!invoiceNumber.trim()) newErrors.invoiceNumber = "Required";
     if (!emrNumber.trim()) newErrors.emrNumber = "Required";
@@ -331,10 +377,21 @@ const InvoiceManagementSystem = () => {
     if (!service) newErrors.service = "Required";
     if (service === "Treatment" && !treatment) newErrors.treatment = "Required";
     if (service === "Package" && !pkg) newErrors.package = "Required";
+    if (service === "Package" && (!packageUnits || parseFloat(packageUnits) <= 0)) newErrors.packageUnits = "Valid units required";
+    if (service === "Package" && parseFloat(formData.usedSession) > parseFloat(packageUnits)) newErrors.usedSession = "Used sessions cannot exceed total units";
     if (!amount || parseFloat(amount) <= 0) newErrors.amount = "Valid amount required";
     if (!paymentMethod) newErrors.paymentMethod = "Required";
     if (insurance === "Yes" && formData.insuranceType === "Advance") {
       if (!coPayPercent || parseFloat(coPayPercent) < 0 || parseFloat(coPayPercent) > 100) newErrors.coPayPercent = "0-100 required";
+    }
+    
+    // Validate membership dates
+    if (formData.membership === "Yes") {
+      if (!formData.membershipStartDate) newErrors.membershipStartDate = "Required";
+      if (!formData.membershipEndDate) newErrors.membershipEndDate = "Required";
+      if (formData.membershipStartDate && formData.membershipEndDate && new Date(formData.membershipStartDate) >= new Date(formData.membershipEndDate)) {
+        newErrors.membershipEndDate = "End date must be after start date";
+      }
     }
     
     setErrors(newErrors);
@@ -576,6 +633,46 @@ return (
                     )}
                   </div>
                 ))}
+                
+                {/* Membership Date Fields */}
+                {formData.membership === "Yes" && (
+                  <>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">
+                        Membership Start Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="membershipStartDate"
+                        value={formData.membershipStartDate}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900 ${errors.membershipStartDate ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                      />
+                      {errors.membershipStartDate && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />{errors.membershipStartDate}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">
+                        Membership End Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="membershipEndDate"
+                        value={formData.membershipEndDate}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-indigo-500 text-gray-900 ${errors.membershipEndDate ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                      />
+                      {errors.membershipEndDate && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />{errors.membershipEndDate}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -615,14 +712,56 @@ return (
                   {errors.service && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.service}</p>}
                 </div>
                 {formData.service === "Package" && (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Package <span className="text-red-500">*</span></label>
-                    <select name="package" value={formData.package} onChange={handleServiceLinkedChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
-                      <option value="">Select Package</option>
-                      {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - ₹${p.price.toFixed(2)}` : ''}</option>)}
-                    </select>
-                    {errors.package && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.package}</p>}
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Package <span className="text-red-500">*</span></label>
+                      <select name="package" value={formData.package} onChange={handleServiceLinkedChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
+                        <option value="">Select Package</option>
+                        {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - ₹${p.price.toFixed(2)} per unit` : ''}</option>)}
+                      </select>
+                      {errors.package && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.package}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Units <span className="text-red-500">*</span></label>
+                      <input
+                        type="number"
+                        name="packageUnits"
+                        value={formData.packageUnits}
+                        onChange={handlePackageUnitsChange}
+                        min="1"
+                        step="1"
+                        className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.packageUnits ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                        placeholder="1"
+                      />
+                      {errors.packageUnits && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.packageUnits}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Used Session</label>
+                      <input
+                        type="number"
+                        name="usedSession"
+                        value={formData.usedSession}
+                        onChange={handleUsedSessionChange}
+                        min="0"
+                        step="1"
+                        className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.usedSession ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                        placeholder="0"
+                      />
+                      {errors.usedSession && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.usedSession}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">User Treatment Name</label>
+                      <input
+                        type="text"
+                        name="userTreatmentName"
+                        value={formData.userTreatmentName}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.userTreatmentName ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                        placeholder="Enter treatment name"
+                      />
+                      {errors.userTreatmentName && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.userTreatmentName}</p>}
+                    </div>
+                  </>
                 )}
                 {formData.service === "Treatment" && (
                   <div>
@@ -707,6 +846,56 @@ return (
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                 Payment Details
               </h2>
+              
+              {/* Package Pricing Breakdown */}
+              {formData.service === "Package" && formData.package && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-semibold text-blue-800 mb-2">Package Pricing Breakdown</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-600">Per Unit Price:</span>
+                      <span className="ml-2 font-semibold text-blue-700">
+                        ₹{fetchedPackages.find(p => p.name === formData.package)?.price?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Units:</span>
+                      <span className="ml-2 font-semibold text-blue-700">{formData.packageUnits}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Used Session:</span>
+                      <span className="ml-2 font-semibold text-blue-700">{formData.usedSession}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Amount:</span>
+                      <span className="ml-2 font-semibold text-blue-700">₹{formData.amount || '0.00'}</span>
+                    </div>
+                  </div>
+                  {parseFloat(formData.usedSession) > 0 && (
+                    <div className="mt-3 pt-3 border-t border-blue-300">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-600">Original Total:</span>
+                          <span className="ml-2 font-semibold text-gray-700">
+                            ₹{((fetchedPackages.find(p => p.name === formData.package)?.price || 0) * parseFloat(formData.packageUnits || 1)).toFixed(2)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Deducted Amount:</span>
+                          <span className="ml-2 font-semibold text-red-600">
+                            -₹{((fetchedPackages.find(p => p.name === formData.package)?.price || 0) * parseFloat(formData.usedSession || 0)).toFixed(2)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Final Amount:</span>
+                          <span className="ml-2 font-semibold text-green-600">₹{formData.amount || '0.00'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {[{ name: "amount", label: "Amount", required: true, type: "number" },
                   { name: "paid", label: "Paid", type: "number" }

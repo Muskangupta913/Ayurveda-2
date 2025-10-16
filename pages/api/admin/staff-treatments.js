@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     // POST → Add a new staff treatment
     // -------------------------------
     if (req.method === "POST") {
-      const { package: pkg, treatment, packagePrice, treatmentPrice } = req.body;
+      const { package: pkg, treatment, packagePrice, treatmentPrice, packageUnits } = req.body;
 
       // Must provide at least one field
       if (!pkg?.trim() && !treatment?.trim()) {
@@ -40,6 +40,10 @@ export default async function handler(req, res) {
         const parsedTreatmentPrice = Number(treatmentPrice);
         if (!Number.isNaN(parsedTreatmentPrice)) dataToInsert.treatmentPrice = parsedTreatmentPrice;
       }
+      if (packageUnits !== undefined && packageUnits !== null && packageUnits !== "") {
+        const parsedPackageUnits = Number(packageUnits);
+        if (!Number.isNaN(parsedPackageUnits) && parsedPackageUnits > 0) dataToInsert.packageUnits = parsedPackageUnits;
+      }
 
       const newTreatment = await StaffTreatment.create(dataToInsert);
 
@@ -54,7 +58,7 @@ export default async function handler(req, res) {
     // PUT → Update existing treatment
     // -------------------------------
     if (req.method === "PUT") {
-      const { id, package: pkg, treatment, packagePrice, treatmentPrice } = req.body;
+      const { id, package: pkg, treatment, packagePrice, treatmentPrice, packageUnits } = req.body;
 
       if (!id) {
         return res.status(400).json({ success: false, message: "Missing treatment ID" });
@@ -77,6 +81,14 @@ export default async function handler(req, res) {
         } else {
           const parsedTreatmentPrice = Number(treatmentPrice);
           if (!Number.isNaN(parsedTreatmentPrice)) dataToUpdate.treatmentPrice = parsedTreatmentPrice;
+        }
+      }
+      if (packageUnits !== undefined) {
+        if (packageUnits === null || packageUnits === "") {
+          dataToUpdate.packageUnits = undefined;
+        } else {
+          const parsedPackageUnits = Number(packageUnits);
+          if (!Number.isNaN(parsedPackageUnits) && parsedPackageUnits > 0) dataToUpdate.packageUnits = parsedPackageUnits;
         }
       }
 

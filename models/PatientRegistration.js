@@ -50,6 +50,9 @@ const patientRegistrationSchema = new mongoose.Schema(
     service: { type: String, enum: ["Package", "Treatment"], required: true },
     treatment: { type: String, trim: true },
     package: { type: String, trim: true },
+    packageUnits: { type: Number, default: 1, min: 1 },
+    usedSession: { type: Number, default: 0, min: 0 },
+    userTreatmentName: { type: String, trim: true },
 
     // Payment Details
     amount: { type: Number, min: 0 },
@@ -71,6 +74,12 @@ const patientRegistrationSchema = new mongoose.Schema(
     advanceClaimCancellationRemark: { type: String, trim: true },
 
     // Status & Notes
+<<<<<<< HEAD
+=======
+    membership: { type: String, enum: ["Yes", "No"], default: "No" },
+    membershipStartDate: { type: Date },
+    membershipEndDate: { type: Date },
+>>>>>>> 5e60680574fbd897b8389dd361f61e04965f3048
     notes: { type: String, trim: true },
     rejectionNote: { type: String, trim: true }, // Show when status is rejected
   },
