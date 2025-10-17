@@ -78,12 +78,8 @@ const INITIAL_FORM_DATA = {
   mobileNumber: "", gender: "", doctor: "", service: "", treatment: "",
   package: "", packageUnits: "1", usedSession: "0", userTreatmentName: "", patientType: "", referredBy: "", amount: "", paid: "",
   advance: "", paymentMethod: "", insurance: "No", advanceGivenAmount: "",
-<<<<<<< HEAD
-  coPayPercent: "", advanceClaimStatus: "Pending", insuranceType: "Paid"
-=======
   coPayPercent: "", advanceClaimStatus: "Pending", insuranceType: "Paid", membership: "No",
   membershipStartDate: "", membershipEndDate: ""
->>>>>>> 5e60680574fbd897b8389dd361f61e04965f3048
 };
 
 const InvoiceManagementSystem = () => {
