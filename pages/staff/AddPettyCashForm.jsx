@@ -520,7 +520,7 @@ function PettyCashAndExpense() {
   };
 
   const handleDeleteExpense = async (expenseId) => {
-    if (pettyCashList.length === 0) return;
+    // if (pettyCashList.length === 0) return;
     const pettyCashId = pettyCashList[0]._id;
     if (!confirm("Delete this expense?")) return;
 
