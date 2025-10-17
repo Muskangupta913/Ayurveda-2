@@ -230,35 +230,46 @@ export default async function handler(req, res) {
       });
     }
 
-    // Upload receipts to Cloudinary
+    // Upload receipts to Cloudinary (skip gracefully if env not configured)
     const receiptFiles = req.files || [];
     const receiptUrls = [];
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-    for (const file of receiptFiles) {
-      const formData = new FormData();
-      formData.append("file", file.buffer, file.originalname);
-      formData.append(
-        "upload_preset",
-        process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-      );
+    if (cloudName && uploadPreset && receiptFiles.length > 0) {
+      for (const file of receiptFiles) {
+        if (!file || !file.buffer) continue;
+        const safeFilename = (file && typeof file.originalname === 'string' && file.originalname.trim())
+          ? file.originalname
+          : `receipt-${Date.now()}.bin`;
+        const formData = new FormData();
+        formData.append("file", file.buffer, safeFilename);
+        formData.append("upload_preset", uploadPreset);
 
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-      const data = await response.json();
-      if (data.secure_url) receiptUrls.push(data.secure_url);
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+          { method: "POST", body: formData }
+        );
+        const data = await response.json();
+        if (data && data.secure_url) receiptUrls.push(data.secure_url);
+      }
     }
 
     // Get vendor name if vendor ID is provided
     let vendorName = null;
     if (vendor) {
-      const vendorDoc = await Vendor.findById(vendor);
-      vendorName = vendorDoc ? vendorDoc.name : null;
+      try {
+        // Validate ObjectId to avoid server errors in production
+        const isValidId = Vendor.db && Vendor.db.base && Vendor.db.base.Types && Vendor.db.base.Types.ObjectId.isValid
+          ? Vendor.db.base.Types.ObjectId.isValid(vendor)
+          : true;
+        if (isValidId) {
+          const vendorDoc = await Vendor.findById(vendor).lean();
+          vendorName = vendorDoc && typeof vendorDoc.name === 'string' ? vendorDoc.name : null;
+        }
+      } catch {
+        vendorName = null;
+      }
     }
 
     // Add expense
