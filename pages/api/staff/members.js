@@ -2,6 +2,7 @@ import dbConnect from "../../../lib/database";
 import jwt from "jsonwebtoken";
 import User from "../../../models/Users";
 import Membership from "../../../models/Membership";
+import PatientRegistration from "../../../models/PatientRegistration";
 
 async function getUserFromToken(req) {
   const authHeader = req.headers.authorization || "";
@@ -134,6 +135,19 @@ export default async function handler(req, res) {
       }
 
       const transferAmount = Number(amount) || 0;
+
+      // Resolve recipient name from EMR if not provided
+      let resolvedToName = toName || "";
+      try {
+        if (!resolvedToName && toEmrNumber) {
+          const recipient = await PatientRegistration.findOne({ emrNumber: toEmrNumber }).select("firstName lastName");
+          if (recipient) {
+            const fn = (recipient.firstName || "").trim();
+            const ln = (recipient.lastName || "").trim();
+            resolvedToName = [fn, ln].filter(Boolean).join(" ");
+          }
+        }
+      } catch {}
       const remainingBalance = Number(membership.remainingBalance || 0);
       
       // Validate transfer amount
@@ -146,7 +160,7 @@ export default async function handler(req, res) {
         fromEmr: membership.emrNumber,
         toEmr: toEmrNumber,
         toPatientId: toPatientId || null,
-        toName: toName || "",
+        toName: resolvedToName || "",
         transferredAmount: transferAmount,
         note: note || "",
         transferredBy: user._id,
@@ -174,28 +188,8 @@ export default async function handler(req, res) {
 
       await membership.save();
 
-      // If partial transfer, create a new membership for the recipient
-      if (transferAmount > 0 && transferAmount < remainingBalance) {
-        const recipientMembership = await Membership.create({
-          emrNumber: toEmrNumber,
-          patientId: toPatientId || null,
-          staffId: user._id,
-          packageName: membership.packageName,
-          packageAmount: transferAmount,
-          paymentMethod: "Transfer",
-          paidAmount: 0,
-          treatments: [],
-          transferHistory: [{
-            fromEmr: membership.emrNumber,
-            toEmr: toEmrNumber,
-            toPatientId: toPatientId || null,
-            toName: toName || "",
-            transferredAmount: transferAmount,
-            note: `Transferred from ${membership.emrNumber}${note ? ` - ${note}` : ''}`,
-            transferredBy: user._id,
-          }]
-        });
-      }
+      // Do NOT create a new membership card; only record transfer and deduction on the original
+      // (If in future we want to reflect on recipient, we can handle it in a separate flow without creating a new card here.)
 
       return res.status(200).json({ success: true, data: membership });
     } catch (err) {

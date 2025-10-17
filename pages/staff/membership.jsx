@@ -687,7 +687,7 @@ function MembershipPage() {
                       {viewItem.transferHistory.map((t, i) => (
                         <div key={i} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium text-gray-900">{t.fromEmr} → {t.toEmr}</p>
+                            <p className="text-sm font-medium text-gray-900">{t.fromEmr} → {t.toEmr}{t.toName ? ` (${t.toName})` : ''}</p>
                             <p className="text-sm font-semibold text-blue-600">₹{t.transferredAmount.toLocaleString()}</p>
                           </div>
                           <p className="text-xs text-gray-600">{new Date(t.transferredAt).toLocaleDateString()}</p>
