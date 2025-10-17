@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import ClinicLayout from "../../components/staffLayout";
 import withClinicAuth from "../../components/withStaffAuth";
 
@@ -19,6 +19,8 @@ const MembershipModal = ({ isOpen, onClose }) => {
   // EMR autocomplete state
   const [emrSuggestions, setEmrSuggestions] = useState([]);
   const [emrSuggesting, setEmrSuggesting] = useState(false);
+  const emrInputRef = useRef(null);
+  const [emrDropdownRect, setEmrDropdownRect] = useState(null);
   const totalConsumed = useMemo(() => lines.reduce((s, l) => s + (Number(l.lineTotal) || 0), 0), [lines]);
   const packageAmount = useMemo(() => {
     if (!selectedPackage) return 0;
@@ -30,6 +32,24 @@ const MembershipModal = ({ isOpen, onClose }) => {
   const [paidAmount, setPaidAmount] = useState("");
 
   const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+
+  // Reset modal state each time it opens so EMR field shows again
+  useEffect(() => {
+    if (isOpen) {
+      setPatient(null);
+      setEmrNumber("");
+      setEmrSuggestions([]);
+      setSelectedPackage("");
+      setSelectedTreatment("");
+      setSelectedPrice("");
+      setLines([]);
+      setPackageDurationMonths("");
+      setPackageStartDate(new Date().toISOString().split('T')[0]);
+      setPackageEndDate("");
+      setPaymentMethod("");
+      setPaidAmount("");
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,16 +69,20 @@ const MembershipModal = ({ isOpen, onClose }) => {
       .catch(() => { });
   }, [isOpen]);
 
-  const fetchByEmr = useCallback(async () => {
-    if (!emrNumber.trim()) return;
+  const fetchByEmr = useCallback(async (overrideEmr) => {
+    const emrToFetch = (overrideEmr ?? emrNumber).trim();
+    if (!emrToFetch) return;
     try {
       setFetching(true);
-      const res = await fetch(`/api/staff/patient-registration/${emrNumber}`, {
+      const res = await fetch(`/api/staff/patient-registration/${emrToFetch}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setPatient(data.data);
+        // Clear EMR field and suggestions once we have a patient, and hide the search UI
+        setEmrSuggestions([]);
+        setEmrNumber("");
       } else {
         setPatient(null);
         alert(data.message || "Patient not found");
@@ -107,6 +131,15 @@ const MembershipModal = ({ isOpen, onClose }) => {
         const json = await res.json();
         if (res.ok && json.success) {
           setEmrSuggestions(json.data || []);
+          // measure input position for dropdown placement
+          if (emrInputRef.current) {
+            const rect = emrInputRef.current.getBoundingClientRect();
+            setEmrDropdownRect({
+              top: rect.bottom + window.scrollY,
+              left: rect.left + window.scrollX,
+              width: rect.width
+            });
+          }
         } else {
           setEmrSuggestions([]);
         }
@@ -118,6 +151,29 @@ const MembershipModal = ({ isOpen, onClose }) => {
     }, 250);
     return () => { if (handle) clearTimeout(handle); };
   }, [emrNumber, isOpen, token]);
+
+  // Keep dropdown aligned on resize/scroll
+  useEffect(() => {
+    const updateRect = () => {
+      if (emrInputRef.current) {
+        const rect = emrInputRef.current.getBoundingClientRect();
+        setEmrDropdownRect({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+      }
+    };
+    if (emrSuggestions && emrSuggestions.length > 0) {
+      updateRect();
+      window.addEventListener('resize', updateRect);
+      window.addEventListener('scroll', updateRect, true);
+      return () => {
+        window.removeEventListener('resize', updateRect);
+        window.removeEventListener('scroll', updateRect, true);
+      };
+    }
+  }, [emrSuggestions]);
 
   const addLine = () => {
     const name = selectedTreatment || "";
@@ -185,39 +241,48 @@ const MembershipModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900">Add Membership</h3>
           <button onClick={onClose} className="px-3 py-1.5 bg-gray-100 rounded-md text-gray-800 hover:bg-gray-200">Close</button>
         </div>
 
         <div className="p-4 space-y-6">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-            <div className="flex-1 relative">
-              <label className="block text-sm font-medium text-gray-800 mb-1">EMR Number</label>
-              <input value={emrNumber} onChange={e => setEmrNumber(e.target.value)} placeholder="Enter EMR Number" className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900" />
-              {(emrSuggesting || (emrSuggestions && emrSuggestions.length > 0)) && emrNumber.trim().length >= 2 && (
-                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 max-h-64 overflow-auto">
-                  {emrSuggesting && <div className="px-3 py-2 text-sm text-gray-600">Searching...</div>}
-                  {!emrSuggesting && emrSuggestions.length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-600">No matches</div>
-                  )}
-                  {!emrSuggesting && emrSuggestions.map((s, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => { setEmrNumber(s.emrNumber || ""); setEmrSuggestions([]); setTimeout(() => fetchByEmr(), 0); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm text-gray-900"
-                    >
-                      <div className="font-medium">{s.emrNumber}</div>
-                      <div className="text-xs text-gray-600">{[s.firstName, s.lastName].filter(Boolean).join(" ")}{s.mobileNumber ? ` · ${s.mobileNumber}` : ''}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {!patient && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <div className="flex-1 relative">
+                <label className="block text-sm font-medium text-gray-800 mb-1">EMR Number</label>
+                <input ref={emrInputRef} value={emrNumber} onChange={e => setEmrNumber(e.target.value)} placeholder="Enter EMR Number" className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900" />
+                {(emrSuggesting || (emrSuggestions && emrSuggestions.length > 0)) && emrNumber.trim().length >= 2 && emrDropdownRect && (
+                  <div
+                    className="fixed bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-64 overflow-auto"
+                    style={{
+                      top: emrDropdownRect.top + 4,
+                      left: emrDropdownRect.left,
+                      width: Math.min(Math.max(emrDropdownRect.width, 360), window.innerWidth - emrDropdownRect.left - 16)
+                    }}
+                  >
+                    {emrSuggesting && <div className="px-3 py-2 text-sm text-gray-600">Searching...</div>}
+                    {!emrSuggesting && emrSuggestions.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-600">No matches</div>
+                    )}
+                    {!emrSuggesting && emrSuggestions.map((s, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => { setEmrSuggestions([]); fetchByEmr(s.emrNumber || ""); }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm text-gray-900"
+                      >
+                        <div className="font-medium truncate">{s.emrNumber}</div>
+                        <div className="text-xs text-gray-600 truncate">{[s.firstName, s.lastName].filter(Boolean).join(" ")}{s.mobileNumber ? ` · ${s.mobileNumber}` : ''}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => fetchByEmr()} disabled={fetching || !emrNumber.trim()} className={`px-5 py-2 rounded-md text-white ${fetching || !emrNumber.trim() ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{fetching ? 'Fetching...' : 'Fetch'}</button>
             </div>
-            <button onClick={fetchByEmr} disabled={fetching || !emrNumber.trim()} className={`px-5 py-2 rounded-md text-white ${fetching || !emrNumber.trim() ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{fetching ? 'Fetching...' : 'Fetch'}</button>
-          </div>
+          )}
 
           {patient && (
             <div className="space-y-6">
@@ -680,6 +745,8 @@ function UpdateMembershipBody({ item, onClose }) {
   const [selectedTreatment, setSelectedTreatment] = useState("");
   const [price, setPrice] = useState("");
   const [rows, setRows] = useState([]);
+  const [updatePaymentMethod, setUpdatePaymentMethod] = useState("");
+  const [updatePaidAmount, setUpdatePaidAmount] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/staff-treatments")
@@ -723,6 +790,7 @@ function UpdateMembershipBody({ item, onClose }) {
     const added = rows.reduce((s, r) => s + (r.lineTotal || 0), 0);
     return Math.max(0, (Number(item.totalConsumedAmount || 0) + added) - Number(item.packageAmount || 0));
   }, [rows, item]);
+  const addedAmount = useMemo(() => rows.reduce((s, r) => s + (r.lineTotal || 0), 0), [rows]);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('userToken') : null;
 
@@ -734,7 +802,9 @@ function UpdateMembershipBody({ item, onClose }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           membershipId: item._id,
-          treatments: rows.map(r => ({ treatmentName: r.treatmentName, unitCount: r.unitCount, unitPrice: r.unitPrice }))
+          treatments: rows.map(r => ({ treatmentName: r.treatmentName, unitCount: r.unitCount, unitPrice: r.unitPrice })),
+          paymentMethod: updatePaymentMethod || undefined,
+          paidAmount: updatePaidAmount ? Number(updatePaidAmount) : undefined
         })
       });
       const json = await res.json();
@@ -910,6 +980,14 @@ function UpdateMembershipBody({ item, onClose }) {
                   <span className="text-sm text-gray-600">Already Consumed</span>
                   <span className="font-semibold text-gray-900">₹{Number(item.totalConsumedAmount).toLocaleString()}</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Added Amount</span>
+                  <span className="font-semibold text-gray-900">₹{Number(addedAmount).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">New Consumed</span>
+                  <span className="font-semibold text-gray-900">₹{Number((Number(item.totalConsumedAmount || 0) + Number(addedAmount || 0))).toLocaleString()}</span>
+                </div>
                 <div className="border-t border-gray-300 pt-3 mt-3">
                   {Number(remainingAfterNew) > 0 ? (
                     <div className="flex justify-between items-center mb-3">
@@ -924,12 +1002,29 @@ function UpdateMembershipBody({ item, onClose }) {
                   )}
                 </div>
               </div>
-              <button
-                onClick={saveUpdate}
-                className="w-full mt-4 py-2.5 rounded-lg text-white font-medium bg-green-600 hover:bg-green-700 transition-colors"
-              >
-                Save & Update
-              </button>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-800 mb-1">Payment Method</label>
+                  <select value={updatePaymentMethod} onChange={e => setUpdatePaymentMethod(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900">
+                    <option value="">Select Method</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="BT">BT</option>
+                    <option value="Tabby">Tabby</option>
+                    <option value="Tamara">Tamara</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-800 mb-1">Paid Amount</label>
+                  <input type="number" value={updatePaidAmount} onChange={e => setUpdatePaidAmount(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900" placeholder="0.00" step="0.01" />
+                </div>
+                <button
+                  onClick={saveUpdate}
+                  className="w-full py-2.5 rounded-lg text-white font-medium bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                >
+                  Collect Payment & Update
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -79,7 +79,7 @@ export default async function handler(req, res) {
 
   if (req.method === "PUT") {
     try {
-      const { membershipId, treatments } = req.body;
+      const { membershipId, treatments, paymentMethod, paidAmount } = req.body;
       if (!membershipId) {
         return res.status(400).json({ success: false, message: "membershipId is required" });
       }
@@ -98,6 +98,18 @@ export default async function handler(req, res) {
 
       if (normalizedTreatments.length > 0) {
         membership.treatments.push(...normalizedTreatments);
+      }
+
+      // Optional payment update during membership update
+      if (typeof paidAmount !== 'undefined') {
+        const addPaid = Number(paidAmount) || 0;
+        if (addPaid > 0) {
+          const currentPaid = Number(membership.paidAmount || 0);
+          membership.paidAmount = currentPaid + addPaid;
+        }
+      }
+      if (typeof paymentMethod === 'string' && paymentMethod) {
+        membership.paymentMethod = paymentMethod;
       }
 
       await membership.save();
