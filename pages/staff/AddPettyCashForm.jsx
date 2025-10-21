@@ -189,12 +189,15 @@ function PettyCashAndExpense() {
 
   useEffect(() => {
     if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
-      fetchAdminGlobalTotals();
+      fetchAdminGlobalTotals(); // Refetch when user role changes (for admin-only sections)
     }
   }, [currentUser.role]);
 
   useEffect(() => {
     fetchGlobalTotals(selectedDate);
+    if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
+      fetchAdminGlobalTotals(); // Refresh admin global amounts when date changes
+    }
     filterExpensesByDate(pettyCashList, selectedDate);
   }, [selectedDate]);
 
@@ -351,6 +354,9 @@ function PettyCashAndExpense() {
       setPettyPreviews([]);
       fetchPettyCash();
       fetchGlobalTotals(selectedDate);
+      if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
+        fetchAdminGlobalTotals(); // Update admin global totals section
+      }
       // Close modal on success
       setShowPettyModal(false);
       alert(editMode ? "Record updated successfully!" : "Petty Cash added!");
@@ -389,7 +395,7 @@ function PettyCashAndExpense() {
       fetchPettyCash();
       fetchGlobalTotals(selectedDate);
       if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
-        fetchAdminGlobalTotals();
+        fetchAdminGlobalTotals(); // Update admin global totals section
       }
       setShowManualPettyModal(false);
       alert("Manual Petty Cash added successfully!");
@@ -464,7 +470,7 @@ function PettyCashAndExpense() {
       fetchPettyCash();
       fetchGlobalTotals(selectedDate);
       if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
-        fetchAdminGlobalTotals();
+        fetchAdminGlobalTotals(); // Update admin global totals section
       }
       // Close modal on success
       setShowExpenseModal(false);
@@ -513,6 +519,9 @@ function PettyCashAndExpense() {
       });
       fetchPettyCash();
       fetchGlobalTotals(selectedDate);
+      if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
+        fetchAdminGlobalTotals(); // Update admin global totals section
+      }
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Error deleting patient");
@@ -520,7 +529,7 @@ function PettyCashAndExpense() {
   };
 
   const handleDeleteExpense = async (expenseId) => {
-    // if (pettyCashList.length === 0) return;
+    if (pettyCashList.length === 0) return;
     const pettyCashId = pettyCashList[0]._id;
     if (!confirm("Delete this expense?")) return;
 
@@ -531,6 +540,9 @@ function PettyCashAndExpense() {
       });
       fetchPettyCash();
       fetchGlobalTotals(selectedDate);
+      if (currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase())) {
+        fetchAdminGlobalTotals(); // Update admin global totals section
+      }
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Error deleting expense");
@@ -916,7 +928,7 @@ function PettyCashAndExpense() {
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="text-sm text-gray-700 mb-1">Remaining</div>
-              <div className="text-2xl font-bold text-green-600">₹{globalData.globalRemaining}</div>
+              <div className="text-2xl font-bold text-green-600">₹{globalData.globalRemaining || 0}</div>
             </div>
           </div>
         </div>

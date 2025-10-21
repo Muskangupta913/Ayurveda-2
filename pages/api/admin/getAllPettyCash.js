@@ -70,6 +70,36 @@ if (startDate && !endDate) {
       .populate("staffId", "name email")
       .sort({ createdAt: -1 });
 
+    // Get cumulative balance up to the end of the current day (all previous days + current day)
+    const cumulativeEnd = new Date(end);
+
+    // Calculate cumulative balance up to current day
+    const cumulativeQuery = {
+      ...(staffIdFilter && { staffId: staffIdFilter }),
+      $or: [
+        { "allocatedAmounts.date": { $lt: cumulativeEnd } },
+        { "expenses.date": { $lt: cumulativeEnd } },
+      ],
+    };
+
+    const cumulativeRecords = await PettyCash.find(cumulativeQuery);
+    let cumulativeAllocated = 0;
+    let cumulativeSpent = 0;
+
+    cumulativeRecords.forEach((record) => {
+      const cumulativeAllocatedFiltered = record.allocatedAmounts.filter(
+        (a) => new Date(a.date) < cumulativeEnd
+      );
+      const cumulativeExpensesFiltered = record.expenses.filter(
+        (e) => new Date(e.date) < cumulativeEnd
+      );
+
+      cumulativeAllocated += cumulativeAllocatedFiltered.reduce((sum, a) => sum + a.amount, 0);
+      cumulativeSpent += cumulativeExpensesFiltered.reduce((sum, e) => sum + e.spentAmount, 0);
+    });
+
+    const cumulativeBalance = Math.max(0, cumulativeAllocated - cumulativeSpent);
+
     // Group by staff
     const groupedData = {};
     records.forEach((record) => {
@@ -106,7 +136,7 @@ if (startDate && !endDate) {
       // Add expenses
       groupedData[staffId].expenses.push(...expensesFiltered);
 
-      // Update totals
+      // Update day-wise totals for display
       groupedData[staffId].totalAllocated += allocatedFiltered.reduce(
         (sum, a) => sum + a.amount,
         0
@@ -115,23 +145,61 @@ if (startDate && !endDate) {
         (sum, e) => sum + e.spentAmount,
         0
       );
-      groupedData[staffId].totalAmount =
-        groupedData[staffId].totalAllocated - groupedData[staffId].totalSpent;
+    });
+
+    // Calculate cumulative balance for each staff member and update totals
+    Object.keys(groupedData).forEach(staffId => {
+      const staffCumulativeRecords = cumulativeRecords.filter(record => 
+        record.staffId && record.staffId.toString() === staffId.toString()
+      );
+      let staffCumulativeAllocated = 0;
+      let staffCumulativeSpent = 0;
+      
+      staffCumulativeRecords.forEach((record) => {
+        const cumulativeAllocatedFiltered = record.allocatedAmounts.filter(
+          (a) => new Date(a.date) < cumulativeEnd
+        );
+        const cumulativeExpensesFiltered = record.expenses.filter(
+          (e) => new Date(e.date) < cumulativeEnd
+        );
+
+        staffCumulativeAllocated += cumulativeAllocatedFiltered.reduce((sum, a) => sum + a.amount, 0);
+        staffCumulativeSpent += cumulativeExpensesFiltered.reduce((sum, e) => sum + e.spentAmount, 0);
+      });
+      
+      const staffCumulativeBalance = Math.max(0, staffCumulativeAllocated - staffCumulativeSpent);
+      
+      groupedData[staffId].totalAmount = staffCumulativeBalance;
     });
 
     const finalData = Object.values(groupedData);
 
-    // Compute date-filtered global amounts from the filtered allocations/expenses
-    let globalTotalAllocated = 0;
-    let globalTotalSpent = 0;
+    // Calculate day-wise allocated and spent amounts for display
+    let dayWiseAllocated = 0;
+    let dayWiseSpent = 0;
     finalData.forEach((item) => {
-      globalTotalAllocated += item.totalAllocated;
-      globalTotalSpent += item.totalSpent;
+      // Calculate day-wise amounts for each staff member
+      const staffDayWiseAllocated = item.patients.reduce((sum, patient) => {
+        return sum + patient.allocatedAmounts.reduce((patientSum, alloc) => {
+          const allocDate = new Date(alloc.date);
+          return (allocDate >= start && allocDate <= end) ? patientSum + alloc.amount : patientSum;
+        }, 0);
+      }, 0);
+      
+      const staffDayWiseSpent = item.expenses.reduce((sum, expense) => {
+        const expenseDate = new Date(expense.date);
+        return (expenseDate >= start && expenseDate <= end) ? sum + expense.spentAmount : sum;
+      }, 0);
+      
+      dayWiseAllocated += staffDayWiseAllocated;
+      dayWiseSpent += staffDayWiseSpent;
     });
+
+    // Use day-wise amounts for allocated/spent, but cumulative for remaining
     const globalAmounts = {
-      globalTotalAmount: globalTotalAllocated,
-      globalSpentAmount: globalTotalSpent,
-      globalRemainingAmount: Math.max(0, globalTotalAllocated - globalTotalSpent)
+      globalTotalAmount: dayWiseAllocated, // Day-wise allocated
+      globalSpentAmount: dayWiseSpent, // Day-wise spent
+      globalRemainingAmount: cumulativeBalance // Cumulative remaining
     };
 
     return res.status(200).json({

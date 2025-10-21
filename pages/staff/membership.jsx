@@ -1013,6 +1013,13 @@ function UpdateMembershipBody({ item, onClose }) {
                     <option value="Tabby">Tabby</option>
                     <option value="Tamara">Tamara</option>
                   </select>
+                  {updatePaymentMethod === "Cash" && rows.length > 0 && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-xs text-blue-700">
+                        💰 Treatment amounts will be automatically added to Petty Cash system
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-800 mb-1">Paid Amount</label>

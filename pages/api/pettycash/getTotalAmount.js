@@ -25,6 +25,70 @@ export default async function handler(req, res) {
     const end = new Date(start);
     end.setDate(start.getDate() + 1);
 
+    // Get cumulative balance up to the end of the current day (all previous days + current day)
+    const cumulativeEnd = new Date(end);
+
+    // Get cumulative balance up to the current day
+    const cumulativePipeline = [
+      {
+        $match: { staffId: new mongoose.Types.ObjectId(staffId) },
+      },
+      {
+        $project: {
+          // filter allocatedAmounts up to current day
+          allocatedUpToCurrentDay: {
+            $filter: {
+              input: "$allocatedAmounts",
+              as: "alloc",
+              cond: {
+                $lt: ["$$alloc.date", cumulativeEnd],
+              },
+            },
+          },
+          // filter expenses up to current day
+          expensesUpToCurrentDay: {
+            $filter: {
+              input: "$expenses",
+              as: "exp",
+              cond: {
+                $lt: ["$$exp.date", cumulativeEnd],
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          allocatedUpToCurrentDaySum: {
+            $cond: [
+              { $gt: [{ $size: "$allocatedUpToCurrentDay" }, 0] },
+              { $sum: "$allocatedUpToCurrentDay.amount" },
+              0,
+            ],
+          },
+          expensesUpToCurrentDaySum: {
+            $cond: [
+              { $gt: [{ $size: "$expensesUpToCurrentDay" }, 0] },
+              { $sum: "$expensesUpToCurrentDay.spentAmount" },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          cumulativeAllocated: { $sum: "$allocatedUpToCurrentDaySum" },
+          cumulativeSpent: { $sum: "$expensesUpToCurrentDaySum" },
+        },
+      },
+    ];
+
+    const cumulativeResult = await PettyCash.aggregate(cumulativePipeline);
+    const cumulativeBalance = cumulativeResult[0] 
+      ? Math.max(0, cumulativeResult[0].cumulativeAllocated - cumulativeResult[0].cumulativeSpent)
+      : 0;
+
     // Aggregation: filter allocatedAmounts & expenses to only those entries within [start, end)
     const pipeline = [
       // Only include petty cash documents for this staff user
@@ -114,13 +178,13 @@ export default async function handler(req, res) {
           },
         },
       },
-      // Project nice shape
+      // Project nice shape with cumulative balance
       {
         $project: {
           _id: 0,
           globalAllocated: 1,
           globalSpent: 1,
-          globalRemaining: { $subtract: ["$globalAllocated", "$globalSpent"] },
+          globalRemaining: cumulativeBalance, // Use cumulative balance instead of day-specific calculation
           patients: 1,
         },
       },
@@ -128,14 +192,78 @@ export default async function handler(req, res) {
 
     const agg = await PettyCash.aggregate(pipeline);
 
+    // Get global cumulative amounts (all staff combined) up to current day
+    const globalCumulativePipeline = [
+      {
+        $project: {
+          // filter allocatedAmounts up to current day
+          allocatedUpToCurrentDay: {
+            $filter: {
+              input: "$allocatedAmounts",
+              as: "alloc",
+              cond: {
+                $lt: ["$$alloc.date", cumulativeEnd],
+              },
+            },
+          },
+          // filter expenses up to current day
+          expensesUpToCurrentDay: {
+            $filter: {
+              input: "$expenses",
+              as: "exp",
+              cond: {
+                $lt: ["$$exp.date", cumulativeEnd],
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          allocatedUpToCurrentDaySum: {
+            $cond: [
+              { $gt: [{ $size: "$allocatedUpToCurrentDay" }, 0] },
+              { $sum: "$allocatedUpToCurrentDay.amount" },
+              0,
+            ],
+          },
+          expensesUpToCurrentDaySum: {
+            $cond: [
+              { $gt: [{ $size: "$expensesUpToCurrentDay" }, 0] },
+              { $sum: "$expensesUpToCurrentDay.spentAmount" },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          globalAllocated: { $sum: "$allocatedUpToCurrentDaySum" },
+          globalSpent: { $sum: "$expensesUpToCurrentDaySum" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          globalAllocated: 1,
+          globalSpent: 1,
+          globalRemaining: { $subtract: ["$globalAllocated", "$globalSpent"] },
+        },
+      },
+    ];
+
+    const globalAgg = await PettyCash.aggregate(globalCumulativePipeline);
+    const globalResult = globalAgg[0] || { globalAllocated: 0, globalSpent: 0, globalRemaining: 0 };
+
     // if no entries for that date, return zeros and empty patient list
     if (!agg || agg.length === 0) {
       return res.status(200).json({
         success: true,
         date: start.toISOString(),
-        globalAllocated: 0,
-        globalSpent: 0,
-        globalRemaining: 0,
+        globalAllocated: 0, // Day-wise allocated (0 for this day)
+        globalSpent: 0, // Day-wise spent (0 for this day)
+        globalRemaining: globalResult.globalRemaining, // Cumulative remaining balance
         patients: [],
       });
     }
@@ -144,9 +272,9 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       date: start.toISOString(),
-      globalAllocated: result.globalAllocated,
-      globalSpent: result.globalSpent,
-      globalRemaining: result.globalRemaining,
+      globalAllocated: result.globalAllocated, // Day-wise allocated
+      globalSpent: result.globalSpent, // Day-wise spent
+      globalRemaining: globalResult.globalRemaining, // Cumulative remaining balance
       patients: result.patients,
     });
   } catch (err) {
