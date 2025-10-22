@@ -393,7 +393,7 @@ export default function ClinicDetail() {
                                             {" "}
                                             -{" "}
                                             <span className="text-[#2D9AA5] font-semibold">
-                                              ₹{subTreatment.price}
+                                              د.إ{subTreatment.price}
                                             </span>
                                           </>
                                         )}

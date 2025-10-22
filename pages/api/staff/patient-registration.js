@@ -47,7 +47,7 @@ async function addToPettyCashIfCash(user, patient, paidAmount) {
       // Update global total amount
       await PettyCash.updateGlobalTotalAmount(paidAmount, 'add');
       
-      console.log(`Added ₹${paidAmount} to PettyCash for staff ${user.name} and updated global total - Patient: ${patient.firstName} ${patient.lastName}`);
+      console.log(`Added د.إ${paidAmount} to PettyCash for staff ${user.name} and updated global total - Patient: ${patient.firstName} ${patient.lastName}`);
     } catch (error) {
       console.error("Error adding to PettyCash:", error);
       // Don't throw error to avoid breaking patient registration

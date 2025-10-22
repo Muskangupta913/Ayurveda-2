@@ -733,7 +733,7 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
                                 {" "}
                                 -{" "}
                                 <span className="text-[#2D9AA5] font-semibold">
-                                  ₹{subTreatment.price}
+                                  د.إ{subTreatment.price}
                                 </span>
                               </>
                             )}
@@ -1178,7 +1178,7 @@ function ClinicManagementDashboard() {
                       onChange={(value: string) =>
                         handleInputChange("pricing", value)
                       }
-                      placeholder="₹500 - ₹2000"
+                      placeholder="د.إ500 - د.إ2000"
                     />
                     <FormInput
                       label="Timings"

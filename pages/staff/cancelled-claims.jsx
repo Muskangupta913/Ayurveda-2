@@ -65,11 +65,11 @@ const ClaimCard = ({ claim, onView, onEdit }) => {
           </div>
           <div>
             <p className="text-gray-600 text-xs mb-0.5">Total Amount</p>
-            <p className="text-gray-900 font-bold">₹{claim.amount?.toFixed(2) || '0.00'}</p>
+            <p className="text-gray-900 font-bold">د.إ{claim.amount?.toFixed(2) || '0.00'}</p>
           </div>
           <div>
             <p className="text-gray-600 text-xs mb-0.5">Pending</p>
-            <p className="text-red-600 font-bold">₹{claim.pending?.toFixed(2) || '0.00'}</p>
+            <p className="text-red-600 font-bold">د.إ{claim.pending?.toFixed(2) || '0.00'}</p>
           </div>
         </div>
 
@@ -167,19 +167,19 @@ const ViewModal = ({ claim, onClose }) => {
               <div className="space-y-2 text-sm">
                 <div>
                   <p className="text-gray-600 text-xs">Total Amount</p>
-                  <p className="text-gray-900 font-bold text-base">₹{claim.amount?.toFixed(2) || '0.00'}</p>
+                  <p className="text-gray-900 font-bold text-base">د.إ{claim.amount?.toFixed(2) || '0.00'}</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-xs">Amount Paid</p>
-                  <p className="text-green-600 font-medium">₹{claim.paid?.toFixed(2) || '0.00'}</p>
+                  <p className="text-green-600 font-medium">د.إ{claim.paid?.toFixed(2) || '0.00'}</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-xs">Advance</p>
-                  <p className="text-blue-600 font-medium">₹{claim.advance?.toFixed(2) || '0.00'}</p>
+                  <p className="text-blue-600 font-medium">د.إ{claim.advance?.toFixed(2) || '0.00'}</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-xs">Pending</p>
-                  <p className="text-red-600 font-medium">₹{claim.pending?.toFixed(2) || '0.00'}</p>
+                  <p className="text-red-600 font-medium">د.إ{claim.pending?.toFixed(2) || '0.00'}</p>
                 </div>
               </div>
             </div>

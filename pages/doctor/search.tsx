@@ -1309,12 +1309,12 @@ export default function FindDoctor() {
                     <div className="flex justify-between items-center mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Min Price</p>
-                        <p className="text-lg font-bold text-[#2D9AA5]">₹ {priceRange[0].toLocaleString()}</p>
+                        <p className="text-lg font-bold text-[#2D9AA5]">د.إ {priceRange[0].toLocaleString()}</p>
                       </div>
                       <div className="w-px h-8 bg-gray-300"></div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Max Price</p>
-                        <p className="text-lg font-bold text-[#2D9AA5]">₹ {priceRange[1].toLocaleString()}</p>
+                        <p className="text-lg font-bold text-[#2D9AA5]">د.إ {priceRange[1].toLocaleString()}</p>
                       </div>
                     </div>
 
@@ -1323,7 +1323,7 @@ export default function FindDoctor() {
                       {/* Min Price Slider */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Minimum Price: ₹{priceRange[0].toLocaleString()}
+                          Minimum Price: د.إ{priceRange[0].toLocaleString()}
                         </label>
                         <input
                           type="range"
@@ -1346,7 +1346,7 @@ export default function FindDoctor() {
                       {/* Max Price Slider */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Maximum Price: ₹{priceRange[1].toLocaleString()}
+                          Maximum Price: د.إ{priceRange[1].toLocaleString()}
                         </label>
                         <input
                           type="range"
@@ -1369,8 +1369,8 @@ export default function FindDoctor() {
 
                     {/* Price Labels */}
                     <div className="flex justify-between text-xs text-gray-500 mt-3">
-                      <span>₹0</span>
-                      <span>₹10,000</span>
+                      <span>د.إ0</span>
+                      <span>د.إ10,000</span>
                     </div>
                   </div>
                 </div>

@@ -448,7 +448,7 @@
 //                             }
 //                           />
 //                           <span>
-//                             {sub.name} - ₹{sub.price ?? 0}
+//                             {sub.name} - د.إ{sub.price ?? 0}
 //                           </span>
 //                         </label>
 //                       ))}

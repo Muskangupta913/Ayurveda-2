@@ -273,7 +273,7 @@ function PatientsPage() {
                         <>
                           <div>
                             <span className="text-gray-500 block text-xs">Pending Amount</span>
-                            <span className="text-blue-600 font-semibold">₹{p.pending}</span>
+                            <span className="text-blue-600 font-semibold">د.إ{p.pending}</span>
                           </div>
                           <div>
                             <span className="text-gray-500 block text-xs">Invoice Date</span>

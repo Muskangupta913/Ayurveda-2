@@ -845,7 +845,7 @@ function PettyCashAndExpense() {
                           <div className="text-gray-700 text-xs">{item.patientPhone}</div>
                         </td>
                         <td className="px-3 py-3 text-center text-sm">
-                          {allocForDate.length > 0 ? allocForDate.map((a, i) => <div key={i} className="font-semibold text-gray-800">₹{a.amount}</div>) : <span className="text-gray-700">-</span>}
+                          {allocForDate.length > 0 ? allocForDate.map((a, i) => <div key={i} className="font-semibold text-gray-800">د.إ{a.amount}</div>) : <span className="text-gray-700">-</span>}
                         </td>
                         <td className="px-3 py-3 text-center text-sm">
                           {allocForDate.some((a) => a.receipts?.length > 0) ? allocForDate.map((a) => a.receipts?.map((r, i) => <a key={i} href={r.url || r} target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:underline text-xs">View {i + 1}</a>)) : <span className="text-gray-700">-</span>}
@@ -896,7 +896,7 @@ function PettyCashAndExpense() {
                         )}
                       </td>
                       <td className="px-3 py-3 text-center">
-                        <span className="font-bold text-gray-800 text-sm">₹{ex.spentAmount}</span>
+                        <span className="font-bold text-gray-800 text-sm">د.إ{ex.spentAmount}</span>
                       </td>
                       {isTodaySelected && (
                         <td className="px-3 py-3 text-center">
@@ -920,15 +920,15 @@ function PettyCashAndExpense() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="text-sm text-gray-700 mb-1">Allocated</div>
-              <div className="text-2xl font-bold text-blue-600">₹{globalData.globalAllocated}</div>
+              <div className="text-2xl font-bold text-blue-600">د.إ{globalData.globalAllocated}</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="text-sm text-gray-700 mb-1">Spent</div>
-              <div className="text-2xl font-bold text-red-600">₹{globalData.globalSpent}</div>
+              <div className="text-2xl font-bold text-red-600">د.إ{globalData.globalSpent}</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="text-sm text-gray-700 mb-1">Remaining</div>
-              <div className="text-2xl font-bold text-green-600">₹{globalData.globalRemaining || 0}</div>
+              <div className="text-2xl font-bold text-green-600">د.إ{globalData.globalRemaining || 0}</div>
             </div>
           </div>
         </div>
@@ -940,15 +940,15 @@ function PettyCashAndExpense() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-white rounded-lg p-4 text-center">
                 <div className="text-xs sm:text-sm text-gray-700 mb-1">Global Amount</div>
-                <div className="text-xl sm:text-2xl font-bold text-purple-600">₹{adminGlobalData.globalAmount}</div>
+                <div className="text-xl sm:text-2xl font-bold text-purple-600">د.إ{adminGlobalData.globalAmount}</div>
               </div>
               <div className="bg-white rounded-lg p-4 text-center">
                 <div className="text-xs sm:text-sm text-gray-700 mb-1">Total Allocated</div>
-                <div className="text-xl sm:text-2xl font-bold text-blue-600">₹{adminGlobalData.totalAllocated}</div>
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">د.إ{adminGlobalData.totalAllocated}</div>
               </div>
               <div className="bg-white rounded-lg p-4 text-center">
                 <div className="text-xs sm:text-sm text-gray-700 mb-1">Total Spent</div>
-                <div className="text-xl sm:text-2xl font-bold text-red-600">₹{adminGlobalData.totalSpent}</div>
+                <div className="text-xl sm:text-2xl font-bold text-red-600">د.إ{adminGlobalData.totalSpent}</div>
               </div>
               <div className="bg-white rounded-lg p-4 text-center">
                 <div className="text-xs sm:text-sm text-gray-700 mb-1">Total Staff</div>

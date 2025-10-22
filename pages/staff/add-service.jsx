@@ -436,7 +436,7 @@ function StaffAddServicePage() {
                             <Package className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
                             <span className="inline-block bg-indigo-50 text-indigo-700 text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg break-words">{item.package}</span>
                             {typeof item.packagePrice === "number" && (
-                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">₹{item.packagePrice.toFixed(2)}</span>
+                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">د.إ{item.packagePrice.toFixed(2)}</span>
                             )}
                           </div>
                         )}
@@ -447,7 +447,7 @@ function StaffAddServicePage() {
                               <p className="text-xs sm:text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed break-words">{item.treatment}</p>
                             </div>
                             {typeof item.treatmentPrice === "number" && (
-                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">₹{item.treatmentPrice.toFixed(2)}</span>
+                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">د.إ{item.treatmentPrice.toFixed(2)}</span>
                             )}
                           </div>
                         )}

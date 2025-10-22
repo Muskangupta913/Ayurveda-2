@@ -68,7 +68,7 @@ async function addTreatmentToPettyCashIfCash(user, membership, treatments) {
         // Update global total amount
         await PettyCash.updateGlobalTotalAmount(totalTreatmentAmount, 'add');
         
-        console.log(`Added ₹${totalTreatmentAmount} to PettyCash for staff ${user.name} from membership update - EMR: ${membership.emrNumber}, Patient: ${patientName}`);
+        console.log(`Added د.إ${totalTreatmentAmount} to PettyCash for staff ${user.name} from membership update - EMR: ${membership.emrNumber}, Patient: ${patientName}`);
       } catch (error) {
         console.error("Error adding treatment amounts to PettyCash:", error);
         // Don't throw error to avoid breaking membership update
@@ -239,7 +239,7 @@ export default async function handler(req, res) {
       
       // Validate transfer amount
       if (transferAmount > remainingBalance) {
-        return res.status(400).json({ success: false, message: `Transfer amount (₹${transferAmount}) cannot exceed remaining balance (₹${remainingBalance})` });
+        return res.status(400).json({ success: false, message: `Transfer amount (د.إ${transferAmount}) cannot exceed remaining balance (د.إ${remainingBalance})` });
       }
 
       // Record transfer (logical tracking)
