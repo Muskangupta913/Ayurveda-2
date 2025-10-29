@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import {
-  Heart,
   MapPin,
   Search,
   Star,
@@ -13,13 +12,10 @@ import {
   Shield,
   X,
 } from "lucide-react";
-// import { useAuth } from "../../context/AuthContext";
 import AuthModal from "../../components/AuthModal";
 import dayjs from "dayjs";
 import Image from "next/image";
-import SearchCard from "../../components/SearchCard";
-import CalculatorGames from "../../components/CalculatorGames";
-import Blog from "../../components/blog";
+import { Stethoscope } from "lucide-react";
 
 interface Doctor {
   _id: string;
@@ -96,10 +92,6 @@ export default function FindDoctor() {
   const [reviewsLoading, setReviewsLoading] = useState<{
     [key: string]: boolean;
   }>({});
-  // const [showReviewsFor, setShowReviewsFor] = useState<string | null>(null);
-  // const [expandedTreatments, setExpandedTreatments] = useState<
-  //   Record<string, boolean>
-  // >({});
 
   // Add ref for results section
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -345,22 +337,6 @@ export default function FindDoctor() {
       setReviewsLoading((prev) => ({ ...prev, [doctorId]: false }));
     }
   };
-
-  // const handleReviewClick = (doctor: Doctor) => {
-  //   if (!isAuthenticated) {
-  //     setPendingAction({ type: "review", doctor });
-  //     setAuthModalMode("login");
-  //     setShowAuthModal(true);
-  //     return;
-  //   }
-
-  //   const params = new URLSearchParams({
-  //     doctorId: doctor._id,
-  //     doctorName: doctor.user.name,
-  //   });
-
-  //   router.push(`/doctor/review-form?${params.toString()}`);
-  // };
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
@@ -833,60 +809,6 @@ export default function FindDoctor() {
     </div>
   );
 
-  // const WhyChooseUs = () => (
-  //   <div className="bg-gray-50 p-8">
-  //     <div className="flex items-center mb-8">
-  //       <div className="bg-blue-100 p-2 rounded-lg mr-4">
-  //         <Leaf className="w-6 h-6 text-blue-600" />
-  //       </div>
-  //       <h3 className="text-2xl font-semibold text-blue-700">
-  //         Why Choose Our Doctors?
-  //       </h3>
-  //     </div>
-
-  //     <div className="space-y-6">
-  //       {[
-  //         {
-  //           icon: <Shield className="w-5 h-5 text-blue-600" />,
-  //           title: "Verified Professionals",
-  //           desc: "All doctors are verified and certified with proven expertise",
-  //         },
-  //         {
-  //           icon: <Clock3 className="w-5 h-5 text-blue-600" />,
-  //           title: "Quick Appointments",
-  //           desc: "Get appointments within 24 hours with flexible scheduling",
-  //         },
-  //         {
-  //           icon: <HeartHandshake className="w-5 h-5 text-blue-600" />,
-  //           title: "Personalized Care",
-  //           desc: "Tailored treatment plans designed specifically for each patient",
-  //         },
-  //         {
-  //           icon: <ThumbsUp className="w-5 h-5 text-blue-600" />,
-  //           title: "High Success Rate",
-  //           desc: "95% patient satisfaction rate with proven treatment outcomes",
-  //         },
-  //         {
-  //           icon: <Zap className="w-5 h-5 text-blue-600" />,
-  //           title: "Modern Equipment",
-  //           desc: "Latest medical technology and state-of-the-art equipment",
-  //         },
-  //       ].map((item, index) => (
-  //         <div key={index} className="flex items-start space-x-4">
-  //           <div className="bg-blue-100 p-3 rounded-lg flex-shrink-0">
-  //             {item.icon}
-  //           </div>
-  //           <div>
-  //             <h4 className="font-semibold text-blue-700 text-lg mb-2">
-  //               {item.title}
-  //             </h4>
-  //             <p className="text-gray-600 leading-relaxed">{item.desc}</p>
-  //           </div>
-  //         </div>
-  //       ))}
-  //     </div>
-  //   </div>
-  // );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-20">
@@ -908,16 +830,28 @@ export default function FindDoctor() {
       <div className="">
         <div className="">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-            <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">
-                Find. Connect. Heal. With the Right <span className="text-[#2D9AA5]">Doctor</span>.
-              </h1>
-              <div className="flex justify-center items-center mb-4 sm:mb-6 w-full">
-                <div className="w-full max-w-4xl">
-
+            <div className="text-center mb-10">
+              <div className="flex items-center justify-center mb-4">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center mr-4 shadow-2xl"
+                  style={{
+                    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)'
+                  }}
+                >
+                  <Stethoscope className="w-6 h-6 text-white drop-shadow-sm" />
                 </div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-800 tracking-tight">
+                  Find Trusted Doctors
+                  <span className="block text-2xl sm:text-3xl lg:text-4xl text-blue-600 font-semibold mt-1">
+                    Near You
+                  </span>
+                </h1>
               </div>
+              <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
+                Browse and connect with verified doctors, specialists, and medical practitioners in your city
+              </p>
             </div>
+
 
             <div className="">
               <div className="">
@@ -925,7 +859,7 @@ export default function FindDoctor() {
                 <div className="hidden lg:flex gap-4 xl:gap-6 items-center justify-center">
                   <div className="relative flex-1 max-w-lg xl:max-w-xl">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                      <Search className="h-5 w-5 text-[#2D9AA5]" />
+                      <Search className="h-5 w-5 text-blue-500" />
                     </div>
                     <input
                       type="text"
@@ -997,7 +931,7 @@ export default function FindDoctor() {
 
                   <div className="flex-1 relative group max-w-lg xl:max-w-xl">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                      <MapPin className="h-5 w-5 text-[#2D9AA5] transition-colors" />
+                      <MapPin className="h-5 w-5 text-blue-500 transition-colors" />
                     </div>
                     <input
                       placeholder="City, area, or postal code"
@@ -1022,7 +956,7 @@ export default function FindDoctor() {
                   <button
                     onClick={locateMe}
                     disabled={loading}
-                    className="flex items-center px-4 xl:px-6 py-4 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-xl cursor-pointer hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5]/80 transition-all font-medium disabled:opacity-50 whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105 disabled:hover:scale-100"
+                    className="flex items-center px-4 xl:px-6 py-4 bg-blue-500 text-white rounded-xl cursor-pointer hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5]/80 transition-all font-medium disabled:opacity-50 whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105 disabled:hover:scale-100"
                   >
                     <Navigation className="w-5 h-5 mr-2 flex-shrink-0" />
                     <span className="hidden xl:inline">Near Me</span>
@@ -1030,7 +964,7 @@ export default function FindDoctor() {
 
                   <button
                     onClick={handleSearch}
-                    className="px-4 xl:px-6 py-4 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-xl font-medium cursor-pointer hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5]/80 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                    className="px-4 xl:px-6 py-4 bg-blue-500 text-white rounded-xl font-medium cursor-pointer hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5]/80 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     Search Doctor
                   </button>
@@ -1289,9 +1223,7 @@ export default function FindDoctor() {
             </div>
           </div>
         </div>
-        <SearchCard
-          hideCards={["doctor"]}
-        />
+
       </div>
 
       {/* Results Section */}
@@ -1309,12 +1241,12 @@ export default function FindDoctor() {
                     <div className="flex justify-between items-center mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100">
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Min Price</p>
-                        <p className="text-lg font-bold text-[#2D9AA5]">₹ {priceRange[0].toLocaleString()}</p>
+                        <p className="text-lg font-bold text-blue-500">₹ {priceRange[0].toLocaleString()}</p>
                       </div>
                       <div className="w-px h-8 bg-gray-300"></div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Max Price</p>
-                        <p className="text-lg font-bold text-[#2D9AA5]">₹ {priceRange[1].toLocaleString()}</p>
+                        <p className="text-lg font-bold text-blue-500">₹ {priceRange[1].toLocaleString()}</p>
                       </div>
                     </div>
 
@@ -1588,16 +1520,12 @@ export default function FindDoctor() {
                           </div>
 
                           {doctor.distance && (
-                            <div className="absolute bottom-3 left-3 bg-[#2D9AA5] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+                            <div className="absolute bottom-3 left-3 bg-orange-400 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
                               <Navigation className="w-2 h-2 mr-1" />
                               {formatDistance(doctor.distance)}
                             </div>
                           )}
 
-                          {/* Heart icon */}
-                          <button className="absolute top-3 left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
-                            <Heart className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
-                          </button>
                         </div>
                         {/* Rating */}
                         <div className="flex items-center gap-2 mb-2 mt-2 ml-1">
@@ -1654,8 +1582,6 @@ export default function FindDoctor() {
                             )}
                           </div>
 
-
-
                           {/* Availability */}
                           <div className="mb-3">
                             {(() => {
@@ -1692,24 +1618,6 @@ export default function FindDoctor() {
 
                           {/* Action buttons */}
                           <div className="flex gap-2">
-                            {/* <button
-                              onClick={() => {
-                                setSelectedDoctor(doctor);
-                                setShowCalendarModal(true);
-                              }}
-                              className="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/90 text-white rounded-lg hover:from-[#2D9AA5]/90 hover:to-[#2D9AA5] transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
-                            >
-                              <Calendar className="w-3 h-3 mr-1" />
-                              View Slot
-                            </button> */}
-
-                            {/* <button
-                              onClick={() => handleReviewClick(doctor)}
-                              className="flex items-center justify-center px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md"
-                            >
-                              <Star className="w-3 h-3" />
-                            </button> */}
-
                             {doctor.location?.coordinates?.length === 2 && (
                               <a
                                 href={`https://www.google.com/maps/dir/?api=1&destination=${doctor.location.coordinates[1]},${doctor.location.coordinates[0]}`}
@@ -1742,8 +1650,6 @@ export default function FindDoctor() {
                               </a>
                             </div>
                           )}
-
-
                         </div>
                       </div>
                     );
@@ -1754,155 +1660,6 @@ export default function FindDoctor() {
           </div>
         )}
       </div>
-      <CalculatorGames />
-
-      {/* // Section: Why Choose Our Doctors - ZEVA */}
-      <div className="py-16 bg-gradient-to-br from-slate-50 to-white">
-        {/* Container to center content and add padding */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          {/* Section Heading */}
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4" style={{ color: '#2D9AA5' }}>
-              Why Choose Our Doctors at ZEVA
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experience healthcare excellence with our carefully selected, verified medical professionals who are committed to your wellbeing.
-            </p>
-          </div>
-
-          {/* Grid for listing reasons/features */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-
-            {/* Feature Card 1 */}
-            <div className="bg-white border border-[#2D9AA5] p-5 rounded-lg shadow-sm hover:shadow-lg hover:border-2 transition-all duration-300 group">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-[#2D9AA5]">Board-Certified Excellence</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">Verified credentials and rigorous background checks for your safety.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Card 2 */}
-            <div className="bg-white border border-[#2D9AA5] p-5 rounded-lg shadow-sm hover:shadow-lg hover:border-2 transition-all duration-300 group">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-[#2D9AA5]">24/7 Availability</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">Round-the-clock consultations with instant appointment booking.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Card 3 */}
-            <div className="bg-white border border-[#2D9AA5] p-5 rounded-lg shadow-sm hover:shadow-lg hover:border-2 transition-all duration-300 group">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-[#2D9AA5]">Diverse Specializations</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">General practitioners to cardiology, dermatology, and pediatrics.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Card 4 */}
-            <div className="bg-white border border-[#2D9AA5] p-5 rounded-lg shadow-sm hover:shadow-lg hover:border-2 transition-all duration-300 group">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-[#2D9AA5]">Patient-Reviewed Excellence</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">High satisfaction ratings with continuous feedback monitoring.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Card 5 */}
-            <div className="bg-white border border-[#2D9AA5] p-5 rounded-lg shadow-sm hover:shadow-lg hover:border-2 transition-all duration-300 group">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-[#2D9AA5]">Advanced Technology</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">Secure video consultations and digital prescription management.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Card 6 */}
-            <div className="bg-white border border-[#2D9AA5] p-5 rounded-lg shadow-sm hover:shadow-lg hover:border-2 transition-all duration-300 group">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-[#2D9AA5]">Compassionate Care</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">Patient-centered care with personalized treatment plans.</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Call to Action */}
-          <div className="text-center mt-12">
-            <p className="text-lg text-gray-600 mb-6">Join thousands of satisfied patients who trust ZEVA for their healthcare needs.</p>
-            <a href="#" className="inline-block bg-[#2D9AA5] hover:bg-[#248A94] text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-300 shadow-lg hover:shadow-xl">
-              Find Your Doctor Today
-            </a>
-          </div>
-        </div>
-      </div>
-      <div>
-        <Blog />
-      </div>
-
-
-      {/* CSS Styles for Slider Thumb */}
-      {/* <style jsx>{`
-        .slider-thumb::-webkit-slider-thumb {
-          appearance: none;
-          height: 16px;
-          width: 16px;
-          border-radius: 50%;
-          background: #2D9AA5;
-          cursor: pointer;
-          border: 2px solid #ffffff;
-          box-shadow: 0 0 0 1px rgba(45, 154, 165, 0.3);
-        }
-
-        .slider-thumb::-moz-range-thumb {
-          height: 16px;
-          width: 16px;
-          border-radius: 50%;
-          background: #2D9AA5;
-          cursor: pointer;
-          border: 2px solid #ffffff;
-          box-shadow: 0 0 0 1px rgba(45, 154, 165, 0.3);
-        }
-      `}</style> */}
     </div>
   );
 }

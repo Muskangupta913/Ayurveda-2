@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Calendar, Heart, Baby, Download, User, Stethoscope, Home, Plus, Trash2, AlertCircle, Clock, Target, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Heart, Baby, Download, User, Stethoscope, Home, Plus, Trash2, AlertCircle, Clock, Target, ChevronLeft, ChevronRight, Layout } from 'lucide-react';
+import L1 from '../../../components/Layout';
 
 // Define jsPDF type properly to avoid TypeScript errors
 interface JSPDF {
@@ -1275,5 +1276,5 @@ const ZevaPregnancyCalculator: PageWithLayout = () => {
 export default ZevaPregnancyCalculator;
 
 ZevaPregnancyCalculator.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; 
+  return <L1>{page}</L1>; 
 };

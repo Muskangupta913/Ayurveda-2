@@ -10,16 +10,29 @@ interface AuthModalProps {
   initialMode?: 'login' | 'register';
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, initialMode = 'login' }) => {
+const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialMode = 'login'
+}) => {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login, register } = useAuth();
+  const [isVisible, setIsVisible] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '', email: '', password: '', phone: ''
+    name: '',
+    email: '',
+    password: '',
+    phone: ''
   });
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -28,11 +41,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, initi
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => { document.body.style.overflow = 'unset'; };
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
     setError('');
   };
 
@@ -40,7 +59,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, initi
     e.preventDefault();
     setLoading(true);
     setError('');
-  
+
     try {
       if (mode === 'login') {
         await login(formData.email, formData.password);
@@ -59,7 +78,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, initi
       setLoading(false);
     }
   };
-  
 
   const switchMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
@@ -74,7 +92,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, initi
   };
 
   const handleCloseButtonClick = (e: React.MouseEvent) => {
-    // console.log('Close button clicked!'); // Debug log
     e.preventDefault();
     e.stopPropagation();
     handleClose();
@@ -88,176 +105,232 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, initi
 
   if (!isOpen) return null;
 
- return (
-  <div 
-    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-    onClick={handleBackdropClick}
-  >
-    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto relative scrollbar-hide mx-auto overflow-x-hidden">
-      {/* Custom scrollbar styles */}
-      <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;  /* Internet Explorer 10+ */
-          scrollbar-width: none;  /* Firefox */
-        }
-        .scrollbar-hide::-webkit-scrollbar { 
-          display: none;  /* Safari and Chrome */
-        }
-      `}</style>
-
-      {/* Decorative Elements - Medical themed */}
-      <div className="absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-br from-[#2D9AA5]/20 to-[#248A94]/20 rounded-full -translate-y-10 translate-x-10 sm:-translate-y-16 sm:translate-x-16 overflow-hidden"></div>
-      <div className="absolute bottom-0 left-0 w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-tr from-[#3AAFBA]/20 to-[#2D9AA5]/20 rounded-full translate-y-8 -translate-x-8 sm:translate-y-12 sm:-translate-x-12 overflow-hidden"></div>
-
-      {/* Close Button - Touch friendly */}
-      <button
-        type="button"
-        onClick={handleCloseButtonClick}
-        className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 sm:p-2 transition-all duration-200 z-50 cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
-        style={{ zIndex: 9999 }}
+  return (
+    <div
+      className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 transition-opacity duration-300 overflow-hidden ${
+        isVisible ? 'opacity-100' : 'opacity-0'
+      }`}
+      onClick={handleBackdropClick}
+      style={{ touchAction: 'none' }}
+    >
+      <div
+        className={`bg-white rounded-2xl shadow-xl w-full max-w-xl transform transition-all duration-300 ${
+          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        }`}
+        onClick={(e) => e.stopPropagation()}
       >
-        <X className="w-5 h-5 pointer-events-none" />
-      </button>
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={handleCloseButtonClick}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
-      {/* Header - Medical themed with new color */}
-      <div className="bg-gradient-to-br from-[#2D9AA5] via-[#248A94] to-[#1F7580] text-white p-4 pb-6 sm:p-6 sm:pb-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
-        
-        {/* Medical cross pattern overlay */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-4 left-8 w-6 h-6 text-white text-2xl">⚕️</div>
-          <div className="absolute top-12 right-12 w-6 h-6 text-white text-lg">⚕️</div>
-          <div className="absolute bottom-8 left-16 w-6 h-6 text-white text-xl">⚕️</div>
-        </div>
-        
-        <div className="relative z-10">
-          <div className="flex items-center mb-2">
-            <span className="text-2xl sm:text-3xl mr-3">⚕️</span>
-            <h2 className="text-xl sm:text-2xl font-bold pr-12 sm:pr-0">
-              {mode === 'login' ? 'Welcome Back!' : 'Join Our Medical Portal!'}
-            </h2>
+        {/* Header - Reduced padding for register mode */}
+        <div className={`px-8 ${mode === 'register' ? 'pt-6 pb-2' : 'pt-8 pb-4'} text-center`}>
+          <div className="flex justify-center mb-2 animate-fade-in">
+            <div className="bg-gray-100 rounded-full p-3 transition-transform duration-300 hover:scale-110">
+              <span className="text-2xl">⚕️</span>
+            </div>
           </div>
-          <p className="text-[#B8E5E9] opacity-90 text-sm sm:text-base pr-12 sm:pr-0">
-            {mode === 'login' ? 'Sign in' : 'Create your account'} to access your medical records, book appointments, and more.
+          <h2 className="text-xl font-semibold text-gray-900 mb-1 animate-slide-down">
+            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+          </h2>
+          <p className="text-gray-500 text-sm animate-slide-down" style={{ animationDelay: '0.1s' }}>
+            {mode === 'login' ? 'Sign in to continue' : 'Join us today'}
           </p>
         </div>
-      </div>
 
-      {/* Form - Responsive padding and inputs */}
-      <div className="p-4 sm:p-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'register' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#2D9AA5] w-5 h-5" />
-                <input
-                  type="text" name="name" value={formData.name} onChange={handleInputChange} required
-                  className="text-black w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5]/30 focus:border-[#2D9AA5] transition-all bg-gray-50 focus:bg-white text-sm sm:text-base min-h-[48px]"
-                  placeholder="Enter your full name"
-                />
-              </div>
-            </div>
-          )}
+        <style jsx>{`
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+              transform: scale(0.9);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#2D9AA5] w-5 h-5" />
-              <input
-                type="email" name="email" value={formData.email} onChange={handleInputChange} required
-                className="text-black w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5]/30 focus:border-[#2D9AA5] transition-all bg-gray-50 focus:bg-white text-sm sm:text-base min-h-[48px]"
-                placeholder="Enter your email"
-              />
-            </div>
-          </div>
+          @keyframes slide-down {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
 
-          {mode === 'register' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#2D9AA5] w-5 h-5" />
-                <input
-                  type="tel" name="phone" value={formData.phone} onChange={handleInputChange} required
-                  className="text-black w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5]/30 focus:border-[#2D9AA5] transition-all bg-gray-50 focus:bg-white text-sm sm:text-base min-h-[48px]"
-                  placeholder="Enter your phone number"
-                />
-              </div>
-            </div>
-          )}
+          @keyframes slide-up {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#2D9AA5] w-5 h-5" />
-              <input
-                type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleInputChange} required
-                className="text-black w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2D9AA5]/30 focus:border-[#2D9AA5] transition-all bg-gray-50 focus:bg-white text-sm sm:text-base min-h-[48px]"
-                placeholder="Enter your password"
-              />
-              <button
-                type="button" onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#2D9AA5] hover:text-[#248A94] p-1 rounded-full hover:bg-[#2D9AA5]/10 min-w-[44px] min-h-[44px] flex items-center justify-center transition-all"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
+          .animate-fade-in {
+            animation: fade-in 0.5s ease-out;
+          }
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-              <span>⚠️</span> 
-              <span className="break-words">{error}</span>
-            </div>
-          )}
+          .animate-slide-down {
+            animation: slide-down 0.5s ease-out;
+          }
 
-          <button
-            type="submit" disabled={loading}
-            className="w-full bg-gradient-to-r from-[#2D9AA5] via-[#248A94] to-[#1F7580] text-white py-3 px-4 rounded-xl hover:from-[#248A94] hover:via-[#1F7580] hover:to-[#1A646C] transition-all font-semibold disabled:opacity-50 shadow-lg hover:shadow-xl min-h-[48px] text-sm sm:text-base"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                <span className="text-sm sm:text-base">
-                  {mode === 'login' ? 'Signing In...' : 'Creating Account...'}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-lg">⚕️</span>
-                <span className="text-sm sm:text-base">
-                  {mode === 'login' ? 'Sign In' : 'Create Account'}
-                </span>
+          .animate-slide-up {
+            animation: slide-up 0.5s ease-out;
+          }
+        `}</style>
+
+        {/* Form - Reduced spacing for register mode */}
+        <div className={`px-8 ${mode === 'register' ? 'pt-1 pb-3' : 'pt-2 pb-4'}`}>
+          <form onSubmit={handleSubmit} className={mode === 'register' ? 'space-y-2' : 'space-y-2.5'}>
+            {mode === 'register' && (
+              <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <div className="relative group">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-all duration-300 group-focus-within:text-gray-600" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                    placeholder="John Doe"
+                  />
+                </div>
               </div>
             )}
-          </button>
-        </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm sm:text-base">
-            {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
-            <button
-              type="button"
-              onClick={switchMode}
-              className="ml-2 text-[#2D9AA5] hover:text-[#248A94] font-semibold min-h-[44px] inline-flex items-center transition-colors"
+            <div
+              className="animate-slide-up"
+              style={{ animationDelay: mode === 'register' ? '0.2s' : '0.1s' }}
             >
-              {mode === 'login' ? 'Sign Up' : 'Sign In'}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-all duration-300 group-focus-within:text-gray-600" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                  placeholder="your@email.com"
+                />
+              </div>
+            </div>
+
+            {mode === 'register' && (
+              <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <div className="relative group">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-all duration-300 group-focus-within:text-gray-600" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                    className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                    placeholder="+1 (555) 000-0000"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div
+              className="animate-slide-up"
+              style={{ animationDelay: mode === 'register' ? '0.4s' : '0.2s' }}
+            >
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <div className="relative group">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-all duration-300 group-focus-within:text-gray-600" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required
+                  className="text-black w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-lg text-sm animate-slide-up">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 px-4 rounded-lg font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] animate-slide-up"
+              style={{ animationDelay: mode === 'register' ? '0.5s' : '0.3s' }}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <span>{mode === 'login' ? 'Signing in...' : 'Creating account...'}</span>
+                </div>
+              ) : (
+                mode === 'login' ? 'Sign In' : 'Create Account'
+              )}
             </button>
-          </p>
-          
-          {/* Medical trust indicators */}
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+          </form>
+
+          <div
+            className={`${mode === 'register' ? 'mt-3' : 'mt-5'} text-center animate-slide-up`}
+            style={{ animationDelay: mode === 'register' ? '0.6s' : '0.4s' }}
+          >
+            <p className="text-sm text-gray-600">
+              {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+              <button
+                type="button"
+                onClick={switchMode}
+                className="ml-1 text-gray-900 hover:text-gray-700 font-medium transition-colors"
+              >
+                {mode === 'login' ? 'Sign up' : 'Sign in'}
+              </button>
+            </p>
+          </div>
+
+          {/* Trust Badge - Reduced spacing for register mode */}
+          <div
+            className={`${mode === 'register' ? 'mt-3 pt-3' : 'mt-5 pt-5'} border-t border-gray-200 flex items-center justify-center gap-4 text-xs text-gray-500 animate-slide-up`}
+            style={{ animationDelay: mode === 'register' ? '0.7s' : '0.5s' }}
+          >
+            <div className="flex items-center gap-1">
+              <span>🔒</span>
+              <span>Secure</span>
+            </div>
+            <div className="flex items-center gap-1">
               <span>⚕️</span>
-              <span>Secure & HIPAA Compliant</span>
-              <span>⚕️</span>
+              <span>HIPAA Compliant</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default AuthModal;

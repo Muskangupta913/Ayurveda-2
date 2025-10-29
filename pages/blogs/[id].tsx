@@ -419,42 +419,167 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-violet-50">
       <Toaster position="top-right" gutter={8} />
       {seo && (
         <Head>
           <title>{seo.title}</title>
           <meta name="description" content={seo.description} />
-          {/* Open Graph */}
           <meta property="og:type" content="article" />
           <meta property="og:title" content={seo.title} />
           <meta property="og:description" content={seo.description} />
           <meta property="og:image" content={seo.image} />
           <meta property="og:url" content={seo.url} />
           <meta property="og:site_name" content="Global Ayurveda" />
-          {/* Twitter */}
           <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:title" content={seo.title} />
           <meta name="twitter:description" content={seo.description} />
           <meta name="twitter:image" content={seo.image} />
-          {/* Quill CSS to preserve editor formatting on view page */}
-          <link
-            rel="stylesheet"
-            href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
-          />
+          <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.6/quill.snow.css" />
         </Head>
       )}
 
       <style jsx global>{`
-        /* Professional typography and spacing */
-        .blog-container {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-          line-height: 1.7;
-          color: #2c3e50;
-        }
+      .blog-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        line-height: 1.7;
+        color: #2c3e50;
+      }
 
-        /* Enhanced blog content media styling - UNIFORM SIZE FOR ALL IMAGES */
+      .blog-content img,
+.blog-content video,
+.blog-content iframe,
+.blog-content embed,
+.blog-content object,
+.blog-content * img,
+.blog-content * video,
+.blog-content * iframe,
+.blog-content * embed,
+.blog-content * object {
+  display: block !important;
+  margin: 2.5rem auto !important;
+  width: 100% !important;
+  max-width: 700px !important;
+  height: 400px !important;
+  object-fit: contain !important; /* ✅ show full image, no cropping */
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(139, 92, 246, 0.15), 0 8px 24px rgba(139, 92, 246, 0.08) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+  transition: all 0.4s ease !important;
+  background-color: #f9f9ff !important; /* optional: adds background around image */
+}
+
+
+      
+
+      .blog-content iframe[src*="youtube"],
+      .blog-content iframe[src*="youtu.be"],
+      .blog-content iframe[src*="drive.google"],
+      .blog-content iframe[src*="docs.google"],
+      .blog-content iframe[src*="googleapis"],
+      .blog-content iframe[src*="embed"],
+      .blog-content iframe[title*="YouTube"],
+      .blog-content iframe[title*="Google Drive"],
+      .blog-content *[src*="youtube"],
+      .blog-content *[src*="youtu.be"],
+      .blog-content *[src*="drive.google"],
+      .blog-content *[src*="docs.google"] {
+        display: block !important;
+        margin: 2.5rem auto !important;
+        width: 100% !important;
+        max-width: 700px !important;
+        height: 400px !important;
+        border-radius: 16px !important;
+        border: none !important;
+        box-shadow: 0 20px 60px rgba(139, 92, 246, 0.15), 0 8px 24px rgba(139, 92, 246, 0.08) !important;
+        transition: all 0.4s ease !important;
+      }
+
+      .blog-content *:has(iframe[src*="youtube"]),
+      .blog-content *:has(iframe[src*="youtu.be"]),
+      .blog-content *:has(iframe[src*="drive.google"]),
+      .blog-content *:has(iframe[src*="docs.google"]),
+      .blog-content *:has(*[src*="youtube"]),
+      .blog-content *:has(*[src*="youtu.be"]),
+      .blog-content *:has(*[src*="drive.google"]) {
+        text-align: center !important;
+        display: block !important;
+        width: 100% !important;
+      }
+
+      .blog-content .video-wrapper,
+      .blog-content .embed-responsive,
+      .blog-content .youtube-embed,
+      .blog-content .video-embed,
+      .blog-content .iframe-wrapper {
+        text-align: center !important;
+        display: block !important;
+        width: 100% !important;
+      }
+
+      .blog-content .ql-align-center { text-align: center !important; }
+      .blog-content .ql-align-right { text-align: right !important; }
+      .blog-content .ql-align-justify { text-align: justify !important; }
+      .blog-content .ql-align-left { text-align: left !important; }
+
+      .blog-content p {
+        margin-bottom: 1.8rem;
+        font-size: 1.125rem;
+        color: #374151;
+        line-height: 1.8;
+      }
+
+      .blog-content h1,
+      .blog-content h2,
+      .blog-content h3,
+      .blog-content h4 {
+        color: #1f2937;
+        font-weight: 700;
+        margin-top: 3rem;
+        margin-bottom: 1.5rem;
+        line-height: 1.3;
+      }
+
+      .blog-content h1 { font-size: 2.5rem; }
+      .blog-content h2 { font-size: 2rem; color: #7c3aed; }
+      .blog-content h3 { font-size: 1.5rem; }
+
+      .blog-content blockquote {
+        border-left: 4px solid #7c3aed;
+        background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        padding: 1.5rem 2rem;
+        margin: 2rem 0;
+        font-style: italic;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+      }
+
+      .blog-content ul,
+      .blog-content ol {
+        margin: 1.5rem 0;
+        padding-left: 2rem;
+        list-style-position: outside;
+      }
+
+      .blog-content li {
+        margin-bottom: 0.5rem;
+        color: #374151;
+      }
+
+      .blog-content ul { list-style-type: disc; }
+      .blog-content ol { list-style-type: decimal; }
+      .blog-content ul ul { list-style-type: circle; }
+      .blog-content ul ul ul { list-style-type: square; }
+
+      .blog-content .ql-size-small { font-size: 0.875rem; }
+      .blog-content .ql-size-large { font-size: 1.5rem; }
+      .blog-content .ql-size-huge { font-size: 2.25rem; }
+
+      .blog-content .ql-font-serif { font-family: Georgia, Cambria, "Times New Roman", Times, serif; }
+      .blog-content .ql-font-monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .blog-content .ql-font-sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; }
+
+      @media (max-width: 768px) {
         .blog-content img,
         .blog-content video,
         .blog-content iframe,
@@ -464,424 +589,92 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
         .blog-content * video,
         .blog-content * iframe,
         .blog-content * embed,
-        .blog-content * object {
-          display: block !important;
-          margin: 2.5rem auto !important;
-          width: 700px !important;
-          max-width: 700px !important;
-          min-width: 700px !important;
-          height: 400px !important;
-          max-height: 400px !important;
-          min-height: 400px !important;
-          object-fit: cover !important;
-          border-radius: 16px !important;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08),
-            0 8px 24px rgba(0, 0, 0, 0.04) !important;
-          border: 1px solid rgba(255, 255, 255, 0.2) !important;
-          transition: all 0.4s ease !important;
-        }
-
-        .blog-content img:hover,
-        .blog-content video:hover,
-        .blog-content iframe:hover {
-          transform: translateY(-4px) scale(1.02) !important;
-          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.12),
-            0 12px 32px rgba(0, 0, 0, 0.08) !important;
-        }
-
-        /* Enhanced YouTube and Google Drive embeds - UNIFORM SIZE */
+        .blog-content * object,
         .blog-content iframe[src*="youtube"],
         .blog-content iframe[src*="youtu.be"],
         .blog-content iframe[src*="drive.google"],
-        .blog-content iframe[src*="docs.google"],
-        .blog-content iframe[src*="googleapis"],
-        .blog-content iframe[src*="embed"],
-        .blog-content iframe[title*="YouTube"],
-        .blog-content iframe[title*="Google Drive"],
         .blog-content *[src*="youtube"],
         .blog-content *[src*="youtu.be"],
-        .blog-content *[src*="drive.google"],
-        .blog-content *[src*="docs.google"] {
-          display: block !important;
-          margin: 2.5rem auto !important;
-          width: 700px !important;
-          max-width: 700px !important;
-          min-width: 700px !important;
-          height: 400px !important;
-          max-height: 400px !important;
-          min-height: 400px !important;
-          border-radius: 16px !important;
-          border: none !important;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08),
-            0 8px 24px rgba(0, 0, 0, 0.04) !important;
-          transition: all 0.4s ease !important;
+        .blog-content *[src*="drive.google"] {
+          max-width: 100% !important;
+          height: 300px !important;
+          margin: 1.5rem auto !important;
         }
+        .blog-content p { font-size: 1rem; }
+        .blog-content h1 { font-size: 2rem; }
+        .blog-content h2 { font-size: 1.75rem; }
+      }
 
-        .blog-content iframe[src*="youtube"]:hover,
-        .blog-content iframe[src*="youtu.be"]:hover {
-          transform: translateY(-4px) scale(1.02) !important;
-          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.12),
-            0 12px 32px rgba(0, 0, 0, 0.08) !important;
+      @media (max-width: 640px) {
+        .blog-content img,
+        .blog-content video,
+        .blog-content iframe,
+        .blog-content embed,
+        .blog-content object,
+        .blog-content * img,
+        .blog-content * video,
+        .blog-content * iframe,
+        .blog-content * embed,
+        .blog-content * object,
+        .blog-content iframe[src*="youtube"],
+        .blog-content iframe[src*="youtu.be"],
+        .blog-content iframe[src*="drive.google"],
+        .blog-content *[src*="youtube"],
+        .blog-content *[src*="youtu.be"],
+        .blog-content *[src*="drive.google"] {
+          height: 250px !important;
         }
+      }
 
-        /* Video wrapper enhancements */
-        .blog-content *:has(iframe[src*="youtube"]),
-        .blog-content *:has(iframe[src*="youtu.be"]),
-        .blog-content *:has(iframe[src*="drive.google"]),
-        .blog-content *:has(iframe[src*="docs.google"]),
-        .blog-content *:has(*[src*="youtube"]),
-        .blog-content *:has(*[src*="youtu.be"]),
-        .blog-content *:has(*[src*="drive.google"]) {
-          text-align: center !important;
-          display: block !important;
-          width: 100% !important;
-        }
+      .blog-container::-webkit-scrollbar { width: 8px; }
+      .blog-container::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+      .blog-container::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%); border-radius: 4px; }
+      .blog-container::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%); }
 
-        .blog-content .video-wrapper,
-        .blog-content .embed-responsive,
-        .blog-content .youtube-embed,
-        .blog-content .video-embed,
-        .blog-content .iframe-wrapper {
-          text-align: center !important;
-          display: block !important;
-          width: 100% !important;
-        }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-4px); }
+      }
 
-        .blog-content .video-wrapper iframe,
-        .blog-content .embed-responsive iframe,
-        .blog-content .youtube-embed iframe,
-        .blog-content .video-embed iframe,
-        .blog-content .iframe-wrapper iframe {
-          display: block !important;
-          margin: 2.5rem auto !important;
-          width: 700px !important;
-          max-width: 700px !important;
-          min-width: 700px !important;
-          height: 400px !important;
-          max-height: 400px !important;
-          min-height: 400px !important;
-          border-radius: 16px !important;
-          border: none !important;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08),
-            0 8px 24px rgba(0, 0, 0, 0.04) !important;
-        }
+      .floating { animation: float 3s ease-in-out infinite; }
 
-        /* Text alignment controls */
-        .blog-content .ql-align-center {
-          text-align: center !important;
-        }
-        .blog-content .ql-align-right {
-          text-align: right !important;
-        }
-        .blog-content .ql-align-justify {
-          text-align: justify !important;
-        }
-        .blog-content .ql-align-left {
-          text-align: left !important;
-        }
+      @keyframes pulse-ring {
+        0% { transform: scale(0.8); }
+        40%, 50% { opacity: 0; }
+        100% { opacity: 0; transform: scale(1.2); }
+      }
 
-        /* Enhanced text styling */
-        .blog-content p {
-          margin-bottom: 1.8rem;
-          font-size: 1.125rem;
-          color: #374151;
-          line-height: 1.8;
-        }
-
-        .blog-content h1,
-        .blog-content h2,
-        .blog-content h3,
-        .blog-content h4 {
-          color: #1f2937;
-          font-weight: 700;
-          margin-top: 3rem;
-          margin-bottom: 1.5rem;
-          line-height: 1.3;
-        }
-
-        .blog-content h1 {
-          font-size: 2.5rem;
-        }
-
-        .blog-content h2 {
-          font-size: 2rem;
-          color: #2d9aa5;
-        }
-
-        .blog-content h3 {
-          font-size: 1.5rem;
-        }
-
-        .blog-content blockquote {
-          border-left: 4px solid #2d9aa5;
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-          padding: 1.5rem 2rem;
-          margin: 2rem 0;
-          font-style: italic;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .blog-content ul,
-        .blog-content ol {
-          margin: 1.5rem 0;
-          padding-left: 2rem;
-          list-style-position: outside;
-        }
-
-        .blog-content li {
-          margin-bottom: 0.5rem;
-          color: #374151;
-        }
-
-        /* Ensure list markers appear */
-        .blog-content ul {
-          list-style-type: disc;
-        }
-        .blog-content ol {
-          list-style-type: decimal;
-        }
-        .blog-content ul ul {
-          list-style-type: circle;
-        }
-        .blog-content ul ul ul {
-          list-style-type: square;
-        }
-
-        /* Quill font size classes */
-        .blog-content .ql-size-small {
-          font-size: 0.875rem;
-        }
-        .blog-content .ql-size-large {
-          font-size: 1.5rem;
-        }
-        .blog-content .ql-size-huge {
-          font-size: 2.25rem;
-        }
-
-        /* Quill font family classes */
-        .blog-content .ql-font-serif {
-          font-family: Georgia, Cambria, "Times New Roman", Times, serif;
-        }
-        .blog-content .ql-font-monospace {
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-            "Liberation Mono", "Courier New", monospace;
-        }
-        .blog-content .ql-font-sans {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-        }
-
-        /* Responsive design - MAINTAINING UNIFORM SIZES */
-        @media (max-width: 768px) {
-          .blog-content img,
-          .blog-content video,
-          .blog-content iframe,
-          .blog-content embed,
-          .blog-content object,
-          .blog-content * img,
-          .blog-content * video,
-          .blog-content * iframe,
-          .blog-content * embed,
-          .blog-content * object,
-          .blog-content iframe[src*="youtube"],
-          .blog-content iframe[src*="youtu.be"],
-          .blog-content iframe[src*="drive.google"],
-          .blog-content iframe[src*="docs.google"],
-          .blog-content iframe[src*="googleapis"],
-          .blog-content *[src*="youtube"],
-          .blog-content *[src*="youtu.be"],
-          .blog-content *[src*="drive.google"],
-          .blog-content .video-wrapper iframe,
-          .blog-content .embed-responsive iframe,
-          .blog-content .youtube-embed iframe,
-          .blog-content .video-embed iframe,
-          .blog-content .iframe-wrapper iframe {
-            width: 500px !important;
-            max-width: 500px !important;
-            min-width: 500px !important;
-            height: 300px !important;
-            max-height: 300px !important;
-            min-height: 300px !important;
-            margin: 1.5rem auto !important;
-          }
-
-          .blog-content p {
-            font-size: 1rem;
-          }
-
-          .blog-content h1 {
-            font-size: 2rem;
-          }
-
-          .blog-content h2 {
-            font-size: 1.75rem;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .blog-content img,
-          .blog-content video,
-          .blog-content iframe,
-          .blog-content embed,
-          .blog-content object,
-          .blog-content * img,
-          .blog-content * video,
-          .blog-content * iframe,
-          .blog-content * embed,
-          .blog-content * object,
-          .blog-content iframe[src*="youtube"],
-          .blog-content iframe[src*="youtu.be"],
-          .blog-content iframe[src*="drive.google"],
-          .blog-content iframe[src*="docs.google"],
-          .blog-content iframe[src*="googleapis"],
-          .blog-content *[src*="youtube"],
-          .blog-content *[src*="youtu.be"],
-          .blog-content *[src*="drive.google"],
-          .blog-content .video-wrapper iframe,
-          .blog-content .embed-responsive iframe,
-          .blog-content .youtube-embed iframe,
-          .blog-content .video-embed iframe,
-          .blog-content .iframe-wrapper iframe {
-            width: 380px !important;
-            max-width: 380px !important;
-            min-width: 380px !important;
-            height: 228px !important;
-            max-height: 228px !important;
-            min-height: 228px !important;
-          }
-        }
-
-        @media (max-width: 400px) {
-          .blog-content img,
-          .blog-content video,
-          .blog-content iframe,
-          .blog-content embed,
-          .blog-content object,
-          .blog-content * img,
-          .blog-content * video,
-          .blog-content * iframe,
-          .blog-content * embed,
-          .blog-content * object,
-          .blog-content iframe[src*="youtube"],
-          .blog-content iframe[src*="youtu.be"],
-          .blog-content iframe[src*="drive.google"],
-          .blog-content iframe[src*="docs.google"],
-          .blog-content iframe[src*="googleapis"],
-          .blog-content *[src*="youtube"],
-          .blog-content *[src*="youtu.be"],
-          .blog-content *[src*="drive.google"],
-          .blog-content .video-wrapper iframe,
-          .blog-content .embed-responsive iframe,
-          .blog-content .youtube-embed iframe,
-          .blog-content .video-embed iframe,
-          .blog-content .iframe-wrapper iframe {
-            width: 320px !important;
-            max-width: 320px !important;
-            min-width: 320px !important;
-            height: 192px !important;
-            max-height: 192px !important;
-            min-height: 192px !important;
-          }
-        }
-
-        /* Custom scrollbar */
-        .blog-container::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .blog-container::-webkit-scrollbar-track {
-          background: #f8fafc;
-          border-radius: 4px;
-        }
-
-        .blog-container::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, #2d9aa5 0%, #236b73 100%);
-          border-radius: 4px;
-        }
-
-        .blog-container::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, #236b73 0%, #1d5a61 100%);
-        }
-
-        /* Glassmorphism effect */
-        .glass-effect {
-          background: rgba(255, 255, 255, 0.25);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-        }
-
-        /* Floating animation */
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-4px);
-          }
-        }
-
-        .floating {
-          animation: float 3s ease-in-out infinite;
-        }
-
-        /* Pulse animation for buttons */
-        @keyframes pulse-ring {
-          0% {
-            transform: scale(0.8);
-          }
-          40%,
-          50% {
-            opacity: 0;
-          }
-          100% {
-            opacity: 0;
-            transform: scale(1.2);
-          }
-        }
-
-        .pulse-ring::before {
-          content: "";
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 100%;
-          height: 100%;
-          border-radius: inherit;
-          background: currentColor;
-          opacity: 0.2;
-          animation: pulse-ring 2s ease-out infinite;
-        }
-
-        /* Smooth transitions for all interactive elements */
-        * {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-      `}</style>
+      .pulse-ring::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        background: currentColor;
+        opacity: 0.2;
+        animation: pulse-ring 2s ease-out infinite;
+      }
+    `}</style>
 
       <div className="blog-container">
-        {/* Hero Section with Featured Image */}
+        {/* Hero Section */}
         <div className="relative bg-white">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-teal-50/30"></div>
-          <div className="relative max-w-5xl mx-auto px-6 py-16">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-indigo-50/30 to-violet-50/50"></div>
+          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
             {blog.image && (
-              <div className="relative mb-16 overflow-hidden rounded-3xl shadow-2xl group">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10"></div>
+              <div className="relative mb-8 sm:mb-12 lg:mb-16 rounded-2xl sm:rounded-3xl shadow-2xl bg-gradient-to-br from-purple-50 to-indigo-50 p-4 sm:p-6">
                 <img
                   src={blog.image}
                   alt={blog.title}
-                  className="w-full h-[500px] object-cover transform group-hover:scale-110 transition-all duration-700"
-                  style={{
-                    filter: "brightness(0.95) contrast(1.05) saturate(1.1)",
-                  }}
+                  className="w-full h-auto max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] object-contain mx-auto"
                 />
-                <div className="absolute top-6 right-6 z-20">
-                  <div className="glass-effect px-4 py-2 rounded-full text-white text-sm font-medium floating">
+                <div className="absolute top-6 sm:top-8 right-6 sm:right-8 z-20">
+                  <div className="backdrop-blur-md bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-white text-xs sm:text-sm font-medium border border-white/30 floating">
                     <span className="flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
                       <span>Featured Article</span>
                     </span>
                   </div>
@@ -890,51 +683,51 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
             )}
 
             {/* Article Header */}
-            <div className="max-w-4xl mx-auto text-center mb-16">
-              <h1 className="text-5xl md:text-6xl font-bold mb-8 text-gray-900 leading-tight tracking-tight">
+            <div className="max-w-4xl mx-auto text-center mb-8 sm:mb-12 lg:mb-16">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8 text-gray-900 leading-tight tracking-tight px-4">
                 {blog.title}
               </h1>
 
-              <div className="flex items-center justify-center space-x-8 text-gray-600 mb-12">
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-6 lg:space-x-8 space-y-4 sm:space-y-0 text-gray-600 mb-8 sm:mb-12 px-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-[#2D9AA5] to-[#236b73] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg">
                     {blog.postedBy?.name?.charAt(0).toUpperCase() || "A"}
                   </div>
                   <div className="text-left">
-                    <span className="font-semibold text-gray-900 text-lg">
+                    <span className="font-semibold text-gray-900 text-sm sm:text-base">
                       By {blog.postedBy?.name || "Author"}
                     </span>
-                    <p className="text-sm text-gray-500">Author</p>
+                    <p className="text-xs sm:text-sm text-gray-500">Author</p>
                   </div>
                 </div>
-                <div className="w-px h-12 bg-gray-300"></div>
+                <div className="hidden sm:block w-px h-12 bg-gray-300"></div>
                 <div className="text-center">
-                  <time className="text-lg font-medium text-gray-700 block">
+                  <time className="text-base sm:text-lg font-medium text-gray-700 block">
                     {new Date(blog.createdAt).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
                     })}
                   </time>
-                  <p className="text-sm text-gray-500">Published</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Published</p>
                 </div>
               </div>
 
-              {/* Enhanced Interactive Elements Bar */}
-              <div className="flex items-center justify-center space-x-6 mb-12">
+              {/* Interactive Elements */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 lg:gap-4 mb-6 sm:mb-8 px-4">
+
                 {/* Like Button */}
                 <button
                   onClick={toggleLike}
-                  className={`group relative flex items-center space-x-3 px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${blog.liked
-                    ? "bg-gradient-to-r from-red-50 to-pink-50 text-red-600 border-2 border-red-200 hover:from-red-100 hover:to-pink-100"
-                    : "bg-white text-gray-600 border-2 border-gray-200 hover:border-red-200 hover:text-red-600"
+                  className={`group flex items-center justify-center space-x-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-medium transition-all duration-200 
+      border shadow-sm hover:shadow-md transform hover:scale-[1.02]
+      ${blog.liked
+                      ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600"
                     }`}
                 >
                   <svg
-                    className={`w-6 h-6 transition-all duration-200 hover:scale-110 ${blog.liked
-                      ? "text-red-500"
-                      : "text-gray-400 hover:text-red-400"
-                      }`}
+                    className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-200 ${blog.liked ? "text-red-500" : "text-gray-400"}`}
                     fill={blog.liked ? "currentColor" : "none"}
                     stroke="currentColor"
                     strokeWidth="2"
@@ -943,360 +736,275 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
                       d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
                     />
                   </svg>
-                  <div className="text-left">
-                    <span className="font-semibold text-lg">
-                      {blog.likesCount}
-                    </span>
-                    <p className="text-sm opacity-70">
-                      {blog.likesCount === 1 ? "" : ""}
-                    </p>
-                  </div>
+                  <span>{blog.likesCount}</span>
                 </button>
 
-                {/* Comment Navigation Button */}
+                {/* Comment Button */}
                 <button
                   onClick={() => {
-                    const commentsSection =
-                      document.getElementById("comments-section");
+                    const commentsSection = document.getElementById("comments-section");
                     if (commentsSection) {
-                      commentsSection.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      });
+                      commentsSection.scrollIntoView({ behavior: "smooth", block: "start" });
                     }
                   }}
-                  className="group flex items-center space-x-3 px-8 py-4 bg-white text-gray-600 border-2 border-gray-200 rounded-full hover:border-blue-200 hover:text-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  className="group flex items-center justify-center space-x-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white text-gray-600 border border-gray-200 rounded-full text-sm sm:text-base font-medium hover:border-indigo-300 hover:text-indigo-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-[1.02]"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-6 h-6 text-gray-500 hover:text-blue-500 transition-colors duration-200"
-                  >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200">
                     <path
                       d="M21.99 4c0-1.1-.89-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"
                       fill="currentColor"
                     />
                   </svg>
-                  <div className="text-left">
-                    <span className="font-semibold text-lg">
-                      {blog.comments.length}
-                    </span>
-                    <p className="text-sm opacity-70">
-                      {blog.comments.length === 1 ? "" : ""}
-                    </p>
-                  </div>
+                  <span>{blog.comments.length}</span>
                 </button>
 
-                {/* Social Share */}
-                <div className="social-share-wrapper">
+                {/* Share Button */}
+                <div className="w-full sm:w-auto">
                   {blog && (
                     <SocialMediaShare
                       blogTitle={blog.title}
                       blogUrl={shareUrl}
-                      blogDescription={blog.content
-                        .replace(/<[^>]+>/g, "")
-                        .slice(0, 200)}
+                      blogDescription={blog.content.replace(/<[^>]+>/g, "").slice(0, 200)}
                       triggerLabel={
-                        <div className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-[#2D9AA5] to-[#236b73] text-white rounded-full hover:from-[#236b73] hover:to-[#1d5a61] transition-all duration-300 font-semibold transform hover:scale-105 shadow-lg hover:shadow-xl">
-                          <svg
-                            className="w-6 h-6"
+                        <div className="flex items-center justify-center space-x-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full text-sm sm:text-base font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 transform hover:scale-[1.02] shadow-sm hover:shadow-md">
+                          {/* <svg
+                            className="w-4 h-4 sm:w-5 sm:h-5"
                             fill="none"
                             stroke="currentColor"
+                            strokeWidth={2}
                             viewBox="0 0 24 24"
                           >
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              strokeWidth={2}
                               d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
                             />
-                          </svg>
-                          <span>Share Article</span>
+                          </svg> */}
+                          <span className="hidden sm:inline">Share</span>
                         </div>
                       }
                     />
                   )}
                 </div>
               </div>
+
             </div>
           </div>
         </div>
 
         {/* Article Content */}
         <div className="bg-white shadow-2xl">
-          <div className="max-w-4xl mx-auto px-8 py-20">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
             <article className="blog-content">{parse(blog.content)}</article>
           </div>
         </div>
 
         {/* Comments Section */}
-        <section id="comments-section">
-          <div className="space-y-8 mb-16">
-            {blog.comments
-              .slice(0, showAllComments ? blog.comments.length : 4)
-              .map((c) => {
-                const canDeleteComment =
-                  user &&
-                  (String(user._id) === String(c.user) ||
-                    String(user._id) === String(blog.postedBy?._id));
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+          <section id="comments-section">
+            <div className="space-y-6 sm:space-y-8 mb-12 sm:mb-16">
+              {blog.comments
+                .slice(0, showAllComments ? blog.comments.length : 4)
+                .map((c) => {
+                  const canDeleteComment =
+                    user &&
+                    (String(user._id) === String(c.user) ||
+                      String(user._id) === String(blog.postedBy?._id));
 
-                const isExpanded = expandedComments[c._id];
-                const isLong = isLongComment(c.text);
-                const displayText = truncateComment(c.text, isExpanded);
+                  const isExpanded = expandedComments[c._id];
+                  const isLong = isLongComment(c.text);
+                  const displayText = truncateComment(c.text, isExpanded);
 
-                return (
-                  <div
-                    key={c._id}
-                    className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-8 hover:shadow-lg transition-all duration-300 border border-gray-100"
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#2D9AA5] to-[#236b73] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                          {c.username.charAt(0).toUpperCase()}
+                  return (
+                    <div
+                      key={c._id}
+                      className="bg-gradient-to-br from-purple-50/50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 hover:shadow-lg transition-all duration-300 border border-purple-100"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center space-x-3 sm:space-x-4">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg flex-shrink-0">
+                            {c.username.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 text-base sm:text-lg truncate">
+                              {c.username}
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-500 flex items-center">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                              <span className="truncate">
+                                {new Date(c.createdAt).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-gray-900 text-lg">
-                            {c.username}
-                          </p>
-                          <p className="text-sm text-gray-500 flex items-center">
-                            <svg
-                              className="w-4 h-4 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
+
+                        {canDeleteComment && (
+                          <button
+                            onClick={() => setConfirmDeleteId(c._id)}
+                            className="text-gray-400 hover:text-red-500 transition-all duration-200 p-2 rounded-full hover:bg-red-50 flex-shrink-0"
+                          >
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                               />
                             </svg>
-                            {new Date(c.createdAt).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
+                          </button>
+                        )}
                       </div>
 
-                      {canDeleteComment && (
-                        <button
-                          onClick={() => setConfirmDeleteId(c._id)}
-                          className="text-gray-400 hover:text-red-500 transition-all duration-200 p-2 rounded-full hover:bg-red-50"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                      <div className="text-gray-700 leading-relaxed mb-4 sm:mb-6 text-sm sm:text-base lg:text-lg">
+                        <pre className="whitespace-pre-wrap font-sans">{displayText}</pre>
+                        {isLong && (
+                          <button
+                            onClick={() => toggleCommentExpansion(c._id)}
+                            className="text-purple-600 hover:text-purple-700 font-medium text-xs sm:text-sm mt-2 flex items-center transition-colors duration-200"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
+                            {isExpanded ? (
+                              <>
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                </svg>
+                                Show less
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                                Show more
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
 
-                    {/* Comment text with line break preservation and expand/collapse */}
-                    <div className="text-gray-700 leading-relaxed mb-6 text-lg">
-                      <pre className="whitespace-pre-wrap font-sans">
-                        {displayText}
-                      </pre>
-                      {isLong && (
+                      <div className="flex items-center gap-2 ml-0 sm:ml-8 mb-2">
+                        {c.replies && c.replies.length > 0 && (
+                          <button
+                            className="flex items-center text-gray-500 hover:text-purple-600 text-xs sm:text-sm"
+                            onClick={() =>
+                              setExpandedReplies((prev) => ({
+                                ...prev,
+                                [c._id]: !prev[c._id],
+                              }))
+                            }
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V10a2 2 0 012-2h2" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 3h-6a2 2 0 00-2 2v0a2 2 0 002 2h6a2 2 0 002-2v0a2 2 0 00-2-2z" />
+                            </svg>
+                            {expandedReplies[c._id]
+                              ? `Hide replies (${c.replies.length})`
+                              : `Show replies (${c.replies.length})`}
+                          </button>
+                        )}
                         <button
-                          onClick={() => toggleCommentExpansion(c._id)}
-                          className="text-[#2D9AA5] hover:text-[#236b73] font-medium text-sm mt-2 flex items-center transition-colors duration-200"
-                        >
-                          {isExpanded ? (
-                            <>
-                              <svg
-                                className="w-4 h-4 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 15l7-7 7 7"
-                                />
-                              </svg>
-                              Show less
-                            </>
-                          ) : (
-                            <>
-                              <svg
-                                className="w-4 h-4 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
-                              Show more
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Replies toggle and count */}
-                    <div className="flex items-center gap-2 ml-8 mb-2">
-                      {c.replies && c.replies.length > 0 && (
-                        <button
-                          className="flex items-center text-gray-500 hover:text-[#2D9AA5] text-sm"
+                          className="ml-2 text-purple-600 hover:underline text-xs sm:text-sm"
                           onClick={() =>
-                            setExpandedReplies((prev) => ({
+                            setShowReplyInput((prev) => ({
                               ...prev,
                               [c._id]: !prev[c._id],
                             }))
                           }
                         >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17 8h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V10a2 2 0 012-2h2"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 3h-6a2 2 0 00-2 2v0a2 2 0 002 2h6a2 2 0 002-2v0a2 2 0 00-2-2z"
-                            />
-                          </svg>
-                          {expandedReplies[c._id]
-                            ? `Hide replies (${c.replies.length})`
-                            : `Show replies (${c.replies.length})`}
+                          Reply
                         </button>
-                      )}
-                      {/* Reply button */}
-                      <button
-                        className="ml-2 text-[#2D9AA5] hover:underline text-sm"
-                        onClick={() =>
-                          setShowReplyInput((prev) => ({
-                            ...prev,
-                            [c._id]: !prev[c._id],
-                          }))
-                        }
-                      >
-                        Reply
-                      </button>
-                    </div>
-                    {/* Reply input box, only if toggled for this comment */}
-                    {user && showReplyInput[c._id] && (
-                      <div className="mt-2 ml-8">
-                        <div className="flex space-x-4">
-                          <div className="w-8 h-8 bg-[#2D9AA5] rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="Reply to this comment..."
-                            value={replyTexts[c._id] || ""}
-                            onChange={(e) =>
-                              setReplyTexts((prev) => ({
-                                ...prev,
-                                [c._id]: e.target.value,
-                              }))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                handleReplySubmit(c._id);
-                              }
-                            }}
-                            className="mb-8 flex-1 border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-[#2D9AA5]/20 focus:border-[#2D9AA5] transition-all duration-200"
-                          />
-                        </div>
                       </div>
-                    )}
-                    {/* Replies section, only if expanded for this comment */}
-                    {c.replies &&
-                      c.replies.length > 0 &&
-                      expandedReplies[c._id] && (
-                        <div className="space-y-4 ml-8 border-l-4 border-[#2D9AA5] pl-6">
+
+                      {user && showReplyInput[c._id] && (
+                        <div className="mt-2 ml-0 sm:ml-8">
+                          <div className="flex space-x-3 sm:space-x-4">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
+                              {user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Reply to this comment..."
+                              value={replyTexts[c._id] || ""}
+                              onChange={(e) =>
+                                setReplyTexts((prev) => ({
+                                  ...prev,
+                                  [c._id]: e.target.value,
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleReplySubmit(c._id);
+                                }
+                              }}
+                              className="mb-4 sm:mb-8 flex-1 border-2 border-purple-200 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition-all duration-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {c.replies && c.replies.length > 0 && expandedReplies[c._id] && (
+                        <div className="space-y-3 sm:space-y-4 ml-0 sm:ml-8 border-l-2 sm:border-l-4 border-purple-500 pl-3 sm:pl-6">
                           {c.replies.map((r) => {
                             const isAuthorReply =
-                              r.user &&
-                              String(r.user) === String(blog.postedBy?._id);
+                              r.user && String(r.user) === String(blog.postedBy?._id);
                             const canDeleteReply =
                               user &&
                               (String(user._id) === String(r.user) ||
-                                String(user._id) ===
-                                String(blog.postedBy?._id));
+                                String(user._id) === String(blog.postedBy?._id));
                             return (
                               <div
                                 key={r._id}
-                                className={`p-6 rounded-xl ${isAuthorReply
-                                  ? "bg-gradient-to-br from-[#2D9AA5]/10 to-[#2D9AA5]/5 border-2 border-[#2D9AA5]/20"
+                                className={`p-4 sm:p-6 rounded-lg sm:rounded-xl ${isAuthorReply
+                                  ? "bg-gradient-to-br from-purple-100/50 to-purple-50/30 border-2 border-purple-200"
                                   : "bg-white border border-gray-200"
                                   }`}
                               >
                                 <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center space-x-3">
+                                  <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                                     <div
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${isAuthorReply
-                                        ? "bg-gradient-to-br from-[#2D9AA5] to-[#236b73]"
+                                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0 ${isAuthorReply
+                                        ? "bg-gradient-to-br from-purple-600 to-indigo-600"
                                         : "bg-gradient-to-br from-gray-400 to-gray-500"
                                         }`}
                                     >
                                       {r.username.charAt(0).toUpperCase()}
                                     </div>
-                                    <div>
+                                    <div className="min-w-0 flex-1">
                                       <p
-                                        className={`font-bold text-sm flex items-center ${isAuthorReply
-                                          ? "text-[#2D9AA5]"
-                                          : "text-gray-700"
+                                        className={`font-bold text-xs sm:text-sm flex items-center flex-wrap ${isAuthorReply ? "text-purple-700" : "text-gray-700"
                                           }`}
                                       >
-                                        {r.username}
+                                        <span className="truncate">{r.username}</span>
                                         {isAuthorReply && (
-                                          <span className="ml-2 text-xs bg-[#2D9AA5] text-white px-3 py-1 rounded-full">
+                                          <span className="ml-2 text-xs bg-purple-600 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full flex-shrink-0">
                                             Author
                                           </span>
                                         )}
                                       </p>
                                       <p className="text-xs text-gray-500">
-                                        {new Date(
-                                          r.createdAt
-                                        ).toLocaleDateString()}
+                                        {new Date(r.createdAt).toLocaleDateString()}
                                       </p>
                                     </div>
                                   </div>
                                   {canDeleteReply && (
                                     <button
                                       onClick={() => setConfirmDeleteId(r._id)}
-                                      className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50"
+                                      className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full hover:bg-red-50 flex-shrink-0"
                                     >
-                                      <svg
-                                        className="w-4 h-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
+                                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path
                                           strokeLinecap="round"
                                           strokeLinejoin="round"
@@ -1307,7 +1015,7 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                                     </button>
                                   )}
                                 </div>
-                                <pre className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                                <pre className="text-gray-700 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans">
                                   {r.text}
                                 </pre>
                               </div>
@@ -1315,74 +1023,70 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
                           })}
                         </div>
                       )}
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
 
-            {/* Show More/Less Comments Button */}
-            {blog.comments.length > 4 && (
-              <div className="text-center pt-8">
-                <button
-                  onClick={() => setShowAllComments(!showAllComments)}
-                  className="px-8 py-3 bg-gradient-to-r from-[#2D9AA5] to-[#236b73] text-white rounded-xl font-medium hover:from-[#236b73] hover:to-[#1d5a61] transition-all duration-300 shadow-lg hover:shadow-xl"
-                >
-                  {showAllComments
-                    ? `Show Less (${blog.comments.length - 4} hidden)`
-                    : `Show More Comments (${blog.comments.length - 4} more)`}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Add Comment Form */}
-          <div className="border-t-2 border-gray-100 pt-12">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold mb-2 text-gray-900">
-                Share Your Thoughts
-              </h3>
-              <p className="text-gray-600">
-                Share your thoughts on this article with us
-              </p>
+              {/* Show More/Less Comments */}
+              {blog.comments.length > 4 && (
+                <div className="text-center pt-6 sm:pt-8">
+                  <button
+                    onClick={() => setShowAllComments(!showAllComments)}
+                    className="px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg sm:rounded-xl font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base"
+                  >
+                    {showAllComments
+                      ? `Show Less (${blog.comments.length - 4} hidden)`
+                      : `Show More Comments (${blog.comments.length - 4} more)`}
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="space-y-6">
-              <div className="relative">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="What are your thoughts on this article? Share your insights, questions, or experiences..."
-                  rows={5}
-                  className="w-full border-2 border-gray-300 rounded-2xl px-6 py-4 focus:outline-none focus:ring-4 focus:ring-[#2D9AA5]/20 focus:border-[#2D9AA5] transition-all duration-200 resize-none text-lg placeholder-gray-400"
-                />
-                <div className="absolute bottom-4 right-4 text-sm text-gray-400">
-                  {newComment.length}/1000
+
+            {/* Add Comment Form */}
+            <div className="border-t-2 border-purple-100 pt-8 sm:pt-12">
+              <div className="text-center mb-6 sm:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold mb-2 text-gray-900">
+                  Share Your Thoughts
+                </h3>
+                <p className="text-sm sm:text-base text-gray-600">
+                  Share your thoughts on this article with us
+                </p>
+              </div>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="relative">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="What are your thoughts on this article? Share your insights, questions, or experiences..."
+                    rows={5}
+                    className="w-full border-2 border-purple-200 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 transition-all duration-200 resize-none text-sm sm:text-base lg:text-lg placeholder-gray-400"
+                  />
+                  <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 text-xs sm:text-sm text-gray-400">
+                    {newComment.length}/1000
+                  </div>
+                </div>
+                <div className="flex justify-center">
+                  <button
+                    onClick={submitComment}
+                    className="relative w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:from-purple-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl pulse-ring"
+                  >
+                    <span className="flex items-center justify-center space-x-2">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                        />
+                      </svg>
+                      <span>Post Comment</span>
+                    </span>
+                  </button>
                 </div>
               </div>
-              <div className="flex justify-center ">
-                <button
-                  onClick={submitComment}
-                  className="relative px-12 py-4 bg-gradient-to-r from-[#2D9AA5] to-[#236b73] text-white rounded-2xl font-bold text-lg hover:from-[#236b73] hover:to-[#1d5a61] transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl pulse-ring"
-                >
-                  <span className="flex items-center space-x-2">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
-                    <span>Post Comment</span>
-                  </span>
-                </button>
-              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
         {/* Auth Modal */}
         {showAuthModal && (
@@ -1396,25 +1100,16 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
           />
         )}
 
-        {/* Floating Back to Top Button */}
+        {/* Back to Top Button */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-r from-[#2D9AA5] to-[#236b73] text-white rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center z-50"
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center z-50"
           style={{
-            opacity:
-              typeof window !== "undefined" && window.scrollY > 300 ? 1 : 0,
-            visibility:
-              typeof window !== "undefined" && window.scrollY > 300
-                ? "visible"
-                : "hidden",
+            opacity: typeof window !== "undefined" && window.scrollY > 300 ? 1 : 0,
+            visibility: typeof window !== "undefined" && window.scrollY > 300 ? "visible" : "hidden",
           }}
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -1426,33 +1121,38 @@ export default function BlogDetail({ initialBlog, seo }: BlogDetailProps) {
 
         {/* Delete Confirmation Modal */}
         {confirmDeleteId && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center">
-            {/* Backdrop with blur and subtle light tint (not black) */}
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div
               className="absolute inset-0 backdrop-blur-sm bg-white/20"
               onClick={() => setConfirmDeleteId(null)}
             />
-            {/* Modal panel */}
-            <div className="relative z-[101] w-full max-w-md mx-4 rounded-2xl shadow-2xl border border-gray-200 bg-white">
-              <div className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v4m0 4h.01M4.93 4.93l14.14 14.14M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2zm-2 7h10l-1 9a2 2 0 01-2 2H9a2 2 0 01-2-2l-1-9z" /></svg>
+            <div className="relative z-[101] w-full max-w-sm sm:max-w-md mx-auto rounded-xl sm:rounded-2xl shadow-2xl border border-purple-200 bg-white">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 9v4m0 4h.01M4.93 4.93l14.14 14.14M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2zm-2 7h10l-1 9a2 2 0 01-2 2H9a2 2 0 01-2-2l-1-9z"
+                      />
+                    </svg>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Delete comment?</h3>
-                    <p className="mt-1 text-sm text-gray-600">This action cannot be undone.</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Delete comment?</h3>
+                    <p className="mt-1 text-xs sm:text-sm text-gray-600">This action cannot be undone.</p>
                   </div>
                 </div>
-                <div className="mt-6 flex items-center justify-end gap-3">
+                <div className="mt-4 sm:mt-6 flex items-center justify-end gap-2 sm:gap-3">
                   <button
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm sm:text-base transition-colors duration-200"
                     onClick={() => setConfirmDeleteId(null)}
                   >
                     Cancel
                   </button>
                   <button
-                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm sm:text-base transition-colors duration-200"
                     onClick={() => confirmDeleteId && performDelete(confirmDeleteId)}
                   >
                     Delete
@@ -1514,32 +1214,32 @@ export const getServerSideProps: GetServerSideProps<BlogDetailProps> = async ({
       imageFromContent || `${baseUrl}/assets/health_treatments_logo.png`;
 
     // Create the blog object, ensuring no undefined values
-    
-const initialBlog: Blog = {
-  _id: blogDoc._id,
-  title: blogDoc.title || "Blog",
-  content: blogDoc.content || "",
-  postedBy: {
-    name: blogDoc.postedBy?.name || "Author",
-    _id: blogDoc.postedBy?._id || null,
-  },
-  createdAt: blogDoc.createdAt
-    ? new Date(blogDoc.createdAt).toISOString()
-    : new Date().toISOString(),
-  image: blogDoc.image || undefined,
-  likesCount: Array.isArray(blogDoc.likes) ? blogDoc.likes.length : 0,
-  liked: false, // will be set on client
-  comments: Array.isArray(blogDoc.comments)
-    ? (blogDoc.comments as Partial<BlogComment>[]).map((c): BlogComment => ({
-        _id: String(c._id ?? ""),
-        username: c.username ?? "Anonymous",
-        text: c.text ?? "",
-        createdAt: c.createdAt
-          ? new Date(c.createdAt).toISOString()
-          : new Date().toISOString(),
-        user: c.user ?? null,
-        replies: Array.isArray(c.replies)
-          ? (c.replies as Partial<BlogReply>[]).map((r): BlogReply => ({
+
+    const initialBlog: Blog = {
+      _id: blogDoc._id,
+      title: blogDoc.title || "Blog",
+      content: blogDoc.content || "",
+      postedBy: {
+        name: blogDoc.postedBy?.name || "Author",
+        _id: blogDoc.postedBy?._id || null,
+      },
+      createdAt: blogDoc.createdAt
+        ? new Date(blogDoc.createdAt).toISOString()
+        : new Date().toISOString(),
+      image: blogDoc.image || undefined,
+      likesCount: Array.isArray(blogDoc.likes) ? blogDoc.likes.length : 0,
+      liked: false, // will be set on client
+      comments: Array.isArray(blogDoc.comments)
+        ? (blogDoc.comments as Partial<BlogComment>[]).map((c): BlogComment => ({
+          _id: String(c._id ?? ""),
+          username: c.username ?? "Anonymous",
+          text: c.text ?? "",
+          createdAt: c.createdAt
+            ? new Date(c.createdAt).toISOString()
+            : new Date().toISOString(),
+          user: c.user ?? null,
+          replies: Array.isArray(c.replies)
+            ? (c.replies as Partial<BlogReply>[]).map((r): BlogReply => ({
               _id: String(r._id ?? ""),
               username: r.username ?? "Anonymous",
               text: r.text ?? "",
@@ -1548,11 +1248,11 @@ const initialBlog: Blog = {
                 : new Date().toISOString(),
               user: r.user ?? null,
             }))
-          : [],
-      }))
-    : [],
-  paramlink: blogDoc.paramlink || null,
-};
+            : [],
+        }))
+        : [],
+      paramlink: blogDoc.paramlink || null,
+    };
 
 
 
@@ -1569,7 +1269,13 @@ const initialBlog: Blog = {
       url,
     };
 
-    return { props: { initialBlog, seo } };
+    // return { props: { initialBlog, seo } };
+    return {
+      props: {
+        initialBlog: JSON.parse(JSON.stringify(initialBlog)),
+        seo
+      }
+    };
   } catch (e) {
     console.error("getServerSideProps error:", e);
     return { props: { initialBlog: null, seo: null } };

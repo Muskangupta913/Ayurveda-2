@@ -670,21 +670,21 @@ return (
                   {errors.service && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.service}</p>}
                 </div>
                 {formData.service === "Package" && (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Package <span className="text-red-500">*</span></label>
-                    <select name="package" value={formData.package} onChange={handleServiceLinkedChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
-                      <option value="">Select Package</option>
-                      {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - ₹${p.price.toFixed(2)}` : ''}</option>)}
-                    </select>
-                    {errors.package && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.package}</p>}
-                  </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Package <span className="text-red-500">*</span></label>
+                      <select name="package" value={formData.package} onChange={handleServiceLinkedChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.package ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
+                        <option value="">Select Package</option>
+                      {fetchedPackages.map(p => <option key={p._id} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - د.إ${p.price.toFixed(2)}` : ''}</option>)}
+                      </select>
+                      {errors.package && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.package}</p>}
+                    </div>
                 )}
                 {formData.service === "Treatment" && (
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Treatment <span className="text-red-500">*</span></label>
                     <select name="treatment" value={formData.treatment} onChange={handleServiceLinkedChange} className={`w-full px-3 py-2 text-sm border rounded-md text-gray-900 ${errors.treatment ? "border-red-500 bg-red-50" : "border-gray-300"}`}>
                       <option value="">Select Treatment</option>
-                      {fetchedTreatments.map(t => <option key={t._id} value={t.name}>{t.name}{typeof t.price === 'number' ? ` - ₹${t.price.toFixed(2)}` : ''}</option>)}
+                      {fetchedTreatments.map(t => <option key={t._id} value={t.name}>{t.name}{typeof t.price === 'number' ? ` - د.إ${t.price.toFixed(2)}` : ''}</option>)}
                     </select>
                     {errors.treatment && <p className="text-red-500 text-xs mt-1"><AlertCircle className="w-3 h-3 inline" /> {errors.treatment}</p>}
                   </div>
@@ -744,7 +744,7 @@ return (
                           <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Need to Pay (Auto)</label>
                           <input 
                             type="text" 
-                            value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} 
+                            value={`د.إ ${calculatedFields.needToPay.toFixed(2)}`} 
                             disabled 
                             className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-md text-gray-900 font-semibold" 
                           />
@@ -795,7 +795,7 @@ return (
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Pending (Auto)</label>
-                  <input type="text" value={`₹ ${calculatedFields.pending.toFixed(2)}`} disabled className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-md text-gray-900 font-semibold" />
+                  <input type="text" value={`د.إ ${calculatedFields.pending.toFixed(2)}`} disabled className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-md text-gray-900 font-semibold" />
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-800 mb-1.5">Payment Method <span className="text-red-500">*</span></label>

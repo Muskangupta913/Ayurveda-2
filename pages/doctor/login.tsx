@@ -1,8 +1,6 @@
 'use client';
-import { useState, FormEvent } from 'react';
-import axios, { AxiosResponse } from 'axios';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 
 // Define response type for doctor login API
 interface DoctorLoginResponse {
@@ -13,6 +11,56 @@ interface DoctorLoginResponse {
   token: string;
   message?: string;
 }
+
+// Auth utility functions
+const AUTH_STORAGE_KEY = 'doctorAuth';
+const TOKEN_KEY = 'doctorToken';
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+
+const setAuthData = (user: { name: string; email: string }, token: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      localStorage.setItem(TOKEN_KEY, token);
+    } catch (error) {
+      console.error('Failed to store auth data:', error);
+    }
+  }
+};
+
+const getLoginAttempts = () => {
+  if (typeof window !== 'undefined') {
+    const attempts = localStorage.getItem('loginAttempts');
+    const lockoutUntil = localStorage.getItem('lockoutUntil');
+    
+    if (lockoutUntil && Date.now() < parseInt(lockoutUntil)) {
+      return { count: MAX_LOGIN_ATTEMPTS, locked: true };
+    }
+    
+    return { count: attempts ? parseInt(attempts) : 0, locked: false };
+  }
+  return { count: 0, locked: false };
+};
+
+const incrementLoginAttempts = () => {
+  if (typeof window !== 'undefined') {
+    const current = getLoginAttempts().count;
+    const newCount = current + 1;
+    localStorage.setItem('loginAttempts', newCount.toString());
+    
+    if (newCount >= MAX_LOGIN_ATTEMPTS) {
+      localStorage.setItem('lockoutUntil', (Date.now() + LOCKOUT_TIME).toString());
+    }
+  }
+};
+
+const resetLoginAttempts = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('loginAttempts');
+    localStorage.removeItem('lockoutUntil');
+  }
+};
 
 export default function DoctorLoginPage() {
   const router = useRouter();
@@ -25,40 +73,84 @@ export default function DoctorLoginPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError(''); // Clear error on input change
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    
+    // Check login attempts
+    const { count, locked } = getLoginAttempts();
+    if (locked) {
+      setError('Too many failed attempts. Please try again in 15 minutes.');
+      return;
+    }
+
+    // Validate input
+    if (!form.email || !form.password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // ✅ Tell axios what the response will look like
-      const res: AxiosResponse<DoctorLoginResponse> = await axios.post('/api/doctor/login', form);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/doctor/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify(form),
+      });
 
+      const data: DoctorLoginResponse = await response.json();
+
+      if (!response.ok) {
+        incrementLoginAttempts();
+        const attemptsLeft = MAX_LOGIN_ATTEMPTS - getLoginAttempts().count;
+        throw new Error(
+          data.message || 
+          `Login failed. ${attemptsLeft > 0 ? `${attemptsLeft} attempts remaining.` : ''}`
+        );
+      }
+
+      // Reset attempts on successful login
+      resetLoginAttempts();
+
+      // Store user data and token
       const doctorUser = {
-        name: res.data.doctor.name,
-        email: res.data.doctor.email,
+        name: data.doctor.name,
+        email: data.doctor.email,
       };
-      localStorage.setItem('doctorUser', JSON.stringify(doctorUser));
-      localStorage.setItem('doctorToken', res.data.token);
-      console.log('doctor token', res.data.token);
+      
+      setAuthData(doctorUser, data.token);
 
-      // Show success toast
-      setToastMessage(res.data.message || 'Login successful!');
+      setToastMessage(data.message || 'Login successful!');
       setShowToast(true);
 
-      // Hide toast after 2 seconds and redirect
+      // Clear form
+      setForm({ email: '', password: '' });
+
       setTimeout(() => {
         setShowToast(false);
         router.push('/doctor/doctor-dashboard');
-      }, 2000);
+      }, 1500);
 
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || 'Login failed');
+      if (err instanceof Error) {
+        setError(err.message);
       } else {
-        setError('Login failed');
+        setError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -66,308 +158,211 @@ export default function DoctorLoginPage() {
   };
 
   return (
-    <>
+    <div className="min-h-screen flex bg-gray-50">
       {/* Toast Notification */}
       {showToast && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className="bg-teal-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3" style={{ backgroundColor: '#2D9AA5' }}>
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            <span className="font-medium">{toastMessage}</span>
+        <div className="fixed top-6 right-6 z-50 animate-slide-in">
+          <div className="bg-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 border border-gray-200">
+            <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <span className="text-gray-700 text-sm font-medium">{toastMessage}</span>
           </div>
         </div>
       )}
 
-      <div className="min-h-screen flex">
-        {/* Left Side - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: `linear-gradient(to bottom right, #2D9AA5, #238B96, #1A7A82)` }}>
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 left-10 w-20 h-20 border-2 border-white rounded-full"></div>
-            <div className="absolute top-32 right-20 w-16 h-16 border-2 border-white rounded-full"></div>
-            <div className="absolute bottom-20 left-20 w-24 h-24 border-2 border-white rounded-full"></div>
-            <div className="absolute bottom-40 right-10 w-12 h-12 border-2 border-white rounded-full"></div>
-          </div>
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 to-slate-800 relative overflow-hidden p-12">
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl opacity-10"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500 rounded-full blur-3xl opacity-10"></div>
 
-          {/* Content */}
-          <div className="flex flex-col justify-center items-start p-12 text-white relative z-10">
-            <div className="mb-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                  <svg
-                    className="w-8 h-8 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold">ZEVA</h1>
-                  <p className="text-teal-200 text-sm uppercase tracking-wider">
-                    Doctor Portal
-                  </p>
-                </div>
-              </div>
-
-              <h2 className="text-4xl font-bold leading-tight mb-4">
-                Welcome Back
-                <br />
-                <span className="text-teal-200">Doctor</span>
-              </h2>
-
-              <p className="text-teal-100 text-lg leading-relaxed mb-8">
-                Join our healthcare network today — register as a doctor, manage your appointments, and deliver better care with our all-in-one platform
-              </p>
-
-              <div className="space-y-4">
-                {[
-                  "Patient Management",
-                  "Appointment Scheduling",
-                  "Treatment Records",
-                ].map((item, index) => (
-                  <div className="flex items-center gap-3" key={index}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#2D9AA5' }}>
-                      <svg
-                        className="w-4 h-4 text-white"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <span className="text-teal-100">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Decorative Elements */}
-          <div className="absolute bottom-0 right-0 w-32 h-32 rounded-tl-full opacity-20" style={{ background: `linear-gradient(to top left, #2D9AA5, transparent)` }}></div>
-          <div className="absolute top-0 left-0 w-24 h-24 rounded-br-full opacity-20" style={{ background: `linear-gradient(to bottom right, #2D9AA5, transparent)` }}></div>
-        </div>
-
-        {/* Right Side - Login Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-white">
-          <div className="w-full max-w-md">
-            {/* Mobile Logo */}
-            <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, #2D9AA5, #238B96)` }}>
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z"
-                    clipRule="evenodd"
-                  />
+        <div className="relative z-10 flex flex-col justify-between w-full max-w-lg">
+          {/* Logo & Title */}
+          <div>
+            <div className="flex items-center gap-3 mb-12">
+              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 9h-4v4h-4v-4H6v-4h4V4h4v4h4v4z"/>
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">ZEVA</h1>
-                <p className="text-xs uppercase tracking-wider" style={{ color: '#2D9AA5' }}>
-                  Doctor Portal
-                </p>
+                <h1 className="text-2xl font-bold text-white">ZEVA Healthcare</h1>
+                <p className="text-slate-400 text-sm">Doctor Portal</p>
               </div>
             </div>
 
-            {/* Login Card */}
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 backdrop-blur-sm">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  Doctor Login
-                </h2>
-                <p className="text-gray-600">
-                  Sign in to access your dashboard
-                </p>
+            <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
+              Welcome back to your<br />medical dashboard
+            </h2>
+            <p className="text-slate-300 text-lg mb-8">
+              Manage patients, appointments, and medical records from one secure platform.
+            </p>
+          </div>
+
+          {/* Features */}
+          <div className="space-y-4">
+            {[
+              { icon: "👥", text: "Patient management" },
+              { icon: "📅", text: "Smart scheduling" },
+              { icon: "📋", text: "Digital records" },
+              { icon: "🔒", text: "HIPAA compliant" }
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-center gap-3 text-slate-200">
+                <span className="text-2xl">{item.icon}</span>
+                <span className="text-base">{item.text}</span>
               </div>
-
-              {error && (
-                <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3">
-                  <div className="w-5 h-5 text-red-500">
-                    <svg fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-red-700 text-sm font-medium">
-                    {error}
-                  </span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Email Field */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg
-                        className="w-5 h-5 text-gray-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                      </svg>
-                    </div>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      className="text-black w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl "
-                      placeholder="doctor@.com"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Password Field */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg
-                        className="w-5 h-5 text-gray-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={form.password}
-                      onChange={handleChange}
-                      className="text-black w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl"
-                      placeholder="Enter your password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                    >
-                      <svg
-                        className="w-5 h-5 text-gray-400 hover:text-gray-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        {showPassword ? (
-                          <path
-                            fillRule="evenodd"
-                            d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
-                            clipRule="evenodd"
-                          />
-                        ) : (
-                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        )}
-                        <path
-                          fillRule="evenodd"
-                          d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full text-white py-3 px-4 rounded-xl font-semibold text-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] hover:opacity-90"
-                  style={{
-                    background: `linear-gradient(to right, #2D9AA5, #238B96)`,
-                    boxShadow: '0 10px 15px -3px rgba(45, 154, 165, 0.3), 0 4px 6px -2px rgba(45, 154, 165, 0.05)'
-                  }}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Signing in...
-                    </div>
-                  ) : (
-                    "Sign In"
-                  )}
-                </button>
-              </form>
-
-              {/* Footer Links */}
-              <div className="mt-8 text-center">
-                <p className="text-sm text-right mt-1">
-                  <button
-                    onClick={() => router.push('/doctor/forgot-password')}
-                    className="text-blue-600 hover:underline cursor-pointer"
-                  >
-                    Forgot password?
-                  </button>
-                </p>
-              </div>
-            </div>
-
-            {/* Additional Links */}
-            <div className="mt-6 text-center text-sm text-gray-500">
-              <Link
-                href="/"
-                className="hover:text-blue-600 transition duration-200 mr-4"
-              >
-                Back to Website
-              </Link>
-              {/* <span>•</span> */}
-              {/* <a
-                href="#"
-                className="hover:text-blue-600 transition duration-200 ml-4"
-              >
-                Privacy Policy
-              </a> */}
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <style jsx>{`
-        .animate-slide-in {
-          animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
-    </>
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex items-center gap-2 mb-2">
+              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 9h-4v4h-4v-4H6v-4h4V4h4v4h4v4z"/>
+                </svg>
+              </div>
+              <span className="text-xl font-bold text-gray-900">ZEVA Healthcare</span>
+            </div>
+          </div>
+
+          {/* Login Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Doctor Sign In</h2>
+              <p className="text-gray-600">Access your medical dashboard</p>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
+                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span className="text-red-800 text-sm">{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Email Field */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
+                  placeholder="doctor@example.com"
+                  required
+                  autoComplete="email"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
+                    placeholder="Enter your password"
+                    required
+                    autoComplete="current-password"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                    disabled={isLoading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot Password */}
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => router.push('/doctor/forgot-password')}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  disabled={isLoading}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </form>
+
+            {/* Footer */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <p className="text-center text-sm text-gray-600 flex items-center justify-center gap-2">
+                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Protected by SSL encryption
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Link */}
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Not a doctor?{' '}
+            <a href="/" className="text-blue-600 hover:text-blue-700 font-medium">
+              Go to main site
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 

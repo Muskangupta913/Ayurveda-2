@@ -644,7 +644,7 @@ function AdminStaffTreatments() {
                               {item.package}
                             </span>
                             {typeof item.packagePrice === "number" && (
-                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">₹{item.packagePrice.toFixed(2)}</span>
+                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">د.إ{item.packagePrice.toFixed(2)}</span>
                             )}
                           </div>
                         )}
@@ -658,7 +658,7 @@ function AdminStaffTreatments() {
                               </p>
                             </div>
                             {typeof item.treatmentPrice === "number" && (
-                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">₹{item.treatmentPrice.toFixed(2)}</span>
+                              <span className="ml-2 inline-block text-xs sm:text-sm font-medium text-slate-600">د.إ{item.treatmentPrice.toFixed(2)}</span>
                             )}
                           </div>
                         )}

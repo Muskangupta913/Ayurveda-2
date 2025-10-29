@@ -202,10 +202,10 @@ const AdminPatientClaims = () => {
                 <td>${p.email || ''}</td>
                 <td>${p.mobileNumber || ''}</td>
                 <td>${p.treatment || p.package || ''}</td>
-                <td>₹${p.amount || ''}</td>
-                <td>₹${p.paid || ''}</td>
-                <td>₹${p.pending || ''}</td>
-                <td>₹${p.advance || ''}</td>
+                <td>د.إ${p.amount || ''}</td>
+                <td>د.إ${p.paid || ''}</td>
+                <td>د.إ${p.pending || ''}</td>
+                <td>د.إ${p.advance || ''}</td>
                 <td>${p.advanceClaimStatus || ''}</td>
               </tr>
             `).join('')}
@@ -390,19 +390,19 @@ const AdminPatientClaims = () => {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Amount:</span>
-                        <span className="font-medium text-gray-900">₹{patient.amount?.toLocaleString() || 0}</span>
+                        <span className="font-medium text-gray-900">د.إ{patient.amount?.toLocaleString() || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Paid:</span>
-                        <span className="font-medium text-green-600">₹{patient.paid?.toLocaleString() || 0}</span>
+                        <span className="font-medium text-green-600">د.إ{patient.paid?.toLocaleString() || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Pending:</span>
-                        <span className="font-medium text-red-600">₹{patient.pending?.toLocaleString() || 0}</span>
+                        <span className="font-medium text-red-600">د.إ{patient.pending?.toLocaleString() || 0}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Advance:</span>
-                        <span className="font-medium text-blue-600">₹{patient.advance?.toLocaleString() || 0}</span>
+                        <span className="font-medium text-blue-600">د.إ{patient.advance?.toLocaleString() || 0}</span>
                       </div>
                     </div>
 
@@ -516,13 +516,13 @@ const AdminPatientClaims = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-2">Financial Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><span className="text-gray-700">Total Amount:</span> <span className="font-medium text-gray-900">₹{selectedPatient.amount?.toLocaleString() || 0}</span></div>
-                  <div><span className="text-gray-700">Paid Amount:</span> <span className="font-medium text-green-600">₹{selectedPatient.paid?.toLocaleString() || 0}</span></div>
-                  <div><span className="text-gray-700">Pending Amount:</span> <span className="font-medium text-red-600">₹{selectedPatient.pending?.toLocaleString() || 0}</span></div>
-                  <div><span className="text-gray-700">Advance:</span> <span className="font-medium text-blue-600">₹{selectedPatient.advance?.toLocaleString() || 0}</span></div>
-                  <div><span className="text-gray-700">Advance Given:</span> <span className="font-medium text-gray-900">₹{selectedPatient.advanceGivenAmount?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Total Amount:</span> <span className="font-medium text-gray-900">د.إ{selectedPatient.amount?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Paid Amount:</span> <span className="font-medium text-green-600">د.إ{selectedPatient.paid?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Pending Amount:</span> <span className="font-medium text-red-600">د.إ{selectedPatient.pending?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Advance:</span> <span className="font-medium text-blue-600">د.إ{selectedPatient.advance?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Advance Given:</span> <span className="font-medium text-gray-900">د.إ{selectedPatient.advanceGivenAmount?.toLocaleString() || 0}</span></div>
                   <div><span className="text-gray-700">Co-pay %:</span> <span className="font-medium text-gray-900">{selectedPatient.coPayPercent || 0}%</span></div>
-                  <div><span className="text-gray-700">Need to Pay:</span> <span className="font-medium text-gray-900">₹{selectedPatient.needToPay?.toLocaleString() || 0}</span></div>
+                  <div><span className="text-gray-700">Need to Pay:</span> <span className="font-medium text-gray-900">د.إ{selectedPatient.needToPay?.toLocaleString() || 0}</span></div>
                   <div><span className="text-gray-700">Payment Method:</span> <span className="font-medium text-gray-900">{selectedPatient.paymentMethod || '-'}</span></div>
                 </div>
               </div>
@@ -555,7 +555,7 @@ const AdminPatientClaims = () => {
                           <p className="text-xs text-gray-600">{payment.date ? new Date(payment.date).toLocaleString() : '-'}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-green-600">₹{payment.amount?.toLocaleString() || 0}</p>
+                          <p className="font-semibold text-green-600">د.إ{payment.amount?.toLocaleString() || 0}</p>
                           <p className="text-xs text-gray-700">{payment.method || '-'}</p>
                         </div>
                       </div>

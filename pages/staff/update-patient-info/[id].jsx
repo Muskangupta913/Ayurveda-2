@@ -214,7 +214,7 @@ const InvoiceUpdateSystem = () => {
     showConfirm(
       "Confirm Payment Update",
       payingAmount > 0 
-        ? `Are you sure you want to add ₹${payingAmount.toFixed(2)} to the existing payment of ₹${parseFloat(formData.paid || 0).toFixed(2)}?`
+        ? `Are you sure you want to add د.إ${payingAmount.toFixed(2)} to the existing payment of د.إ${parseFloat(formData.paid || 0).toFixed(2)}?`
         : `Are you sure you want to update the payment details without adding any new payment?`,
       async () => {
         try {
@@ -599,7 +599,7 @@ const InvoiceUpdateSystem = () => {
                   <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-2">Pending (Auto)</label>
                   <input
                     type="text"
-                    value={`₹ ${formData.pending?.toFixed(2) || "0.00"}`}
+                    value={`د.إ ${formData.pending?.toFixed(2) || "0.00"}`}
                     disabled
                     className="w-full px-3 py-2 text-sm md:text-base bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-bold cursor-not-allowed"
                   />
@@ -697,9 +697,9 @@ const InvoiceUpdateSystem = () => {
               <InfoCard icon={FileText} title="Insurance Details" bgColor="bg-gradient-to-br from-cyan-50 to-blue-50">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                   <InfoField label="Insurance" value={formData.insurance} />
-                  <InfoField label="Advance Given Amount" value={formData.advanceGivenAmount != null ? `₹ ${formData.advanceGivenAmount.toFixed(2)}` : null} />
+                  <InfoField label="Advance Given Amount" value={formData.advanceGivenAmount != null ? `د.إ ${formData.advanceGivenAmount.toFixed(2)}` : null} />
                   <InfoField label="Co-Pay %" value={formData.coPayPercent != null ? `${formData.coPayPercent}%` : null} />
-                  <InfoField label="Need to Pay Amount (Auto)" value={`₹ ${calculatedFields.needToPay.toFixed(2)}`} />
+                  <InfoField label="Need to Pay Amount (Auto)" value={`د.إ ${calculatedFields.needToPay.toFixed(2)}`} />
                   <div>
                     <label className="block text-xs md:text-sm font-semibold text-gray-800 mb-1">Advance Claim Status</label>
                     <div className="flex items-center gap-2">
@@ -748,24 +748,24 @@ const InvoiceUpdateSystem = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 text-xs md:text-sm">
                         <div>
                           <span className="font-medium text-gray-600">Amount:</span>
-                          <p className="text-gray-800">₹{entry.amount?.toFixed(2) || "0.00"}</p>
+                          <p className="text-gray-800">د.إ{entry.amount?.toFixed(2) || "0.00"}</p>
                         </div>
                         <div>
                           <span className="font-medium text-gray-600">Paid:</span>
-                          <p className="text-gray-800">₹{entry.paid?.toFixed(2) || "0.00"}</p>
+                          <p className="text-gray-800">د.إ{entry.paid?.toFixed(2) || "0.00"}</p>
                         </div>
                         <div>
                           <span className="font-medium text-gray-600">Advance:</span>
-                          <p className="text-gray-800">₹{entry.advance?.toFixed(2) || "0.00"}</p>
+                          <p className="text-gray-800">د.إ{entry.advance?.toFixed(2) || "0.00"}</p>
                         </div>
                         <div>
                           <span className="font-medium text-gray-600">Pending:</span>
-                          <p className="text-gray-800">₹{entry.pending?.toFixed(2) || "0.00"}</p>
+                          <p className="text-gray-800">د.إ{entry.pending?.toFixed(2) || "0.00"}</p>
                         </div>
                         {entry.paying > 0 && (
                           <div className="col-span-2 sm:col-span-4">
                             <span className="font-medium text-gray-600">Paying Amount:</span>
-                            <p className="text-green-600 font-semibold">₹{entry.paying.toFixed(2)}</p>
+                            <p className="text-green-600 font-semibold">د.إ{entry.paying.toFixed(2)}</p>
                           </div>
                         )}
                         <div className="col-span-2 sm:col-span-4">

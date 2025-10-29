@@ -109,17 +109,17 @@ function AllPettyCashAdmin() {
         <h2 className="text-xl font-bold text-gray-900 mb-4">Global Petty Cash Summary</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">₹{globalAmounts.globalTotalAmount}</div>
+            <div className="text-2xl font-bold text-green-600">د.إ{globalAmounts.globalTotalAmount}</div>
             <div className="text-sm text-green-800">Total Amount</div>
             <div className="text-xs text-green-600 mt-1">All staff combined</div>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">₹{globalAmounts.globalSpentAmount}</div>
+            <div className="text-2xl font-bold text-red-600">د.إ{globalAmounts.globalSpentAmount}</div>
             <div className="text-sm text-red-800">Total Spent</div>
             <div className="text-xs text-red-600 mt-1">All expenses combined</div>
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">₹{globalAmounts.globalRemainingAmount}</div>
+            <div className="text-2xl font-bold text-blue-600">د.إ{globalAmounts.globalRemainingAmount}</div>
             <div className="text-sm text-blue-800">Remaining Balance</div>
             <div className="text-xs text-blue-600 mt-1">Available for use</div>
           </div>
@@ -197,16 +197,16 @@ function AllPettyCashAdmin() {
                   {item.totalAllocated > 0 && (
                     <div>
                       <p className="text-xs text-gray-800">Allocated</p>
-                      <p className="font-bold text-gray-900">₹{item.totalAllocated}</p>
+                      <p className="font-bold text-gray-900">د.إ{item.totalAllocated}</p>
                     </div>
                   )}
                   <div>
                     <p className="text-xs text-gray-800">Spent</p>
-                    <p className="font-bold text-gray-900">₹{item.totalSpent}</p>
+                    <p className="font-bold text-gray-900">د.إ{item.totalSpent}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-800">Balance</p>
-                    <p className="font-bold text-gray-900">₹{item.totalAmount}</p>
+                    <p className="font-bold text-gray-900">د.إ{item.totalAmount}</p>
                   </div>
                 </div>
 
@@ -224,7 +224,7 @@ function AllPettyCashAdmin() {
                               <p className="text-gray-800">{p.phone} • {p.email}</p>
                               {p.allocatedAmounts.map((a, j) => (
                                 <div key={j} className="flex justify-between items-center mt-1 pt-1 border-t">
-                                  <span className="text-gray-900">₹{a.amount} • {formatDate(a.date)}</span>
+                                  <span className="text-gray-900">د.إ{a.amount} • {formatDate(a.date)}</span>
                                   {a.receipts?.length > 0 && (
                                     <button
                                       onClick={() => { setReceipts(a.receipts); setShowModal(true); }}
@@ -252,7 +252,7 @@ function AllPettyCashAdmin() {
                         <div key={i} className="bg-gray-50 rounded p-2 text-sm flex justify-between items-center">
                           <div>
                             <p className="font-medium text-gray-900">{e.description}</p>
-                            <p className="text-gray-800">₹{e.spentAmount} • {formatDate(e.date)}</p>
+                            <p className="text-gray-800">د.إ{e.spentAmount} • {formatDate(e.date)}</p>
                           </div>
                           {e.receipts?.length > 0 && (
                             <button

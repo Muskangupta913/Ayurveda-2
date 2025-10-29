@@ -17,6 +17,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "lib/firebase.js", "models/Treatment.js", "models/Clinic.js", "pages/api/clinics/treatments.js", "pages/api/clinics/register.js", "pages/api/auth/register.js", "pages/api/admin/deleteTreatment.js", "components/createBlog.tsx", "pages/staff/update-patient-info/[id].jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "lib/firebase.js", "models/Treatment.js", "models/Clinic.js", "pages/api/clinics/treatments.js", "pages/api/clinics/register.js", "pages/api/auth/register.js", "pages/api/admin/deleteTreatment.js", "components/createBlog.tsx", "pages/staff/update-patient-info/[id].jsx", "components/blog.jsx", "components/Index1.jsx", "components/Footer.jsx", "components/CalculatorGames.jsx"],
   "exclude": ["node_modules"]
 }

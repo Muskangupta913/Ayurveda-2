@@ -3,18 +3,15 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { useRouter } from 'next/router';
-import { 
-  HomeIcon, 
-  BriefcaseIcon, 
-  PencilSquareIcon, 
-  KeyIcon 
+import {
+  KeyIcon
 } from "@heroicons/react/24/solid";
 
-// Define a type for navigation items - updated to accept both string and JSX element
 interface NavItem {
   name: string;
   href: string;
-  icon: string | React.ComponentType<{ className?: string }>; // Updated to accept both emoji string and React component
+  icon: string | React.ComponentType<{ className?: string }>;
+  color: string;
   action?: () => void;
 }
 
@@ -22,103 +19,43 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [isRegisterDropdownOpen, setIsRegisterDropdownOpen] = useState(false);
   const [isDashboardDropdownOpen, setIsDashboardDropdownOpen] = useState(false);
-  const [isMobileDashboardDropdownOpen, setIsMobileDashboardDropdownOpen] = useState(false);
-  const [isMobileRegisterDropdownOpen, setIsMobileRegisterDropdownOpen] = useState(false);
+  const [isRegisterDropdownOpen, setIsRegisterDropdownOpen] = useState(false);
+  const [isModulesDropdownOpen, setIsModulesDropdownOpen] = useState(false);
 
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
-  // Refs for dropdown elements
   const dashboardDropdownRef = useRef<HTMLDivElement>(null);
   const registerDropdownRef = useRef<HTMLDivElement>(null);
+  const modulesDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Close dashboard dropdown if click is outside
       if (dashboardDropdownRef.current && !dashboardDropdownRef.current.contains(event.target as Node)) {
         setIsDashboardDropdownOpen(false);
       }
-
-      // Close register dropdown if click is outside
       if (registerDropdownRef.current && !registerDropdownRef.current.contains(event.target as Node)) {
         setIsRegisterDropdownOpen(false);
       }
+      if (modulesDropdownRef.current && !modulesDropdownRef.current.contains(event.target as Node)) {
+        setIsModulesDropdownOpen(false);
+      }
     };
 
-    // Add event listener when any dropdown is open
-    if (isDashboardDropdownOpen || isRegisterDropdownOpen) {
+    if (isDashboardDropdownOpen || isRegisterDropdownOpen || isModulesDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
-    // Cleanup event listener
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isDashboardDropdownOpen, isRegisterDropdownOpen]);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDashboardDropdownOpen, isRegisterDropdownOpen, isModulesDropdownOpen]);
 
-  // Function to handle dashboard dropdown toggle
-  const handleDashboardDropdownToggle = () => {
-    if (isRegisterDropdownOpen) {
-      setIsRegisterDropdownOpen(false);
-    }
-    setIsDashboardDropdownOpen(prev => !prev);
-  };
-
-  // Function to handle register dropdown toggle
-  const handleRegisterDropdownToggle = () => {
-    if (isDashboardDropdownOpen) {
-      setIsDashboardDropdownOpen(false);
-    }
-    setIsRegisterDropdownOpen(prev => !prev);
-  };
-
-  // Function to handle mobile dashboard dropdown toggle
-  const handleMobileDashboardDropdownToggle = () => {
-    if (isMobileRegisterDropdownOpen) {
-      setIsMobileRegisterDropdownOpen(false);
-    }
-    setIsMobileDashboardDropdownOpen(prev => !prev);
-  };
-
-  // Function to handle mobile register dropdown toggle
-  const handleMobileRegisterDropdownToggle = () => {
-    if (isMobileDashboardDropdownOpen) {
-      setIsMobileDashboardDropdownOpen(false);
-    }
-    setIsMobileRegisterDropdownOpen(prev => !prev);
-  };
-
-  // Helper function to render icons
-  const renderIcon = (icon: string | React.ComponentType<{ className?: string }>, className: string = "w-4 h-4") => {
+  const renderIcon = (icon: string | React.ComponentType<{ className?: string }>, color: string, className: string = "w-5 h-5") => {
     if (typeof icon === 'string') {
-      return <span className="text-sm">{icon}</span>;
+      return <span className="text-lg">{icon}</span>;
     } else {
       const IconComponent = icon;
-      return <IconComponent className={className} />;
-    }
-  };
-
-  // Navigation items - dynamically change based on auth status - Updated with Heroicons
-  const getNavItems = (): NavItem[] => {
-    const baseItems: NavItem[] = [
-      { name: 'Home', href: '/', icon: HomeIcon }, // Using HomeIcon here
-      { name: 'Career', href: '/job-listings', icon: BriefcaseIcon }, // Using BriefcaseIcon
-      { name: 'Blogs', href: '/blogs/viewBlogs', icon: PencilSquareIcon }, // Using PencilSquareIcon
-      // Add other links here if needed
-    ];
-
-    if (isAuthenticated) {
-      return [
-        ...baseItems,
-      ];
-    } else {
-      return [
-        ...baseItems,
-        { name: 'User Login', href: '#', icon: KeyIcon, action: () => openAuthModal('login') }, // Using KeyIcon
-      ];
+      return <IconComponent className={`${className} ${color}`} />;
     }
   };
 
@@ -137,671 +74,318 @@ const Header = () => {
     router.push('/');
   };
 
-  const navItems = getNavItems();
+  const moduleOptions = [
+    { name: 'Home', icon: '🏠', color: 'text-indigo-600', bgColor: 'bg-indigo-50', href: '/' },
+    { name: 'Search Health Center', icon: '🏥', color: 'text-red-600', bgColor: 'bg-red-50', href: '/clinic/findclinic' },
+    { name: 'Search Doctor', icon: '👨‍⚕️', color: 'text-teal-600', bgColor: 'bg-teal-50', href: '/doctor/search' },
+    { name: 'Games', icon: '🎮', color: 'text-purple-600', bgColor: 'bg-purple-50', href: '/games/allgames' },
+    { name: 'Carriers', icon: '💼', color: 'text-blue-600', bgColor: 'bg-blue-50', href: '/job-listings' },
+    { name: 'Blog', icon: '✍️', color: 'text-blue-600', bgColor: 'bg-blue-50', href: '/blogs/viewBlogs' },
+    { name: 'Calculator', icon: '🧮', color: 'text-purple-600', bgColor: 'bg-purple-50', href: '/calculator/allcalc' },
+    { name: 'About Us', icon: 'ℹ️', color: 'text-gray-600', bgColor: 'bg-gray-50', href: '/aboutus' },
+  ];
 
   return (
     <>
-      <header className="bg-white/95 backdrop-blur-md shadow-xl border-b border-opacity-20 relative z-30" style={{ borderColor: '#2D9AA5' }}>
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Left: ZEVA name & subtitle with enhanced styling */}
-            <div className="flex items-center space-x-3 group">
-              <div className="relative">
-                {/* Subtle background accent */}
-                <div className="absolute inset-0 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-110"></div>
-                <div className="relative px-3 py-2">
-                  <div className="flex items-center gap-3">
-                    {/* <span className="text-6xl text-cyan-400 drop-shadow-[0_0_20px_rgba(0,255,255,0.7)] animate-bounce">
-                      ⚕
-                    </span> */}
-                    <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-400 to-cyan-300 drop-shadow-lg">
-                      ZEVA
-                    </h1>
-                  </div>
-
-                  <div className="h-0.5 w-0 bg-gradient-to-r from-transparent via-teal-400 to-transparent group-hover:w-full transition-all duration-500"></div>
+      <header className="bg-white shadow-lg border-b border-gray-200">
+        <nav className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
+          {/* Main Bar - Logo, Dashboard, Register, User, and Toggle */}
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center flex-shrink-0">
+              <Link href="/" className="flex items-center space-x-2">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-teal-600 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  Z
                 </div>
-              </div>
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-lg font-bold text-gray-800">Zeva</span>
+                  {/* <span className="text-xs text-gray-500">Digital OS</span> */}
+                </div>
+              </Link>
             </div>
 
-            {/* Desktop Navigation with enhanced hover effects - Updated icon rendering */}
-            <div className="hidden lg:flex items-center space-x-1">
-              {navItems.map((item) =>
-                item.action ? (
-                  <button
-                    key={item.name}
-                    onClick={item.action}
-                    className="group relative px-5 py-3 rounded-full text-gray-700 font-medium transition-all duration-300 hover:shadow-lg"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#2D9AA5';
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.12)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#374151';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateY(0px)';
-                    }}
-                  >
-                    <span className="flex items-center space-x-2">
-                      <span className="group-hover:scale-125 transition-transform duration-300">
-                        {renderIcon(item.icon)}
-                      </span>
-                      <span className="relative">
-                        {item.name}
-                        <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-teal-400 to-cyan-500 group-hover:w-full transition-all duration-300"></div>
-                      </span>
-                    </span>
-                  </button>
-                ) : (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className="group relative px-5 py-3 rounded-full text-gray-700 font-medium transition-all duration-300 hover:shadow-lg"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#2D9AA5';
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.12)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#374151';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateY(0px)';
-                    }}
-                  >
-                    <span className="flex items-center space-x-2">
-                      <span className="group-hover:scale-125 transition-transform duration-300">
-                        {renderIcon(item.icon)}
-                      </span>
-                      <span className="relative">
-                        {item.name}
-                        <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-teal-400 to-cyan-500 group-hover:w-full transition-all duration-300"></div>
-                      </span>
-                    </span>
-                  </Link>
-                )
-              )}
-
-              {/* Enhanced User Menu for Authenticated Users */}
-              {isAuthenticated && (
-                <div className="relative group">
-                  <button
-                    className="flex items-center space-x-3 px-5 py-3 rounded-full text-gray-700 font-medium transition-all duration-300 hover:shadow-lg"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#2D9AA5';
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.12)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#374151';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateY(0px)';
-                    }}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-600 flex items-center justify-center text-white font-semibold text-sm">
-                      {user?.name?.charAt(0)?.toUpperCase() || '👤'}
-                    </div>
-                    <span className="max-w-24 truncate">{user?.name}</span>
-                    <span className="text-xs transition-transform duration-300 group-hover:rotate-180">▼</span>
-                  </button>
-                  <div className="absolute right-0 top-full mt-3 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40 overflow-hidden">
-                    {/* Gradient header */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-800">{user?.name}</p>
-                      <p className="text-xs text-gray-500">Authenticated User</p>
-                    </div>
-                    <div className="py-2">
-                      <Link
-                        href="/user/profile"
-                        className="flex items-center space-x-3 px-4 py-3 text-gray-700 transition-all duration-300 hover:shadow-sm"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#2D9AA5';
-                          e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.08)';
-                          e.currentTarget.style.transform = 'translateX(4px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#374151';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.transform = 'translateX(0px)';
-                        }}
-                      >
-                        <span className="text-lg">👤</span>
-                        <span className="font-medium">My Profile</span>
+            {/* Right Side - Dashboard, Register, User/Login Section, and Module Toggle */}
+            <div className="flex items-center space-x-1.5 sm:space-x-3 xl:space-x-4 flex-shrink-0">
+              {/* Dashboard Dropdown */}
+              <div className="relative" ref={dashboardDropdownRef}>
+                <button
+                  onClick={() => setIsDashboardDropdownOpen(!isDashboardDropdownOpen)}
+                  className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-teal-600 to-blue-600 text-white px-2 sm:px-3 xl:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-sm font-medium hover:from-teal-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 whitespace-nowrap"
+                >
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                  <span>Dashboard</span>
+                  <svg className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${isDashboardDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isDashboardDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <div className="py-1">
+                      <Link href="/clinic/login-clinic" onClick={() => setIsDashboardDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        Health Center Login
                       </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-700 transition-all duration-300"
-                      >
-                        <span className="text-lg">🚪</span>
-                        <span className="font-medium">Logout</span>
+                      <Link href="/doctor/login" onClick={() => setIsDashboardDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        Doctor Login
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Register Dropdown */}
+              <div className="relative" ref={registerDropdownRef}>
+                <button
+                  onClick={() => setIsRegisterDropdownOpen(!isRegisterDropdownOpen)}
+                  className="flex items-center space-x-1 sm:space-x-2 border-2 border-teal-600 text-teal-600 px-2 sm:px-3 xl:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-sm font-medium hover:bg-teal-600 hover:text-white transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 whitespace-nowrap"
+                >
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-current rounded-full"></div>
+                  <span>Register</span>
+                  <svg className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${isRegisterDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isRegisterDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <div className="py-1">
+                      <Link href="/clinic/register-clinic" onClick={() => setIsRegisterDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        Register Health Center
+                      </Link>
+                      <Link href="/doctor/doctor-register" onClick={() => setIsRegisterDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        Register as Doctor
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* User Menu or Login/SignUp Button */}
+              {isAuthenticated ? (
+                <div className="relative group">
+                  <button className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium hover:bg-gray-50 rounded-lg transition-all duration-200">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-teal-500 to-blue-500 flex items-center justify-center text-white font-medium text-sm shadow-lg relative">
+                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                    </div>
+                    <div className="hidden lg:flex flex-col items-start">
+                      <span className="text-sm font-semibold text-gray-800 max-w-32 truncate">{user?.name}</span>
+                    </div>
+                    <svg className="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div className="absolute right-0 mt-2 w-48 max-w-[calc(100vw-2rem)] bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="py-1">
+                      <Link href="/user/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        Profile
+                      </Link>
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        Logout
                       </button>
                     </div>
                   </div>
                 </div>
+              ) : (
+                <button
+                  onClick={() => openAuthModal('login')}
+                  className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 sm:px-3 xl:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-sm font-medium hover:from-red-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 whitespace-nowrap"
+                >
+                  {renderIcon(KeyIcon, 'text-white', "w-3 h-3 sm:w-4 sm:h-4")}
+                  <span className="hidden xs:inline sm:inline">Login/SignUp</span>
+                  <span className="xs:hidden sm:hidden">Login</span>
+                </button>
               )}
-            </div>
 
-            {/* Enhanced Dashboard Login & Register Dropdowns */}
-            <div className="flex items-center space-x-3">
-              {/* Enhanced Dashboard Login Dropdown */}
-              <div className="relative" ref={dashboardDropdownRef}>
+              {/* Modules Toggle Button - Extreme Right */}
+              <div className="relative" ref={modulesDropdownRef}>
                 <button
-                  onClick={handleDashboardDropdownToggle}
-                  className="hidden sm:flex items-center space-x-2 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                  style={{
-                    backgroundImage: `linear-gradient(135deg, #2D9AA5, #1f7a82, #2D9AA5)`,
-                  }}
-                  aria-haspopup="true"
-                  aria-expanded={isDashboardDropdownOpen}
+                  onClick={() => setIsModulesDropdownOpen(!isModulesDropdownOpen)}
+                  className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                  title="All Modules"
                 >
-                  <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 transition-opacity duration-300"></div>
-                  <span className="relative z-10">Dashboard Login</span>
-                  <svg
-                    className={`w-4 h-4 transition-all duration-300 relative z-10 ${isDashboardDropdownOpen ? 'rotate-180 scale-110' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"></path>
+                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                {isDashboardDropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-40 overflow-hidden animate-fadeIn">
-                    {/* Gradient header */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-100">
-                      <h3 className="font-semibold text-gray-800">Choose Dashboard</h3>
-                      <p className="text-xs text-gray-500">Select your login type</p>
-                    </div>
-                    <div className="py-2">
-                      <Link
-                        href="/clinic/login-clinic"
-                        onClick={() => setIsDashboardDropdownOpen(false)}
-                        className="flex items-center space-x-3 px-4 py-4 text-gray-700 transition-all duration-300 group hover:shadow-sm"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#2D9AA5';
-                          e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.08)';
-                          e.currentTarget.style.transform = 'translateX(4px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#374151';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.transform = 'translateX(0px)';
-                        }}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                          <span className="text-lg">🏥</span>
-                        </div>
-                        <div>
-                          <div className="font-medium">Health Center</div>
-                          <div className="text-xs text-gray-500">Medical facilities & clinics</div>
-                        </div>
-                      </Link>
-                      <Link
-                        href="/doctor/login"
-                        onClick={() => setIsDashboardDropdownOpen(false)}
-                        className="flex items-center space-x-3 px-4 py-4 text-gray-700 transition-all duration-300 group hover:shadow-sm"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#2D9AA5';
-                          e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.08)';
-                          e.currentTarget.style.transform = 'translateX(4px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#374151';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.transform = 'translateX(0px)';
-                        }}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                          <span className="text-lg">👨‍⚕️</span>
-                        </div>
-                        <div>
-                          <div className="font-medium">Doctor</div>
-                          <div className="text-xs text-gray-500">Healthcare professionals</div>
-                        </div>
-                      </Link>
-                      <div className="px-4 py-4 text-gray-400 cursor-not-allowed relative group">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                            <span className="text-lg opacity-50">🧘</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">Wellness Center</div>
-                            <div className="text-xs text-gray-400">Holistic health services</div>
-                          </div>
-                          <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-3 py-1 rounded-full font-medium">
-                            Coming Soon
-                          </span>
-                        </div>
-                      </div>
-                      <div className="px-4 py-4 text-gray-400 cursor-not-allowed relative group">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                            <span className="text-lg opacity-50">💆</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">Spa</div>
-                            <div className="text-xs text-gray-400">Relaxation & beauty services</div>
-                          </div>
-                          <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-3 py-1 rounded-full font-medium">
-                            Coming Soon
-                          </span>
+                {isModulesDropdownOpen && (
+                  <>
+                    {/* Mobile/Tablet View */}
+                    <div className="lg:hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] sm:max-w-md bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                      <div className="p-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">All Modules</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {moduleOptions.map((module) => (
+                            <Link
+                              key={module.name}
+                              href={module.href}
+                              onClick={() => setIsModulesDropdownOpen(false)}
+                              className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-gray-50 transition-all duration-200 group border border-gray-100"
+                            >
+                              <span className="text-3xl mb-2">{module.icon}</span>
+                              <span className="text-sm font-medium text-gray-700 group-hover:font-semibold text-center">
+                                {module.name}
+                              </span>
+                            </Link>
+                          ))}
                         </div>
                       </div>
                     </div>
-                  </div>
+
+                    {/* Desktop View - Full Width with 2 columns */}
+                    <div className="hidden lg:block fixed left-0 right-0 top-16 bg-white shadow-2xl border-b border-gray-200 z-50">
+                      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-base font-semibold text-gray-700">All Modules</h3>
+                          <button
+                            onClick={() => setIsModulesDropdownOpen(false)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          {moduleOptions.map((module) => (
+                            <Link
+                              key={module.name}
+                              href={module.href}
+                              onClick={() => setIsModulesDropdownOpen(false)}
+                              className="flex items-center space-x-3 p-3 rounded-md hover:bg-gray-50 transition-all duration-200 group hover:border-gray-200 hover:shadow-sm"
+                            >
+                              <span className="text-2xl flex-shrink-0">{module.icon}</span>
+                              <span className="text-sm font-medium text-gray-700 group-hover:font-semibold">
+                                {module.name}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
-
-              {/* Enhanced Register Dropdown */}
-              <div className="relative" ref={registerDropdownRef}>
-                <button
-                  onClick={handleRegisterDropdownToggle}
-                  className="hidden sm:flex items-center space-x-2 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                  style={{
-                    backgroundImage: `linear-gradient(135deg, #237a84, #2D9AA5, #1f7a82)`,
-                  }}
-                  aria-haspopup="true"
-                  aria-expanded={isRegisterDropdownOpen}
-                >
-                  <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 transition-opacity duration-300"></div>
-                  <span className="relative z-10">Register</span>
-                  <svg
-                    className={`w-4 h-4 transition-all duration-300 relative z-10 ${isRegisterDropdownOpen ? 'rotate-180 scale-110' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </button>
-                {isRegisterDropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-40 overflow-hidden animate-fadeIn">
-                    {/* Gradient header */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-100">
-                      <h3 className="font-semibold text-gray-800">Join Our Platform</h3>
-                      <p className="text-xs text-gray-500">Start your healthcare journey</p>
-                    </div>
-                    <div className="py-2">
-                      <Link
-                        href="/clinic/register-clinic"
-                        onClick={() => setIsRegisterDropdownOpen(false)}
-                        className="flex items-center space-x-3 px-4 py-4 text-gray-700 transition-all duration-300 group hover:shadow-sm"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#2D9AA5';
-                          e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.08)';
-                          e.currentTarget.style.transform = 'translateX(4px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#374151';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.transform = 'translateX(0px)';
-                        }}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                          <span className="text-lg">🏥</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Register Health Center</div>
-                          <div className="text-xs text-gray-500">Add your medical facility</div>
-                        </div>
-                      </Link>
-                      <Link
-                        href="/doctor/doctor-register"
-                        onClick={() => setIsRegisterDropdownOpen(false)}
-                        className="flex items-center space-x-3 px-4 py-4 text-gray-700 transition-all duration-300 group hover:shadow-sm"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#2D9AA5';
-                          e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.08)';
-                          e.currentTarget.style.transform = 'translateX(4px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#374151';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.transform = 'translateX(0px)';
-                        }}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                          <span className="text-lg">👨‍⚕️</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Register as Doctor</div>
-                          <div className="text-xs text-gray-500">Join as healthcare provider</div>
-                        </div>
-                      </Link>
-                      <div className="px-4 py-4 text-gray-400 cursor-not-allowed relative group">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                            <span className="text-lg opacity-50">🧘</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">Register Wellness Center</div>
-                            <div className="text-xs text-gray-400">Holistic health services</div>
-                          </div>
-                          <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-3 py-1 rounded-full font-medium">
-                            Coming Soon
-                          </span>
-                        </div>
-                      </div>
-                      <div className="px-4 py-4 text-gray-400 cursor-not-allowed relative group">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                            <span className="text-lg opacity-50">💆</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">Register as Spa</div>
-                            <div className="text-xs text-gray-400">Beauty & relaxation services</div>
-                          </div>
-                          <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-3 py-1 rounded-full font-medium">
-                            Coming Soon
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Enhanced Mobile Menu Button */}
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="lg:hidden relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:shadow-lg"
-                style={{
-                  backgroundColor: 'rgba(45, 154, 165, 0.1)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.2)';
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                aria-label="Toggle menu"
-                aria-expanded={isMenuOpen}
-              >
-                <div className="w-6 h-5 relative flex flex-col justify-between">
-                  <span className={`block h-0.5 w-full transform transition-all duration-300 rounded-full ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`} style={{ backgroundColor: '#2D9AA5' }}></span>
-                  <span className={`block h-0.5 w-full transition-all duration-300 rounded-full ${isMenuOpen ? 'opacity-0 scale-0' : ''}`} style={{ backgroundColor: '#2D9AA5' }}></span>
-                  <span className={`block h-0.5 w-full transform transition-all duration-300 rounded-full ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} style={{ backgroundColor: '#2D9AA5' }}></span>
-                </div>
-              </button>
             </div>
           </div>
 
-          {/* Enhanced Mobile Menu - Updated icon rendering */}
-          <div className={`lg:hidden transition-all duration-500 overflow-hidden ${isMenuOpen ? 'max-h-screen pb-6' : 'max-h-0'}`}>
-            <div className="pt-4 space-y-2">
-              {navItems.map((item) =>
-                item.action ? (
-                  <button
-                    key={item.name}
-                    onClick={() => {
-                      if (item.action) {
-                        item.action();
-                      }
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center space-x-4 px-4 py-4 rounded-xl text-gray-700 font-medium transition-all duration-300 group text-left hover:shadow-md"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#2D9AA5';
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#374151';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0px)';
-                    }}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      {renderIcon(item.icon, "w-5 h-5")}
-                    </div>
-                    <span>{item.name}</span>
-                  </button>
-                ) : (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-4 px-4 py-4 rounded-xl text-gray-700 font-medium transition-all duration-300 group hover:shadow-md"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#2D9AA5';
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#374151';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0px)';
-                    }}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      {renderIcon(item.icon, "w-5 h-5")}
-                    </div>
-                    <span>{item.name}</span>
-                  </Link>
-                )
+          {/* Mobile Menu */}
+          <div className={`lg:hidden transition-all duration-300 ${isMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {/* Mobile Login/SignUp Button (only show if not authenticated) */}
+              {!isAuthenticated && (
+                <button
+                  onClick={() => {
+                    openAuthModal('login');
+                    setIsMenuOpen(false);
+                  }}
+                  className="group flex items-center space-x-3 w-full text-left px-3 py-3 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 rounded-lg transition-all duration-200"
+                >
+                  {renderIcon(KeyIcon, 'text-red-500', "w-5 h-5 group-hover:scale-110 transition-transform")}
+                  <span>Login/SignUp</span>
+                </button>
               )}
 
-              {/* Enhanced Mobile Dashboard Login Dropdown */}
-              <details 
-                className="px-4 py-3 rounded-xl border border-opacity-30 shadow-sm" 
-                style={{ backgroundColor: 'rgba(45, 154, 165, 0.08)', borderColor: '#2D9AA5' }}
-                open={isMobileDashboardDropdownOpen}
-                onToggle={(e) => {
-                  const isOpen = (e.target as HTMLDetailsElement).open;
-                  if (isOpen) {
-                    handleMobileDashboardDropdownToggle();
-                  } else {
-                    setIsMobileDashboardDropdownOpen(false);
-                  }
-                }}
-              >
-                <summary className="cursor-pointer font-semibold mb-3 list-none flex items-center justify-between" style={{ color: '#2D9AA5' }}>
-                  <span className="flex items-center space-x-2">
-                    <span>🏥</span>
-                    <span>Dashboard Login</span>
-                  </span>
-                  <span className={`text-sm transition-transform duration-300 ${isMobileDashboardDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
-                </summary>
-                <div className="mt-2 space-y-2 pl-4">
-                  <Link
-                    href="/clinic/login-clinic"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-3 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:shadow-sm"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0px)';
-                    }}
-                  >
-                    <span>🏥</span>
-                    <span className="font-medium">Health Center</span>
-                  </Link>
-                  <Link
-                    href="/doctor/login"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-3 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:shadow-sm"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0px)';
-                    }}
-                  >
-                    <span>👨‍⚕️</span>
-                    <span className="font-medium">Doctor</span>
-                  </Link>
-                  <div className="flex items-center justify-between px-3 py-3 text-gray-400 rounded-lg">
-                    <span className="flex items-center space-x-3">
-                      <span>🧘</span>
-                      <span className="font-medium">Wellness Center</span>
-                    </span>
-                    <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
+              {/* Mobile All Modules Section */}
+              <div className="pt-4 space-y-2">
+                <details className="group">
+                  <summary className="flex items-center justify-between px-3 py-3 text-base font-medium text-gray-700 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 rounded-lg transition-all duration-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                      All Modules
+                    </div>
+                    <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="pl-6 space-y-1 mt-2">
+                    {moduleOptions.map((module) => (
+                      <Link
+                        key={module.name}
+                        href={module.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className={`flex items-center space-x-3 px-3 py-2 text-sm ${module.color} hover:bg-gray-50 rounded-lg transition-all duration-200`}
+                      >
+                        <span className="text-lg">{module.icon}</span>
+                        <span>{module.name}</span>
+                      </Link>
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between px-3 py-3 text-gray-400 rounded-lg">
-                    <span className="flex items-center space-x-3">
-                      <span>💆</span>
-                      <span className="font-medium">Spa</span>
-                    </span>
-                    <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
-                  </div>
-                </div>
-              </details>
+                </details>
 
-              {/* Enhanced Mobile Register Dropdown */}
-              <details 
-                className="px-4 py-3 rounded-xl border border-opacity-30 shadow-sm" 
-                style={{ backgroundColor: 'rgba(45, 154, 165, 0.05)', borderColor: '#2D9AA5' }}
-                open={isMobileRegisterDropdownOpen}
-                onToggle={(e) => {
-                  const isOpen = (e.target as HTMLDetailsElement).open;
-                  if (isOpen) {
-                    handleMobileRegisterDropdownToggle();
-                  } else {
-                    setIsMobileRegisterDropdownOpen(false);
-                  }
-                }}
-              >
-                <summary className="cursor-pointer font-semibold mb-3 list-none flex items-center justify-between" style={{ color: '#2D9AA5' }}>
-                  <span className="flex items-center space-x-2">
-                    <span>📝</span>
-                    <span>Register</span>
-                  </span>
-                  <span className={`text-sm transition-transform duration-300 ${isMobileRegisterDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
-                </summary>
-                <div className="mt-2 space-y-2 pl-4">
-                  <Link
-                    href="/clinic/register-clinic"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-3 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:shadow-sm"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0px)';
-                    }}
-                  >
-                    <span>🏥</span>
-                    <span className="font-medium">Register Health Center</span>
-                  </Link>
-                  <Link
-                    href="/doctor/doctor-register"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 px-3 py-3 text-gray-700 rounded-lg transition-all duration-300 hover:shadow-sm"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0px)';
-                    }}
-                  >
-                    <span>👨‍⚕️</span>
-                    <span className="font-medium">Register as Doctor</span>
-                  </Link>
-                  <div className="flex items-center justify-between px-3 py-3 text-gray-400 rounded-lg">
-                    <span className="flex items-center space-x-3">
-                      <span>🧘</span>
-                      <span className="font-medium">Register Wellness Center</span>
-                    </span>
-                    <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
+                <details className="group">
+                  <summary className="flex items-center justify-between px-3 py-3 text-base font-medium text-gray-700 cursor-pointer hover:bg-gradient-to-r hover:from-teal-50 hover:to-blue-50 rounded-lg transition-all duration-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full"></div>
+                      Dashboard Login
+                    </div>
+                    <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="pl-6 space-y-1 mt-2">
+                    <Link href="/clinic/login-clinic" onClick={() => setIsMenuOpen(false)} className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-teal-600 hover:bg-green-50 rounded-lg transition-all duration-200">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      Health Center
+                    </Link>
+                    <Link href="/doctor/login" onClick={() => setIsMenuOpen(false)} className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-teal-600 hover:bg-blue-50 rounded-lg transition-all duration-200">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                      Doctor
+                    </Link>
                   </div>
-                  <div className="flex items-center justify-between px-3 py-3 text-gray-400 rounded-lg">
-                    <span className="flex items-center space-x-3">
-                      <span>💆</span>
-                      <span className="font-medium">Register as Spa</span>
-                    </span>
-                    <span className="text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 px-2 py-1 rounded-full">Coming Soon</span>
-                  </div>
-                </div>
-              </details>
+                </details>
 
-              {/* Enhanced Mobile User Menu */}
+                <details className="group">
+                  <summary className="flex items-center justify-between px-3 py-3 text-base font-medium text-gray-700 cursor-pointer hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 rounded-lg transition-all duration-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                      Register
+                    </div>
+                    <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="pl-6 space-y-1 mt-2">
+                    <Link href="/clinic/register-clinic" onClick={() => setIsRegisterDropdownOpen(false)} className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-teal-600 hover:bg-purple-50 rounded-lg transition-all duration-200">
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                      Health Center
+                    </Link>
+                    <Link href="/doctor/doctor-register" onClick={() => setIsRegisterDropdownOpen(false)} className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-teal-600 hover:bg-orange-50 rounded-lg transition-all duration-200">
+                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                      Doctor
+                    </Link>
+                  </div>
+                </details>
+              </div>
+
+              {/* Mobile User Menu */}
               {isAuthenticated && (
                 <>
-                  <div className="border-t border-gray-200 my-4 mx-4"></div>
-                  <div className="mx-4 px-4 py-3 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-100">
-                    <p className="text-sm text-gray-600 font-medium">Signed in as:</p>
-                    <div className="flex items-center space-x-3 mt-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-600 flex items-center justify-center text-white font-semibold text-sm">
-                        {user?.name?.charAt(0)?.toUpperCase() || '👤'}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex items-center px-3 py-3 bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-blue-500 flex items-center justify-center text-white font-medium shadow-lg">
+                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
-                      <p className="font-semibold text-gray-800">{user?.name}</p>
+                      <div className="ml-3">
+                        <div className="text-base font-medium text-gray-800">{user?.name}</div>
+                        <div className="text-xs text-gray-500">Welcome back!</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      <Link href="/user/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center space-x-3 px-3 py-3 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-teal-50 rounded-lg transition-all duration-200">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        Profile
+                      </Link>
+                      <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full flex items-center space-x-3 px-3 py-3 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 rounded-lg transition-all duration-200">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        Logout
+                      </button>
                     </div>
                   </div>
-                  <Link
-                    href="/user/profile"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-4 px-4 py-4 mx-2 rounded-xl text-gray-700 font-medium transition-all duration-300 hover:shadow-md"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#2D9AA5';
-                      e.currentTarget.style.backgroundColor = 'rgba(45, 154, 165, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#374151';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0px)';
-                    }}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-50 to-cyan-50 flex items-center justify-center">
-                      <span className="text-lg">👤</span>
-                    </div>
-                    <span>My Profile</span>
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center space-x-4 px-4 py-4 mx-2 rounded-xl text-gray-700 hover:text-red-700 hover:bg-red-50 font-medium transition-all duration-300 text-left hover:shadow-md"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                      <span className="text-lg">🚪</span>
-                    </div>
-                    <span>Logout</span>
-                  </button>
                 </>
               )}
             </div>
           </div>
         </nav>
-
-        {/* Enhanced Top Bar */}
-        <div className="hidden md:block text-white text-sm relative overflow-hidden" style={{ backgroundImage: `linear-gradient(135deg, #2D9AA5, #1f7a82, #2D9AA5)` }}>
-          <div className="absolute inset-0 bg-white opacity-5"></div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 relative z-10">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-8">
-                <span className="flex items-center space-x-2 hover:scale-105 transition-transform duration-300">
-                  <span className="text-base">✉️</span>
-                  <span className="font-medium">info@zeva.com</span>
-                </span>
-                <span className="flex items-center space-x-2 hover:scale-105 transition-transform duration-300">
-                  <span className="text-base">🕌</span>
-                  <span className="font-medium">Healthcare Near You</span>
-                </span>
-              </div>
-              {isAuthenticated && (
-                <div className="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
-                  <span className="text-base">👋</span>
-                  <span className="font-medium">Welcome, {user?.name}!</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </header>
 
       {/* Auth Modal */}
@@ -811,23 +395,6 @@ const Header = () => {
         onSuccess={handleAuthSuccess}
         initialMode={authMode}
       />
-
-      {/* Add custom CSS for animations */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
     </>
   );
 };

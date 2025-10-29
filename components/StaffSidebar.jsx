@@ -128,6 +128,12 @@ const Sidebar = () => {
         icon: "🧑‍💼", 
         description: "Manage Membership" 
       },
+      { 
+        label: "All Contracts", 
+        path: "/staff/contract", 
+        icon: "🧑‍💼", 
+        description: "See all contracts" 
+      },
       
     ];
   }
@@ -270,13 +276,13 @@ const Sidebar = () => {
               Staff Management
             </div>
             <div className="space-y-1">
-              {navItems.map((item) => {
+              {navItems.map((item, index) => {
                 const isActive = router.pathname === item.path;
                 const isHovered = hoveredItem === item.path;
 
                 // Regular navigation items
                 return (
-                  <Link key={item.path} href={item.path}>
+                  <Link key={`${item.path}-${index}`} href={item.path}>
                     <div
                       className={clsx(
                         'group relative block rounded-lg transition-all duration-200 cursor-pointer p-3',
@@ -400,12 +406,12 @@ const Sidebar = () => {
               </div>
 
               <div className="space-y-1">
-                {navItems.map((item) => {
+                {navItems.map((item, index) => {
                   const isActive = router.pathname === item.path;
 
                   // Regular navigation items for mobile
                   return (
-                    <Link key={item.path} href={item.path}>
+                    <Link key={`${item.path}-${index}`} href={item.path}>
                       <div
                         className={clsx(
                           'group relative block rounded-lg transition-all duration-200 cursor-pointer p-3 touch-manipulation active:scale-98',

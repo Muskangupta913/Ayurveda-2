@@ -1,8 +1,10 @@
 import dbConnect from "../../../lib/database";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../../../models/Users";
 import Membership from "../../../models/Membership";
 import PatientRegistration from "../../../models/PatientRegistration";
+import PettyCash from "../../../models/PettyCash";
 
 async function getUserFromToken(req) {
   const authHeader = req.headers.authorization || "";
@@ -15,6 +17,63 @@ async function getUserFromToken(req) {
     return user;
   } catch {
     throw { status: 401, message: "Invalid or expired token" };
+  }
+}
+
+// Helper function to add treatment amounts to PettyCash when payment method is Cash
+async function addTreatmentToPettyCashIfCash(user, membership, treatments) {
+  if (treatments && treatments.length > 0) {
+    // Calculate total treatment amount
+    const totalTreatmentAmount = treatments.reduce((sum, treatment) => {
+      const lineTotal = Number(treatment.unitCount || 0) * Number(treatment.unitPrice || 0);
+      return sum + lineTotal;
+    }, 0);
+
+    if (totalTreatmentAmount > 0) {
+      try {
+        // Try to get patient details from PatientRegistration
+        let patientName = `Membership: ${membership.packageName}`;
+        let patientEmail = '';
+        let patientPhone = '';
+
+        try {
+          const patient = await PatientRegistration.findOne({ emrNumber: membership.emrNumber }).select("firstName lastName email mobileNumber");
+          if (patient) {
+            const firstName = (patient.firstName || '').trim();
+            const lastName = (patient.lastName || '').trim();
+            patientName = [firstName, lastName].filter(Boolean).join(' ') || patientName;
+            patientEmail = patient.email || '';
+            patientPhone = patient.mobileNumber || '';
+          }
+        } catch (patientError) {
+          console.log("Could not fetch patient details for petty cash record:", patientError.message);
+        }
+
+        // Create a PettyCash record for the treatment amounts
+        const pettyCashRecord = await PettyCash.create({
+          staffId: user._id,
+          patientName: patientName,
+          patientEmail: patientEmail,
+          patientPhone: patientPhone,
+          note: `Auto-added from membership update - EMR: ${membership.emrNumber}, Package: ${membership.packageName}`,
+          allocatedAmounts: [{
+            amount: totalTreatmentAmount,
+            receipts: [],
+            date: new Date()
+          }],
+          expenses: []
+        });
+
+        
+        // Update global total amount
+        await PettyCash.updateGlobalTotalAmount(totalTreatmentAmount, 'add');
+        
+        console.log(`Added د.إ${totalTreatmentAmount} to PettyCash for staff ${user.name} from membership update - EMR: ${membership.emrNumber}, Patient: ${patientName}`);
+      } catch (error) {
+        console.error("Error adding treatment amounts to PettyCash:", error);
+        // Don't throw error to avoid breaking membership update
+      }
+    }
   }
 }
 
@@ -84,11 +143,28 @@ export default async function handler(req, res) {
       if (!membershipId) {
         return res.status(400).json({ success: false, message: "membershipId is required" });
       }
+      
+      // Validate membershipId format (should be a valid MongoDB ObjectId)
+      if (!mongoose.Types.ObjectId.isValid(membershipId)) {
+        return res.status(400).json({ success: false, message: "Invalid membershipId format" });
+      }
 
-      const membership = await Membership.findOne({ _id: membershipId, staffId: user._id });
+      console.log("Looking for membership with ID:", membershipId, "User ID:", user._id);
+
+      // Find the membership by ID only (removed staffId filter to allow any staff to update)
+      let membership = await Membership.findOne({ _id: membershipId });
       if (!membership) {
+        console.log("Membership not found for ID:", membershipId);
         return res.status(404).json({ success: false, message: "Membership not found" });
       }
+      
+      console.log("Membership found:", {
+        id: membership._id,
+        emrNumber: membership.emrNumber,
+        packageName: membership.packageName,
+        originalStaffId: membership.staffId,
+        currentUserId: user._id
+      });
 
       const normalizedTreatments = Array.isArray(treatments) ? treatments.map(t => ({
         treatmentName: t.treatmentName,
@@ -114,6 +190,12 @@ export default async function handler(req, res) {
       }
 
       await membership.save();
+
+      // Add treatment amounts to PettyCash if payment method is Cash
+      if (paymentMethod === "Cash" && normalizedTreatments.length > 0) {
+        await addTreatmentToPettyCashIfCash(user, membership, normalizedTreatments);
+      }
+
       return res.status(200).json({ success: true, data: membership });
     } catch (err) {
       console.error("Update membership error:", err);
@@ -129,7 +211,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, message: "membershipId and toEmrNumber are required" });
       }
 
-      const membership = await Membership.findOne({ _id: membershipId, staffId: user._id });
+      // Validate membershipId format
+      if (!mongoose.Types.ObjectId.isValid(membershipId)) {
+        return res.status(400).json({ success: false, message: "Invalid membershipId format" });
+      }
+
+      const membership = await Membership.findOne({ _id: membershipId });
       if (!membership) {
         return res.status(404).json({ success: false, message: "Membership not found" });
       }
@@ -152,7 +239,7 @@ export default async function handler(req, res) {
       
       // Validate transfer amount
       if (transferAmount > remainingBalance) {
-        return res.status(400).json({ success: false, message: `Transfer amount (₹${transferAmount}) cannot exceed remaining balance (₹${remainingBalance})` });
+        return res.status(400).json({ success: false, message: `Transfer amount (د.إ${transferAmount}) cannot exceed remaining balance (د.إ${remainingBalance})` });
       }
 
       // Record transfer (logical tracking)

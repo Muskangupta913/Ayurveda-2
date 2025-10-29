@@ -250,78 +250,78 @@ function FitnessApp () {
 
   // Profile Screen
   if (screen === 'profile') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#2D9AA5] to-blue-600 p-4 flex items-center justify-center">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-[#2D9AA5] rounded-full flex items-center justify-center mx-auto mb-4">
-              <Heart className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">ZEVA Fitness</h1>
-            <p className="text-[#2D9AA5] font-semibold mb-2 text-lg">ZEVA cares for you and wants you to be fit</p>
-            <p className="text-gray-600">Create your personalized fitness journey</p>
+return (
+  <div className="min-h-screen bg-white p-4 flex items-center justify-center">
+    <div className="bg-white rounded-lg border border-gray-200 p-6 w-full max-w-2xl">
+      <div className="text-center mb-6">
+        <div className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Heart className="w-7 h-7 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">ZEVA Fitness</h1>
+        <p className="text-gray-700 font-medium text-sm mb-1">ZEVA cares for you and wants you to be fit</p>
+        <p className="text-gray-600 text-sm">Create your personalized fitness journey</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+          <input
+            type="text"
+            placeholder="Enter your name"
+            value={profile.name}
+            onChange={(e) => handleProfileChange('name', e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+            <input
+              type="number"
+              placeholder="25"
+              value={profile.age}
+              onChange={(e) => handleProfileChange('age', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900"
+            />
           </div>
-
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-              <input
-                type="text"
-                placeholder="Enter your name"
-                value={profile.name}
-                onChange={(e) => handleProfileChange('name', e.target.value)}
-                className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
-                <input
-                  type="number"
-                  placeholder="25"
-                  value={profile.age}
-                  onChange={(e) => handleProfileChange('age', e.target.value)}
-                  className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
-                <input
-                  type="number"
-                  placeholder="70"
-                  value={profile.weight}
-                  onChange={(e) => handleProfileChange('weight', e.target.value)}
-                  className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-              <select
-                value={profile.gender}
-                onChange={(e) => handleProfileChange('gender', e.target.value)}
-                className="text-black w-full p-4 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] outline-none transition-colors"
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <button
-              onClick={startProfile}
-              disabled={!profile.name || !profile.age || !profile.weight || !profile.gender}
-              className="w-full bg-[#2D9AA5] hover:bg-[#258993] disabled:bg-gray-300 text-white py-4 rounded-xl font-semibold transition-colors text-lg"
-            >
-              Start My Fitness Journey
-            </button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
+            <input
+              type="number"
+              placeholder="70"
+              value={profile.weight}
+              onChange={(e) => handleProfileChange('weight', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900"
+            />
           </div>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+          <select
+            value={profile.gender}
+            onChange={(e) => handleProfileChange('gender', e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 bg-white"
+          >
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <button
+          onClick={startProfile}
+          disabled={!profile.name || !profile.age || !profile.weight || !profile.gender}
+          className="w-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 text-white py-3 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed"
+        >
+          Start My Fitness Journey
+        </button>
       </div>
-    );
+    </div>
+  </div>
+);
   }
 
   // Exercise Plan Screen
@@ -618,6 +618,6 @@ function FitnessApp () {
 
 export default FitnessApp;
 
-FitnessApp.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; // No layout
-}
+// FitnessApp.getLayout = function PageLayout(page: React.ReactNode) {
+//   return page; // No layout
+// }

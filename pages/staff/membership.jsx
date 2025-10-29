@@ -249,9 +249,9 @@ const MembershipModal = ({ isOpen, onClose }) => {
 
         <div className="p-4 space-y-6">
           {!patient && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
               <div className="flex-1 relative">
-                <label className="block text-sm font-medium text-gray-800 mb-1">EMR Number</label>
+              <label className="block text-sm font-medium text-gray-800 mb-1">EMR Number</label>
                 <input ref={emrInputRef} value={emrNumber} onChange={e => setEmrNumber(e.target.value)} placeholder="Enter EMR Number" className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900" />
                 {(emrSuggesting || (emrSuggestions && emrSuggestions.length > 0)) && emrNumber.trim().length >= 2 && emrDropdownRect && (
                   <div
@@ -277,9 +277,9 @@ const MembershipModal = ({ isOpen, onClose }) => {
                         <div className="text-xs text-gray-600 truncate">{[s.firstName, s.lastName].filter(Boolean).join(" ")}{s.mobileNumber ? ` · ${s.mobileNumber}` : ''}</div>
                       </button>
                     ))}
-                  </div>
+            </div>
                 )}
-              </div>
+          </div>
               <button onClick={() => fetchByEmr()} disabled={fetching || !emrNumber.trim()} className={`px-5 py-2 rounded-md text-white ${fetching || !emrNumber.trim() ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{fetching ? 'Fetching...' : 'Fetch'}</button>
             </div>
           )}
@@ -335,7 +335,7 @@ const MembershipModal = ({ isOpen, onClose }) => {
                     <select value={selectedPackage} onChange={e => { setSelectedPackage(e.target.value); setSelectedTreatment(""); }} className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900">
                       <option value="">Select Package</option>
                       {packages.map(p => (
-                        <option key={p.name} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - ₹${p.price.toFixed(2)}` : ''}</option>
+                        <option key={p.name} value={p.name}>{p.name}{typeof p.price === 'number' ? ` - د.إ${p.price.toFixed(2)}` : ''}</option>
                       ))}
                     </select>
                   </div>
@@ -374,19 +374,19 @@ const MembershipModal = ({ isOpen, onClose }) => {
                     <select value={selectedTreatment} onChange={e => { setSelectedTreatment(e.target.value); }} className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900">
                       <option value="">Select Treatment</option>
                       {treatments.map(t => (
-                        <option key={t.name} value={t.name}>{t.name}{typeof t.price === 'number' ? ` - ₹${t.price.toFixed(2)}` : ''}</option>
+                        <option key={t.name} value={t.name}>{t.name}{typeof t.price === 'number' ? ` - د.إ${t.price.toFixed(2)}` : ''}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-800 mb-1">Price</label>
                     <div className="flex gap-2">
-                      <input value={selectedPrice ? `₹ ${selectedPrice}` : ""} readOnly className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-gray-50" />
+                      <input value={selectedPrice ? `د.إ ${selectedPrice}` : ""} readOnly className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-gray-50" />
                       <button onClick={addLine} disabled={!selectedTreatment || !selectedPrice} className={`px-4 py-2 rounded-md text-white ${(!selectedTreatment || !selectedPrice) ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>Add</button>
                     </div>
                   </div>
                 </div>
-
+                
 
                 {selectedPackage && (
                   <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 text-gray-700">
@@ -405,11 +405,11 @@ const MembershipModal = ({ isOpen, onClose }) => {
                           {lines.map((l, idx) => (
                             <tr key={idx} className="border-t">
                               <td className="p-2">{l.treatmentName}</td>
-                              <td className="p-2 text-right">₹ {Number(l.unitPrice).toFixed(2)}</td>
+                              <td className="p-2 text-right">د.إ {Number(l.unitPrice).toFixed(2)}</td>
                               <td className="p-2 text-right">
                                 <input type="number" min={1} value={l.unitCount} onChange={e => updateLine(idx, 'unitCount', e.target.value)} className="w-20 border border-gray-300 rounded px-2 py-1 text-right" />
                               </td>
-                              <td className="p-2 text-right">₹ {Number(l.lineTotal).toFixed(2)}</td>
+                              <td className="p-2 text-right">د.إ {Number(l.lineTotal).toFixed(2)}</td>
                               <td className="p-2 text-right">
                                 <button onClick={() => removeLine(idx)} className="text-red-600 hover:underline">Remove</button>
                               </td>
@@ -423,10 +423,10 @@ const MembershipModal = ({ isOpen, onClose }) => {
                         </tbody>
                       </table>
                     </div>
-                    <div className="bg-gray-50 border rounded-md p-3 h-max text-gray-700">
-                      <div className="flex justify-between text-sm mb-2"><span>Package Total</span><span className="font-semibold">₹ {Number(packageAmount).toFixed(2)}</span></div>
-                      <div className="flex justify-between text-sm mb-2"><span>Consumed</span><span className="font-semibold">₹ {Number(totalConsumed).toFixed(2)}</span></div>
-                      <div className="flex justify-between text-sm mb-2"><span>Remaining</span><span className="font-semibold">₹ {Number(remaining).toFixed(2)}</span></div>
+                    <div className="bg-gray-50 border rounded-md p-3 h-max">
+                      <div className="flex justify-between text-sm mb-2"><span>Package Total</span><span className="font-semibold">د.إ {Number(packageAmount).toFixed(2)}</span></div>
+                      <div className="flex justify-between text-sm mb-2"><span>Consumed</span><span className="font-semibold">د.إ {Number(totalConsumed).toFixed(2)}</span></div>
+                      <div className="flex justify-between text-sm mb-2"><span>Remaining</span><span className="font-semibold">د.إ {Number(remaining).toFixed(2)}</span></div>
 
                       <div className="mt-3">
                         <label className="block text-sm font-medium text-gray-800 mb-1">Payment Method</label>
@@ -542,7 +542,7 @@ function MembershipPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="text-black w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-        </div>
+                </div>
 
         {/* Memberships Grid */}
         {filteredList.length > 0 ? (
@@ -558,28 +558,28 @@ function MembershipPage() {
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900">{item.packageName}</h3>
                       <p className="text-sm text-gray-500 mt-1">{item.emrNumber}</p>
-                    </div>
+                </div>
                     {validityStatus && (
                       <div className={`text-xs px-2.5 py-1 rounded-full font-medium ${validityStatus.bg} ${validityStatus.color}`}>
                         {validityStatus.text}
-                      </div>
+                </div>
                     )}
-                  </div>
+                </div>
 
                   {/* Stats Grid */}
                   <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-200">
                     <div className="text-center">
                       <p className="text-xs text-gray-500 font-medium mb-1">PACKAGE</p>
-                      <p className="text-sm font-semibold text-gray-900">₹{Number(item.packageAmount || 0).toLocaleString()}</p>
+                      <p className="text-sm font-semibold text-gray-900">د.إ{Number(item.packageAmount || 0).toLocaleString()}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-gray-500 font-medium mb-1">CONSUMED</p>
-                      <p className="text-sm font-semibold text-gray-900">₹{Number(item.totalConsumedAmount || 0).toLocaleString()}</p>
+                      <p className="text-sm font-semibold text-gray-900">د.إ{Number(item.totalConsumedAmount || 0).toLocaleString()}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-gray-500 font-medium mb-1">REMAINING</p>
                       <p className={`text-sm font-semibold ${item.remainingBalance > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ₹{Number(Math.abs(item.remainingBalance || 0)).toLocaleString()}
+                        د.إ{Number(Math.abs(item.remainingBalance || 0)).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -602,14 +602,14 @@ function MembershipPage() {
                       <p className="text-sm font-medium text-gray-900">
                         {new Date(item.packageEndDate).toLocaleDateString()}
                       </p>
-                    </div>
-                  )}
+                </div>
+              )}
 
                   {/* Transfer History */}
                   {item.transferHistory && item.transferHistory.length > 0 && (
                     <div className="mb-4 p-2.5 bg-blue-50 rounded border border-blue-200">
                       <p className="text-xs text-blue-700 font-medium">📤 {item.transferHistory.length} Transfer(s)</p>
-                    </div>
+                </div>
                   )}
 
                   {/* Action Buttons */}
@@ -623,7 +623,7 @@ function MembershipPage() {
                     <button onClick={() => { setTransferItem(item); setTransferOpen(true); }} className="flex-1 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg font-medium text-sm hover:bg-amber-100 transition-colors">
                       Transfer
                     </button>
-                  </div>
+              </div>
                 </div>
               );
             })}
@@ -651,15 +651,15 @@ function MembershipPage() {
                   {[
                     { label: 'EMR Number', value: viewItem.emrNumber },
                     { label: 'Package', value: viewItem.packageName },
-                    { label: 'Amount', value: `₹${Number(viewItem.packageAmount || 0).toLocaleString()}` },
-                    { label: 'Paid', value: `₹${Number(viewItem.paidAmount || 0).toLocaleString()}` },
-                    { label: 'Consumed', value: `₹${Number(viewItem.totalConsumedAmount || 0).toLocaleString()}` },
-                    { label: 'Remaining', value: `₹${Number(viewItem.remainingBalance || 0).toLocaleString()}` },
+                    { label: 'Amount', value: `د.إ${Number(viewItem.packageAmount || 0).toLocaleString()}` },
+                    { label: 'Paid', value: `د.إ${Number(viewItem.paidAmount || 0).toLocaleString()}` },
+                    { label: 'Consumed', value: `د.إ${Number(viewItem.totalConsumedAmount || 0).toLocaleString()}` },
+                    { label: 'Remaining', value: `د.إ${Number(viewItem.remainingBalance || 0).toLocaleString()}` },
                   ].map((info, i) => (
                     <div key={i} className="p-3 bg-gray-50 rounded-lg">
                       <p className="text-xs font-medium text-gray-600 mb-1">{info.label}</p>
                       <p className="text-sm font-semibold text-gray-900">{info.value}</p>
-                    </div>
+                </div>
                   ))}
                 </div>
 
@@ -671,9 +671,9 @@ function MembershipPage() {
                         <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                           <div>
                             <p className="text-sm font-medium text-gray-900">{t.treatmentName}</p>
-                            <p className="text-xs text-gray-600">{t.unitCount} units × ₹{Number(t.unitPrice).toLocaleString()}</p>
+                            <p className="text-xs text-gray-600">{t.unitCount} units × د.إ{Number(t.unitPrice).toLocaleString()}</p>
                           </div>
-                          <p className="font-semibold text-gray-900">₹{Number(t.lineTotal).toLocaleString()}</p>
+                          <p className="font-semibold text-gray-900">د.إ{Number(t.lineTotal).toLocaleString()}</p>
                         </div>
                       ))}
                     </div>
@@ -688,8 +688,8 @@ function MembershipPage() {
                         <div key={i} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-medium text-gray-900">{t.fromEmr} → {t.toEmr}{t.toName ? ` (${t.toName})` : ''}</p>
-                            <p className="text-sm font-semibold text-blue-600">₹{t.transferredAmount.toLocaleString()}</p>
-                          </div>
+                            <p className="text-sm font-semibold text-blue-600">د.إ{t.transferredAmount.toLocaleString()}</p>
+                </div>
                           <p className="text-xs text-gray-600">{new Date(t.transferredAt).toLocaleDateString()}</p>
                           {t.note && <p className="text-xs text-gray-700 mt-1">Note: {t.note}</p>}
                         </div>
@@ -826,17 +826,17 @@ function UpdateMembershipBody({ item, onClose }) {
         <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
           <p className="text-xs font-medium text-purple-600 mb-1">PACKAGE</p>
           <p className="text-lg font-semibold text-gray-900">{item.packageName}</p>
-          <p className="text-xs text-gray-600 mt-1">₹{Number(item.packageAmount || 0).toLocaleString()}</p>
+          <p className="text-xs text-gray-600 mt-1">د.إ{Number(item.packageAmount || 0).toLocaleString()}</p>
         </div>
         <div className="bg-green-50 rounded-lg p-4 border border-green-200">
           <p className="text-xs font-medium text-green-600 mb-1">REMAINING</p>
           <p className={`text-lg font-semibold ${item.remainingBalance > 0 ? 'text-green-600' : 'text-red-600'}`}>
-            ₹{Number(item.remainingBalance || 0).toLocaleString()}
+            د.إ{Number(item.remainingBalance || 0).toLocaleString()}
           </p>
         </div>
         <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
           <p className="text-xs font-medium text-orange-600 mb-1">CONSUMED</p>
-          <p className="text-lg font-semibold text-gray-900">₹{Number(item.totalConsumedAmount || 0).toLocaleString()}</p>
+          <p className="text-lg font-semibold text-gray-900">د.إ{Number(item.totalConsumedAmount || 0).toLocaleString()}</p>
         </div>
       </div>
 
@@ -860,9 +860,9 @@ function UpdateMembershipBody({ item, onClose }) {
                 (item.treatments || []).map((t, i) => (
                   <tr key={i} className="border-t hover:bg-gray-50 transition-colors">
                     <td className="p-3 text-gray-900">{t.treatmentName}</td>
-                    <td className="p-3 text-right text-gray-600">₹{Number(t.unitPrice || 0).toLocaleString()}</td>
+                    <td className="p-3 text-right text-gray-600">د.إ{Number(t.unitPrice || 0).toLocaleString()}</td>
                     <td className="p-3 text-right text-gray-600">{Number(t.unitCount || 0)}</td>
-                    <td className="p-3 text-right font-medium text-gray-900">₹{Number(t.lineTotal || 0).toLocaleString()}</td>
+                    <td className="p-3 text-right font-medium text-gray-900">د.إ{Number(t.lineTotal || 0).toLocaleString()}</td>
                   </tr>
                 ))
               ) : (
@@ -883,7 +883,7 @@ function UpdateMembershipBody({ item, onClose }) {
         <div className="p-4">
           {/* Input Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end mb-6">
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Select Treatment</label>
               <select
                 value={selectedTreatment}
@@ -891,21 +891,21 @@ function UpdateMembershipBody({ item, onClose }) {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Choose a treatment...</option>
-                {treatmentsList.map(t => (
+              {treatmentsList.map(t => (
                   <option key={t.name} value={t.name}>
-                    {t.name} {typeof t.price === 'number' ? `• ₹${Number(t.price).toLocaleString()}` : ''}
+                    {t.name} {typeof t.price === 'number' ? `• د.إ${Number(t.price).toLocaleString()}` : ''}
                   </option>
-                ))}
-              </select>
-            </div>
-            <div>
+              ))}
+            </select>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Unit Price</label>
               <input
-                value={price ? `₹${Number(price).toLocaleString()}` : ""}
+                value={price ? `د.إ${Number(price).toLocaleString()}` : ""}
                 readOnly
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 bg-gray-50 cursor-not-allowed"
               />
-            </div>
+          </div>
             <button
               onClick={addRow}
               disabled={!selectedTreatment || !price}
@@ -916,11 +916,11 @@ function UpdateMembershipBody({ item, onClose }) {
             >
               Add Treatment
             </button>
-          </div>
+        </div>
 
           {/* New Treatments Table */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
+          <div className="lg:col-span-2">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-100 border-b">
@@ -930,14 +930,14 @@ function UpdateMembershipBody({ item, onClose }) {
                       <th className="p-3 text-right font-semibold text-gray-700">Units</th>
                       <th className="p-3 text-right font-semibold text-gray-700">Total</th>
                       <th className="p-3 text-center font-semibold text-gray-700">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                </tr>
+              </thead>
+              <tbody>
                     {rows.length > 0 ? (
                       rows.map((r, idx) => (
                         <tr key={idx} className="border-t hover:bg-gray-50 transition-colors">
                           <td className="p-3 text-gray-900 font-medium">{r.treatmentName}</td>
-                          <td className="p-3 text-right text-gray-600">₹{Number(r.unitPrice).toLocaleString()}</td>
+                          <td className="p-3 text-right text-gray-600">د.إ{Number(r.unitPrice).toLocaleString()}</td>
                           <td className="p-3 text-right">
                             <input
                               type="number"
@@ -946,8 +946,8 @@ function UpdateMembershipBody({ item, onClose }) {
                               onChange={e => updateRow(idx, 'unitCount', e.target.value)}
                               className="w-16 border border-gray-300 rounded px-2 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                          </td>
-                          <td className="p-3 text-right font-semibold text-gray-900">₹{Number(r.lineTotal).toLocaleString()}</td>
+                    </td>
+                          <td className="p-3 text-right font-semibold text-gray-900">د.إ{Number(r.lineTotal).toLocaleString()}</td>
                           <td className="p-3 text-center">
                             <button
                               onClick={() => removeRow(idx)}
@@ -955,17 +955,17 @@ function UpdateMembershipBody({ item, onClose }) {
                             >
                               Remove
                             </button>
-                          </td>
-                        </tr>
+                    </td>
+                  </tr>
                       ))
                     ) : (
-                      <tr>
+                  <tr>
                         <td colSpan={5} className="p-4 text-center text-gray-500">No new treatments added yet</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
             </div>
 
             {/* Summary Card */}
@@ -974,34 +974,34 @@ function UpdateMembershipBody({ item, onClose }) {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Package Total</span>
-                  <span className="font-semibold text-gray-900">₹{Number(item.packageAmount).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">د.إ{Number(item.packageAmount).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Already Consumed</span>
-                  <span className="font-semibold text-gray-900">₹{Number(item.totalConsumedAmount).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">د.إ{Number(item.totalConsumedAmount).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Added Amount</span>
-                  <span className="font-semibold text-gray-900">₹{Number(addedAmount).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">د.إ{Number(addedAmount).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">New Consumed</span>
-                  <span className="font-semibold text-gray-900">₹{Number((Number(item.totalConsumedAmount || 0) + Number(addedAmount || 0))).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">د.إ{Number((Number(item.totalConsumedAmount || 0) + Number(addedAmount || 0))).toLocaleString()}</span>
                 </div>
                 <div className="border-t border-gray-300 pt-3 mt-3">
-                  {Number(remainingAfterNew) > 0 ? (
+            {Number(remainingAfterNew) > 0 ? (
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-sm font-medium text-green-700">Remaining (after add)</span>
-                      <span className="font-semibold text-green-700">₹{Number(remainingAfterNew).toLocaleString()}</span>
+                      <span className="font-semibold text-green-700">د.إ{Number(remainingAfterNew).toLocaleString()}</span>
                     </div>
-                  ) : (
+            ) : (
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-sm font-medium text-red-700">Pending (after add)</span>
-                      <span className="font-semibold text-red-700">₹{Number(pendingAfterNew).toLocaleString()}</span>
+                      <span className="font-semibold text-red-700">د.إ{Number(pendingAfterNew).toLocaleString()}</span>
                     </div>
-                  )}
-                </div>
-              </div>
+            )}
+          </div>
+        </div>
               <div className="mt-4 space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-800 mb-1">Payment Method</label>
@@ -1013,6 +1013,13 @@ function UpdateMembershipBody({ item, onClose }) {
                     <option value="Tabby">Tabby</option>
                     <option value="Tamara">Tamara</option>
                   </select>
+                  {updatePaymentMethod === "Cash" && rows.length > 0 && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-xs text-blue-700">
+                        💰 Treatment amounts will be automatically added to Petty Cash system
+                      </p>
+      </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-800 mb-1">Paid Amount</label>
@@ -1079,20 +1086,11 @@ return (
         </div>
         <h3 className="text-lg sm:text-xl font-bold text-gray-800">Transfer Membership</h3>
       </div>
-      <button 
-        onClick={onClose} 
-        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all"
-      >
-        ✕
-      </button>
-    </div>
-
-    {/* Compact Info Bar */}
-    <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-3 mb-4 border border-slate-200">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm">
-        <div className="flex justify-between sm:flex-col">
-          <span className="text-gray-500 font-medium">EMR</span>
-          <span className="font-semibold text-gray-800">{item.emrNumber}</span>
+      <div className="mt-3 space-y-3">
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <Info label="From EMR" value={item.emrNumber} />
+          <Info label="Package" value={`${item.packageName} (د.إ ${Number(item.packageAmount || 0).toFixed(2)})`} />
+          <Info label="Remaining" value={`د.إ ${Number(item.remainingBalance || 0).toFixed(2)}`} />
         </div>
         <div className="flex justify-between sm:flex-col">
           <span className="text-gray-500 font-medium">Package</span>
@@ -1102,6 +1100,19 @@ return (
           <span className="text-gray-500 font-medium">Balance</span>
           <span className="font-bold text-indigo-600">₹{Number(item.remainingBalance || 0).toFixed(2)}</span>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Transferred Amount</label>
+          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900" placeholder={`0.00 (Max: د.إ ${remaining.toFixed(2)})`} step="0.01" max={remaining} />
+          <div className="text-xs text-gray-600 mt-1">
+            • Leave empty or 0 for full transfer (د.إ{remaining.toFixed(2)})<br />
+            • Enter amount for partial transfer (will deduct from balance)
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-800 mb-1">Note</label>
+          <textarea value={note} onChange={e => setNote(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900" rows={3} placeholder="Reason or details" />
+        </div>
+        <button onClick={submit} className="w-full py-2 rounded-md text-white bg-yellow-600 hover:bg-yellow-700">Confirm Transfer</button>
       </div>
     </div>
 

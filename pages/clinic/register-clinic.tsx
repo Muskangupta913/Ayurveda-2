@@ -21,6 +21,7 @@ import {
 import axios from "axios";
 import { GoogleMap, Marker } from "@react-google-maps/api";
 import { useRouter } from "next/router";
+import Layout from "@/components/Layout";
 
 interface SuccessPopupProps {
   isOpen: boolean;
@@ -1131,5 +1132,5 @@ const RegisterClinic: React.FC & {
 export default RegisterClinic;
 
 RegisterClinic.getLayout = function PageLayout(page: React.ReactNode) {
-  return page;
+  return <Layout>{page}</Layout>;
 };
