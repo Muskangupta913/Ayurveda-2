@@ -61,7 +61,7 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
         } catch (err) {
             // console.error("Error fetching category stats:", err);
             // Fallback to default stats if API fails
-            ;setCategoryStats([
+            ; setCategoryStats([
                 { name: "Technology", growth: "+25%", icon: "💻" },
                 { name: "Healthcare", growth: "+18%", icon: "🏥" },
                 { name: "Finance", growth: "+12%", icon: "💰" },
@@ -80,7 +80,7 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
         if (!searchQuery && !searchLocation && !searchSalary) {
             // No search - show 4 latest jobs
             let sorted = [...jobs];
-            
+
             // Apply sorting
             if (sortBy === "date") {
                 sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -95,23 +95,23 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                     return getSalaryValue(b) - getSalaryValue(a);
                 });
             }
-            
+
             setFilteredJobs(sorted.slice(0, 4));
         } else {
             // Filter based on search criteria
             const filtered = jobs.filter((job) => {
-                const matchesTitle = !searchQuery || 
+                const matchesTitle = !searchQuery ||
                     (job.jobTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                     job.role?.toLowerCase().includes(searchQuery.toLowerCase()));
-                
-                const matchesLocation = !searchLocation || 
+                        job.role?.toLowerCase().includes(searchQuery.toLowerCase()));
+
+                const matchesLocation = !searchLocation ||
                     job.location?.toLowerCase().includes(searchLocation.toLowerCase());
-                
+
                 const matchesSalary = !searchSalary || checkSalaryMatch(job, searchSalary);
 
                 return matchesTitle && matchesLocation && matchesSalary;
             });
-            
+
             // Apply sorting to filtered results
             let sorted = [...filtered];
             if (sortBy === "date") {
@@ -127,23 +127,23 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                     return getSalaryValue(b) - getSalaryValue(a);
                 });
             }
-            
+
             setFilteredJobs(sorted.slice(0, 4));
         }
     }, [searchQuery, searchLocation, searchSalary, jobs, sortBy]);
 
     const checkSalaryMatch = (job: Job, searchSalary: string) => {
         if (!job.salary) return false;
-        
+
         const salaryStr = job.salary.toString();
         const searchNum = parseInt(searchSalary.replace(/[^\d]/g, ''));
-        
+
         if (isNaN(searchNum)) return false;
-        
+
         // Handle salary ranges
         const rangePattern = /(\d+)[\s]*[-,][\s]*(\d+)/;
         const match = salaryStr.match(rangePattern);
-        
+
         if (match) {
             const minSalary = parseInt(match[1]);
             const maxSalary = parseInt(match[2]);
@@ -217,7 +217,7 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
     return (
         <div className={`w-full ${className}`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
-                
+
                 {/* Header */}
                 <div className="flex flex-col gap-4 mb-6 sm:mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -321,8 +321,8 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                         </div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">No jobs found</h3>
                         <p className="text-sm text-gray-500 mb-4">
-                            {hasActiveSearch 
-                                ? "Try adjusting your search criteria" 
+                            {hasActiveSearch
+                                ? "Try adjusting your search criteria"
                                 : "New opportunities will appear here soon"}
                         </p>
                         {hasActiveSearch && (
@@ -344,7 +344,7 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                                 className="group"
                             >
                                 <div className="bg-gray-50 rounded-lg border border-gray-200 p-5 hover:shadow-md hover:border-gray-300 transition-all duration-200 h-full flex flex-col">
-                                    
+
                                     {/* Job Header */}
                                     <div className="flex items-start justify-between mb-4 gap-3">
                                         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -354,7 +354,7 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                                                     {job.companyName.charAt(0).toUpperCase()}
                                                 </span>
                                             </div>
-                                            
+
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-bold text-gray-900 text-base mb-1 break-words group-hover:text-blue-600 transition-colors">
                                                     {truncateText(job.jobTitle || job.role, 50)}
@@ -371,7 +371,7 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                                                 Featured
                                             </span>
                                         )}
-                                        
+
                                         {/* Bookmark Icon */}
                                         <button className="flex-shrink-0 w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded transition-colors">
                                             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -396,13 +396,12 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                                                 </>
                                             )}
                                         </div>
-                                        
+
                                         <div className="flex items-center text-sm text-gray-600">
-                                            <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                                            </svg>
+                                            <span className="mr-2 ml-1">د.إ</span>
                                             {formatSalary(job)}
                                         </div>
+
                                     </div>
 
                                     {/* Footer */}
@@ -415,9 +414,9 @@ const LatestJobsSlider: React.FC<LatestJobsSliderProps> = ({ className = "" }) =
                                                 {formatPostedDate(job.createdAt)}
                                             </div>
                                         </div>
-                                        
+
                                         <div className="flex items-center gap-4">
-                                           
+
                                             <button className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">
                                                 Apply Now
                                             </button>
