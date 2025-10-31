@@ -1,39 +1,44 @@
-// //assign-lead2
-// import dbConnect from "../../../lib/database";
-// import User from "../../../models/Users"; // agents live here
-// import { getUserFromReq, requireRole } from "./auth";
-// import Clinic from "../../../models/Clinic";
+import dbConnect from "../../../lib/database";
+import User from "../../../models/Users";
+import { getUserFromReq, requireRole } from "./auth";
+import Clinic from "../../../models/Clinic";
 
-// export default async function handler(req, res) {
-//   await dbConnect();
+export default async function handler(req, res) {
+  await dbConnect();
 
-//   const user = await getUserFromReq(req);
+  if (req.method !== "GET") {
+    return res.status(405).json({ success: false, message: "Method not allowed" });
+  }
 
-//   const me = await getUserFromReq(req);
-//     if (!requireRole(me, ["clinic"])) {
-//       return res.status(403).json({ success: false, message: "Access denied" });
-//     }
-//   const clinic = await Clinic.findOne({ owner: me._id });
-//     if (!clinic) {
-//       return res.status(400).json({ success: false, message: "Clinic not found for this user" });
-//     }
+  const me = await getUserFromReq(req);
+  if (!requireRole(me, ["clinic", "agent"])) {
+    return res.status(403).json({ success: false, message: "Access denied" });
+  }
 
-//   if (req.method === "GET") {
-//     try {
-//       // ✅ fetch only agents that belong to this clinic
-//       const agents = await User.find({
-//         role: "agent",
-//          isApproved: true, // ✅ only approved
-//         declined: false,
-//         clinicId: clinic._id, // match current logged-in clinic
-//       }).select("name email  clinicId ");
+  // Determine clinicId correctly
+  let clinicId;
+  if (me.role === "clinic") {
+    const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+    clinicId = clinic?._id;
+  } else if (me.role === "agent") {
+    clinicId = me.clinicId;
+  }
 
-//       return res.status(200).json({ users: agents });
-//     } catch (err) {
-//       console.error("Error fetching agents:", err);
-//       return res.status(500).json({ message: "Failed to fetch agents" });
-//     }
-//   }
+  if (!clinicId) {
+    return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+  }
 
-//   return res.status(405).json({ message: "Method not allowed" });
-// }
+  try {
+    const agents = await User.find({
+      role: "agent",
+      isApproved: true,
+      declined: false,
+      clinicId,
+    }).select("_id name email clinicId");
+
+    return res.status(200).json({ success: true, users: agents });
+  } catch (err) {
+    console.error("Error fetching agents:", err);
+    return res.status(500).json({ success: false, message: "Failed to fetch agents" });
+  }
+}
