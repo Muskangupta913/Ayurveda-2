@@ -60,6 +60,16 @@ const LoadingSpinner = () => (
   </div>
 );
 
+// Lightweight inline placeholder to avoid 404 loops
+const PLACEHOLDER_DATA_URI =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="320" viewBox="0 0 800 320">
+      <rect width="100%" height="100%" fill="#f3f4f6"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="20" font-family="Arial, sans-serif">No image available</text>
+    </svg>`
+  );
+
 const Header = ({
   onEditClick,
   hasClinic,
@@ -617,21 +627,26 @@ interface ClinicCardProps {
   getImagePath: (photoPath: string) => string;
 }
 const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden max-w-4xl mx-auto">
+  <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden max-w-5xl mx-auto">
     {/* Image & Edit Section */}
     <div className="relative">
       {clinic.photos?.[0] ? (
         <Image
           src={getImagePath(clinic.photos[0])}
-          className="w-full h-auto max-h-64 sm:max-h-80 object-contain bg-gray-50"
+          className="w-full h-auto max-h-48 sm:max-h-56 object-contain bg-gray-50"
           alt={clinic.name}
-          width={400}
-          height={200}
+          width={480}
+          height={220}
           unoptimized={true}
+          onError={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            (img as any).onerror = null;
+            img.src = PLACEHOLDER_DATA_URI;
+          }}
         />
       ) : (
-        <div className="w-full h-auto min-h-48 sm:min-h-56 flex items-center justify-center bg-gray-50">
-          <span className="text-gray-400 text-sm">
+        <div className="w-full h-auto min-h-40 sm:min-h-48 flex items-center justify-center bg-gray-50">
+          <span className="text-gray-400 text-xs">
             Upload Health Center Photo
           </span>
         </div>
@@ -646,39 +661,39 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
     </div>
 
     {/* Content */}
-    <div className="p-4 sm:p-6">
+    <div className="p-3 sm:p-4">
       {/* Header */}
-      <div className="mb-4">
-        <h2 className="text-lg sm:text-xl font-semibold text-[#2D9AA5] mb-1">
+      <div className="mb-3">
+        <h2 className="text-base sm:text-lg font-semibold text-[#2D9AA5] mb-1">
           {clinic.name}
         </h2>
-        <div className="flex items-center gap-2 text-gray-600 text-sm">
-          <MapPin className="w-4 h-4" />
+        <div className="flex items-center gap-1.5 text-gray-600 text-xs">
+          <MapPin className="w-3.5 h-3.5" />
           <span>{clinic.address}</span>
         </div>
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-          <div className="w-8 h-8 bg-[#2D9AA5] rounded-lg flex items-center justify-center text-white text-xs font-bold">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+        <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-md">
+          <div className="w-7 h-7 bg-[#2D9AA5] rounded-md flex items-center justify-center text-white text-[10px] font-bold">
             د.إ
           </div>
           <div>
-            <div className="text-xs text-gray-500">Consultation Fee</div>
-            <div className="text-sm font-medium text-gray-800">
+            <div className="text-[11px] text-gray-500">Consultation Fee</div>
+            <div className="text-xs font-medium text-gray-800">
               {clinic.pricing || "Contact for pricing"}
             </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-          <div className="w-8 h-8 bg-[#2D9AA5] rounded-lg flex items-center justify-center">
-            <Clock className="w-4 h-4 text-white" />
+        
+        <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-md">
+          <div className="w-7 h-7 bg-[#2D9AA5] rounded-md flex items-center justify-center">
+            <Clock className="w-3.5 h-3.5 text-white" />
           </div>
           <div>
-            <div className="text-xs text-gray-500">Timings</div>
-            <div className="text-sm font-medium text-gray-800">
+            <div className="text-[11px] text-gray-500">Timings</div>
+            <div className="text-xs font-medium text-gray-800">
               {clinic.timings || "Contact for timings"}
             </div>
           </div>
@@ -687,16 +702,16 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
 
       {/* Services */}
       {clinic.servicesName?.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-            <Leaf className="w-4 h-4 text-green-500" />
+        <div className="mb-3">
+          <h3 className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+            <Leaf className="w-3.5 h-3.5 text-green-500" />
             Services
           </h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {clinic.servicesName.map((service, idx) => (
               <span
                 key={idx}
-                className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs"
+                className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded text-[10px]"
               >
                 {service}
               </span>
@@ -707,24 +722,24 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
 
       {/* Treatments */}
       {clinic.treatments?.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-            <Heart className="w-4 h-4 text-rose-500" />
+        <div className="mb-3">
+          <h3 className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+            <Heart className="w-3.5 h-3.5 text-rose-500" />
             Treatments
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {clinic.treatments.map((treatment, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-lg p-3">
-                <span className="px-2 py-1 bg-[#2D9AA5] text-white rounded text-xs font-medium">
+              <div key={idx} className="border border-gray-200 rounded-md p-2.5">
+                <span className="px-1.5 py-0.5 bg-[#2D9AA5] text-white rounded text-[10px] font-medium">
                   {treatment.mainTreatment}
                 </span>
                 {treatment.subTreatments &&
                   treatment.subTreatments.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
+                    <div className="mt-1.5 flex flex-wrap gap-1">
                       {treatment.subTreatments.map((subTreatment, subIdx) => (
                         <span
                           key={subIdx}
-                          className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                          className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px]"
                         >
                           {subTreatment.name}
                           {typeof subTreatment.price === "number" &&
@@ -748,9 +763,9 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
       )}
 
       {/* Footer */}
-      <div className="pt-3 border-t border-gray-200">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <Calendar className="w-4 h-4" />
+      <div className="pt-2.5 border-t border-gray-200">
+        <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+          <Calendar className="w-3.5 h-3.5" />
           <span>
             Established{" "}
             {new Date(clinic.createdAt).toLocaleDateString("en-US", {
@@ -784,7 +799,8 @@ function ClinicManagementDashboard() {
   const [photoError, setPhotoError] = useState("");
 
   const getImagePath = (photoPath: string): string => {
-    if (!photoPath) return "/placeholder-clinic.jpg";
+    if (!photoPath) return PLACEHOLDER_DATA_URI;
+    if (photoPath.startsWith("http")) return photoPath;
     if (photoPath.startsWith("/")) return photoPath;
     if (photoPath.includes("uploads/clinic/")) {
       const filename = photoPath.split("uploads/clinic/").pop();
@@ -1096,7 +1112,7 @@ function ClinicManagementDashboard() {
         isEditing={isEditing}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
         {isEditing ? (
           <div className="max-w-5xl mx-auto">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, AlertTriangle, Heart, User, Calendar, Stethoscope } from 'lucide-react';
+import L1 from '../../components/Layout'
 
 interface UserInfo {
   name: string;
@@ -44,7 +45,7 @@ const allQuestions: Question[] = [
   { id: 30, text: "I feel like life has no meaning or purpose" }
 ];
 
-function DepressionTest () {
+function DepressionTest() {
   const [currentStep, setCurrentStep] = useState<'info' | 'test' | 'result'>('info');
   const [userInfo, setUserInfo] = useState<UserInfo>({ name: '', age: '' });
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -171,42 +172,40 @@ function DepressionTest () {
 
   if (currentStep === 'info') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-[#2D9AA5] rounded-full flex items-center justify-center mx-auto mb-4">
-              <Heart className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Heart className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-black mb-2">Depression Screening Test</h1>
-            <p className="text-black text-sm">This confidential assessment helps identify potential signs of depression</p>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Mental Health Screening</h1>
+            <p className="text-gray-600 text-sm">Please provide your basic information to begin</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
-                <User className="w-4 h-4 inline mr-2" />
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name
               </label>
               <input
                 type="text"
                 value={userInfo.name}
-                onChange={(e) => setUserInfo({...userInfo, name: e.target.value})}
-                className="text-black w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent outline-none transition-all"
-                placeholder="Enter your full name"
+                onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
+                className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="Your name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-black mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Age
               </label>
               <input
                 type="number"
                 value={userInfo.age}
-                onChange={(e) => setUserInfo({...userInfo, age: e.target.value})}
-                className="text-black w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent outline-none transition-all"
-                placeholder="Enter your age"
+                onChange={(e) => setUserInfo({ ...userInfo, age: e.target.value })}
+                className="text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="Your age"
                 min="13"
                 max="120"
               />
@@ -214,12 +213,15 @@ function DepressionTest () {
 
             <button
               onClick={handleUserInfoSubmit}
-              className="w-full bg-[#2D9AA5] text-white py-3 px-6 rounded-lg font-medium hover:bg-[#257a83] transition-colors flex items-center justify-center"
+              className="w-full bg-blue-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-600 transition-colors mt-6"
             >
-              Start Assessment
-              <ChevronRight className="w-5 h-5 ml-2" />
+              Continue
             </button>
           </div>
+
+          <p className="text-xs text-gray-500 text-center mt-6">
+            Provided by ZEVA
+          </p>
         </div>
       </div>
     );
@@ -235,7 +237,7 @@ function DepressionTest () {
               <span className="text-sm text-black">Age: {userInfo.age}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-[#2D9AA5] h-2 rounded-full transition-all duration-300"
                 style={{ width: `${((currentQuestion + 1) / shuffledQuestions.length) * 100}%` }}
               ></div>
@@ -287,82 +289,80 @@ function DepressionTest () {
     const scoreChart = getScoreChart();
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-6xl">
-          <div className="text-center mb-8">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              result.type === 'severe' ? 'bg-red-100' :
-              result.type === 'moderate' ? 'bg-orange-100' :
-              result.type === 'mild' ? 'bg-yellow-100' :
-              'bg-green-100'
-            }`}>
-              {result.needsHelp ? 
-                <AlertTriangle className={`w-8 h-8 ${
-                  result.type === 'severe' ? 'text-red-600' : 'text-orange-600'
-                }`} /> :
-                <Heart className="w-8 h-8 text-green-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-5xl">
+          <div className="text-center mb-6">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${result.type === 'severe' ? 'bg-red-50' :
+                result.type === 'moderate' ? 'bg-orange-50' :
+                  result.type === 'mild' ? 'bg-yellow-50' :
+                    'bg-green-50'
+              }`}>
+              {result.needsHelp ?
+                <AlertTriangle className={`w-6 h-6 ${result.type === 'severe' ? 'text-red-500' : 'text-orange-500'
+                  }`} /> :
+                <Heart className="w-6 h-6 text-green-500" />
               }
             </div>
-            <h2 className="text-2xl font-bold text-black mb-2">{result.title}</h2>
-            <p className="text-black mb-4">Assessment completed for {userInfo.name}</p>
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">{result.title}</h2>
+            <p className="text-sm text-gray-600">Assessment completed for {userInfo.name}</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Side - Results */}
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* User Results Table */}
               <div>
-                <h3 className="text-xl font-bold text-black mb-4">Your Results</h3>
-                <div className="bg-slate-50 rounded-lg p-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm">
-                      <span className="font-medium text-black">Name:</span>
-                      <span className="text-black">{userInfo.name}</span>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Your Results</h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-white rounded border border-gray-200">
+                      <span className="text-sm font-medium text-gray-700">Name:</span>
+                      <span className="text-sm text-gray-900">{userInfo.name}</span>
                     </div>
-                    <div className="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm">
-                      <span className="font-medium text-black">Age:</span>
-                      <span className="text-black">{userInfo.age}</span>
+                    <div className="flex justify-between items-center p-3 bg-white rounded border border-gray-200">
+                      <span className="text-sm font-medium text-gray-700">Age:</span>
+                      <span className="text-sm text-gray-900">{userInfo.age}</span>
                     </div>
-                    <div className="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm">
-                      <span className="font-medium text-black">Total Score:</span>
-                      <span className="text-black font-bold">{totalScore} / {maxScore}</span>
+                    <div className="flex justify-between items-center p-3 bg-white rounded border border-gray-200">
+                      <span className="text-sm font-medium text-gray-700">Total Score:</span>
+                      <span className="text-sm text-gray-900 font-semibold">{totalScore} / {maxScore}</span>
                     </div>
-                    <div className="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm">
-                      <span className="font-medium text-black">Percentage:</span>
-                      <span className="text-black font-bold">{percentage}%</span>
+                    <div className="flex justify-between items-center p-3 bg-white rounded border border-gray-200">
+                      <span className="text-sm font-medium text-gray-700">Percentage:</span>
+                      <span className="text-sm text-gray-900 font-semibold">{percentage}%</span>
                     </div>
                   </div>
-                  <div className={`mt-6 p-4 rounded-lg ${result.color}`}>
+                  <div className={`mt-4 p-3 rounded border ${result.color}`}>
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-lg">Depression Level:</span>
-                      <span className="font-bold text-lg">{result.level}</span>
+                      <span className="text-sm font-semibold">Depression Level:</span>
+                      <span className="text-sm font-semibold">{result.level}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Result Message */}
-              <div className="bg-slate-50 rounded-lg p-6">
-                <h3 className="font-semibold text-black mb-3">Assessment Summary:</h3>
-                <p className="text-black">{result.message}</p>
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Assessment Summary:</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">{result.message}</p>
               </div>
 
               {/* Consult Doctor Button */}
               <div className="flex justify-center">
                 <button
                   onClick={redirectToDoctorSearch}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-8 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center"
+                  className="bg-blue-600 text-white py-2.5 px-6 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow flex items-center"
                 >
-                  <Stethoscope className="w-5 h-5 mr-2" />
+                  <Stethoscope className="w-4 h-4 mr-2" />
                   Consult Our Doctors
-                  <ChevronRight className="w-5 h-5 ml-2" />
+                  <ChevronRight className="w-4 h-4 ml-2" />
                 </button>
               </div>
 
               <div className="flex justify-center">
                 <button
                   onClick={restartTest}
-                  className="bg-slate-200 text-black py-3 px-6 rounded-lg font-medium hover:bg-slate-300 transition-colors"
+                  className="bg-gray-100 text-gray-700 py-2.5 px-6 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border border-gray-300"
                 >
                   Take Test Again
                 </button>
@@ -370,34 +370,34 @@ function DepressionTest () {
             </div>
 
             {/* Right Side - Statistics */}
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* Complete Score Chart */}
               <div>
-                <h3 className="text-xl font-bold text-black mb-4">Depression Score Chart</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Depression Score Chart</h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse bg-white rounded-lg shadow-sm overflow-hidden">
+                  <table className="w-full border-collapse bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
                     <thead>
-                      <tr className="bg-slate-50">
-                        <th className="border border-slate-200 p-4 text-left font-semibold text-black">Score Range</th>
-                        <th className="border border-slate-200 p-4 text-left font-semibold text-black">Percentage</th>
-                        <th className="border border-slate-200 p-4 text-left font-semibold text-black">Level</th>
-                        <th className="border border-slate-200 p-4 text-left font-semibold text-black">Description</th>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-200 p-3 text-left text-xs font-semibold text-gray-700">Score Range</th>
+                        <th className="border border-gray-200 p-3 text-left text-xs font-semibold text-gray-700">Percentage</th>
+                        <th className="border border-gray-200 p-3 text-left text-xs font-semibold text-gray-700">Level</th>
+                        <th className="border border-gray-200 p-3 text-left text-xs font-semibold text-gray-700">Description</th>
                       </tr>
                     </thead>
                     <tbody>
                       {scoreChart.map((row, index) => {
-                        const isUserScore = totalScore >= parseInt(row.range.split(' - ')[0]) && 
-                                           totalScore <= parseInt(row.range.split(' - ')[1]);
-                        
+                        const isUserScore = totalScore >= parseInt(row.range.split(' - ')[0]) &&
+                          totalScore <= parseInt(row.range.split(' - ')[1]);
+
                         return (
-                          <tr key={index} className={isUserScore ? `${row.color} border-2 border-current` : 'hover:bg-slate-50'}>
-                            <td className="border border-slate-200 p-4 font-medium text-black">
+                          <tr key={index} className={isUserScore ? `${row.color} border-l-4 border-l-gray-900` : 'hover:bg-gray-50'}>
+                            <td className="border border-gray-200 p-3 text-sm font-medium text-gray-900">
                               {row.range}
-                              {isUserScore && <span className="ml-2 text-sm font-bold">(Your Score: {totalScore})</span>}
+                              {isUserScore && <span className="ml-1 text-xs font-semibold">({totalScore})</span>}
                             </td>
-                            <td className="border border-slate-200 p-4 text-black">{row.percentage}</td>
-                            <td className="border border-slate-200 p-4 font-semibold text-black">{row.level}</td>
-                            <td className="border border-slate-200 p-4 text-black">{row.description}</td>
+                            <td className="border border-gray-200 p-3 text-sm text-gray-700">{row.percentage}</td>
+                            <td className="border border-gray-200 p-3 text-sm font-semibold text-gray-900">{row.level}</td>
+                            <td className="border border-gray-200 p-3 text-sm text-gray-700">{row.description}</td>
                           </tr>
                         );
                       })}
@@ -407,12 +407,6 @@ function DepressionTest () {
               </div>
             </div>
           </div>
-
-          {/* <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-800">
-              <strong>Remember:</strong> This screening tool is not a substitute for professional medical advice, diagnosis, or treatment. Always consult with qualified healthcare providers regarding your mental health.
-            </p>
-          </div> */}
         </div>
       </div>
     );
@@ -424,5 +418,5 @@ function DepressionTest () {
 export default DepressionTest;
 
 DepressionTest.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; // No layout
+  return <L1>{page}</L1>;
 };

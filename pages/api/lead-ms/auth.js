@@ -7,21 +7,13 @@ export async function getUserFromReq(req) {
   await dbConnect();
   try { 
     const auth = req.headers.authorization || "";
-    // console.log("Authorization header:", req.headers.authorization);
-
- const token = auth?.toLowerCase().startsWith("bearer ")
-    ? auth.slice(7)
-    : null;
-    // console.log("Extracted token:", token);
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
     if (!token) return null;
 
-   const payload = jwt.verify(token, process.env.JWT_SECRET);
-// console.log("JWT payload:", payload);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (!payload?.userId) return null;
 
-const userId = payload.userId || payload.id;  // ✅ support both
-if (!userId) return null;
-
-const user = await User.findById(userId);
+    const user = await User.findById(payload.userId);
     return user || null;
   } catch (e) {
     return null;

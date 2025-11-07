@@ -9,7 +9,7 @@ interface WaterCalculatorState {
   exerciseDays: string;
 }
 
-function WaterIntakeCalculator(){
+function WaterIntakeCalculator() {
   const [state, setState] = useState<WaterCalculatorState>({
     weight: '',
     weightUnit: 'kg',
@@ -33,32 +33,32 @@ function WaterIntakeCalculator(){
 
   useEffect(() => {
     if (state.weight) {
-      const weightInKg = state.weightUnit === 'lbs' 
-        ? parseFloat(state.weight) * 0.453592 
+      const weightInKg = state.weightUnit === 'lbs'
+        ? parseFloat(state.weight) * 0.453592
         : parseFloat(state.weight);
-      
+
       const exerciseMin = parseFloat(state.exerciseMinutes) || 0;
       const exerciseDays = parseFloat(state.exerciseDays) || 0;
-      
+
       // Basic water calculation
       const basicWater = weightInKg * 0.033;
-      
+
       // Activity level multipliers
       const activityMultipliers = {
         low: 1.0,
         moderate: 1.1,
         high: 1.2
       };
-      
+
       // Exercise water calculation
       // Total weekly exercise water
       const weeklyExerciseWater = (exerciseMin / 30) * 0.35 * exerciseDays;
       // Daily average exercise water (spread across 7 days)
       const dailyAverageExerciseWater = weeklyExerciseWater / 7;
-      
+
       // Total daily water calculation
       const totalWater = (basicWater * activityMultipliers[state.activityLevel]) + dailyAverageExerciseWater;
-      
+
       setResults({
         basicWater: Math.round(basicWater * 100) / 100,
         totalWater: Math.round(totalWater * 100) / 100,
@@ -68,76 +68,63 @@ function WaterIntakeCalculator(){
         dailyAverageExerciseWater: Math.round(dailyAverageExerciseWater * 100) / 100
       });
     } else {
-      setResults({ 
-        basicWater: 0, 
-        totalWater: 0, 
-        cups: 0, 
-        bottles: 0, 
+      setResults({
+        basicWater: 0,
+        totalWater: 0,
+        cups: 0,
+        bottles: 0,
         weeklyExerciseWater: 0,
-        dailyAverageExerciseWater: 0 
+        dailyAverageExerciseWater: 0
       });
     }
   }, [state]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-4">
-      <div className="max-w-7xl mx-auto relative">
-        
+    <div className="min-h-screen bg-white">
+      <div className="max-w-6xl mx-auto p-6">
+
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Droplets className="w-10 h-10 text-[#2D9AA5]" />
-            <h1 className="text-4xl font-bold text-gray-800">Water Intake Calculator</h1>
-          </div>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Calculate daily water intake by weight, activity, and exercise duration.
-          </p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Water Intake Calculator</h1>
+          <p className="text-gray-600">Calculate your daily water intake based on weight, activity, and exercise</p>
         </div>
 
         {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Left Side - Inputs */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8 border border-gray-100">
-            <div className="flex items-center gap-3 mb-6">
-              <Calculator className="w-6 h-6 text-[#2D9AA5]" />
-              <h2 className="text-2xl font-semibold text-gray-800">Input Details</h2>
-            </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Input Details</h2>
 
             <div className="space-y-6">
               {/* Weight Input */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                  <User className="w-4 h-4" />
+                <label className="block text-gray-700 font-medium mb-2">
                   Body Weight
                 </label>
                 <div className="flex gap-3">
-                  <div className="flex-1">
-                    <input
-                      type="number"
-                      value={state.weight}
-                      onChange={(e) => updateState({ weight: e.target.value })}
-                      placeholder="Enter weight"
-                      className="text-black w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] focus:outline-none transition-colors text-lg"
-                    />
-                  </div>
-                  <div className="flex bg-gray-100 rounded-xl p-1">
+                  <input
+                    type="number"
+                    value={state.weight}
+                    onChange={(e) => updateState({ weight: e.target.value })}
+                    placeholder="Enter weight"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900"
+                  />
+                  <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => updateState({ weightUnit: 'kg' })}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        state.weightUnit === 'kg' 
-                          ? 'bg-[#2D9AA5] text-white shadow-md' 
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${state.weightUnit === 'kg'
+                          ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:text-gray-800'
-                      }`}
+                        }`}
                     >
                       kg
                     </button>
                     <button
                       onClick={() => updateState({ weightUnit: 'lbs' })}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        state.weightUnit === 'lbs' 
-                          ? 'bg-[#2D9AA5] text-white shadow-md' 
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${state.weightUnit === 'lbs'
+                          ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:text-gray-800'
-                      }`}
+                        }`}
                     >
                       lbs
                     </button>
@@ -147,8 +134,7 @@ function WaterIntakeCalculator(){
 
               {/* Activity Level */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                  <Activity className="w-4 h-4" />
+                <label className="block text-gray-700 font-medium mb-2">
                   Activity Level
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -160,13 +146,12 @@ function WaterIntakeCalculator(){
                     <button
                       key={level.key}
                       onClick={() => updateState({ activityLevel: level.key as 'low' | 'moderate' | 'high' })}
-                      className={`p-4 rounded-xl border-2 transition-all text-left ${
-                        state.activityLevel === level.key
-                          ? 'border-[#2D9AA5] bg-[#2D9AA5]/5'
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${state.activityLevel === level.key
+                          ? 'border-gray-900 bg-gray-50'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
-                      <div className="font-medium text-gray-800">{level.label}</div>
+                      <div className="font-medium text-gray-900">{level.label}</div>
                       <div className="text-sm text-gray-600 mt-1">{level.desc}</div>
                     </button>
                   ))}
@@ -175,8 +160,7 @@ function WaterIntakeCalculator(){
 
               {/* Exercise Input */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                  <Droplets className="w-4 h-4" />
+                <label className="block text-gray-700 font-medium mb-2">
                   Additional Exercise
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -185,7 +169,7 @@ function WaterIntakeCalculator(){
                     <select
                       value={state.exerciseDays}
                       onChange={(e) => updateState({ exerciseDays: e.target.value })}
-                      className="text-black w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] focus:outline-none transition-colors text-lg bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 bg-white"
                     >
                       <option value="0">0 days</option>
                       <option value="1">1 day</option>
@@ -206,65 +190,50 @@ function WaterIntakeCalculator(){
                       placeholder="0"
                       min="0"
                       max="480"
-                      className="text-black w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2D9AA5] focus:outline-none transition-colors text-lg"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900"
                     />
                   </div>
                 </div>
-                {/* <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Formula:</span> +0.35L per 30min session × days per week ÷ 7
-                  </p>
-                  {state.exerciseDays !== '0' && state.exerciseMinutes !== '0' && (
-                    <p className="text-sm text-[#2D9AA5] mt-1">
-                      <span className="font-medium">Your exercise:</span> {state.exerciseMinutes} min × {state.exerciseDays} days = +{results.dailyAverageExerciseWater}L daily average
-                    </p>
-                  )}
-                </div> */}
               </div>
             </div>
           </div>
 
           {/* Right Side - Results */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8 border border-gray-100">
-            <div className="flex items-center gap-3 mb-6">
-              <Droplets className="w-6 h-6 text-[#2D9AA5]" />
-              <h2 className="text-2xl font-semibold text-gray-800">Your Water Intake</h2>
-            </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Your Water Intake</h2>
 
             {state.weight ? (
               <div className="space-y-6">
                 {/* Main Result */}
-                <div className="bg-gradient-to-r from-[#2D9AA5] to-[#2D9AA5]/80 rounded-2xl p-6 text-white">
-                  <div className="text-center">
-                    <div className="text-4xl lg:text-5xl font-bold mb-2">
-                      {results.totalWater}L
-                    </div>
-                    <div className="text-lg opacity-90">
-                      Recommended Daily Intake
-                    </div>
+                <div className="bg-gray-900 rounded-lg p-6 text-white text-center">
+                  <div className="text-5xl font-bold mb-2">
+                    {results.totalWater}L
+                  </div>
+                  <div className="text-lg opacity-90">
+                    Recommended Daily Intake
                   </div>
                 </div>
 
                 {/* Breakdown */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-[#2D9AA5] mb-1">
+                  <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
                       {results.basicWater}L
                     </div>
                     <div className="text-sm text-gray-600">Base Amount</div>
                     <div className="text-xs text-gray-500 mt-1">Weight × 0.033</div>
                   </div>
-                  
-                  <div className="bg-gray-50 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-[#2D9AA5] mb-1">
+
+                  <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
                       {Math.round(((results.basicWater * (state.activityLevel === 'low' ? 1.0 : state.activityLevel === 'moderate' ? 1.1 : 1.2)) - results.basicWater) * 100) / 100}L
                     </div>
                     <div className="text-sm text-gray-600">Activity Level</div>
                     <div className="text-xs text-gray-500 mt-1 capitalize">{state.activityLevel}</div>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-[#2D9AA5] mb-1">
+                  <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
                       {results.dailyAverageExerciseWater}L
                     </div>
                     <div className="text-sm text-gray-600">Exercise Bonus</div>
@@ -274,16 +243,16 @@ function WaterIntakeCalculator(){
 
                 {/* Exercise Details */}
                 {results.weeklyExerciseWater > 0 && (
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4 border border-green-200">
-                    <h4 className="font-medium text-gray-800 mb-2">📊 Exercise Water Breakdown</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-2">Exercise Water Breakdown</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Total weekly exercise water:</span>
-                        <span className="font-semibold text-[#2D9AA5]">{results.weeklyExerciseWater}L</span>
+                        <span className="font-semibold text-gray-900">{results.weeklyExerciseWater}L</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Daily average from exercise:</span>
-                        <span className="font-semibold text-[#2D9AA5]">{results.dailyAverageExerciseWater}L</span>
+                        <span className="font-semibold text-gray-900">{results.dailyAverageExerciseWater}L</span>
                       </div>
                     </div>
                   </div>
@@ -291,23 +260,23 @@ function WaterIntakeCalculator(){
 
                 {/* Alternative Measurements */}
                 <div className="border-t pt-6">
-                  <h3 className="font-semibold text-gray-800 mb-4">Other Measurements</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">Other Measurements</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <span className="text-gray-700">Cups (8 oz)</span>
-                      <span className="font-semibold text-[#2D9AA5]">{results.cups}</span>
+                      <span className="font-semibold text-gray-900">{results.cups}</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <span className="text-gray-700">Bottles (500ml)</span>
-                      <span className="font-semibold text-[#2D9AA5]">{results.bottles}</span>
+                      <span className="font-semibold text-gray-900">{results.bottles}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Tips */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <h4 className="font-medium text-amber-800 mb-2">💡 Hydration Tips</h4>
-                  <ul className="text-sm text-amber-700 space-y-1">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">💡 Hydration Tips</h4>
+                  <ul className="text-sm text-gray-700 space-y-1">
                     <li>• Start your day with a glass of water</li>
                     <li>• Drink before, during, and after exercise</li>
                     <li>• Increase intake in hot weather</li>
@@ -317,21 +286,16 @@ function WaterIntakeCalculator(){
               </div>
             ) : (
               <div className="text-center py-12">
-                <Droplets className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <div className="text-gray-500 text-lg">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Droplets className="w-8 h-8 text-gray-400" />
+                </div>
+                <div className="text-gray-500">
                   Enter your weight to see recommendations
                 </div>
               </div>
             )}
           </div>
         </div>
-
-        {/* Footer */}
-        {/* <div className="text-center mt-12 pb-8">
-          <p className="text-gray-500 text-sm">
-            This calculator provides general guidance. Consult healthcare professionals for personalized advice.
-          </p>
-        </div> */}
       </div>
     </div>
   );
@@ -341,6 +305,6 @@ export default WaterIntakeCalculator;
 
 
 
-WaterIntakeCalculator.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; // No layout
-}
+// WaterIntakeCalculator.getLayout = function PageLayout(page: React.ReactNode) {
+//   return page; // No layout
+// }

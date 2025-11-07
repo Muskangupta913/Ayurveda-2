@@ -915,6 +915,6 @@ function HealthQuiz() {
 
 export default HealthQuiz;
 
-HealthQuiz.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; // No layout
-};
+// HealthQuiz.getLayout = function PageLayout(page: React.ReactNode) {
+//   return page; // No layout
+// };

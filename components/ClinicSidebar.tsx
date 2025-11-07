@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useRef } from "react";
 import clsx from "clsx";
 
 interface NavItem {
@@ -36,6 +36,62 @@ const navItems: NavItem[] = [
     path: "/clinic/get-Enquiry",
     icon: "👨‍⚕️",
     description: "All Patient Enquiries",
+  },
+  {
+    label: "Create Agent",
+    path: "/lead/create-agent",
+    icon: "📅",
+    description: "Manage Clinic",
+  },
+  {
+    label: "Lead",
+    icon: "🧑‍💼",
+    description: "Lead Management",
+    children: [
+      {
+        label: "Create Lead",
+        path: "/lead/create-lead",
+        icon: "👤",
+        description: "Create Lead",
+      },
+      {
+        label: "Assign Lead",
+        path: "/lead/assign-lead",
+        icon: "👨‍⚕️",
+        description: "All Patient Enquiries",
+      },
+    ],
+  },
+  {
+    label: "Create offers",
+    path: "/lead/create-offer",
+    icon: "🤑",
+    description: "Manage Offers",
+  },
+  {
+    label: "Marketing",
+    icon: "📊",
+    description: "Manage Marketing",
+    children: [
+      {
+        label: "SMS marketing",
+        path: "/marketingalltype/sms-marketing",
+        icon: "📩",
+        description: "Create SMS marketing",
+      },
+      {
+        label: "Whatsapp Marketing",
+        path: "/marketingalltype/whatsapp-marketing",
+        icon: "💬",
+        description: "Create Whatsapp marketing",
+      },
+      {
+        label: "Gmail Marketing",
+        path: "/marketingalltype/gmail-marketing",
+        icon: "✉️",
+        description: "Create Gmail marketing",
+      },
+    ],
   },
   {
     label: "Jobs",
@@ -94,6 +150,13 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [items, setItems] = useState<NavItem[]>(navItems);
+  const dragItemRef = useRef<
+    | { type: 'parent'; parentIdx: number }
+    | { type: 'child'; parentIdx: number; childIdx: number }
+    | null
+  >(null);
+  const isDraggingRef = useRef<boolean>(false);
 
   // Handle escape key to close mobile menu
   useEffect(() => {
@@ -120,6 +183,24 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
     };
   }, [isMobileOpen]);
 
+  // Load saved sidebar order
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('clinicSidebarOrder') : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setItems(parsed as NavItem[]);
+      }
+    } catch {}
+  }, []);
+
+  // Persist order on change
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') localStorage.setItem('clinicSidebarOrder', JSON.stringify(items));
+    } catch {}
+  }, [items]);
+
   const handleToggleDesktop = () => {
     setIsDesktopHidden(!isDesktopHidden);
   };
@@ -140,6 +221,65 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
     setIsMobileOpen(false);
     setOpenDropdown(null); // Close dropdown when regular items are clicked
     setSelectedItem(label); // Mark this item as selected
+  };
+
+  // Avoid click firing after drag
+  const safeClick = (handler?: () => void) => (e: React.MouseEvent) => {
+    if (isDraggingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    handler?.();
+  };
+
+  // Drag handlers
+  const onDragStartParent = (parentIdx: number) => (e: React.DragEvent) => {
+    isDraggingRef.current = true;
+    dragItemRef.current = { type: 'parent', parentIdx };
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const onDragStartChild = (parentIdx: number, childIdx: number) => (e: React.DragEvent) => {
+    isDraggingRef.current = true;
+    dragItemRef.current = { type: 'child', parentIdx, childIdx };
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  const onDropParent = (targetParentIdx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const drag = dragItemRef.current;
+    isDraggingRef.current = false;
+    if (!drag || drag.type !== 'parent' || drag.parentIdx === targetParentIdx) return;
+    setItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(drag.parentIdx, 1);
+      next.splice(targetParentIdx, 0, moved);
+      return next;
+    });
+    dragItemRef.current = null;
+  };
+  const onDropChild = (targetParentIdx: number, targetChildIdx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const drag = dragItemRef.current;
+    isDraggingRef.current = false;
+    if (!drag || drag.type !== 'child') return;
+    if (drag.parentIdx !== targetParentIdx) return;
+    if (drag.childIdx === targetChildIdx) return;
+    setItems((prev) => {
+      const next = [...prev];
+      const group = [...(next[targetParentIdx].children || [])];
+      const [moved] = group.splice(drag.childIdx, 1);
+      group.splice(targetChildIdx, 0, moved);
+      next[targetParentIdx] = { ...next[targetParentIdx], children: group };
+      return next;
+    });
+    dragItemRef.current = null;
+  };
+  const onDragEnd = () => {
+    setTimeout(() => { isDraggingRef.current = false; dragItemRef.current = null; }, 0);
   };
 
   return (
@@ -210,7 +350,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
       {/* Desktop Sidebar */}
       <aside
         className={clsx(
-          "transition-all duration-300 ease-in-out bg-white border-r border-gray-200 shadow-sm flex-col min-h-screen w-72 hidden lg:flex",
+          "transition-all duration-300 ease-in-out bg-white border-r border-gray-200 shadow-sm flex-col min-h-screen w-64 hidden lg:flex",
           {
             "lg:flex": !isDesktopHidden,
             "lg:hidden": isDesktopHidden,
@@ -221,19 +361,19 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
       >
         <div className="flex flex-col h-full">
           {/* Desktop Header Section */}
-          <div className="p-6 border-b border-gray-100 flex-shrink-0 relative">
+          <div className="p-3 border-b border-gray-100 flex-shrink-0 relative">
             <div className="group">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 group-hover:bg-[#2D9AA5]/5 transition-all duration-300 border border-gray-100">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#2D9AA5] to-[#1e7d87] rounded-xl flex items-center justify-center shadow-sm">
-                  <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 group-hover:bg-[#2D9AA5]/5 transition-all duration-300 border border-gray-100">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#2D9AA5] to-[#1e7d87] rounded-lg flex items-center justify-center shadow-sm">
+                  <div className="w-5 h-5 bg-white/20 rounded-md flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-white rounded"></div>
                   </div>
                 </div>
                 <div>
-                  <span className="font-bold text-xl text-gray-900 block">
+                  <span className="font-bold text-sm text-gray-900 block leading-4">
                     ZEVA
                   </span>
-                  <span className="text-sm text-[#2D9AA5] font-medium">
+                  <span className="text-[10px] text-[#2D9AA5] font-medium leading-3">
                     Healthcare Excellence
                   </span>
                 </div>
@@ -264,11 +404,9 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
 
           {/* Desktop Navigation */}
           <nav className="flex-1 overflow-y-auto custom-scrollbar px-4 py-6 min-h-0">
-            <div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-4 px-2">
-              Health Center Management
-            </div>
+            
             <div className="space-y-1">
-              {navItems.map((item) => {
+              {items.map((item, parentIdx) => {
                 const isDropdownOpen = openDropdown === item.label;
                 // If an item is manually selected, only that item should be active
                 // Otherwise, use router pathname to determine active state
@@ -280,36 +418,43 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                 // If item has children => Dropdown
                 if (item.children) {
                   return (
-                    <div key={item.label}>
+                    <div
+                      key={item.label}
+                      draggable
+                      onDragStart={onDragStartParent(parentIdx)}
+                      onDragOver={onDragOver}
+                      onDrop={onDropParent(parentIdx)}
+                      onDragEnd={onDragEnd}
+                    >
                       <div
                         className={clsx(
-                          "group relative block rounded-lg transition-all duration-200 cursor-pointer p-3",
+                          "group relative block rounded-lg transition-all duration-200 cursor-pointer p-2",
                           {
                             "bg-[#2D9AA5] text-white shadow-sm": isDropdownOpen,
                             "hover:bg-gray-50 text-gray-700 hover:text-gray-900":
                               !isDropdownOpen,
                           }
                         )}
-                        onClick={() => {
+                        onClick={safeClick(() => {
                           setOpenDropdown(isDropdownOpen ? null : item.label);
-                          setSelectedItem(item.label); // Mark this dropdown as selected
-                        }}
+                          setSelectedItem(item.label);
+                        })}
                       >
-                        <div className="flex items-center space-x-3">
-                          <div className="text-lg p-2 rounded-lg bg-gray-100 text-gray-600 group-hover:bg-[#2D9AA5]/10 group-hover:text-[#2D9AA5]">
+                        <div className="flex items-center space-x-2">
+                          <div className="text-base p-1.5 rounded-lg bg-gray-100 text-gray-600 group-hover:bg-[#2D9AA5]/10 group-hover:text-[#2D9AA5]">
                             {item.icon}
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium text-sm">
+                            <div className="font-medium text-xs">
                               {item.label}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-[10px] text-gray-500">
                               {item.description}
                             </div>
                           </div>
                           <svg
                             className={clsx(
-                              "w-4 h-4 transition-transform duration-200",
+                              "w-3.5 h-3.5 transition-transform duration-200",
                               isDropdownOpen && "rotate-90"
                             )}
                             fill="currentColor"
@@ -326,8 +471,8 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
 
                       {/* Dropdown children */}
                       {isDropdownOpen && (
-                        <div className="pl-6 mt-1 space-y-1">
-                          {item.children.map((child) => {
+                        <div className="pl-5 mt-1 space-y-1">
+                          {item.children.map((child, childIdx) => {
                             // Child items are active if they are selected OR if no item is selected and router matches
                             const childActive = selectedItem 
                               ? selectedItem === child.label 
@@ -337,9 +482,14 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                             return (
                               <Link key={child.path} href={child.path!}>
                                 <div
+                                  draggable
+                                  onDragStart={onDragStartChild(parentIdx, childIdx)}
+                                  onDragOver={onDragOver}
+                                  onDrop={onDropChild(parentIdx, childIdx)}
+                                  onDragEnd={onDragEnd}
                                   className={clsx(
                                     "group relative block rounded-lg transition-all duration-200 cursor-pointer",
-                                    child.description ? "p-3" : "p-1.5",
+                                    child.description ? "p-2.5" : "p-1.5",
                                     {
                                       "bg-[#2D9AA5] text-white shadow-sm":
                                         childActive,
@@ -351,15 +501,15 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                                     setHoveredItem(child.path!)
                                   }
                                   onMouseLeave={() => setHoveredItem(null)}
-                                  onClick={() => {
-                                    setSelectedItem(child.label); // Mark child as selected
-                                  }}
+                                  onClick={safeClick(() => {
+                                    setSelectedItem(child.label);
+                                  })}
                                 // Don't close dropdown when clicking on child items within the dropdown
                                 >
                                   <div className="flex items-center space-x-2">
                                     <div
                                       className={clsx(
-                                        "text-base p-1.5 rounded-lg transition-all duration-200 relative flex-shrink-0",
+                                        "text-sm p-1.5 rounded-lg transition-all duration-200 relative flex-shrink-0",
                                         {
                                           "bg-white/20 text-white": childActive,
                                           "text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10":
@@ -372,7 +522,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                                     <div className="flex-1 min-w-0">
                                       <div
                                         className={clsx(
-                                          "font-medium text-sm transition-colors duration-200 truncate",
+                                          "font-medium text-xs transition-colors duration-200 truncate",
                                           {
                                             "text-white": childActive,
                                             "text-gray-900 group-hover:text-gray-900":
@@ -385,7 +535,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                                       {child.description && (
                                         <div
                                           className={clsx(
-                                            "text-xs mt-0.5 transition-all duration-200 truncate",
+                                            "text-[10px] mt-0.5 transition-all duration-200 truncate",
                                             {
                                               "text-white/80": childActive,
                                               "text-gray-500 group-hover:text-gray-600":
@@ -412,8 +562,13 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                 return (
                   <Link key={item.path} href={item.path!}>
                     <div
+                      draggable
+                      onDragStart={onDragStartParent(parentIdx)}
+                      onDragOver={onDragOver}
+                      onDrop={onDropParent(parentIdx)}
+                      onDragEnd={onDragEnd}
                       className={clsx(
-                        "group relative block rounded-lg transition-all duration-200 cursor-pointer p-3",
+                        "group relative block rounded-lg transition-all duration-200 cursor-pointer p-2",
                         {
                           "bg-[#2D9AA5] text-white shadow-sm": isActive,
                           "hover:bg-gray-50 text-gray-700 hover:text-gray-900":
@@ -422,18 +577,18 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                       )}
                       onMouseEnter={() => setHoveredItem(item.path!)}
                       onMouseLeave={() => setHoveredItem(null)}
-                      onClick={() => {
-                        setOpenDropdown(null); // Close dropdown when regular item is clicked
-                        setSelectedItem(item.label); // Mark this item as selected
-                      }}
+                      onClick={safeClick(() => {
+                        setOpenDropdown(null);
+                        setSelectedItem(item.label);
+                      })}
                     >
                       {isActive && (
                         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
                       )}
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
                         <div
                           className={clsx(
-                            "text-lg p-2 rounded-lg transition-all duration-200 relative flex-shrink-0",
+                            "text-base p-1.5 rounded-lg transition-all duration-200 relative flex-shrink-0",
                             {
                               "bg-white/20 text-white": isActive,
                               "text-gray-500 group-hover:text-[#2D9AA5] group-hover:bg-[#2D9AA5]/10":
@@ -445,7 +600,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div
-                            className={clsx("font-medium text-sm truncate", {
+                            className={clsx("font-medium text-xs truncate", {
                               "text-white": isActive,
                               "text-gray-900 group-hover:text-gray-900":
                                 !isActive,
@@ -454,7 +609,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                             {item.label}
                           </div>
                           <div
-                            className={clsx("text-xs mt-0.5 truncate", {
+                            className={clsx("text-[10px] mt-0.5 truncate", {
                               "text-white/80": isActive,
                               "text-gray-500 group-hover:text-gray-600":
                                 !isActive,
@@ -475,7 +630,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                           )}
                         >
                           <svg
-                            className="w-4 h-4"
+                            className="w-3.5 h-3.5"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >

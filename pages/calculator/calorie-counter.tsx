@@ -156,223 +156,155 @@ function CalorieCounter() {
 
   const calorieStatus = getCalorieStatus(totalCalories);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/6 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/3 right-1/6 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-600/3 rounded-full blur-3xl animate-pulse delay-2000"></div>
+return (
+  <div className="min-h-screen bg-white">
+    <div className="max-w-6xl mx-auto p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Calorie Counter</h1>
+        <p className="text-gray-600">Track your daily nutrition intake</p>
       </div>
 
-      <div className="relative z-10 p-4 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-2xl mb-6 shadow-lg">
-              <Calculator className="text-white" size={32} />
-            </div>
-            <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-600 bg-clip-text text-transparent mb-4">
-              Calorie Counter
-            </h1>
-            <p className="text-slate-400 text-lg max-w-md mx-auto">
-              Track your daily nutrition intake with precision and style
-            </p>
-          </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <div className="text-2xl font-bold text-gray-900 mb-1">{totalCalories}</div>
+          <div className="text-sm text-gray-600">Total Calories</div>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <div className="text-2xl font-bold text-gray-900 mb-1">{consumedFoods.length}</div>
+          <div className="text-sm text-gray-600">Foods Logged</div>
+        </div>
+        <div className={`border rounded-lg p-6 ${calorieStatus.bgColor}`}>
+          <div className={`text-2xl font-bold mb-1 ${calorieStatus.color}`}>{calorieStatus.status}</div>
+          <div className="text-sm text-gray-600">Intake Level</div>
+        </div>
+      </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-gradient-to-r from-cyan-600/10 to-cyan-400/10 backdrop-blur-xl border border-cyan-600/20 rounded-2xl p-6 text-center">
-              <Target className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-white mb-1">{totalCalories}</div>
-              <div className="text-sm text-slate-400">Total Calories</div>
-            </div>
-            <div className="bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-xl border border-slate-600/30 rounded-2xl p-6 text-center">
-              <TrendingUp className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-white mb-1">{consumedFoods.length}</div>
-              <div className="text-sm text-slate-400">Foods Logged</div>
-            </div>
-            <div className={`backdrop-blur-xl border rounded-2xl p-6 text-center ${calorieStatus.bgColor} border-opacity-20`}>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-slate-400 to-slate-300 mx-auto mb-2 flex items-center justify-center">
-                <span className="text-xs font-bold text-slate-800">%</span>
-              </div>
-              <div className={`text-2xl font-bold mb-1 ${calorieStatus.color}`}>{calorieStatus.status}</div>
-              <div className="text-sm text-slate-600">Intake Level</div>
-            </div>
-          </div>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Left Side - Food Selection */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Add Foods</h2>
+          
+          {/* Search Bar */}
+          <input
+            type="text"
+            placeholder="Search foods..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-4"
+          />
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            
-            {/* Left Side - Food Selection */}
-            <div className="space-y-6">
-              <div className="bg-cyan-600/10 backdrop-blur-xl border border-cyan-600/20 rounded-3xl p-6 shadow-xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-xl flex items-center justify-center">
-                    <Plus className="text-white" size={20} />
-                  </div>
-                  <h2 className="text-xl font-bold text-white">Add Foods</h2>
-                </div>
-                
-                {/* Search Bar */}
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search foods..."
-                    value={searchTerm}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-cyan-600/30 rounded-2xl text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                {/* Food Categories */}
-                <div className="max-h-96 overflow-y-auto space-y-4 mb-6 scrollbar-thin scrollbar-track-slate-800 scrollbar-thumb-cyan-600/50">
-                  {Object.entries(groupedFoods).map(([category, foods]) => (
-                    <div key={category} className="space-y-2">
-                      <div className="sticky top-0 bg-slate-800/80 backdrop-blur-sm px-3 py-2 rounded-lg border-l-4 border-cyan-500">
-                        <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wide">{category}</h3>
-                      </div>
-                      {foods.map((food: string) => {
-                        const isSelected = selectedFoods.find((f: Food) => f.name === food);
-                        return (
-                          <div key={food} className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 ${
-                            isSelected 
-                              ? 'bg-gradient-to-r from-cyan-600/20 to-cyan-400/20 border-2 border-cyan-500/50 shadow-lg' 
-                              : 'bg-slate-800/30 border border-slate-700/50 hover:bg-slate-700/50 hover:border-cyan-600/30'
-                          }`}>
-                            <div className="flex items-center gap-4">
-                              <div 
-                                onClick={() => toggleFood(food)}
-                                className="flex-1 min-w-0"
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <span className="text-2xl bg-slate-700/50 w-10 h-10 rounded-xl flex items-center justify-center">
-                                    {uaeFoods[food].emoji}
-                                  </span>
-                                  <div>
-                                    <div className="font-semibold text-white text-sm truncate">{food}</div>
-                                    <div className="text-xs text-cyan-400 font-medium">{uaeFoods[food].calories} cal</div>
-                                  </div>
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <div className="flex items-center gap-2 bg-slate-800/50 rounded-xl p-2">
-                                  <span className="text-xs text-slate-400">×</span>
-                                  <input
-                                    type="number"
-                                    min="0.1"
-                                    step="0.1"
-                                    value={isSelected.portion}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updatePortion(food, e.target.value)}
-                                    className="w-16 px-2 py-1 bg-slate-700 border border-cyan-600/30 rounded-lg text-center text-white text-sm focus:ring-1 focus:ring-cyan-500"
-                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                  />
-                                </div>
-                              )}
+          {/* Food Categories */}
+          <div className="max-h-96 overflow-y-auto space-y-4 mb-4">
+            {Object.entries(groupedFoods).map(([category, foods]) => (
+              <div key={category} className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide px-2">{category}</h3>
+                {foods.map((food) => {
+                  const isSelected = selectedFoods.find((f) => f.name === food);
+                  return (
+                    <div key={food} className={`p-4 rounded-lg cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'bg-gray-900 text-white border-2 border-gray-900' 
+                        : 'bg-gray-50 border border-gray-200 hover:border-gray-300'
+                    }`}>
+                      <div className="flex items-center gap-4">
+                        <div 
+                          onClick={() => toggleFood(food)}
+                          className="flex-1"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{uaeFoods[food].emoji}</span>
+                            <div>
+                              <div className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>{food}</div>
+                              <div className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-600'}`}>{uaeFoods[food].calories} cal</div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Selected Foods Summary */}
-                {selectedFoods.length > 0 && (
-                  <div className="bg-slate-800/50 rounded-2xl p-4 mb-6 border border-cyan-600/30">
-                    <div className="text-sm font-semibold text-cyan-400 mb-3">
-                      Selected Foods ({selectedFoods.length})
-                    </div>
-                    <div className="space-y-2 max-h-24 overflow-y-auto">
-                      {selectedFoods.map((food: Food) => (
-                        <div key={food.name} className="flex justify-between items-center text-sm">
-                          <span className="text-white truncate flex-1">{food.name}</span>
-                          <span className="text-cyan-400 ml-2">×{food.portion}</span>
                         </div>
-                      ))}
+                        {isSelected && (
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            value={isSelected.portion}
+                            onChange={(e) => updatePortion(food, e.target.value)}
+                            className="w-16 px-2 py-1 bg-white text-gray-900 border border-gray-300 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                <button
-                  onClick={addFood}
-                  disabled={selectedFoods.length === 0}
-                  className="w-full bg-gradient-to-r from-cyan-600 to-cyan-400 disabled:from-slate-600 disabled:to-slate-500 text-white py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  <Plus size={20} />
-                  Add Selected ({selectedFoods.length})
-                </button>
+                  );
+                })}
               </div>
-            </div>
+            ))}
+          </div>
 
-            {/* Right Side - Consumed Foods */}
-            <div className="space-y-6">
-              {/* Total Calories Card */}
-              <div className="bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-3xl p-8 text-center shadow-xl text-white">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <Calculator size={28} />
-                  <span className="text-xl font-semibold">Daily Total</span>
-                </div>
-                <div className="text-5xl font-bold mb-2">{totalCalories}</div>
-                <div className="text-cyan-100 opacity-90">calories consumed</div>
-              </div>
+          <button
+            onClick={addFood}
+            disabled={selectedFoods.length === 0}
+            className="w-full bg-gray-900 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg font-medium transition-all hover:bg-gray-800 disabled:cursor-not-allowed"
+          >
+            Add Selected ({selectedFoods.length})
+          </button>
+        </div>
 
-              {/* Consumed Foods List */}
-              <div className="bg-slate-800/30 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 shadow-xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-r from-slate-600 to-slate-500 rounded-xl flex items-center justify-center">
-                    <span className="text-white text-lg">📋</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white">Today&apos;s Intake</h3>
-                </div>
+        {/* Right Side - Consumed Foods */}
+        <div className="space-y-6">
+          {/* Total Calories Card */}
+          <div className="bg-gray-900 rounded-lg p-8 text-center text-white">
+            <div className="text-xl font-semibold mb-2">Daily Total</div>
+            <div className="text-5xl font-bold mb-2">{totalCalories}</div>
+            <div className="text-gray-300">calories consumed</div>
+          </div>
 
-                {consumedFoods.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-thin scrollbar-track-slate-800 scrollbar-thumb-cyan-600/50">
-                    {consumedFoods.map((food: ConsumedFood) => (
-                      <div key={food.id} className="group bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 hover:border-cyan-600/30 rounded-2xl p-4 transition-all duration-300">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <div className="w-12 h-12 bg-slate-600/50 rounded-xl flex items-center justify-center text-xl">
-                              {uaeFoods[food.name].emoji}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-white truncate">{food.name}</div>
-                              <div className="text-sm text-slate-400">
-                                {food.portion}× portion • <span className="text-cyan-400 font-semibold">{food.calories} cal</span>
-                              </div>
-                            </div>
+          {/* Consumed Foods List */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Today's Intake</h3>
+
+            {consumedFoods.length > 0 ? (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {consumedFoods.map((food) => (
+                  <div key={food.id} className="group bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-4 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <span className="text-2xl">{uaeFoods[food.name].emoji}</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{food.name}</div>
+                          <div className="text-sm text-gray-600">
+                            {food.portion}× portion • <span className="font-semibold">{food.calories} cal</span>
                           </div>
-                          <button
-                            onClick={() => removeFood(food.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-xl transition-all duration-300 opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 size={18} />
-                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="w-24 h-24 bg-slate-700/30 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                      <span className="text-4xl">🍽️</span>
+                      <button
+                        onClick={() => removeFood(food.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
-                    <div className="text-slate-400 text-lg font-medium mb-2">No foods logged yet</div>
-                    <div className="text-slate-500 text-sm">Start adding foods to track your calories</div>
                   </div>
-                )}
+                ))}
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-4">🍽️</div>
+                <div className="text-gray-600 font-medium mb-2">No foods logged yet</div>
+                <div className="text-gray-500 text-sm">Start adding foods to track your calories</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default CalorieCounter;
 
-CalorieCounter.getLayout = function PageLayout(page: React.ReactNode) {
-  return page; 
-}
+// CalorieCounter.getLayout = function PageLayout(page: React.ReactNode) {
+//   return page; 
+// }

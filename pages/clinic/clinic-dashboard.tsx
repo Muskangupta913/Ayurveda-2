@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Mail, Settings, Calendar, Clock, MessageCircle } from 'lucide-react';
+import { Star, Mail, Settings } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList } from 'recharts';
 import Stats from '../../components/Stats';
 import ClinicLayout from '../../components/ClinicLayout';
@@ -110,19 +110,6 @@ const ClinicDashboard: NextPageWithLayout = () => {
     { name: 'Total Reviews', value: stats.totalReviews }
   ];
 
-    const quickActions = [
-      { title: 'Manage Health Center', icon: Settings, color: 'from-blue-500 to-indigo-500', href: '/clinic/myallClinic' },
-      { title: 'Review', icon: Star, color: 'from-yellow-500 to-orange-500', href: '/clinic/getAllReview' },
-      { title: 'Enquiry', icon: MessageCircle, color: 'from-green-500 to-emerald-500', href: '/clinic/get-Enquiry' },
-      { 
-    title: 'Lead', 
-    icon: Mail, 
-    color: 'from-purple-500 to-pink-500', 
-    href: '/lead/dashboard' 
-  }
-
-    ];
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen px-4">
@@ -133,64 +120,10 @@ const ClinicDashboard: NextPageWithLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Enhanced Header */}
-      <div className="bg-gradient-to-r from-[#2D9AA5] to-[#1F7A7A] rounded-xl p-8 shadow-lg border border-gray-200 mx-4 mt-4 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-4 right-4 w-32 h-32 bg-white rounded-full"></div>
-          <div className="absolute top-12 right-12 w-20 h-20 bg-white rounded-full"></div>
-          <div className="absolute bottom-8 left-8 w-24 h-24 bg-white rounded-full"></div>
-          <div className="absolute bottom-4 left-16 w-16 h-16 bg-white rounded-full"></div>
-        </div>
-
-        <div className="flex flex-col items-start space-y-6 relative z-10">
-          <div className="w-full">
-            <h1 className="text-4xl font-bold mb-3 text-white drop-shadow-sm">
-              {getGreeting()}, {clinicUser?.name || 'Clinic'}!
-            </h1>
-            <p className="text-white/90 text-xl mb-4 font-medium">
-              Welcome back to your professional dashboard
-            </p>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
-              <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                <Calendar className="w-5 h-5 text-white" />
-                <span className="font-semibold text-white text-sm">{formatDate(currentTime)}</span>
-              </div>
-              <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                <Clock className="w-5 h-5 text-white" />
-                <span className="font-semibold text-white text-sm">{formatTime(currentTime)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Enhanced Header removed per request */}
 
       {/* Main Content */}
       <div className="p-4 space-y-6">
-        {/* Quick Actions Section */}
-       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-  <h2 className="text-2xl font-semibold mb-6 text-gray-900">Quick Actions</h2>
-  <div className="flex space-x-4 overflow-x-auto pb-2">
-    {quickActions.map((action, index) => (
-      <Link
-        key={index}
-        href={action.href}
-        className="group bg-white hover:bg-gray-50 rounded-lg p-6 border border-gray-200 hover:border-[#2D9AA5] transition-all duration-200 hover:shadow-md min-w-[180px]"
-      >
-        <div className="flex flex-col items-center space-y-3">
-          <div className="p-3 bg-[#2D9AA5] rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-200">
-            <action.icon className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-gray-800 font-medium text-lg text-center">
-            {action.title}
-          </span>
-        </div>
-      </Link>
-    ))}
-  </div>
-</div>
-
-
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {stats.totalClinics !== undefined && (
