@@ -4,41 +4,17 @@ import ClinicLayout from "../../components/AgentLayout";
 import withClinicAuth from "../../components/withAgentAuth";
 import FilterAssignedLead from "../../components/Filter-assigned-lead";
 import WhatsAppChat from "../../components/WhatsAppChat";
-import type { NextPageWithLayout } from "../_app";
 
-interface Lead {
-  _id: string;
-  clinicId: string;
-  name: string;
-  phone: string;
-  gender: string;
-  age: number;
-  source: string;
-  customSource?: string;
-  offerTag?: string;
-  status: string;
-  customStatus?: string;
-  notes?: { _id: string; text: string; createdAt: string }[];
-  assignedTo?: { _id: string; user?: { _id: string; name: string } }[];
-  followUps?: { _id: string; date: string; note?: string }[];
-  nextFollowUps?: { _id: string; date: string }[];
-  treatments?: { treatment?: { name: string }; subTreatment?: string }[];
-  createdAt: string;
-  updatedAt: string;
-  followUpStatus?: string;
-  __v?: number;
-}
-
-const AssignedLeadsPage: NextPageWithLayout = () => {
+const AssignedLeadsPage = () => {
   const [loading, setLoading] = useState(true);
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState([]);
   const [totalAssigned, setTotalAssigned] = useState(0);
   const [error, setError] = useState("");
-  const [followUpsdate, setFollowUpsdate] = useState<{ [key: string]: string }>({});
-  const [token, setToken] = useState<string | null>(null);
-  const [saving, setSaving] = useState<{ [key: string]: boolean }>({});
+  const [followUpsdate, setFollowUpsdate] = useState({});
+  const [token, setToken] = useState(null);
+  const [saving, setSaving] = useState({});
   const [chatOpen, setChatOpen] = useState(false);
-  const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  const [activeLead, setActiveLead] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
@@ -76,11 +52,11 @@ const AssignedLeadsPage: NextPageWithLayout = () => {
     fetchLeads();
   }, [token]);
 
-  const handleFollowUpdateChange = (leadId: string, value: string) => {
+  const handleFollowUpdateChange = (leadId, value) => {
     setFollowUpsdate((prev) => ({ ...prev, [leadId]: value }));
   };
 
-  const saveFollowUp = async (leadId: string) => {
+  const saveFollowUp = async (leadId) => {
     if (!token) {
       alert("Unauthorized");
       return;
@@ -94,9 +70,9 @@ const AssignedLeadsPage: NextPageWithLayout = () => {
     try {
       setSaving((prev) => ({ ...prev, [leadId]: true }));
 
-      const payload = { 
-        leadId, 
-        nextFollowUp: followUpsdate[leadId] 
+      const payload = {
+        leadId,
+        nextFollowUp: followUpsdate[leadId]
       };
 
       const res = await axios.put("/api/agent/update-note", payload, {
@@ -131,8 +107,8 @@ const AssignedLeadsPage: NextPageWithLayout = () => {
     }
   };
 
-  const getStatusConfig = (status: string) => {
-    const configs: { [key: string]: { bg: string; text: string; border: string; dot: string } } = {
+  const getStatusConfig = (status) => {
+    const configs = {
       new: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
       contacted: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
       qualified: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
@@ -142,7 +118,7 @@ const AssignedLeadsPage: NextPageWithLayout = () => {
     return configs[status?.toLowerCase()] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
   };
 
-  const getFollowUpBadge = (followUpStatus?: string) => {
+  const getFollowUpBadge = (followUpStatus) => {
     if (followUpStatus === 'past') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-red-500 text-white rounded-lg shadow-sm">
@@ -166,7 +142,7 @@ const AssignedLeadsPage: NextPageWithLayout = () => {
     return null;
   };
 
-  const formatPhoneNumber = (phone: string) => {
+  const formatPhoneNumber = (phone) => {
     const trimmed = phone.replace(/\s+/g, "");
     if (trimmed.startsWith("+")) return trimmed;
     return `+91${trimmed}`;
@@ -389,8 +365,8 @@ const AssignedLeadsPage: NextPageWithLayout = () => {
                             </svg>
                             Treatments
                           </div>
-                          {lead.treatments && lead.treatments.length > 0 ? (
-                            lead.treatments.map((t: any, idx: number) => (
+                        {lead.treatments && lead.treatments.length > 0 ? (
+                            lead.treatments.map((t, idx) => (
                               <div key={idx} className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-2.5 border border-indigo-100 shadow-sm">
                                 <div className="text-sm font-bold text-gray-900">{t.treatment?.name}</div>
                                 {t.subTreatment && (
