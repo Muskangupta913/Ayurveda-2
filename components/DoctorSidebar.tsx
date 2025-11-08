@@ -66,6 +66,12 @@ const navigationItems: NavItem[] = [
     icon: "📋",
     description: "View all prescription requests",
   },
+  {
+    label: "Create Agent",
+    path: "/doctor/create-agent",
+    icon: "👤",
+    description: "Create agent account",
+  },
 ];
 
 const DoctorSidebar: FC<DoctorSidebarProps> = ({

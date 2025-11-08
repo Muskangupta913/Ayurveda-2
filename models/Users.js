@@ -18,6 +18,7 @@ const UserSchema = new mongoose.Schema({
     default: 'user',
   },
   clinicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' }, // ✅ tie agent to clinic
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ✅ track who created this agent
   isApproved: { type: Boolean, default: false },
   declined: { type: Boolean, default: false },
   eodNotes: [EODNoteSchema],

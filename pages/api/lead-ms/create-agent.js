@@ -14,61 +14,87 @@ export default async function handler(req, res) {
   await dbConnect();
   const me = await getUserFromReq(req);
 
-  // Only clinic owners can create agents
-  if (!me || !requireRole(me, ["clinic","agent"])) {
+  // Allow admin, clinic, doctor, and agent roles to create agents
+  if (!me || !requireRole(me, ["admin", "clinic", "doctor", "agent"])) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
   const { name, email, phone, password } = req.body;
-  if (!name || !email || !phone || !password) {
+  if (!name || !email || !password) {
     return res
       .status(400)
       .json({ success: false, message: "Missing required fields" });
   }
 
   try {
-    // ✅ Find clinic owned by the logged-in user
-   // Find clinic based on role
-let clinic;
-if (me.role === "clinic") {
-  clinic = await Clinic.findOne({ owner: me._id });
-} else if (me.role === "agent") {
-  clinic = await Clinic.findById(me.clinicId); // agent already has clinicId
-}
+    let clinicId = null;
+    
+    // Find clinic based on role
+    if (me.role === "clinic") {
+      const clinic = await Clinic.findOne({ owner: me._id });
+      if (!clinic) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Clinic not found for this user" });
+      }
+      clinicId = clinic._id;
+    } else if (me.role === "agent") {
+      clinicId = me.clinicId; // agent already has clinicId
+      if (!clinicId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Clinic not found for this agent" });
+      }
+    } else if (me.role === "doctor") {
+      // Doctor might have a clinicId, or might not (optional)
+      clinicId = me.clinicId || null;
+    }
+    // For admin, clinicId is null (agents created by admin are not tied to a clinic)
 
-if (!clinic) {
-  return res
-    .status(400)
-    .json({ success: false, message: "Clinic not found for this user" });
-}
-
-    // Check if agent already exists for this clinic
-    const existing = await User.findOne({
-      email,
-      role: "agent",
-      clinicId: clinic._id,
-    });
+    // Check if agent already exists with this email
+    // If clinicId is provided, check within that clinic
+    // If no clinicId (admin), check for agents without clinicId (admin-created)
+    const existingQuery = { email, role: "agent" };
+    if (clinicId) {
+      existingQuery.clinicId = clinicId;
+    } else {
+      // For admin-created agents (no clinicId), check for agents with null/undefined clinicId
+      existingQuery.$or = [
+        { clinicId: null },
+        { clinicId: { $exists: false } }
+      ];
+    }
+    
+    const existing = await User.findOne(existingQuery);
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: "Agent already exists for this clinic",
+        message: clinicId 
+          ? "Agent already exists for this clinic" 
+          : "Agent with this email already exists (admin-created agent)",
       });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Tie agent to clinic._id instead of user._id
-    const agent = await User.create({
+    // Create agent - clinicId is optional (for admin-created agents)
+    const agentData = {
       name,
       email,
-      phone,
+      phone: phone || undefined,
       password: hashedPassword,
       role: "agent",
-      clinicId: clinic._id,
+      createdBy: me._id, // ✅ Store who created this agent
       isApproved: true,
       declined: false,
-    });
+    };
+    
+    if (clinicId) {
+      agentData.clinicId = clinicId;
+    }
+
+    const agent = await User.create(agentData);
 
     return res.status(201).json({
       success: true,
@@ -77,7 +103,7 @@ if (!clinic) {
         name: agent.name,
         email: agent.email,
         phone: agent.phone,
-        clinicId: agent.clinicId, // ✅ correct clinicId
+        clinicId: agent.clinicId || null,
       },
     });
   } catch (err) {

@@ -11,11 +11,16 @@ export async function getUserFromReq(req) {
     if (!token) return null;
 
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    if (!payload?.userId) return null;
+    
+    // Handle different token formats:
+    // Admin uses 'id', others use 'userId'
+    const userId = payload?.userId || payload?.id;
+    if (!userId) return null;
 
-    const user = await User.findById(payload.userId);
+    const user = await User.findById(userId);
     return user || null;
   } catch (e) {
+    console.error("Auth error:", e.message);
     return null;
   }
 }

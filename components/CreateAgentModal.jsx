@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const CreateAgentModal = ({ isOpen, onClose, onCreated, token }) => {
+const CreateAgentModal = ({ isOpen, onClose, onCreated, token, doctorToken, adminToken }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -9,6 +9,14 @@ const CreateAgentModal = ({ isOpen, onClose, onCreated, token }) => {
   const [submitting, setSubmitting] = useState(false);
 
   if (!isOpen) return null;
+
+  // Determine which token to use: priority order is adminToken > doctorToken > token
+  const authToken = adminToken || doctorToken || token || null;
+  
+  if (!authToken) {
+    console.error('No authentication token provided');
+    return null;
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -18,7 +26,7 @@ const CreateAgentModal = ({ isOpen, onClose, onCreated, token }) => {
       const { data } = await axios.post(
         '/api/lead-ms/create-agent',
         { name, email, phone, password },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${authToken}` } }
       );
       if (data?.success) {
         setName(''); setEmail(''); setPhone(''); setPassword('');
