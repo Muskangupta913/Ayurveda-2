@@ -195,18 +195,18 @@ function LeadForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="name" className="block text-xs font-medium text-gray-600 mb-1">Name</label>
-              <input id="name" name="name" placeholder="Enter full name" value={formData.name} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+              <input id="name" name="name" placeholder="Enter full name" value={formData.name} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
             </div>
             <div>
               <label htmlFor="phone" className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
-              <input id="phone" name="phone" placeholder="Enter phone number" value={formData.phone} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+              <input id="phone" name="phone" placeholder="Enter phone number" value={formData.phone} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="gender" className="block text-xs font-medium text-gray-600 mb-1">Gender</label>
-              <select id="gender" name="gender" value={formData.gender} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+              <select id="gender" name="gender" value={formData.gender} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
             <option>Male</option>
             <option>Female</option>
             <option>Other</option>
@@ -214,7 +214,7 @@ function LeadForm() {
           </div>
             <div>
               <label htmlFor="age" className="block text-xs font-medium text-gray-600 mb-1">Age</label>
-              <input id="age" name="age" type="number" placeholder="e.g. 32" value={formData.age} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+              <input id="age" name="age" type="number" placeholder="e.g. 32" value={formData.age} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
             </div>
           </div>
 
@@ -260,7 +260,7 @@ function LeadForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="source" className="block text-xs font-medium text-gray-600 mb-1">Source</label>
-              <select id="source" name="source" value={formData.source} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+              <select id="source" name="source" value={formData.source} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
             <option value="Instagram">Instagram</option>
             <option value="Facebook">Facebook</option>
             <option value="Google">Google</option>
@@ -272,7 +272,7 @@ function LeadForm() {
           {formData.source === "Other" && (
               <div>
                 <label htmlFor="customSource" className="block text-xs font-medium text-gray-600 mb-1">Custom Source</label>
-                <input id="customSource" name="customSource" placeholder="Enter source" value={formData.customSource} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+                <input id="customSource" name="customSource" placeholder="Enter source" value={formData.customSource} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
               </div>
           )}
           </div>
@@ -280,7 +280,7 @@ function LeadForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="status" className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-              <select id="status" name="status" value={formData.status} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+              <select id="status" name="status" value={formData.status} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
             <option value="New">New</option>
             <option value="Contacted">Contacted</option>
             <option value="Booked">Booked</option>
@@ -293,7 +293,7 @@ function LeadForm() {
           {formData.status === "Other" && (
               <div>
                 <label htmlFor="customStatus" className="block text-xs font-medium text-gray-600 mb-1">Custom Status</label>
-                <input id="customStatus" name="customStatus" placeholder="Enter status" value={formData.customStatus} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+                <input id="customStatus" name="customStatus" placeholder="Enter status" value={formData.customStatus} onChange={handleChange} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
               </div>
           )}
           </div>
@@ -305,7 +305,7 @@ function LeadForm() {
               name="offerTag"
               value={formData.offerTag}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             >
             <option value="">No offer</option>
             {activeOffers.map((o) => (
@@ -328,7 +328,7 @@ function LeadForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="noteType" className="block text-xs font-medium text-gray-600 mb-1">Note</label>
-              <select id="noteType" value={noteType} onChange={(e) => setNoteType(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+              <select id="noteType" value={noteType} onChange={(e) => setNoteType(e.target.value)} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
                 <option value="">Select Note</option>
                 <option value="Interested">Interested</option>
                 <option value="Medium">Medium</option>
@@ -339,14 +339,14 @@ function LeadForm() {
             {noteType === "Custom" && (
               <div>
                 <label htmlFor="customNote" className="block text-xs font-medium text-gray-600 mb-1">Custom Note</label>
-                <input id="customNote" type="text" placeholder="Type a note" value={customNote} onChange={(e) => setCustomNote(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+                <input id="customNote" type="text" placeholder="Type a note" value={customNote} onChange={(e) => setCustomNote(e.target.value)} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
               </div>
             )}
           </div>
 
           <div>
             <label htmlFor="followUpDate" className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label>
-            <input id="followUpDate" type="datetime-local" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+            <input id="followUpDate" type="datetime-local" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
           </div>
 
           {/* Assign To - simple select that closes on selection */}
@@ -359,7 +359,7 @@ function LeadForm() {
                 const selectedId = e.target.value;
                 setFormData(prev => ({ ...prev, assignedTo: selectedId ? [selectedId] : [] }));
               }}
-              className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="text-gray-800 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             >
               <option value="">Select agent</option>
               {agents.map(agent => (
@@ -384,7 +384,7 @@ function LeadForm() {
           </div>
           <button onClick={handleUpload} disabled={loading || !file} className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium shadow hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-60">{loading ? "Uploading..." : "Upload"}</button>
         </div>
-        <input className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-gray-700 hover:file:bg-gray-200" type="file" accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        <input className="text-gray-800 w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-gray-700 hover:file:bg-gray-200" type="file" accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => setFile(e.target.files?.[0] || null)} />
       </div>
     </div>
   );

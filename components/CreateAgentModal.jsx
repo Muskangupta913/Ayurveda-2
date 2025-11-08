@@ -50,19 +50,19 @@ const CreateAgentModal = ({ isOpen, onClose, onCreated, token }) => {
           <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="block text-sm text-gray-700 mb-1">Full name <span className="text-red-500">*</span></label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Agent name" required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Agent name" required className="text-gray-700 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Email address <span className="text-red-500">*</span></label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="agent@example.com" required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="agent@example.com" required className="text-gray-700 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Phone number</label>
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 000 0000" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 000 0000" className="text-gray-700 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Password <span className="text-red-500">*</span></label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" required className="text-gray-700 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none" />
             </div>
           </div>
           <div className="mt-4 flex items-center justify-end gap-2">

@@ -263,7 +263,7 @@ export default function CreateOfferModal({
                   name="title"
                   value={form.title}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                  className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                   placeholder="e.g., Summer Special Discount"
                   required
                 />
@@ -276,7 +276,7 @@ export default function CreateOfferModal({
                   value={form.description}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all resize-none text-sm"
+                  className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all resize-none text-sm"
                   placeholder="Describe the offer details..."
                 />
               </div>
@@ -290,7 +290,7 @@ export default function CreateOfferModal({
                     name="type"
                     value={form.type}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     required
                   >
                     <option value="percentage">Percentage (%)</option>
@@ -307,7 +307,7 @@ export default function CreateOfferModal({
                     name="value"
                     value={form.value}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="0"
                   />
                 </div>
@@ -326,7 +326,7 @@ export default function CreateOfferModal({
                     name="startsAt"
                     value={form.startsAt}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                   />
                 </div>
                 <div>
@@ -336,7 +336,7 @@ export default function CreateOfferModal({
                     name="endsAt"
                     value={form.endsAt}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                   />
                 </div>
               </div>
@@ -349,7 +349,7 @@ export default function CreateOfferModal({
                     name="maxUses"
                     value={form.maxUses || ""}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="Unlimited"
                   />
                 </div>
@@ -360,7 +360,7 @@ export default function CreateOfferModal({
                     name="perUserLimit"
                     value={form.perUserLimit}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="1"
                   />
                 </div>
@@ -398,7 +398,7 @@ export default function CreateOfferModal({
                     name="utm.source"
                     value={form.utm.source}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="clinic"
                   />
                 </div>
@@ -409,7 +409,7 @@ export default function CreateOfferModal({
                     name="utm.medium"
                     value={form.utm.medium}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="email"
                   />
                 </div>
@@ -420,7 +420,7 @@ export default function CreateOfferModal({
                     name="utm.campaign"
                     value={form.utm.campaign}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="summer-2024"
                   />
                 </div>
@@ -434,7 +434,7 @@ export default function CreateOfferModal({
                 name="status"
                 value={form.status}
                 onChange={handleChange}
-                className="w-full md:w-1/2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                className="text-gray-700 w-full md:w-1/2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
               >
                 {["draft", "active", "paused", "expired", "archived"].map((s) => (
                   <option key={s} value={s} className="capitalize">

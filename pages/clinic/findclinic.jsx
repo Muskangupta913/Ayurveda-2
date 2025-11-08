@@ -827,7 +827,6 @@ export default function Home() {
                                 </div>
                             </div>
 
-
                         </div>
                     </div>
                 </div>
@@ -972,7 +971,7 @@ export default function Home() {
                                     <div className="space-y-2">
                                         {[5, 4, 3, 2, 1].map((rating) => (
                                             <label key={rating} className="flex items-center cursor-pointer">
-                                                <input
+                                                 <input
                                                     type="radio"
                                                     name="rating"
                                                     value={rating}
