@@ -15,15 +15,17 @@ export async function getUserFromReq(req) {
     // console.log("Extracted token:", token);
     if (!token) return null;
 
-   const payload = jwt.verify(token, process.env.JWT_SECRET);
-// console.log("JWT payload:", payload);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Handle different token formats:
+    // Admin uses 'id', others use 'userId'
+    const userId = payload?.userId || payload?.id;
+    if (!userId) return null;
 
-const userId = payload.userId || payload.id;  // ✅ support both
-if (!userId) return null;
-
-const user = await User.findById(userId);
+    const user = await User.findById(userId);
     return user || null;
   } catch (e) {
+    console.error("Auth error:", e.message);
     return null;
   }
 }

@@ -2,6 +2,7 @@
 import dbConnect from '../../../lib/database';
 import User from '../../../models/Users';
 import Clinic from '../../../models/Clinic';   // ✅ import Clinic
+import bcrypt from 'bcryptjs';
 import { getUserFromReq, requireRole } from './auth';
 
 export default async function handler(req, res) {
@@ -12,33 +13,58 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
   }
 
-if (!requireRole(me, ['clinic', 'agent'])) {
-  return res.status(403).json({ success: false, message: 'Access denied' });
-}
-  // ✅ Find clinic owned by logged-in user
- let clinic;
-if (me.role === 'clinic') {
-  clinic = await Clinic.findOne({ owner: me._id });
-} else if (me.role === 'agent') {
-  clinic = await Clinic.findById(me.clinicId);
-}
-
-if (!clinic) {
-  return res
-    .status(400)
-    .json({ success: false, message: 'Clinic not found for this user' });
-}
+  // Allow admin, clinic, doctor, and agent roles
+  if (!requireRole(me, ['admin', 'clinic', 'doctor', 'agent'])) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
 
   // ---------------- GET Agents ----------------
   if (req.method === 'GET') {
     try {
-      const agents = await User.find({
-        role: 'agent',
-        clinicId: clinic._id,   // ✅ tied to clinic
-      }).select('_id name email phone isApproved declined');
+      let query = { role: 'agent' };
+
+      // Filter agents based on who is requesting
+      if (me.role === 'admin') {
+        // Admin sees all agents they created (without clinicId or with createdBy = admin)
+        query.createdBy = me._id;
+      } else if (me.role === 'clinic') {
+        // Clinic sees agents from their clinic OR agents they created
+        const clinic = await Clinic.findOne({ owner: me._id });
+        if (clinic) {
+          query.$or = [
+            { clinicId: clinic._id },
+            { createdBy: me._id }
+          ];
+        } else {
+          // If no clinic found, only show agents they created
+          query.createdBy = me._id;
+        }
+      } else if (me.role === 'doctor') {
+        // Doctor sees agents from their clinic (if they have one) OR agents they created
+        if (me.clinicId) {
+          query.$or = [
+            { clinicId: me.clinicId },
+            { createdBy: me._id }
+          ];
+        } else {
+          // If no clinicId, only show agents they created
+          query.createdBy = me._id;
+        }
+      } else if (me.role === 'agent') {
+        // Agent sees agents from their clinic
+        if (me.clinicId) {
+          query.clinicId = me.clinicId;
+        } else {
+          // If agent has no clinicId, return empty
+          return res.status(200).json({ success: true, agents: [] });
+        }
+      }
+
+      const agents = await User.find(query).select('_id name email phone isApproved declined clinicId createdBy');
 
       return res.status(200).json({ success: true, agents });
     } catch (err) {
+      console.error('Error fetching agents:', err);
       return res.status(500).json({ success: false, message: 'Failed to fetch agents', error: err.message });
     }
   }
@@ -54,10 +80,45 @@ if (!clinic) {
       return res.status(400).json({ success: false, message: 'action must be either "approve", "decline" or "resetPassword"' });
     }
 
-    // ✅ ensure agent belongs to this clinic
-    const agent = await User.findOne({ _id: agentId, role: 'agent', clinicId: clinic._id });
+    // Build query to find agent based on who is requesting
+    let agentQuery = { _id: agentId, role: 'agent' };
+
+    if (me.role === 'admin') {
+      // Admin can only modify agents they created
+      agentQuery.createdBy = me._id;
+    } else if (me.role === 'clinic') {
+      // Clinic can modify agents from their clinic OR agents they created
+      const clinic = await Clinic.findOne({ owner: me._id });
+      if (clinic) {
+        agentQuery.$or = [
+          { clinicId: clinic._id },
+          { createdBy: me._id }
+        ];
+      } else {
+        agentQuery.createdBy = me._id;
+      }
+    } else if (me.role === 'doctor') {
+      // Doctor can modify agents from their clinic OR agents they created
+      if (me.clinicId) {
+        agentQuery.$or = [
+          { clinicId: me.clinicId },
+          { createdBy: me._id }
+        ];
+      } else {
+        agentQuery.createdBy = me._id;
+      }
+    } else if (me.role === 'agent') {
+      // Agent can only modify agents from their clinic
+      if (me.clinicId) {
+        agentQuery.clinicId = me.clinicId;
+      } else {
+        return res.status(403).json({ success: false, message: 'Agent has no clinic assigned' });
+      }
+    }
+
+    const agent = await User.findOne(agentQuery);
     if (!agent) {
-      return res.status(404).json({ success: false, message: 'Agent not found or not in your clinic' });
+      return res.status(404).json({ success: false, message: 'Agent not found or you do not have permission to modify this agent' });
     }
 
     if (action === 'approve') {
@@ -70,7 +131,9 @@ if (!clinic) {
       if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
         return res.status(400).json({ success: false, message: 'Valid newPassword (min 6 chars) is required' });
       }
-      agent.password = newPassword;
+      // Hash the password before saving
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      agent.password = hashedPassword;
     }
 
     try {
