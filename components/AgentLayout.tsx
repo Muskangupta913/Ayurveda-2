@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import DoctorSidebar from './AgentSidebar';
-import DoctorHeader from './AgentHeader';
+import AgentSidebar from './AgentSidebar';
+import AgentHeader from './AgentHeader';
 
-const DoctorLayout = ({ children }: { children: React.ReactNode }) => {
+const AgentLayout = ({ children }: { children: React.ReactNode }) => {
   const [isDesktopHidden, setIsDesktopHidden] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -23,9 +23,8 @@ const DoctorLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100" role="application">
-      {/* Sidebar */}
-      <DoctorSidebar
+    <div className="flex min-h-screen bg-slate-50" role="application">
+      <AgentSidebar
         isDesktopHidden={isDesktopHidden}
         isMobileOpen={isMobileOpen}
         handleToggleDesktop={handleToggleDesktop}
@@ -34,11 +33,9 @@ const DoctorLayout = ({ children }: { children: React.ReactNode }) => {
         handleItemClick={handleItemClick}
       />
 
-      {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-h-screen max-h-screen transition-all duration-300">
-        {/* Header */}
+      <div className="flex flex-col flex-1 min-h-screen max-h-screen">
         <div className="sticky top-0 z-20">
-          <DoctorHeader
+          <AgentHeader
             handleToggleDesktop={handleToggleDesktop}
             handleToggleMobile={handleToggleMobile}
             isDesktopHidden={isDesktopHidden}
@@ -46,7 +43,6 @@ const DoctorLayout = ({ children }: { children: React.ReactNode }) => {
           />
         </div>
 
-        {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" role="main">
           {children}
         </main>
@@ -55,4 +51,4 @@ const DoctorLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export default DoctorLayout;
+export default AgentLayout;
