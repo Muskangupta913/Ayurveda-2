@@ -97,9 +97,11 @@ interface ConfirmAction {
 
 interface BlogEditorProps {
   tokenKey: "clinicToken" | "doctorToken";
+  skipLandingPage?: boolean;
+  onClose?: () => void;
 }
 
-const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
+const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey, skipLandingPage = false, onClose }) => {
   const [title, setTitle] = useState<string>("");
   const [isParamlinkEditable, setIsParamlinkEditable] = useState(false);
   const [content, setContent] = useState<string>("");
@@ -146,7 +148,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [videoType, setVideoType] = useState<"youtube" | "drive">("youtube");
   // Open/close main editor modal
-  const [showEditor, setShowEditor] = useState<boolean>(false);
+  const [showEditor, setShowEditor] = useState<boolean>(skipLandingPage);
   // Close confirmation modal for editor
   const [showCloseConfirm, setShowCloseConfirm] = useState<boolean>(false);
   const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
@@ -213,12 +215,18 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
     if (ok) {
       setShowCloseConfirm(false);
       setShowEditor(false);
+      if (onClose) {
+        onClose();
+      }
     }
   };
 
   const discardAndCloseEditor = () => {
     setShowCloseConfirm(false);
     setShowEditor(false);
+    if (onClose) {
+      onClose();
+    }
   };
 
   const resetEditorFields = () => {
@@ -948,6 +956,10 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       setParamlink("");
       setSelectedDraft(null);
       setSelectedPublished(null);
+      // Close editor if in modal mode
+      if (skipLandingPage && onClose) {
+        onClose();
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       if (error.response?.data?.message?.includes("Paramlink already exists")) {
@@ -1278,7 +1290,7 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
       </div>
 
       {/* Landing - Write Blog CTA */}
-      {!showEditor && (
+      {!skipLandingPage && !showEditor && (
         <div className="relative w-full h-screen flex items-center justify-center px-4 overflow-hidden">
           {/* Subtle Background */}
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-800">
@@ -1333,9 +1345,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({ tokenKey }) => {
 
       {/* Full-Screen Blog Editor Modal */}
       {showEditor && (
-        <div className="fixed inset-0 z-40 flex items-start justify-center p-0 overflow-y-auto">
-          <div className="absolute inset-0 bg-black/50" onClick={requestCloseEditor} />
-          <div className="relative z-40 w-full h-full min-h-screen overflow-hidden bg-white flex flex-col">
+        <div className={`${skipLandingPage ? 'relative' : 'fixed inset-0 z-40'} flex items-start justify-center p-0 overflow-y-auto`}>
+          {!skipLandingPage && <div className="absolute inset-0 bg-black/50" onClick={requestCloseEditor} />}
+          <div className={`${skipLandingPage ? 'relative' : 'relative z-40'} w-full h-full min-h-screen overflow-hidden bg-white flex flex-col`}>
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-b bg-gray-50 flex-shrink-0 gap-3 sm:gap-0">

@@ -1,6 +1,7 @@
 // pages/api/clinic/permissions.js
 import dbConnect from "../../../lib/database";
 import ClinicPermission from "../../../models/ClinicPermission";
+import Clinic from "../../../models/Clinic";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
@@ -18,7 +19,13 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, message: 'Clinic access required' });
     }
 
-    const clinicId = decoded.userId;
+    // ✅ Find the clinic document from the user's owner field
+    const clinic = await Clinic.findOne({ owner: decoded.userId }).select("_id");
+    if (!clinic) {
+      return res.status(404).json({ success: false, message: 'Clinic not found for this user' });
+    }
+
+    const clinicId = clinic._id;
     console.log('Decoded token:', { userId: decoded.userId, role: decoded.role, clinicId });
 
     if (req.method === 'GET') {

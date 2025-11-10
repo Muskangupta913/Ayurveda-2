@@ -53,13 +53,14 @@ export const clinicNavigationItems = [
         description: "Create Lead",
         order: 1,
       },
-      {
-        label: "Assign Lead",
-        path: "/lead/assign-lead",
-        icon: "👨‍⚕️",
-        description: "All Patient Enquiries",
-        order: 2,
-      },
+      // Commented out - merged into create-lead page
+      // {
+      //   label: "Assign Lead",
+      //   path: "/lead/assign-lead",
+      //   icon: "👨‍⚕️",
+      //   description: "All Patient Enquiries",
+      //   order: 2,
+      // },
     ],
   },
   {
@@ -113,18 +114,19 @@ export const clinicNavigationItems = [
         icon: "📢",
         order: 1,
       },
-      {
-        label: "See All Jobs",
-        path: "/clinic/my-jobs",
-        icon: "💼",
-        order: 2,
-      },
-      {
-        label: "See Job Applicants",
-        path: "/clinic/job-applicants",
-        icon: "👥",
-        order: 3,
-      },
+      // Commented out - merged into job-posting page
+      // {
+      //   label: "See All Jobs",
+      //   path: "/clinic/my-jobs",
+      //   icon: "💼",
+      //   order: 2,
+      // },
+      // {
+      //   label: "See Job Applicants",
+      //   path: "/clinic/job-applicants",
+      //   icon: "👥",
+      //   order: 3,
+      // },
     ],
   },
   {
@@ -140,18 +142,19 @@ export const clinicNavigationItems = [
         icon: "📝",
         order: 1,
       },
-      {
-        label: "Published and Drafts Blogs",
-        path: "/clinic/published-blogs",
-        icon: "📄",
-        order: 2,
-      },
-      {
-        label: "Analytics of blog",
-        path: "/clinic/getAuthorCommentsAndLikes",
-        icon: "📊",
-        order: 3,
-      },
+      // Commented out - merged into BlogForm page
+      // {
+      //   label: "Published and Drafts Blogs",
+      //   path: "/clinic/published-blogs",
+      //   icon: "📄",
+      //   order: 2,
+      // },
+      // {
+      //   label: "Analytics of blog",
+      //   path: "/clinic/getAuthorCommentsAndLikes",
+      //   icon: "📊",
+      //   order: 3,
+      // },
     ],
   },
 ];

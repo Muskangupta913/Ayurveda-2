@@ -1,55 +1,7 @@
 import dbConnect from "../../../lib/database";
 import Blog from "../../../models/Blog";
-import jwt from "jsonwebtoken";
-import User from "../../../models/Users";
-
-// Define allowed roles for different operations
-const allowedRoles = {
-  create: ["clinic", "doctor", "admin"], // roles that can create drafts
-  edit: ["clinic", "doctor", "admin"], // roles that can edit drafts
-  delete: ["admin", "clinic", "doctor"], // roles that can delete drafts
-};
-
-// Authentication middleware function
-const authenticate = async (req) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    throw new Error("No token provided");
-  }
-
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    throw new Error("Invalid token format");
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { role, userId } = decoded;
-
-    if (!userId || !role) {
-      throw new Error("Invalid token payload");
-    }
-
-    // Verify user exists in database
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    return { userId, role, user };
-  } catch (error) {
-    throw new Error(`Authentication failed: ${error.message}`);
-  }
-};
-
-// Authorization middleware function
-const authorize = (userRole, requiredRoles) => {
-  if (!requiredRoles.includes(userRole)) {
-    throw new Error(
-      `Access denied. Required roles: ${requiredRoles.join(", ")}`
-    );
-  }
-};
+import Clinic from "../../../models/Clinic";
+import { getUserFromReq, requireRole } from "../lead-ms/auth";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -59,8 +11,38 @@ export default async function handler(req, res) {
     switch (method) {
       case "GET":
         try {
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
+
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for reading drafts (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "read",
+              "Published and Drafts Blogs" // Check "Published and Drafts Blogs" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to view drafts"
+              });
+            }
+          }
+
           const { id } = req.query;
-          const { userId, role } = await authenticate(req); // Authenticate for all GET requests
 
           if (id) {
             // Get single draft by ID
@@ -68,7 +50,7 @@ export default async function handler(req, res) {
               _id: id,
               status: "draft",
               $or: [
-                { postedBy: userId }, // User owns the draft
+                { postedBy: me._id }, // User owns the draft
                 { role: "admin" }, // Or user is admin
               ],
             }).populate("postedBy", "name email");
@@ -87,9 +69,9 @@ export default async function handler(req, res) {
           // Get all drafts for the authenticated user's role
           const drafts = await Blog.find({
             status: "draft",
-            role: role, // Filter by the user's role
+            role: me.role, // Filter by the user's role
             $or: [
-              { postedBy: userId }, // User owns the draft
+              { postedBy: me._id }, // User owns the draft
               { role: "admin" }, // Or user is admin
             ],
           })
@@ -98,25 +80,43 @@ export default async function handler(req, res) {
 
           res.status(200).json({ success: true, drafts });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in GET drafts:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
       case "POST":
         try {
-          // Authenticate user
-          const { userId, role } = await authenticate(req);
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
 
-          // Check authorization for creating drafts
-          authorize(role, allowedRoles.create);
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for creating drafts (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "create",
+              "Write Blog" // Check "Write Blog" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to create drafts"
+              });
+            }
+          }
 
           const { title, content, paramlink } = req.body;
 
@@ -140,8 +140,8 @@ export default async function handler(req, res) {
             content: content || "",
             paramlink,
             status: "draft",
-            postedBy: userId,
-            role: role,
+            postedBy: me._id,
+            role: me.role,
           });
 
           // Populate the postedBy field to return user info
@@ -152,30 +152,17 @@ export default async function handler(req, res) {
 
           res.status(201).json({ success: true, draft: populatedDraft });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          if (error.message.includes("Access denied")) {
-            return res
-              .status(403)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in POST draft:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
       case "PUT":
         try {
-          // Authenticate user
-          const { userId, role } = await authenticate(req);
-
-          // Check authorization for editing drafts
-          authorize(role, allowedRoles.edit);
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
 
           const { id } = req.query;
           const { title, content, paramlink } = req.body;
@@ -196,14 +183,40 @@ export default async function handler(req, res) {
 
           // Check if user owns the draft or is admin
           if (
-            existingDraft.postedBy.toString() !== userId &&
-            role !== "admin"
+            existingDraft.postedBy.toString() !== me._id.toString() &&
+            me.role !== "admin"
           ) {
             return res.status(403).json({
               success: false,
               message:
                 "You can only edit your own drafts unless you are an admin",
             });
+          }
+
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for updating drafts (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "update",
+              "Write Blog" // Check "Write Blog" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to update drafts"
+              });
+            }
           }
 
           // If paramlink is being updated, only conflict with published blogs
@@ -233,30 +246,17 @@ export default async function handler(req, res) {
 
           res.status(200).json({ success: true, draft: updatedDraft });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          if (error.message.includes("Access denied")) {
-            return res
-              .status(403)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in PUT draft:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
       case "DELETE":
         try {
-          // Authenticate user
-          const { userId, role } = await authenticate(req);
-
-          // Check authorization for deleting drafts
-          authorize(role, allowedRoles.delete);
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
 
           const { id } = req.query;
 
@@ -274,15 +274,41 @@ export default async function handler(req, res) {
               .json({ success: false, message: "Draft not found" });
           }
 
-          // Check if user owns the draft or has delete permissions
+          // Check if user owns the draft or is admin
           if (
-            existingDraft.postedBy.toString() !== userId &&
-            !allowedRoles.delete.includes(role)
+            existingDraft.postedBy.toString() !== me._id.toString() &&
+            me.role !== "admin"
           ) {
             return res.status(403).json({
               success: false,
-              message: "You do not have permission to delete this draft",
+              message: "Not allowed to access this draft",
             });
+          }
+
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for deleting drafts (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "delete",
+              "Published and Drafts Blogs" // Check "Published and Drafts Blogs" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to delete drafts"
+              });
+            }
           }
 
           await Blog.findByIdAndDelete(id);
@@ -290,20 +316,8 @@ export default async function handler(req, res) {
             .status(200)
             .json({ success: true, message: "Draft deleted successfully" });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          if (error.message.includes("Access denied")) {
-            return res
-              .status(403)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in DELETE draft:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
@@ -311,12 +325,12 @@ export default async function handler(req, res) {
         res.status(405).json({ success: false, message: "Method not allowed" });
     }
   } catch (error) {
+    console.error("Error in draft API:", error);
     res
       .status(500)
       .json({
         success: false,
         message: "Internal server error",
-        error: error.message,
       });
   }
 }

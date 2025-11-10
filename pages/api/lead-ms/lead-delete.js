@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
   try {
     const me = await getUserFromReq(req);
-    if (!me || !requireRole(me, ["clinic", "agent"])) {
+    if (!me || !requireRole(me, ["clinic", "agent", "admin"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -23,19 +23,56 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "leadId is required" });
     }
 
+    // ✅ First, get the lead to determine which clinic it belongs to
+    const lead = await Lead.findById(leadId);
+    if (!lead) {
+      return res.status(404).json({ success: false, message: "Lead not found" });
+    }
+
     // Determine the clinic for the user
     let clinic;
     if (me.role === "clinic") {
       clinic = await Clinic.findOne({ owner: me._id });
+      // Ensure the lead belongs to this clinic
+      if (lead.clinicId.toString() !== clinic._id.toString()) {
+        return res.status(403).json({ success: false, message: "Not allowed to access this lead" });
+      }
     } else if (me.role === "agent") {
       if (!me.clinicId) {
         return res.status(403).json({ success: false, message: "Agent not linked to any clinic" });
       }
       clinic = await Clinic.findById(me.clinicId);
+      // Ensure the lead belongs to this clinic
+      if (lead.clinicId.toString() !== clinic._id.toString()) {
+        return res.status(403).json({ success: false, message: "Not allowed to access this lead" });
+      }
+    } else if (me.role === "admin") {
+      // Admin can delete any lead
+      clinic = await Clinic.findById(lead.clinicId);
+      if (!clinic) {
+        return res.status(404).json({ success: false, message: "Clinic not found" });
+      }
     }
 
     if (!clinic) {
       return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+    }
+
+    // ✅ Check permission for deleting leads (only for clinic and agent, admin bypasses)
+    if (me.role !== "admin") {
+      const { checkClinicPermission } = await import("./permissions-helper");
+      const { hasPermission, error } = await checkClinicPermission(
+        clinic._id,
+        "lead",
+        "delete"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: error || "You do not have permission to delete leads"
+        });
+      }
     }
 
     // Delete the lead only if it belongs to the user's clinic

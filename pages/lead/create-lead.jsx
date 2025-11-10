@@ -2,399 +2,453 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import ClinicLayout from '../../components/ClinicLayout';
 import withClinicAuth from '../../components/withClinicAuth';
+import CreateLeadModal from '../../components/CreateLeadModal';
+import LeadViewModal from '../../components/LeadViewModal';
+import { PlusCircle } from "lucide-react";
 
-function LeadForm() {
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    gender: "Male",
-    age: "",
-    treatments: [],
-    source: "Instagram",
-    offerTag: "",
-    status: "New",
-    notes: [],
-    customSource: "",
-    customStatus: "",
-    followUps: [],
-    assignedTo: [],
-  });
-
-  const [treatments, setTreatments] = useState([]);
-  const [file, setFile] = useState(null);
+function LeadsPage() {
+  const [leads, setLeads] = useState([]);
   const [agents, setAgents] = useState([]);
-  const [activeOffers, setActiveOffers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [noteType, setNoteType] = useState("");
-  const [customNote, setCustomNote] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    treatment: "",
+    offer: "",
+    source: "",
+    status: "",
+    name: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [selectedAgents, setSelectedAgents] = useState([]);
   const [followUpDate, setFollowUpDate] = useState("");
-  // removed custom dropdown open state; using native select for Assign To
+  const [viewLead, setViewLead] = useState(null);
+  const [permissions, setPermissions] = useState({
+    canCreate: false,
+    canUpdate: false,
+    canDelete: false,
+    canRead: false,
+    canAssign: false,
+  });
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("clinicToken") : null;
 
-  // Fetch clinic-specific treatments using clinicToken
-  useEffect(() => {
-    async function fetchTreatments() {
-      try {
-        if (!token) return;
-        const res = await axios.get("/api/lead-ms/get-clinic-treatment", {
+  // Fetch permissions
+  const fetchPermissions = async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get("/api/clinic/permissions", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = res.data || {};
-        setTreatments(Array.isArray(data.treatments) ? data.treatments : []);
-      } catch (err) {
-        console.error(err);
-        setTreatments([]);
-      }
-    }
-    fetchTreatments();
-  }, [token]);
+      const data = res.data;
+      if (data.success && data.data) {
+        const modulePermission = data.data.permissions?.find(
+          (p) => p.module === "lead"
+        );
+        if (modulePermission) {
+          const actions = modulePermission.actions || {};
+          // Check for "Create Lead" submodule
+          const createLeadSubModule = modulePermission.subModules?.find(
+            (sm) => sm.name === "Create Lead"
+          );
+          // Check for "Assign Lead" submodule
+          const assignLeadSubModule = modulePermission.subModules?.find(
+            (sm) => sm.name === "Assign Lead"
+          );
 
-  // Fetch agents
-  useEffect(() => {
-    async function fetchAgents() {
-      try {
-        const res = await axios.get("/api/lead-ms/assign-lead", {
-          headers: { Authorization: `Bearer ${token}` },
+          // Module-level "all" grants all permissions including submodules
+          const moduleAll = actions.all === true;
+          const moduleCreate = actions.create === true;
+          const moduleUpdate = actions.update === true;
+          const moduleDelete = actions.delete === true;
+          const moduleRead = actions.read === true;
+
+          // Submodule permissions (only checked if module-level doesn't grant)
+          const createLeadAll = createLeadSubModule?.actions?.all === true;
+          const createLeadCreate = createLeadSubModule?.actions?.create === true;
+          const assignLeadAll = assignLeadSubModule?.actions?.all === true;
+          const assignLeadUpdate = assignLeadSubModule?.actions?.update === true;
+          const assignLeadCreate = assignLeadSubModule?.actions?.create === true;
+
+          setPermissions({
+            // Create: Module "all" OR module "create" OR submodule "all" OR submodule "create"
+            canCreate: moduleAll || moduleCreate || createLeadAll || createLeadCreate,
+            // Update: Module "all" OR module "update" OR submodule "all" OR submodule "update"
+            canUpdate: moduleAll || moduleUpdate || assignLeadAll || assignLeadUpdate,
+            // Delete: Module "all" OR module "delete"
+            canDelete: moduleAll || moduleDelete,
+            // Read: Module "all" OR module "read"
+            canRead: moduleAll || moduleRead,
+            // Assign: Module "all" OR module "update" OR submodule "all" OR submodule "update" OR submodule "create"
+            // When module-level "all" is true, it should grant assign permission
+            canAssign: moduleAll || moduleUpdate || assignLeadAll || assignLeadUpdate || assignLeadCreate,
+          });
+        } else {
+          // No permissions found, default to false
+          setPermissions({
+            canCreate: false,
+            canUpdate: false,
+            canDelete: false,
+            canRead: false,
+            canAssign: false,
+          });
+        }
+      } else {
+        // API failed, default to false
+        setPermissions({
+          canCreate: false,
+          canUpdate: false,
+          canDelete: false,
+          canRead: false,
+          canAssign: false,
         });
-        setAgents(res.data.users || []);
-      } catch (err) {
-        console.error(err);
       }
-    }
-    fetchAgents();
-  }, [token]);
-
-  // Fetch active offers for Offer Tag selection
-  useEffect(() => {
-    async function fetchActiveOffers() {
-      try {
-        if (!token) return;
-        const res = await axios.get("/api/lead-ms/get-create-offer", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const list = Array.isArray(res.data?.offers) ? res.data.offers : [];
-        const onlyActive = list.filter((o) => o.status === "active");
-        setActiveOffers(onlyActive);
+      setPermissionsLoaded(true);
       } catch (err) {
-        console.error(err);
-        setActiveOffers([]);
-      }
+      console.error("Error fetching permissions:", err);
+      // On error, default to false
+      setPermissions({
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canRead: false,
+        canAssign: false,
+      });
+      setPermissionsLoaded(true);
     }
-    fetchActiveOffers();
-  }, [token]);
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleTreatmentChange = (e) => {
-    const value = e.target.value;
-    // value format: MAIN::SUB or MAIN
-    if (value.includes("::")) {
-      const [mainName, subName] = value.split("::");
-      setFormData((prev) => {
-        const exists = prev.treatments.some(
-          (t) => t.treatment === mainName && t.subTreatment === subName
-        );
-        return {
-          ...prev,
-          treatments: exists
-            ? prev.treatments.filter((t) => !(t.treatment === mainName && t.subTreatment === subName))
-            : [...prev.treatments, { treatment: mainName, subTreatment: subName }],
-        };
-      });
+  const fetchLeads = async () => {
+    if (!token) return;
+    
+    // Wait for permissions to load
+    if (!permissionsLoaded) return;
+    
+    // Check if user has read permission
+    if (permissions.canRead === false) {
+      setLeads([]);
       return;
     }
-    const mainName = value;
-    setFormData((prev) => {
-      const exists = prev.treatments.some((t) => t.treatment === mainName && !t.subTreatment);
-      return {
-        ...prev,
-        treatments: exists
-          ? prev.treatments.filter((t) => !(t.treatment === mainName && !t.subTreatment))
-          : [...prev.treatments, { treatment: mainName, subTreatment: null }],
-      };
-    });
-  };
 
-  // Removed custom treatment flow per request
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
     try {
-      const selectedNote = noteType === "Custom" ? customNote.trim() : noteType;
-      const notesToSend = selectedNote ? [{ text: selectedNote }] : [];
-      const followUpsToSend = followUpDate
-        ? [...formData.followUps, { date: followUpDate, addedBy: null }]
-        : formData.followUps;
-
-      await axios.post(
-        "/api/lead-ms/create-lead",
-        { ...formData, notes: notesToSend, followUps: followUpsToSend, mode: "manual" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert("Lead added!");
-      setFormData({
-        name: "",
-        phone: "",
-        gender: "Male",
-        age: "",
-        treatments: [],
-        source: "Instagram",
-        offerTag: "",
-        status: "New",
-        notes: [],
-        customSource: "",
-        customStatus: "",
-        followUps: [],
-        assignedTo: [],
-      });
-      setNoteType("");
-      setCustomNote("");
-      setFollowUpDate("");
+      const res = await axios.get("/api/lead-ms/leadFilter", {
+        params: filters,
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      if (res.data.success) {
+        setLeads(res.data.leads || []);
+      } else {
+        // If permission denied, clear leads
+        if (res.data.message && res.data.message.includes("permission")) {
+          setLeads([]);
+        }
+      }
     } catch (err) {
-      console.error(err);
-      alert("Error adding lead");
-    } finally {
-      setLoading(false);
+      console.error("Error fetching leads:", err);
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) return alert("Select a CSV or Excel file");
-    setLoading(true);
-    const formDataObj = new FormData();
-    formDataObj.append("file", file);
-    formDataObj.append("mode", "bulk");
+  const fetchAgents = async () => {
     try {
-      const res = await axios.post("/api/lead-ms/create-lead", formDataObj, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-      });
-      alert(`Uploaded ${res.data.count} leads successfully!`);
-      setFile(null);
+      const res = await axios.get("/api/lead-ms/getA", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      if (res.data.success) {
+        setAgents(res.data.agents || []);
+      }
+      } catch (err) {
+      console.error("Error fetching agents:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPermissions();
+  }, [token]);
+
+  useEffect(() => {
+    // Fetch leads and agents after permissions are loaded
+    if (permissionsLoaded) {
+      fetchLeads();
+      fetchAgents();
+    }
+  }, [permissionsLoaded, permissions.canRead, filters]);
+
+  const assignLead = async () => {
+    if (!selectedLead || selectedAgents.length === 0) return;
+    
+    // Check permission
+    if (!permissions.canAssign) {
+      alert("You do not have permission to assign leads");
+      return;
+    }
+
+    try {
+      await axios.post(
+        "/api/lead-ms/reassign-lead",
+        {
+          leadId: selectedLead,
+          agentIds: selectedAgents,
+          followUpDate: followUpDate
+            ? new Date(followUpDate).toISOString()
+            : null,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Lead assigned!");
+      setSelectedLead(null);
+      setSelectedAgents([]);
+      setFollowUpDate("");
+      fetchLeads();
     } catch (err) {
       console.error(err);
-      alert("Failed to upload leads");
-    } finally {
-      setLoading(false);
+      alert(err.response?.data?.message || "Error assigning lead");
+    }
+  };
+
+  const deleteLead = async (leadId) => {
+    // Check permission
+    if (!permissions.canDelete) {
+      alert("You do not have permission to delete leads");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this lead?")) return;
+    try {
+      await axios.delete("/api/lead-ms/lead-delete", {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { leadId },
+      });
+      alert("Lead deleted");
+      fetchLeads();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Error deleting lead");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-5">
-      <form onSubmit={handleSubmit} className="mx-auto max-w-5xl bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-gray-200">
-        <div className="px-6 py-5 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Add Lead</h2>
-          <p className="text-xs text-gray-500">Capture lead details and assign to your team</p>
-        </div>
-
-        <div className="px-6 py-5 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="min-h-screen p-5 bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-4 bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-gray-200 p-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5">
             <div>
-              <label htmlFor="name" className="block text-xs font-medium text-gray-600 mb-1">Name</label>
-              <input id="name" name="name" placeholder="Enter full name" value={formData.name} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+              <h1 className="text-2xl font-semibold text-gray-900">Leads Management</h1>
+              <p className="text-xs text-gray-500">Filter, review, and assign leads to your team</p>
             </div>
-            <div>
-              <label htmlFor="phone" className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
-              <input id="phone" name="phone" placeholder="Enter phone number" value={formData.phone} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+            {permissions.canCreate && (
+              <button
+                onClick={() => setModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 text-xs font-medium"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span>Create New Lead</span>
+              </button>
+            )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="gender" className="block text-xs font-medium text-gray-600 mb-1">Gender</label>
-              <select id="gender" name="gender" value={formData.gender} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-            <option>Male</option>
-            <option>Female</option>
+        {/* Filters */}
+        <div className="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-gray-200 p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input
+            placeholder="Name"
+            value={filters.name}
+            onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          />
+          <input
+            placeholder="Offer Tag"
+            value={filters.offer}
+            onChange={(e) => setFilters({ ...filters, offer: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          />
+          <select
+            value={filters.source}
+            onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          >
+            <option value="">All Sources</option>
+            <option>Instagram</option>
+            <option>Facebook</option>
+            <option>Google</option>
+            <option>WhatsApp</option>
+            <option>Walk-in</option>
+            <option>Other</option>
+          </select>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          >
+            <option value="">All Status</option>
+            <option>New</option>
+            <option>Contacted</option>
+            <option>Booked</option>
+            <option>Visited</option>
+            <option>Follow-up</option>
+            <option>Not Interested</option>
             <option>Other</option>
             </select>
-          </div>
-            <div>
-              <label htmlFor="age" className="block text-xs font-medium text-gray-600 mb-1">Age</label>
-              <input id="age" name="age" type="number" placeholder="e.g. 32" value={formData.age} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-            </div>
-          </div>
 
-          <div>
-            <p className="text-xs font-medium text-gray-600 mb-2">Treatments</p>
-            <div className="space-y-2 max-h-56 overflow-y-auto rounded-lg border border-gray-200 p-3 bg-white">
-          {treatments.map((t, idx) => (
-            <div key={idx}>
-                  <div className="flex items-center gap-2">
                     <input
-                      type="checkbox"
-                      value={t.mainTreatment}
-                      checked={formData.treatments.some((tr) => tr.treatment === t.mainTreatment && !tr.subTreatment)}
-                      onChange={handleTreatmentChange}
-                      className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                    />
-                    <span className="text-sm font-medium text-gray-800">{t.mainTreatment}</span>
-                  </div>
-              {t.subTreatments?.length > 0 && (
-                    <div className="ml-6 mt-1 space-y-1">
-                  {t.subTreatments.map((sub, sidx) => {
-                    const val = `${t.mainTreatment}::${sub.name}`;
-                    return (
-                          <div key={`${idx}-${sidx}`} className="flex items-center gap-2">
+            type="date"
+            value={filters.startDate}
+            onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          />
                             <input
-                              type="checkbox"
-                              value={val}
-                              checked={formData.treatments.some(tr => tr.treatment === t.mainTreatment && tr.subTreatment === sub.name)}
-                              onChange={handleTreatmentChange}
-                              className="h-3.5 w-3.5 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                            />
-                            <span className="text-xs text-gray-700">{sub.name}</span>
-                          </div>
-                    );
-                  })}
-                    </div>
-              )}
-            </div>
-          ))}
-            </div>
+            type="date"
+            value={filters.endDate}
+            onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          />
+          <button
+            onClick={fetchLeads}
+            className="inline-flex items-center justify-center bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow"
+          >
+            Apply Filters
+          </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Leads as Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {leads.length > 0 ? (
+            leads.map((lead) => (
+              <div key={lead._id} className="bg-white/90 backdrop-blur rounded-xl shadow border border-gray-200 p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
             <div>
-              <label htmlFor="source" className="block text-xs font-medium text-gray-600 mb-1">Source</label>
-              <select id="source" name="source" value={formData.source} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-            <option value="Instagram">Instagram</option>
-            <option value="Facebook">Facebook</option>
-            <option value="Google">Google</option>
-            <option value="WhatsApp">WhatsApp</option>
-            <option value="Walk-in">Walk-in</option>
-            <option value="Other">Other</option>
-            </select>
+                    <p className="text-sm font-semibold text-gray-900">{lead.name || 'Unnamed'}</p>
+                    <p className="text-xs text-gray-600">{lead.phone}</p>
             </div>
-          {formData.source === "Other" && (
-              <div>
-                <label htmlFor="customSource" className="block text-xs font-medium text-gray-600 mb-1">Custom Source</label>
-                <input id="customSource" name="customSource" placeholder="Enter source" value={formData.customSource} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-              </div>
-          )}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${lead.status === 'Booked' || lead.status === 'Visited' ? 'bg-green-100 text-green-700' : lead.status === 'Not Interested' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{lead.status || '—'}</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="status" className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-              <select id="status" name="status" value={formData.status} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-            <option value="New">New</option>
-            <option value="Contacted">Contacted</option>
-            <option value="Booked">Booked</option>
-            <option value="Visited">Visited</option>
-            <option value="Follow-up">Follow-up</option>
-            <option value="Not Interested">Not Interested</option>
-            <option value="Other">Other</option>
-            </select>
-            </div>
-          {formData.status === "Other" && (
-              <div>
-                <label htmlFor="customStatus" className="block text-xs font-medium text-gray-600 mb-1">Custom Status</label>
-                <input id="customStatus" name="customStatus" placeholder="Enter status" value={formData.customStatus} onChange={handleChange} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-              </div>
-          )}
+                <div className="text-[11px] text-gray-700 space-y-1">
+                  <p className="truncate"><span className="text-gray-500">Treatment:</span> {lead.treatments?.map((t) => (t.subTreatment ? `${t.subTreatment} (${t.treatment?.name || 'Unknown'})` : t.treatment?.name)).join(', ') || '—'}</p>
+                  <p><span className="text-gray-500">Source:</span> <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700">{lead.source || '—'}</span></p>
+                  <p className="truncate"><span className="text-gray-500">Offer:</span> {lead.offerTag || '—'}</p>
+                  <p className="truncate"><span className="text-gray-500">Notes:</span> {lead.notes?.map((n) => n.text).join(', ') || 'No Notes'}</p>
+                  <p className="truncate"><span className="text-gray-500">Assigned:</span> {lead.assignedTo?.map((a) => a.user?.name).join(', ') || 'Not Assigned'}</p>
+                  <p className="truncate"><span className="text-gray-500">Follow-ups:</span> {lead.followUps?.map((f) => new Date(f.date).toLocaleString()).join(', ') || 'None'}</p>
           </div>
 
-          <div>
-            <label htmlFor="offerTag" className="block text-xs font-medium text-gray-600 mb-1">Offer Tag</label>
-            <select
-              id="offerTag"
-              name="offerTag"
-              value={formData.offerTag}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            >
-            <option value="">No offer</option>
-            {activeOffers.map((o) => (
-              <option key={o._id} value={o.title}>
-                {o.title} — {o.type === "percentage" ? `${o.value}%` : `₹${o.value}`}
-              </option>
-            ))}
-            </select>
-            {formData.offerTag && (
-              <p className="text-xs text-gray-500 mt-1">
-                {(() => {
-                  const sel = activeOffers.find((o) => o.title === formData.offerTag);
-                  if (!sel) return null;
-                  return sel.type === "percentage" ? `Selected: ${sel.value}% off` : `Selected: ₹${sel.value} off`;
-                })()}
-              </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setViewLead(lead)}
+                    className="inline-flex items-center justify-center bg-white border border-gray-300 text-gray-800 px-3 py-1.5 rounded-md text-xs font-medium shadow-sm hover:bg-gray-50"
+                  >
+                    View
+                  </button>
+                  {permissions.canAssign && (
+                    <button
+                      onClick={() => setSelectedLead(lead._id)}
+                      className="inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow"
+                    >
+                      ReAssign
+                    </button>
+                  )}
+                  {permissions.canDelete && (
+                    <button
+                      onClick={() => deleteLead(lead._id)}
+                      className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow"
+                    >
+                      Delete
+                    </button>
             )}
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="noteType" className="block text-xs font-medium text-gray-600 mb-1">Note</label>
-              <select id="noteType" value={noteType} onChange={(e) => setNoteType(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-                <option value="">Select Note</option>
-                <option value="Interested">Interested</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-                <option value="Custom">Custom</option>
-              </select>
             </div>
-            {noteType === "Custom" && (
-              <div>
-                <label htmlFor="customNote" className="block text-xs font-medium text-gray-600 mb-1">Custom Note</label>
-                <input id="customNote" type="text" placeholder="Type a note" value={customNote} onChange={(e) => setCustomNote(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+            ))
+          ) : (
+            <div className="col-span-full bg-white/90 backdrop-blur rounded-xl border border-gray-200 p-6 text-center text-gray-500">
+              {permissions.canRead === false ? "You do not have permission to view leads" : "No leads found"}
               </div>
             )}
           </div>
 
-          <div>
-            <label htmlFor="followUpDate" className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label>
-            <input id="followUpDate" type="datetime-local" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-          </div>
+        {/* Create Lead Modal */}
+        <CreateLeadModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onCreated={() => {
+            fetchLeads();
+            setModalOpen(false);
+          }}
+          token={token || ""}
+        />
 
-          {/* Assign To - simple select that closes on selection */}
-          <div className="w-full">
-            <label htmlFor="assignTo" className="block text-xs font-medium text-gray-600 mb-1">Assign To</label>
+        {/* Assign Modal */}
+        {selectedLead && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+            <div className="bg-white/95 border border-gray-200 rounded-2xl shadow-xl w-full max-w-md">
+              <div className="px-5 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Assign Lead</h2>
+                <p className="text-xs text-gray-500">Choose agent(s) and optional follow-up time</p>
+          </div>
+              <div className="p-5">
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Select Agent(s)</label>
             <select
-              id="assignTo"
-              value={formData.assignedTo[0] || ""}
-              onChange={(e) => {
-                const selectedId = e.target.value;
-                setFormData(prev => ({ ...prev, assignedTo: selectedId ? [selectedId] : [] }));
-              }}
-              className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            >
-              <option value="">Select agent</option>
-              {agents.map(agent => (
-                <option key={agent._id} value={agent._id}>{agent.name}</option>
+                    multiple
+                    value={selectedAgents}
+                    onChange={(e) =>
+                      setSelectedAgents(
+                        Array.from(e.target.selectedOptions, (o) => o.value)
+                      )
+                    }
+                    className="w-full h-36 rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  >
+                    {agents.map((a) => (
+                      <option key={a._id} value={a._id}>
+                        {a.name}
+                      </option>
               ))}
             </select>
           </div>
-          <div className="flex justify-end pt-4">
-            <button type="submit" disabled={loading} className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-gradient-to-r from-teal-600 to-teal-700 text-white text-sm font-medium shadow hover:from-teal-700 hover:to-teal-800 disabled:opacity-60">
-              {loading ? "Saving..." : "Save Lead"}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={followUpDate}
+                    onChange={(e) => setFollowUpDate(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    onClick={() => {
+                      setSelectedLead(null);
+                      setSelectedAgents([]);
+                      setFollowUpDate("");
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={assignLead}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow hover:from-teal-700 hover:to-teal-800"
+                  >
+                    ReAssign
             </button>
           </div>
         </div>
-      </form>
-
-      {/* CSV Upload */}
-      <div className="mx-auto max-w-5xl mt-5 bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Upload Leads</h3>
-            <p className="text-xs text-gray-500">Supports CSV or Excel files</p>
           </div>
-          <button onClick={handleUpload} disabled={loading || !file} className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium shadow hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-60">{loading ? "Uploading..." : "Upload"}</button>
         </div>
-        <input className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-gray-700 hover:file:bg-gray-200" type="file" accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        )}
+        {viewLead && (
+          <LeadViewModal lead={viewLead} onClose={() => setViewLead(null)} />
+        )}
       </div>
     </div>
   );
 }
 
 // Wrap page in ClinicLayout
-LeadForm.getLayout = (page) => <ClinicLayout>{page}</ClinicLayout>;
+LeadsPage.getLayout = (page) => <ClinicLayout>{page}</ClinicLayout>;
 
 // Preserve layout on wrapped component
-const ProtectedLeadForm = withClinicAuth(LeadForm);
-ProtectedLeadForm.getLayout = LeadForm.getLayout;
+const ProtectedLeadsPage = withClinicAuth(LeadsPage);
+ProtectedLeadsPage.getLayout = LeadsPage.getLayout;
 
-export default ProtectedLeadForm;
+export default ProtectedLeadsPage;

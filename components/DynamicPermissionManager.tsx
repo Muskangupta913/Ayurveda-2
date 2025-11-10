@@ -93,8 +93,8 @@ const DynamicPermissionManager: React.FC<DynamicPermissionManagerProps> = ({
       if (data.success) {
         setNavigationItems(data.data);
         // Auto-expand modules with sub-modules
-        const modulesWithSubModules = data.data.filter(item => item.subModules && item.subModules.length > 0);
-        setExpandedModules(new Set(modulesWithSubModules.map(item => item.moduleKey)));
+        const modulesWithSubModules = data.data.filter((item: NavigationItem) => item.subModules && item.subModules.length > 0);
+        setExpandedModules(new Set(modulesWithSubModules.map((item: NavigationItem) => item.moduleKey)));
       }
     } catch (error) {
       console.error('Error fetching navigation items:', error);
@@ -122,9 +122,24 @@ const DynamicPermissionManager: React.FC<DynamicPermissionManagerProps> = ({
       
       if (action === 'all') {
         const allActions = Object.keys(module.actions).filter(key => key !== 'all');
+        // Set all module-level actions
         allActions.forEach(actionKey => {
           module.actions[actionKey as keyof typeof module.actions] = value;
         });
+        
+        // ✅ When module-level "all" is clicked, also set all submodule actions to true
+        // This ensures UI consistency and makes it clear that all submodules are active
+        if (module.subModules && module.subModules.length > 0) {
+          module.subModules.forEach(subModule => {
+            // Set all actions for each submodule
+            const subModuleActions = Object.keys(subModule.actions).filter(key => key !== 'all');
+            subModuleActions.forEach(actionKey => {
+              (subModule.actions as any)[actionKey] = value;
+            });
+            // Also set the "all" flag for the submodule
+            subModule.actions.all = value;
+          });
+        }
       } else {
         module.actions[action as keyof typeof module.actions] = value;
         

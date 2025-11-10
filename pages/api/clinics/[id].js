@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { getUserFromReq, requireRole } from "../lead-ms/auth";
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
@@ -66,33 +67,49 @@ export default async function handler(req, res) {
     method,
   } = req;
 
-  // For PUT and DELETE methods, we need authentication
-  let decoded = null;
-  if (method === "PUT" || method === "DELETE") {
-    // Extract and verify token
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
-
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log("🔑 Decoded token:", decoded);
-
-      if (decoded.role !== "clinic") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-    } catch (err) {
-      console.error("❌ Token decode error:", err);
-      return res.status(401).json({ message: "Invalid token" });
-    }
+  // Authenticate user for all methods
+  const me = await getUserFromReq(req);
+  if (!me || !requireRole(me, ["clinic", "admin"])) {
+    return res.status(403).json({ success: false, message: "Access denied" });
   }
 
-  // GET - Fetch clinic by ID (existing functionality)
+  // GET - Fetch clinic by ID
   if (method === "GET") {
     try {
+      // ✅ Resolve clinicId for permission check
+      let clinicId;
+      if (me.role === "clinic") {
+        const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+        if (!clinic) {
+          return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+        }
+        clinicId = clinic._id;
+      } else if (me.role === "admin") {
+        // Admin can view any clinic, use the ID from URL
+        clinicId = id;
+      }
+
+      // ✅ Check permission for reading clinic (only for clinic, admin bypasses)
+      if (me.role !== "admin" && clinicId) {
+        const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+        const { hasPermission, error } = await checkClinicPermission(
+          clinicId,
+          "health_center",
+          "read"
+        );
+
+        if (!hasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: error || "You do not have permission to view clinic information"
+          });
+        }
+      }
+
       const clinic = await Clinic.findById(id).lean();
 
       if (!clinic) {
-        return res.status(404).json({ message: "Clinic not found" });
+        return res.status(404).json({ success: false, message: "Clinic not found" });
       }
 
       // Ensure photos are absolute URLs
@@ -110,7 +127,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, clinic });
     } catch (error) {
       console.error("Error fetching clinic by ID:", error);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ success: false, message: "Internal server error" });
     }
   }
 
@@ -119,17 +136,52 @@ export default async function handler(req, res) {
     try {
       console.log("🔄 Starting PUT request for clinic ID:", id);
 
-      // Find the clinic by ID and verify ownership
-      const existingClinic = await Clinic.findOne({
+      // ✅ Resolve clinicId
+      let clinicId;
+      if (me.role === "clinic") {
+        const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+        if (!clinic) {
+          return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+        }
+        clinicId = clinic._id;
+      } else if (me.role === "admin") {
+        // Admin can update any clinic, use the ID from URL
+        clinicId = id;
+      }
+
+      // ✅ Check permission for updating clinic (only for clinic, admin bypasses)
+      if (me.role !== "admin" && clinicId) {
+        const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+        const { hasPermission, error } = await checkClinicPermission(
+          clinicId,
+          "health_center",
+          "update"
+        );
+
+        if (!hasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: error || "You do not have permission to update clinic information"
+          });
+        }
+      }
+
+      // Find the clinic by ID and verify ownership (for clinic users)
+      let existingClinic;
+      if (me.role === "clinic") {
+        existingClinic = await Clinic.findOne({
         _id: id,
-        owner: decoded.userId,
+          owner: me._id,
       });
+      } else if (me.role === "admin") {
+        existingClinic = await Clinic.findById(id);
+      }
 
       if (!existingClinic) {
-        console.log("❌ Clinic not found for user:", decoded.userId);
+        console.log("❌ Clinic not found for user:", me._id);
         return res
           .status(404)
-          .json({ message: "Clinic not found or access denied" });
+          .json({ success: false, message: "Clinic not found or access denied" });
       }
 
       console.log("✅ Found existing clinic:", existingClinic._id);
@@ -279,9 +331,9 @@ export default async function handler(req, res) {
       if (error.name === "ValidationError") {
         return res
           .status(400)
-          .json({ message: "Validation error", details: error.errors });
+          .json({ success: false, message: "Validation error", details: error.errors });
       }
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ success: false, message: "Internal server error" });
     }
   }
 
@@ -290,17 +342,52 @@ export default async function handler(req, res) {
     try {
       console.log("🗑️ Starting DELETE request for clinic ID:", id);
 
-      // Find the clinic by ID and verify ownership
-      const existingClinic = await Clinic.findOne({
-        _id: id,
-        owner: decoded.userId,
-      });
+      // ✅ Resolve clinicId
+      let clinicId;
+      if (me.role === "clinic") {
+        const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+        if (!clinic) {
+          return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+        }
+        clinicId = clinic._id;
+      } else if (me.role === "admin") {
+        // Admin can delete any clinic, use the ID from URL
+        clinicId = id;
+      }
+
+      // ✅ Check permission for deleting clinic (only for clinic, admin bypasses)
+      if (me.role !== "admin" && clinicId) {
+        const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+        const { hasPermission, error } = await checkClinicPermission(
+          clinicId,
+          "health_center",
+          "delete"
+        );
+
+        if (!hasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: error || "You do not have permission to delete clinic"
+          });
+        }
+      }
+
+      // Find the clinic by ID and verify ownership (for clinic users)
+      let existingClinic;
+      if (me.role === "clinic") {
+        existingClinic = await Clinic.findOne({
+          _id: id,
+          owner: me._id,
+        });
+      } else if (me.role === "admin") {
+        existingClinic = await Clinic.findById(id);
+      }
 
       if (!existingClinic) {
-        console.log("❌ Clinic not found for user:", decoded.userId);
+        console.log("❌ Clinic not found for user:", me._id);
         return res
           .status(404)
-          .json({ message: "Clinic not found or access denied" });
+          .json({ success: false, message: "Clinic not found or access denied" });
       }
 
       console.log("✅ Found clinic to delete:", existingClinic._id);
@@ -342,13 +429,13 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       console.error("❌ Error deleting clinic:", error);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ success: false, message: "Internal server error" });
     }
   }
 
   // Method not allowed
   console.log("❌ Method not allowed:", method);
-  return res.status(405).json({ message: "Method not allowed" });
+  return res.status(405).json({ success: false, message: "Method not allowed" });
 }
 
 // Important: Disable body parser for file uploads (needed for PUT method with file upload)

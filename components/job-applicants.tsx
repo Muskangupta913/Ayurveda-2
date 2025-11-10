@@ -38,13 +38,23 @@ interface ApplicationsDashboardProps {
   apiEndpoint?: string;
   updateStatusEndpoint?: string;
   deleteEndpoint?: string;
+  permissions?: {
+    canRead?: boolean;
+    canUpdate?: boolean;
+    canDelete?: boolean;
+  };
 }
 
 const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
   tokenKey = "clinicToken",
   apiEndpoint = "/api/job-postings/job-applications",
   updateStatusEndpoint = "/api/job-postings/application-status",
-  deleteEndpoint = "/api/job-postings/delete-application"
+  deleteEndpoint = "/api/job-postings/delete-application",
+  permissions = {
+    canRead: true,
+    canUpdate: true,
+    canDelete: true,
+  }
 }) => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [filter, setFilter] = useState<FilterType>('All');
@@ -61,6 +71,12 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
 
   useEffect(() => {
     const fetchApplications = async () => {
+      // Don't fetch if no read permission
+      if (!permissions.canRead) {
+        setLoading(false);
+        return;
+      }
+
       const token = localStorage.getItem(tokenKey);
 
       try {
@@ -72,7 +88,13 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          validateStatus: (status) => status === 200 || status === 403,
         });
+
+        if (res.status === 403) {
+          setApplications([]);
+          return;
+        }
 
         setApplications(res.data.applications || []);
       } catch (error) {
@@ -84,9 +106,14 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
     };
 
     fetchApplications();
-  }, [tokenKey, apiEndpoint]);
+  }, [tokenKey, apiEndpoint, permissions.canRead]);
 
   const updateStatus = async (applicationId: string, status: string): Promise<void> => {
+    if (!permissions.canUpdate) {
+      setError("You do not have permission to update application status.");
+      return;
+    }
+
     const token = localStorage.getItem(tokenKey);
 
     try {
@@ -111,6 +138,11 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
   };
 
   const deleteApplication = async (applicationId: string): Promise<void> => {
+    if (!permissions.canDelete) {
+      setError("You do not have permission to delete applications.");
+      return;
+    }
+
     const token = localStorage.getItem(tokenKey);
 
     try {
@@ -225,6 +257,30 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D9AA5]"></div>
             <span className="ml-2 text-gray-600">Loading applications...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Don't render content if no read permission
+  if (!permissions.canRead) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h3>
+            <p className="text-gray-600 mb-4">
+              You do not have permission to view job applicants.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact your administrator to request access to the Job Applicants module.
+            </p>
           </div>
         </div>
       </div>
@@ -459,24 +515,30 @@ const ApplicationsDashboard: React.FC<ApplicationsDashboardProps> = ({
 
                   {/* Right: Actions */}
                   <div className="flex flex-row lg:flex-col gap-2 lg:min-w-[140px]">
-                    <button
-                      className="px-4 py-2 bg-[#2D9AA5] hover:bg-[#247a84] text-white rounded-lg text-sm font-medium transition-colors flex-1 lg:flex-none"
-                      onClick={() => updateStatus(app._id, "contacted")}
-                    >
-                      Contact
-                    </button>
-                    <button
-                      className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex-1 lg:flex-none"
-                      onClick={() => updateStatus(app._id, "rejected")}
-                    >
-                      Reject
-                    </button>
-                    <button
-                      className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex-1 lg:flex-none"
-                      onClick={() => handleDeleteClick(app)}
-                    >
-                      Delete
-                    </button>
+                    {permissions.canUpdate && (
+                      <>
+                        <button
+                          className="px-4 py-2 bg-[#2D9AA5] hover:bg-[#247a84] text-white rounded-lg text-sm font-medium transition-colors flex-1 lg:flex-none"
+                          onClick={() => updateStatus(app._id, "contacted")}
+                        >
+                          Contact
+                        </button>
+                        <button
+                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex-1 lg:flex-none"
+                          onClick={() => updateStatus(app._id, "rejected")}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    {permissions.canDelete && (
+                      <button
+                        className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex-1 lg:flex-none"
+                        onClick={() => handleDeleteClick(app)}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

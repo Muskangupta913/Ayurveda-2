@@ -3,6 +3,7 @@ import Offer from "../../../models/CreateOffer";
 import Treatment from "../../../models/Treatment";
 import Clinic from "../../../models/Clinic";  
 import { getUserFromReq, requireRole } from "./auth";
+import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -59,6 +60,22 @@ export default async function handler(req, res) {
   }
   clinicId = clinic._id;
 }
+
+    // ✅ Check permission for creating offers (only for clinic and agent, admin bypasses)
+    if (user.role !== "admin") {
+      const { hasPermission, error } = await checkClinicPermission(
+        clinicId,
+        "create_offers",
+        "create"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: error || "You do not have permission to create offers"
+        });
+      }
+    }
 
 
     // ✅ Resolve treatments & subtreatments

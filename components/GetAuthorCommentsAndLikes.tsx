@@ -64,6 +64,11 @@ interface Props {
   setDetailsBlog?: React.Dispatch<React.SetStateAction<Blog | null>>;
   setDetailsModalOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   openCommentsPopup?: (blog: Blog) => void;
+  permissions?: {
+    canRead?: boolean;
+    canUpdate?: boolean;
+    canDelete?: boolean;
+  };
 }
 
 
@@ -173,7 +178,11 @@ const CommentsPopup: React.FC<{
   onClose: () => void;
   onReply: (blogId: string, commentId: string, text: string) => Promise<void>;
   onDelete: (blogId: string, commentId: string) => Promise<void>;
-}> = ({ blog, isOpen, onClose, onReply, onDelete }) => {
+  permissions?: {
+    canUpdate?: boolean;
+    canDelete?: boolean;
+  };
+}> = ({ blog, isOpen, onClose, onReply, onDelete, permissions = { canUpdate: true, canDelete: true } }) => {
   const [replyTexts, setReplyTexts] = useState<{ [key: string]: string }>({});
   const [activeReply, setActiveReply] = useState<string | null>(null);
   // New state for delete confirmation modal
@@ -255,12 +264,14 @@ const CommentsPopup: React.FC<{
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDelete(blog._id, comment._id)}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {permissions.canDelete && (
+                      <button
+                        onClick={() => handleDelete(blog._id, comment._id)}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
 
                   <p className="text-gray-700 mb-4">{comment.text}</p>
@@ -289,12 +300,14 @@ const CommentsPopup: React.FC<{
                                 </p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => handleDelete(blog._id, reply._id)}
-                              className="p-1 text-red-400 hover:text-red-600"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {permissions.canDelete && (
+                              <button
+                                onClick={() => handleDelete(blog._id, reply._id)}
+                                className="p-1 text-red-400 hover:text-red-600"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </div>
                           <p className="text-sm text-gray-700">{reply.text}</p>
                         </div>
@@ -303,46 +316,48 @@ const CommentsPopup: React.FC<{
                   )}
 
                   {/* Reply Input */}
-                  <div className="border-t border-gray-200 pt-3">
-                    {activeReply === comment._id ? (
-                      <div className="space-y-3">
-                        <textarea
-                          placeholder="Write your reply..."
-                          className="text-black w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                          rows={3}
-                          value={replyTexts[comment._id] || ""}
-                          onChange={(e) =>
-                            setReplyTexts((prev) => ({
-                              ...prev,
-                              [comment._id]: e.target.value,
-                            }))
-                          }
-                        />
-                        <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => setActiveReply(null)}
-                            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleReply(comment._id)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                          >
-                            Reply
-                          </button>
+                  {permissions.canUpdate && (
+                    <div className="border-t border-gray-200 pt-3">
+                      {activeReply === comment._id ? (
+                        <div className="space-y-3">
+                          <textarea
+                            placeholder="Write your reply..."
+                            className="text-black w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            rows={3}
+                            value={replyTexts[comment._id] || ""}
+                            onChange={(e) =>
+                              setReplyTexts((prev) => ({
+                                ...prev,
+                                [comment._id]: e.target.value,
+                              }))
+                            }
+                          />
+                          <div className="flex justify-end space-x-2">
+                            <button
+                              onClick={() => setActiveReply(null)}
+                              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleReply(comment._id)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Reply
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setActiveReply(comment._id)}
-                        className="flex items-center text-sm text-blue-600 hover:text-blue-700 transition-colors"
-                      >
-                        <ReplyIcon size={14} className="mr-1" />
-                        Reply
-                      </button>
-                    )}
-                  </div>
+                      ) : (
+                        <button
+                          onClick={() => setActiveReply(comment._id)}
+                          className="flex items-center text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                          <ReplyIcon size={14} className="mr-1" />
+                          Reply
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -671,7 +686,14 @@ const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
   );
 };
 
-const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
+const BlogAnalytics: React.FC<Props> = ({ 
+  tokenKey,
+  permissions = {
+    canRead: true,
+    canUpdate: true,
+    canDelete: true,
+  }
+}) => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [filteredBlogs, setFilteredBlogs] = useState<Blog[]>([]);
   // const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
@@ -693,6 +715,11 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
   const blogsPerPage = 12;
 
   const fetchBlogs = useCallback(async () => {
+    // Don't fetch if no read permission
+    if (!permissions.canRead) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     const token = localStorage.getItem(tokenKey);
@@ -710,6 +737,10 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
       const data = await res.json();
 
       if (!data.success) {
+        if (res.status === 403) {
+          setBlogs([]);
+          return;
+        }
         setError(data.error || "Failed to fetch blogs");
       } else {
         setBlogs(data.blogs);
@@ -719,7 +750,7 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
     } finally {
       setLoading(false);
     }
-  }, [tokenKey]);
+  }, [tokenKey, permissions.canRead]);
 
   useEffect(() => {
     fetchBlogs();
@@ -983,6 +1014,28 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
     { value: "most_commented", label: "Most Commented", icon: MessageCircle },
   ];
 
+  // Don't render content if no read permission
+  if (!permissions.canRead) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 max-w-md mx-auto">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BarChart3 className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h3>
+            <p className="text-gray-600 mb-4">
+              You do not have permission to view blog analytics.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact your administrator to request access to the Blog Analytics module.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1025,77 +1078,51 @@ const BlogAnalytics: React.FC<Props> = ({ tokenKey }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 top-0 z-40">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-[#2D9AA5]">
-                Blog Analytics
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Monitor and manage your blog performance
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={refreshData}
-                disabled={refreshing}
-                className="flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw
-                  size={16}
-                  className={`mr-2 ${refreshing ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </button>
-              <div className="relative">
-                <button
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <Calendar size={16} className="mr-2" />
-                  {
-                    filterOptions.find((opt) => opt.value === filterOption)
-                      ?.label
-                  }
-                </button>
-                {showFilterDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                    {filterOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => {
-                          setFilterOption(option.value as FilterOption);
-                          setShowFilterDropdown(false);
-                        }}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
-                      >
-                        <option.icon size={16} className="mr-2" />
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+    <div className="w-full">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Filter Controls */}
+        <div className="mb-6 flex items-center space-x-3">
+          <button
+            onClick={refreshData}
+            disabled={refreshing}
+            className="flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw
+              size={16}
+              className={`mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Calendar size={16} className="mr-2" />
+              {
+                filterOptions.find((opt) => opt.value === filterOption)
+                  ?.label
+              }
+            </button>
+            {showFilterDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                {filterOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setFilterOption(option.value as FilterOption);
+                      setShowFilterDropdown(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
+                  >
+                    <option.icon size={16} className="mr-2" />
+                    {option.label}
+                  </button>
+                ))}
               </div>
-              {/* <button
-                onClick={exportData}
-                disabled={isExporting}
-                className="flex items-center px-4 py-2 
-bg-[#2D9AA5] text-white rounded-lg text-sm font-medium 
-hover:bg-[#23747D] transition-colors disabled:opacity-50
-"
-              >
-                <Download size={16} className="mr-2" />
-                {isExporting ? "Exporting..." : "Export Data"}
-              </button> */}
-            </div>
+            )}
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
@@ -1492,6 +1519,10 @@ hover:bg-[#23747D] transition-colors disabled:opacity-50
           }}
           onReply={submitReply}
           onDelete={deleteComment}
+          permissions={{
+            canUpdate: permissions.canUpdate,
+            canDelete: permissions.canDelete,
+          }}
         />
       )}
 

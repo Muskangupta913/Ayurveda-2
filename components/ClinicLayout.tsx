@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import ClinicSidebar from './ClinicSidebar';
 import ClinicHeader from './ClinicHeader';
 
-const ClinicLayout = ({ children }: { children: React.ReactNode }) => {
+interface ClinicLayoutProps {
+  children: React.ReactNode;
+  hideSidebar?: boolean;
+  hideHeader?: boolean;
+}
+
+const ClinicLayout = ({ children, hideSidebar = false, hideHeader = false }: ClinicLayoutProps) => {
   const [isDesktopHidden, setIsDesktopHidden] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -14,27 +20,36 @@ const ClinicLayout = ({ children }: { children: React.ReactNode }) => {
     setIsMobileOpen(prev => !prev);
   };
 
+  // If both sidebar and header are hidden, render children directly without layout wrapper
+  if (hideSidebar && hideHeader) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-100" role="application">
       {/* Sidebar */}
-      <div className="h-screen sticky top-0 z-30">
-        <ClinicSidebar />
-      </div>
+      {!hideSidebar && (
+        <div className="h-screen sticky top-0 z-30">
+          <ClinicSidebar />
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-h-screen max-h-screen">
         {/* Header */}
-        <div className="sticky top-0 z-20">
-          <ClinicHeader
-            handleToggleDesktop={handleToggleDesktop}
-            handleToggleMobile={handleToggleMobile}
-            isDesktopHidden={isDesktopHidden}
-            isMobileOpen={isMobileOpen}
-          />
-        </div>
+        {!hideHeader && (
+          <div className="sticky top-0 z-20">
+            <ClinicHeader
+              handleToggleDesktop={handleToggleDesktop}
+              handleToggleMobile={handleToggleMobile}
+              isDesktopHidden={isDesktopHidden}
+              isMobileOpen={isMobileOpen}
+            />
+          </div>
+        )}
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" role="main">
+        <main className={`flex-1 overflow-y-auto ${hideSidebar && hideHeader ? '' : 'p-4 sm:p-6 md:p-8'}`} role="main">
           {children}
         </main>
       </div>

@@ -2,6 +2,7 @@ import dbConnect from "../../../lib/database";
 import Offer from "../../../models/CreateOffer";
 import Clinic from "../../../models/Clinic";
 import { getUserFromReq } from "./auth";
+import { checkClinicPermission } from "./permissions-helper";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -28,10 +29,18 @@ export default async function handler(req, res) {
         .json({ success: false, message: "Invalid or missing Offer ID" });
     }
 
+    // ✅ First, get the offer to determine which clinic it belongs to
+    const offer = await Offer.findById(id);
+    if (!offer) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Offer not found" });
+    }
+
     const filter = { _id: new mongoose.Types.ObjectId(id) };
+    let clinic = null;
 
     if (user.role === "clinic" || user.role === "agent") {
-      let clinic = null;
       if (user.role === "clinic") {
         clinic = await Clinic.findOne({ owner: user._id }).select("_id");
       } else if (user.role === "agent") {
@@ -45,12 +54,37 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, message: "Clinic not found" });
       }
 
+      // Ensure the offer belongs to this clinic
+      if (offer.clinicId.toString() !== clinic._id.toString()) {
+        return res.status(403).json({ success: false, message: "Not allowed to access this offer" });
+      }
+
       filter.clinicId = clinic._id;
+
+      // ✅ Check permission for deleting offers (only for clinic and agent, admin bypasses)
+      const { hasPermission, error } = await checkClinicPermission(
+        clinic._id,
+        "create_offers",
+        "delete"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: error || "You do not have permission to delete offers"
+        });
+      }
+    } else if (user.role === "admin") {
+      // Admin can delete any offer
+      clinic = await Clinic.findById(offer.clinicId).select("_id");
+      if (!clinic) {
+        return res.status(404).json({ success: false, message: "Clinic not found" });
+      }
     }
 
-    const offer = await Offer.findOneAndDelete(filter);
+    const deletedOffer = await Offer.findOneAndDelete(filter);
 
-    if (!offer) {
+    if (!deletedOffer) {
       return res
         .status(404)
         .json({ success: false, message: "Offer not found or not authorized" });

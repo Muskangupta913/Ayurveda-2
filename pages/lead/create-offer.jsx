@@ -10,11 +10,80 @@ function OffersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [editingOfferData, setEditingOfferData] = useState(null);
+  const [permissions, setPermissions] = useState({
+    canCreate: false,
+    canUpdate: false,
+    canDelete: false,
+    canRead: undefined, // undefined means not loaded yet
+  });
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const token = typeof window !== "undefined" ? localStorage.getItem("clinicToken") : "";
+
+  // Fetch permissions
+  const fetchPermissions = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/clinic/permissions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const modulePermission = data.data.permissions?.find(
+          (p) => p.module === "create_offers"
+        );
+        if (modulePermission) {
+          const actions = modulePermission.actions || {};
+          setPermissions({
+            canCreate: actions.all === true || actions.create === true,
+            canUpdate: actions.all === true || actions.update === true,
+            canDelete: actions.all === true || actions.delete === true,
+            canRead: actions.all === true || actions.read === true,
+          });
+        } else {
+          // No permissions found, default to false
+          setPermissions({
+            canCreate: false,
+            canUpdate: false,
+            canDelete: false,
+            canRead: false,
+          });
+        }
+      } else {
+        // API failed, default to false
+        setPermissions({
+          canCreate: false,
+          canUpdate: false,
+          canDelete: false,
+          canRead: false,
+        });
+      }
+      setPermissionsLoaded(true);
+    } catch (err) {
+      console.error("Error fetching permissions:", err);
+      // On error, default to false
+      setPermissions({
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canRead: false,
+      });
+      setPermissionsLoaded(true);
+    }
+  };
 
   // Fetch all offers
   const fetchOffers = async () => {
     if (!token) return;
+    
+    // Wait for permissions to load
+    if (!permissionsLoaded) return;
+    
+    // Check if user has read permission
+    if (permissions.canRead === false) {
+      setOffers([]);
+      return;
+    }
+
     // Serve instantly from cache if available
     try {
       const cached = sessionStorage.getItem("offersCache");
@@ -32,9 +101,16 @@ function OffersPage() {
         },
       });
       const data = await res.json();
-      const next = data.offers || [];
-      setOffers(next);
-      try { sessionStorage.setItem("offersCache", JSON.stringify(next)); } catch {}
+      if (data.success) {
+        const next = data.offers || [];
+        setOffers(next);
+        try { sessionStorage.setItem("offersCache", JSON.stringify(next)); } catch {}
+      } else {
+        // If permission denied, clear offers
+        if (data.message && data.message.includes("permission")) {
+          setOffers([]);
+        }
+      }
     } catch (err) {
       console.error("Error fetching offers:", err);
       // keep whatever is shown (cached) to avoid flash
@@ -42,11 +118,22 @@ function OffersPage() {
   };
 
   useEffect(() => {
-    fetchOffers();
+    fetchPermissions();
   }, [token]);
+
+  useEffect(() => {
+    // Fetch offers after permissions are loaded
+    if (permissionsLoaded) {
+      fetchOffers();
+    }
+  }, [permissionsLoaded, permissions.canRead]);
 
   const openEditModal = async (offerId) => {
     if (!token) return alert("Not authorized!");
+    if (!permissions.canUpdate) {
+      alert("You do not have permission to update offers");
+      return;
+    }
     setEditingOfferId(offerId);
     setModalOpen(true);
 
@@ -76,6 +163,10 @@ function OffersPage() {
   };
 
   const handleDelete = async (id) => {
+    if (!permissions.canDelete) {
+      alert("You do not have permission to delete offers");
+      return;
+    }
     if (!confirm("Are you sure you want to delete this offer?")) return;
     if (!token) return alert("Not authorized!");
 
@@ -113,17 +204,19 @@ function OffersPage() {
               <h1 className="text-xl font-semibold text-gray-900 mb-0.5">Offers Management</h1>
               <p className="text-gray-600 text-xs">Create and manage promotional offers for your clinic</p>
             </div>
-            <button
-              onClick={() => {
-                setEditingOfferId(null);
-                setEditingOfferData(null);
-                setModalOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 text-xs font-medium"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span>Create New Offer</span>
-            </button>
+            {permissions.canCreate && (
+              <button
+                onClick={() => {
+                  setEditingOfferId(null);
+                  setEditingOfferData(null);
+                  setModalOpen(true);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 text-xs font-medium"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span>Create New Offer</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -183,17 +276,22 @@ function OffersPage() {
                 </div>
                 <h3 className="text-sm font-medium text-gray-900 mb-1">No offers yet</h3>
                 <p className="text-gray-500 text-xs mb-4">Get started by creating your first promotional offer</p>
-                <button
-                  onClick={() => {
-                    setEditingOfferId(null);
-                    setEditingOfferData(null);
-                    setModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white px-4 py-1.5 rounded text-xs transition-colors"
-                >
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  <span>Create Your First Offer</span>
-                </button>
+                {permissions.canCreate && (
+                  <button
+                    onClick={() => {
+                      setEditingOfferId(null);
+                      setEditingOfferData(null);
+                      setModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white px-4 py-1.5 rounded text-xs transition-colors"
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    <span>Create Your First Offer</span>
+                  </button>
+                )}
+                {!permissions.canCreate && (
+                  <p className="text-red-500 text-xs">You do not have permission to create offers</p>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -276,20 +374,27 @@ function OffersPage() {
                         </td>
                         <td className="px-3 py-3">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => openEditModal(offer._id)}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                              title="Edit offer"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(offer._id)}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                              title="Delete offer"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
+                            {permissions.canUpdate && (
+                              <button
+                                onClick={() => openEditModal(offer._id)}
+                                className="inline-flex items-center justify-center w-7 h-7 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                title="Edit offer"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                            )}
+                            {permissions.canDelete && (
+                              <button
+                                onClick={() => handleDelete(offer._id)}
+                                className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                title="Delete offer"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                            {!permissions.canUpdate && !permissions.canDelete && (
+                              <span className="text-xs text-gray-400">No actions available</span>
+                            )}
                           </div>
                         </td>
                       </tr>

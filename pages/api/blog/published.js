@@ -2,56 +2,8 @@
 
 import dbConnect from "../../../lib/database";
 import Blog from "../../../models/Blog";
-import jwt from "jsonwebtoken";
-import User from "../../../models/Users";
-
-// Define allowed roles for different operations
-const allowedRoles = {
-  create: ["clinic", "doctor", "admin"], // roles that can create published blogs
-  edit: ["clinic", "doctor", "admin"], // roles that can edit published blogs
-  delete: ["admin", "clinic", "doctor"], // roles that can delete published blogs
-};
-
-// Authentication middleware function
-const authenticate = async (req) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    throw new Error("No token provided");
-  }
-
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    throw new Error("Invalid token format");
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { role, userId } = decoded;
-
-    if (!userId || !role) {
-      throw new Error("Invalid token payload");
-    }
-
-    // Verify user exists in database
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    return { userId, role, user };
-  } catch (error) {
-    throw new Error(`Authentication failed: ${error.message}`);
-  }
-};
-
-// Authorization middleware function
-const authorize = (userRole, requiredRoles) => {
-  if (!requiredRoles.includes(userRole)) {
-    throw new Error(
-      `Access denied. Required roles: ${requiredRoles.join(", ")}`
-    );
-  }
-};
+import Clinic from "../../../models/Clinic";
+import { getUserFromReq, requireRole } from "../lead-ms/auth";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -61,8 +13,38 @@ export default async function handler(req, res) {
     switch (method) {
       case "GET":
         try {
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
+
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for reading published blogs (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "read",
+              "Published and Drafts Blogs" // Check "Published and Drafts Blogs" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to view published blogs"
+              });
+            }
+          }
+
           const { id } = req.query;
-          const { userId, role } = await authenticate(req); // Authenticate for all GET requests
 
           if (id) {
             // Get single published blog by ID
@@ -70,7 +52,7 @@ export default async function handler(req, res) {
               _id: id,
               status: "published",
               $or: [
-                { postedBy: userId }, // User owns the blog
+                { postedBy: me._id }, // User owns the blog
                 { role: "admin" }, // Or user is admin
               ],
             }).populate("postedBy", "name email");
@@ -87,9 +69,9 @@ export default async function handler(req, res) {
           // Get published blogs for the authenticated user's role
           const publishedBlogs = await Blog.find({
             status: "published",
-            role: role, // Filter by the user's role
+            role: me.role, // Filter by the user's role
             $or: [
-              { postedBy: userId }, // User owns the blog
+              { postedBy: me._id }, // User owns the blog
               { role: "admin" }, // Or user is admin
             ],
           })
@@ -98,25 +80,43 @@ export default async function handler(req, res) {
 
           res.status(200).json({ success: true, blogs: publishedBlogs });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in GET published blogs:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
       case "POST":
         try {
-          // Authenticate user
-          const { userId, role } = await authenticate(req);
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
 
-          // Check authorization for creating published blogs
-          authorize(role, allowedRoles.create);
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for creating published blogs (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "create",
+              "Write Blog" // Check "Write Blog" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to create blogs"
+              });
+            }
+          }
 
           const { title, content, paramlink } = req.body;
 
@@ -141,8 +141,8 @@ export default async function handler(req, res) {
             content: content || "",
             paramlink,
             status: "published",
-            postedBy: userId,
-            role: role,
+            postedBy: me._id,
+            role: me.role,
           });
 
           // Populate the postedBy field to return user info
@@ -153,30 +153,17 @@ export default async function handler(req, res) {
 
           res.status(201).json({ success: true, blog: populatedBlog });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          if (error.message.includes("Access denied")) {
-            return res
-              .status(403)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in POST published blog:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
       case "PUT":
         try {
-          // Authenticate user
-          const { userId, role } = await authenticate(req);
-
-          // Check authorization for editing published blogs
-          authorize(role, allowedRoles.edit);
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
 
           const { id } = req.query;
           const { title, content, paramlink } = req.body;
@@ -196,12 +183,38 @@ export default async function handler(req, res) {
           }
 
           // Check if user owns the blog or is admin
-          if (existingBlog.postedBy.toString() !== userId && role !== "admin") {
+          if (existingBlog.postedBy.toString() !== me._id.toString() && me.role !== "admin") {
             return res.status(403).json({
               success: false,
               message:
                 "You can only edit your own published blogs unless you are an admin",
             });
+          }
+
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for updating published blogs (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "update",
+              "Published and Drafts Blogs" // Check "Published and Drafts Blogs" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to update blogs"
+              });
+            }
           }
 
           // If paramlink is being updated, only conflict with other published blogs
@@ -232,30 +245,17 @@ export default async function handler(req, res) {
 
           res.status(200).json({ success: true, blog: updatedBlog });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          if (error.message.includes("Access denied")) {
-            return res
-              .status(403)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in PUT published blog:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
       case "DELETE":
         try {
-          // Authenticate user
-          const { userId, role } = await authenticate(req);
-
-          // Check authorization for deleting published blogs
-          authorize(role, allowedRoles.delete);
+          const me = await getUserFromReq(req);
+          if (!me || !requireRole(me, ["clinic", "doctor", "admin"])) {
+            return res.status(403).json({ success: false, message: "Access denied" });
+          }
 
           const { id } = req.query;
 
@@ -273,16 +273,38 @@ export default async function handler(req, res) {
               .json({ success: false, message: "Published blog not found" });
           }
 
-          // Check if user owns the blog or has delete permissions
-          if (
-            existingBlog.postedBy.toString() !== userId &&
-            !allowedRoles.delete.includes(role)
-          ) {
+          // Check if user owns the blog or is admin
+          if (existingBlog.postedBy.toString() !== me._id.toString() && me.role !== "admin") {
             return res.status(403).json({
               success: false,
-              message:
-                "You do not have permission to delete this published blog",
+              message: "Not allowed to access this blog",
             });
+          }
+
+          let clinicId;
+          if (me.role === "clinic") {
+            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+            if (!clinic) {
+              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+            }
+            clinicId = clinic._id;
+          }
+
+          // ✅ Check permission for deleting published blogs (only for clinic, admin bypasses)
+          if (me.role !== "admin" && clinicId) {
+            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+            const { hasPermission, error } = await checkClinicPermission(
+              clinicId,
+              "blogs",
+              "delete",
+              "Published and Drafts Blogs" // Check "Published and Drafts Blogs" submodule permission
+            );
+            if (!hasPermission) {
+              return res.status(403).json({
+                success: false,
+                message: error || "You do not have permission to delete blogs"
+              });
+            }
           }
 
           // Clear comments and likes before deleting
@@ -299,20 +321,8 @@ export default async function handler(req, res) {
               "Published blog and all related comments & likes deleted successfully",
           });
         } catch (error) {
-          if (
-            error.message.includes("No token") ||
-            error.message.includes("Authentication failed")
-          ) {
-            return res
-              .status(401)
-              .json({ success: false, message: error.message });
-          }
-          if (error.message.includes("Access denied")) {
-            return res
-              .status(403)
-              .json({ success: false, message: error.message });
-          }
-          res.status(400).json({ success: false, error: error.message });
+          console.error("Error in DELETE published blog:", error);
+          res.status(500).json({ success: false, message: "Internal server error" });
         }
         break;
 
@@ -320,10 +330,10 @@ export default async function handler(req, res) {
         res.status(405).json({ success: false, message: "Method not allowed" });
     }
   } catch (error) {
+    console.error("Error in published blog API:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message,
     });
   }
 }
