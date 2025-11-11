@@ -1,5 +1,5 @@
 // pages/admin/manage-clinic-permissions.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { NextPageWithLayout } from '../_app';
 import AdminLayout from '../../components/AdminLayout';
@@ -11,6 +11,22 @@ interface Clinic {
   name: string;
   address: string;
   isApproved: boolean;
+}
+
+interface Doctor {
+  _id: string;
+  name: string;
+  email?: string;
+  userId?: string;
+}
+
+interface DoctorProfileApi {
+  _id: string;
+  user?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+  };
 }
 
 interface SubModule {
@@ -41,12 +57,21 @@ interface ModulePermission {
 
 interface ClinicPermission {
   _id: string;
-  clinicId: {
-    _id: string;
-    name: string;
-  };
+  clinicId:
+    | {
+        _id: string;
+        name?: string;
+      }
+    | string
+    | null;
   permissions: ModulePermission[];
   isActive: boolean;
+  role: 'admin' | 'clinic' | 'doctor';
+}
+
+interface EntityOption {
+  id: string;
+  label: string;
 }
 
 interface NavigationItem {
@@ -60,6 +85,7 @@ interface NavigationItem {
   order: number;
   isActive: boolean;
   moduleKey: string;
+  role: 'admin' | 'clinic' | 'doctor';
   subModules: Array<{
     name: string;
     path?: string;
@@ -68,18 +94,19 @@ interface NavigationItem {
   }>;
 }
 
+const ACTION_KEYS: Array<keyof ModulePermission['actions']> = ['all', 'create', 'read', 'update', 'delete'];
+
 const ManageClinicPermissionsPage: NextPageWithLayout = () => {
   const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [clinicPermissions, setClinicPermissions] = useState<ClinicPermission[]>([]);
   const [navigationItems, setNavigationItems] = useState<NavigationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveStatusTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [selectedClinic, setSelectedClinic] = useState<string>('');
+  const [selectedEntity, setSelectedEntity] = useState<string>('');
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
-
-  const actionKeys: Array<keyof ModulePermission['actions']> = ['all', 'create', 'read', 'update', 'delete'];
 
   const createBlankActions = () => ({
     all: false,
@@ -89,29 +116,54 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
     delete: false,
   });
 
-  const sanitizeModulePermissions = (items: ModulePermission[]): ModulePermission[] =>
-    items.map((module) => ({
-      module: module.module,
-      actions: actionKeys.reduce((acc, key) => {
-        acc[key] = Boolean(module.actions?.[key]);
-        return acc;
-      }, {} as ModulePermission['actions']),
-      subModules: module.subModules?.map((subModule) => ({
-        ...subModule,
-        actions: actionKeys.reduce((acc, key) => {
-          acc[key] = Boolean(subModule.actions?.[key]);
+  const sanitizeModulePermissions = useCallback(
+    (items: ModulePermission[]): ModulePermission[] =>
+      items.map((module) => ({
+        module: module.module,
+        actions: ACTION_KEYS.reduce((acc, key) => {
+          acc[key] = Boolean(module.actions?.[key]);
           return acc;
-        }, {} as SubModule['actions']),
-      })) || [],
+        }, {} as ModulePermission['actions']),
+        subModules: module.subModules?.map((subModule) => ({
+          ...subModule,
+          actions: ACTION_KEYS.reduce((acc, key) => {
+            acc[key] = Boolean(subModule.actions?.[key]);
+            return acc;
+          }, {} as SubModule['actions']),
+        })) || [],
+      })),
+    [],
+  );
+
+  const arePermissionsEqual = (left: ModulePermission[], right: ModulePermission[]) =>
+    JSON.stringify(left) === JSON.stringify(right);
+
+  const roleOptions = [
+    { label: 'Clinic', value: 'clinic' },
+    { label: 'Doctor', value: 'doctor' },
+  ] as const;
+
+  const [selectedRole, setSelectedRole] = useState<'clinic' | 'doctor'>(roleOptions[0].value);
+  const [roleLoading, setRoleLoading] = useState(false);
+  const entityOptions = useMemo<EntityOption[]>(() => {
+    if (selectedRole === 'clinic') {
+      return clinics.map(({ _id, name }) => ({
+        id: _id,
+        label: name,
+      }));
+    }
+
+    return doctors.map(({ _id, name, email }) => ({
+      id: _id,
+      label: name || email || 'Unnamed doctor',
     }));
+  }, [selectedRole, clinics, doctors]);
+  const entityCardLabel = selectedRole === 'clinic' ? 'Clinics' : 'Doctors';
+  const entitySelectLabel = selectedRole === 'clinic' ? 'Select clinic' : 'Select doctor';
+  const entityPlaceholder = selectedRole === 'clinic' ? 'Choose a clinic...' : 'Choose a doctor...';
+  const entityCount = entityOptions.length;
 
-  useEffect(() => {
-    fetchClinics();
-    fetchClinicPermissions();
-    fetchNavigationItems();
-  }, []);
-
-  const fetchClinics = async () => {
+  const fetchClinics = useCallback(async (): Promise<Clinic[]> => {
     try {
       const token = localStorage.getItem('adminToken');
       console.log('Admin token:', token ? 'Present' : 'Missing');
@@ -127,23 +179,108 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
       const data = await response.json();
       console.log('API Response:', data);
       
-      if (data.clinics) {
-        console.log('Found clinics:', data.clinics.length);
-        setClinics(data.clinics);
-      } else {
-        console.log('No clinics found in response');
-      }
+      const clinicsData: Clinic[] = data?.clinics || [];
+      console.log('Found clinics:', clinicsData.length);
+      setClinics(clinicsData);
+      return clinicsData;
     } catch (error) {
       console.error('Error fetching clinics:', error);
+      return [];
     }
-  };
+  }, []);
 
-  const fetchClinicPermissions = async () => {
+  const fetchDoctors = useCallback(async (): Promise<Doctor[]> => {
     try {
       const token = localStorage.getItem('adminToken');
-      console.log('Fetching clinic permissions...');
+      console.log('Fetching doctors list...');
+
+      const response = await fetch('/api/admin/getAllDoctors', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Doctors response status:', response.status);
+      const data = await response.json();
+      console.log('Doctors API response:', data);
+
+      if (!data?.success) {
+        console.log('No doctors found or API reported failure.');
+        setDoctors([]);
+        return [];
+      }
+
+      const doctorProfiles: DoctorProfileApi[] = Array.isArray(data.doctorProfiles)
+        ? data.doctorProfiles
+        : [];
+      const normalizedDoctors: Doctor[] = doctorProfiles.map((profile) => ({
+        _id: profile._id,
+        name: profile?.user?.name || profile?.user?.email || 'Unnamed doctor',
+        email: profile?.user?.email,
+        userId: profile?.user?._id,
+      }));
+
+      console.log('Found doctors:', normalizedDoctors.length);
+      setDoctors(normalizedDoctors);
+      return normalizedDoctors;
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+      setDoctors([]);
+      return [];
+    }
+  }, []);
+
+  const getPermissionEntityId = (permission: ClinicPermission): string => {
+    if (!permission?.clinicId) {
+      return '';
+    }
+    return typeof permission.clinicId === 'string'
+      ? permission.clinicId
+      : permission.clinicId._id;
+  };
+
+  const buildPermissionsForEntity = useCallback(
+    (
+      entityId: string,
+      availablePermissions: ClinicPermission[],
+      navItems: NavigationItem[],
+    ): ModulePermission[] => {
+      if (!entityId) {
+        return [];
+      }
+
+      const existing = availablePermissions.find(
+        (cp) => getPermissionEntityId(cp) === entityId
+      );
+      if (existing) {
+        return sanitizeModulePermissions(existing.permissions);
+      }
+
+      return navItems.map((navItem) => ({
+        module: navItem.moduleKey,
+        subModules: navItem.subModules.map((subModule) => ({
+          name: subModule.name,
+          path: subModule.path,
+          icon: subModule.icon,
+          order: subModule.order,
+          actions: createBlankActions(),
+        })),
+        actions: createBlankActions(),
+      }));
+    },
+    [sanitizeModulePermissions],
+  );
+
+  const fetchClinicPermissions = useCallback(async (
+    role: 'clinic' | 'doctor',
+    entityOptionsOverride?: EntityOption[],
+  ) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      console.log('Fetching clinic permissions for role:', role);
       
-      const response = await fetch('/api/admin/permissions/clinic', {
+      const response = await fetch(`/api/admin/permissions/clinic?role=${role}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -155,24 +292,49 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
       console.log('Permissions API Response:', data);
       
       if (data.success) {
-        console.log('Found permissions:', data.data.length);
-        setClinicPermissions(data.data);
+        const permissionsArray = Array.isArray(data.data) ? data.data : data.data ? [data.data] : [];
+        const normalizedPermissions = permissionsArray.map((permission: ClinicPermission) => ({
+          ...permission,
+          role: permission.role || 'clinic',
+        }));
+        console.log('Found permissions:', normalizedPermissions.length);
+        const entityOptionsForRole = entityOptionsOverride || [];
+
+        const enrichedPermissions = normalizedPermissions.map((permission: ClinicPermission) => {
+          const rawId =
+            typeof permission.clinicId === 'object' && permission.clinicId !== null
+              ? permission.clinicId._id
+              : permission.clinicId;
+          const stringId = rawId?.toString?.() || '';
+          const entityMatch = entityOptionsForRole.find((option) => option.id === stringId);
+          return {
+            ...permission,
+            clinicId: {
+              _id: stringId,
+              name:
+                entityMatch?.label ||
+                (typeof permission.clinicId === 'object' ? permission.clinicId?.name : undefined) ||
+                'Unknown',
+            },
+          };
+        });
+
+        setClinicPermissions(enrichedPermissions as ClinicPermission[]);
       } else {
         console.log('No permissions found or error:', data.message);
+        setClinicPermissions([]);
       }
     } catch (error) {
       console.error('Error fetching clinic permissions:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchNavigationItems = async () => {
+  const fetchNavigationItems = useCallback(async (role: 'clinic' | 'doctor') => {
     try {
       const token = localStorage.getItem('adminToken');
-      console.log('Fetching clinic navigation items...');
+      console.log('Fetching clinic navigation items for role:', role);
       
-      const response = await fetch('/api/admin/navigation/clinic-items', {
+      const response = await fetch(`/api/admin/navigation/clinic-items?role=${role}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -184,58 +346,82 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
       console.log('Navigation API Response:', data);
       
       if (data.success) {
-        console.log('Found navigation items:', data.data.length);
-        setNavigationItems(data.data);
+        const items = Array.isArray(data.data) ? data.data : [];
+        console.log('Found navigation items:', items.length);
+        setNavigationItems(items as NavigationItem[]);
       } else {
         console.log('No navigation items found or error:', data.message);
+        setNavigationItems([]);
       }
     } catch (error) {
       console.error('Error fetching navigation items:', error);
     }
-  };
+  }, []);
 
-  const handleClinicSelect = (clinicId: string) => {
-    setSelectedClinic(clinicId);
-    const existingPermissions = clinicPermissions.find(cp => cp.clinicId._id === clinicId);
-    
-    if (existingPermissions) {
-      setPermissions(sanitizeModulePermissions(existingPermissions.permissions));
-    } else {
-      // Initialize with default permissions (all false) - dynamically generated from navigation items
-      const defaultPermissions = navigationItems.map(navItem => ({
-        module: navItem.moduleKey,
-        subModules: navItem.subModules.map(subModule => ({
-          name: subModule.name,
-          path: subModule.path,
-          icon: subModule.icon,
-          order: subModule.order,
-          actions: createBlankActions()
-        })),
-        actions: createBlankActions()
-      }));
-      setPermissions(defaultPermissions);
+  const fetchEntitiesForRole = useCallback(
+    (role: 'clinic' | 'doctor') => (role === 'clinic' ? fetchClinics() : fetchDoctors()),
+    [fetchClinics, fetchDoctors]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRoleData = async () => {
+      setRoleLoading(true);
+      setSelectedEntity('');
+      setPermissions([]);
+
+      try {
+        const entityList = await fetchEntitiesForRole(selectedRole);
+        const entityOptionsOverride: EntityOption[] = entityList.map((entity) => ({
+          id: entity._id,
+          label: entity.name || (selectedRole === 'clinic' ? 'Unnamed clinic' : 'Unnamed doctor'),
+        }));
+
+        await Promise.all([
+          fetchClinicPermissions(selectedRole, entityOptionsOverride),
+          fetchNavigationItems(selectedRole),
+        ]);
+      } finally {
+        if (!cancelled) {
+          setRoleLoading(false);
+          setLoading(false);
+        }
+      }
+    };
+
+    loadRoleData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRole, fetchEntitiesForRole, fetchClinicPermissions, fetchNavigationItems]);
+
+  const handleEntitySelect = (entityId: string) => {
+    setSelectedEntity(entityId);
+    if (!entityId) {
+      setPermissions([]);
     }
   };
 
   useEffect(() => {
-    return () => {
-      if (saveStatusTimeout.current) {
-        clearTimeout(saveStatusTimeout.current);
-      }
-    };
-  }, []);
-
-  const handlePermissionsChange = (newPermissions: ModulePermission[], meta?: { trigger?: 'user' | 'sync' }) => {
-    console.log('Permissions changed:', newPermissions);
-    setPermissions(newPermissions);
-    if (meta?.trigger === 'user') {
-      autoSavePermissions(newPermissions);
+    if (!selectedEntity) {
+      setPermissions([]);
+      return;
     }
-  };
 
-  const autoSavePermissions = async (permissionsPayload: ModulePermission[]) => {
-    if (!selectedClinic) return;
-    console.log('Auto-saving permissions for clinic:', selectedClinic);
+    const next = buildPermissionsForEntity(
+      selectedEntity,
+      clinicPermissions,
+      navigationItems,
+    );
+
+    setPermissions((prev) => (arePermissionsEqual(prev, next) ? prev : next));
+  }, [selectedEntity, clinicPermissions, navigationItems, buildPermissionsForEntity]);
+
+  const autoSavePermissions = useCallback(async (permissionsPayload: ModulePermission[]) => {
+    if (!selectedEntity || !selectedRole) return;
+    console.log('Auto-saving permissions for entity:', selectedEntity, 'role:', selectedRole);
     console.log('Payload:', permissionsPayload);
     if (saveStatusTimeout.current) {
       clearTimeout(saveStatusTimeout.current);
@@ -252,7 +438,8 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          clinicId: selectedClinic,
+          clinicId: selectedEntity,
+          role: selectedRole,
           permissions: permissionsPayload
         })
       });
@@ -266,18 +453,7 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
         saveStatusTimeout.current = setTimeout(() => {
           setSaveStatus('idle');
         }, 2000);
-        setClinicPermissions((prev) => {
-          const existingIndex = prev.findIndex((cp) => cp.clinicId._id === selectedClinic);
-          if (existingIndex >= 0) {
-            const next = [...prev];
-            next[existingIndex] = {
-              ...next[existingIndex],
-              permissions: permissionsPayload
-            };
-            return next;
-          }
-          return prev;
-        });
+        await fetchClinicPermissions(selectedRole, entityOptions);
       } else {
         setSaveStatus('error');
         setTimeout(() => setSaveStatus('idle'), 3000);
@@ -289,11 +465,50 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [selectedEntity, selectedRole, fetchClinicPermissions, entityOptions]);
 
-  const getClinicName = (clinicId: string) => {
-    const clinic = clinics.find(c => c._id === clinicId);
-    return clinic ? clinic.name : 'Unknown Clinic';
+  useEffect(() => {
+    return () => {
+      if (saveStatusTimeout.current) {
+        clearTimeout(saveStatusTimeout.current);
+      }
+    };
+  }, []);
+
+  const handlePermissionsChange = useCallback((
+    newPermissions: ModulePermission[],
+    meta?: { trigger?: 'user' | 'sync' }
+  ) => {
+    console.log('Permissions changed:', newPermissions);
+    setPermissions(newPermissions);
+    if (meta?.trigger === 'user') {
+      autoSavePermissions(newPermissions);
+    }
+  }, [autoSavePermissions]);
+
+  const getEntityLabel = (entityId: string) => {
+    if (!entityId) {
+      return selectedRole === 'clinic' ? 'Unknown Clinic' : 'Unknown Doctor';
+    }
+
+    const option = entityOptions.find((entity) => entity.id === entityId);
+    if (option) {
+      return option.label;
+    }
+
+    const permissionMatch = clinicPermissions.find(
+      (permission) => getPermissionEntityId(permission) === entityId
+    );
+
+    if (
+      permissionMatch &&
+      typeof permissionMatch.clinicId === 'object' &&
+      permissionMatch.clinicId?.name
+    ) {
+      return permissionMatch.clinicId.name;
+    }
+
+    return selectedRole === 'clinic' ? 'Unknown Clinic' : 'Unknown Doctor';
   };
 
   if (loading) {
@@ -346,11 +561,11 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
                 ))}
               </div>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-4">
               <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Clinics</p>
-                  <p className="text-lg font-semibold text-slate-900">{clinics.length}</p>
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">{entityCardLabel}</p>
+                  <p className="text-lg font-semibold text-slate-900">{roleLoading ? '…' : entityCount}</p>
                 </div>
                 <span className="h-9 w-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-sm font-semibold">
                   ✓
@@ -359,26 +574,57 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
               <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Permission sets</p>
-                  <p className="text-lg font-semibold text-slate-900">{navigationItems.length}</p>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {roleLoading ? '…' : navigationItems.length}
+                  </p>
                 </div>
                 <span className="h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-semibold">
                   ∑
                 </span>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:col-span-1 sm:flex sm:flex-col sm:justify-between">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:flex sm:flex-col sm:justify-between">
                 <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400">
-                  Select clinic
+                  Role filter
                 </label>
                 <div className="relative mt-2">
                   <select
-                    value={selectedClinic}
-                    onChange={(e) => handleClinicSelect(e.target.value)}
-                    className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value as typeof roleOptions[number]['value'])}
+                    disabled={roleLoading}
+                    className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <option value="">Choose a clinic...</option>
-                    {clinics.map((clinic) => (
-                      <option key={clinic._id} value={clinic._id}>
-                        {clinic.name}
+                    {roleOptions.map((roleOption) => (
+                      <option key={roleOption.value} value={roleOption.value}>
+                        {roleOption.label}
+                      </option>
+                    ))}
+                  </select>
+                  <svg
+                    className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:col-span-1 sm:flex sm:flex-col sm:justify-between">
+                <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400">
+                  {entitySelectLabel}
+                </label>
+                <div className="relative mt-2">
+                  <select
+                    value={selectedEntity}
+                    onChange={(e) => handleEntitySelect(e.target.value)}
+                    disabled={roleLoading || entityOptions.length === 0}
+                    className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="">{entityPlaceholder}</option>
+                    {entityOptions.map((entity) => (
+                      <option key={entity.id} value={entity.id}>
+                        {entity.label}
                       </option>
                     ))}
                   </select>
@@ -396,19 +642,28 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
             </div>
           </header>
 
-          {selectedClinic && (
+          {selectedEntity && (
             <section className="space-y-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur">
               <header className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Active matrix</p>
                   <h2 className="text-xl font-semibold text-slate-900">
-                    {getClinicName(selectedClinic)}
+                    {getEntityLabel(selectedEntity)}
                   </h2>
                   <p className="text-sm text-slate-500">
                     Toggle module and sub-module permissions to tailor the clinic experience.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-medium">
+                  {roleLoading && (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
+                      </svg>
+                      Refreshing modules…
+                    </span>
+                  )}
                   {saveStatus === 'saving' && (
                     <span className="inline-flex items-center gap-2 rounded-full bg-sky-100 px-3 py-1 text-sky-700">
                       <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -439,7 +694,10 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
 
               <ClinicPermissionManagerNew
                 permissions={permissions}
+                navigationItems={navigationItems}
                 onPermissionsChange={handlePermissionsChange}
+                isLoading={roleLoading}
+                disabled={roleLoading || saving}
                 title="Permission Matrix"
               />
             </section>
@@ -458,3 +716,4 @@ const ProtectedManageClinicPermissions: NextPageWithLayout =
 ProtectedManageClinicPermissions.getLayout = ManageClinicPermissionsPage.getLayout;
 
 export default ProtectedManageClinicPermissions;
+
