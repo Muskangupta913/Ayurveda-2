@@ -23,25 +23,61 @@ export default function withDoctorAuth<P extends object>(
       };
 
       const checkAuth = async () => {
-        const token = typeof window !== 'undefined'
+        // Check if we're on an agent route - if so, allow agent tokens
+        const isAgentRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/agent/');
+        
+        let token = typeof window !== 'undefined'
           ? (localStorage.getItem('doctorToken') || sessionStorage.getItem('doctorToken') || localStorage.getItem('token') || sessionStorage.getItem('token'))
           : null;
-        const user = typeof window !== 'undefined'
+        let user = typeof window !== 'undefined'
           ? (localStorage.getItem('doctorUser') || sessionStorage.getItem('doctorUser'))
           : null;
+        
+        // If on agent route and no doctorToken, try agentToken
+        if (isAgentRoute && !token) {
+          token = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+          
+          if (token) {
+            // Verify agent token instead
+            try {
+              const response = await fetch('/api/agent/verify-token', {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
 
-        if (!token || !user) {
-          console.warn('Missing token or user data. Token:', !!token, 'User:', !!user);
-          toast.error('Please login to continue');
-          clearStorage();
-          // Redirect immediately
-          router.replace('/doctor/login');
+              const data = await response.json();
+
+              if (response.ok && data.valid) {
+                setIsAuthenticated(true);
+                setIsLoading(false);
+                return;
+              }
+            } catch (error) {
+              console.error('Agent token verification failed:', error);
+            }
+          }
+        }
+
+        if (!token || (!user && !isAgentRoute)) {
+          if (!isAgentRoute) {
+            console.warn('Missing token or user data. Token:', !!token, 'User:', !!user);
+            toast.error('Please login to continue');
+            clearStorage();
+            router.replace('/doctor/login');
+          }
           setIsLoading(false);
           return;
         }
 
         try {
-          const response = await fetch('/api/doctor/verify-token', {
+          // For agent routes with agentToken, verify agent token
+          // For doctor routes with doctorToken, verify doctor token
+          const verifyEndpoint = isAgentRoute && token === (localStorage.getItem('agentToken') || sessionStorage.getItem('agentToken'))
+            ? '/api/agent/verify-token' 
+            : '/api/doctor/verify-token';
+            
+          const response = await fetch(verifyEndpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -53,24 +89,26 @@ export default function withDoctorAuth<P extends object>(
             setIsAuthenticated(true);
             setIsLoading(false);
           } else {
-            console.error('Token verification failed:', data);
-            const errorMessage = data.message || 'Authentication failed';
-            if (data.message === 'Token expired') {
-              toast.error('Session expired. Please login again.');
-            } else {
-              toast.error(errorMessage);
+            if (!isAgentRoute) {
+              console.error('Token verification failed:', data);
+              const errorMessage = data.message || 'Authentication failed';
+              if (data.message === 'Token expired') {
+                toast.error('Session expired. Please login again.');
+              } else {
+                toast.error(errorMessage);
+              }
+              clearStorage();
+              router.replace('/doctor/login');
             }
-            clearStorage();
-            // Redirect immediately instead of waiting 4 seconds
-            router.replace('/doctor/login');
+            setIsLoading(false);
           }
         } catch (error) {
-          console.error('Doctor token verification failed:', error);
-          toast.error('Network error. Please check your connection.');
-          clearStorage();
-          // Redirect immediately instead of waiting 4 seconds
-          router.replace('/doctor/login');
-        } finally {
+          console.error('Token verification failed:', error);
+          if (!isAgentRoute) {
+            toast.error('Network error. Please check your connection.');
+            clearStorage();
+            router.replace('/doctor/login');
+          }
           setIsLoading(false);
         }
       };

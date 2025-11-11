@@ -12,13 +12,45 @@ export default function withClinicAuth<P extends Record<string, unknown> = Recor
     useEffect(() => {
       const checkAuth = async () => {
         try {
-          const token = localStorage.getItem('clinicToken') || sessionStorage.getItem('clinicToken');
-          const user = localStorage.getItem('clinicUser') || sessionStorage.getItem('clinicUser');
+          // Check if we're on an agent route - if so, allow agent tokens
+          const isAgentRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/agent/');
+          
+          let token = localStorage.getItem('clinicToken') || sessionStorage.getItem('clinicToken');
+          let user = localStorage.getItem('clinicUser') || sessionStorage.getItem('clinicUser');
+          
+          // If on agent route and no clinicToken, try agentToken
+          if (isAgentRoute && !token) {
+            token = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+            
+            if (token) {
+              // Verify agent token instead
+              try {
+                const response = await fetch('/api/agent/verify-token', {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                });
 
-          if (!token || !user) {
-            toast.error('Please login to continue');
-            clearStorage();
-            router.replace('/clinic/login-clinic');
+                const data = await response.json();
+
+                if (response.ok && data.valid) {
+                  setIsAuthorized(true);
+                  setLoading(false);
+                  return;
+                }
+              } catch (error) {
+                console.error('Agent token verification failed:', error);
+              }
+            }
+          }
+
+          if (!token || (!user && !isAgentRoute)) {
+            if (!isAgentRoute) {
+              toast.error('Please login to continue');
+              clearStorage();
+              router.replace('/clinic/login-clinic');
+            }
+            setLoading(false);
             return;
           }
 
@@ -30,7 +62,13 @@ export default function withClinicAuth<P extends Record<string, unknown> = Recor
             return;
           }
 
-          const res = await fetch('/api/clinics/verify-token', {
+          // For agent routes with agentToken, verify agent token
+          // For clinic routes with clinicToken, verify clinic token
+          const verifyEndpoint = isAgentRoute && token === (localStorage.getItem('agentToken') || sessionStorage.getItem('agentToken'))
+            ? '/api/agent/verify-token' 
+            : '/api/clinics/verify-token';
+            
+          const res = await fetch(verifyEndpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -39,17 +77,20 @@ export default function withClinicAuth<P extends Record<string, unknown> = Recor
           const data = await res.json();
 
           if (!res.ok || !data.valid) {
-            clearStorage();
-            if (data.message === 'Token expired') {
-              alert('Session expired. Please login again.');
-              // ⏳ Wait 3 seconds before redirecting
-              setTimeout(() => {
+            if (!isAgentRoute) {
+              clearStorage();
+              if (data.message === 'Token expired') {
+                alert('Session expired. Please login again.');
+                // ⏳ Wait 3 seconds before redirecting
+                setTimeout(() => {
+                  router.replace('/clinic/login-clinic');
+                }, 4000);
+              } else {
+                toast.error('Authentication failed.');
                 router.replace('/clinic/login-clinic');
-              }, 4000);
-            } else {
-              toast.error('Authentication failed.');
-              router.replace('/clinic/login-clinic');
+              }
             }
+            setLoading(false);
             return;
           }
 

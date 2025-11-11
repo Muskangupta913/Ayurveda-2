@@ -13,15 +13,53 @@ export default function withAdminAuth<P extends object>(
 
     useEffect(() => {
       const checkAuth = async () => {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+        // Check if we're on an agent route - if so, allow agent tokens
+        const isAgentRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/agent/');
+        
+        let token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+        
+        // If on agent route and no adminToken, try agentToken
+        if (isAgentRoute && !token) {
+          token = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+          
+          if (token) {
+            // Verify agent token instead
+            try {
+              const response = await fetch('/api/agent/verify-token', {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+
+              const data = await response.json();
+
+              if (response.ok && data.valid) {
+                setIsAuthenticated(true);
+                setIsLoading(false);
+                return;
+              }
+            } catch (error) {
+              console.error('Agent token verification failed:', error);
+            }
+          }
+        }
 
         if (!token) {
-          router.replace('/admin');
+          if (!isAgentRoute) {
+            router.replace('/admin');
+          }
+          setIsLoading(false);
           return;
         }
 
         try {
-          const response = await fetch('/api/admin/verify-token', {
+          // For admin routes, verify admin token
+          // For agent routes with adminToken, verify admin token
+          const verifyEndpoint = isAgentRoute && token === localStorage.getItem('agentToken') 
+            ? '/api/agent/verify-token' 
+            : '/api/admin/verify-token';
+            
+          const response = await fetch(verifyEndpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -37,13 +75,17 @@ export default function withAdminAuth<P extends object>(
               alert('Session expired. Please login again.');
             }
 
-            localStorage.removeItem('adminToken');
-            router.replace('/admin');
+            if (!isAgentRoute) {
+              localStorage.removeItem('adminToken');
+              router.replace('/admin');
+            }
           }
         } catch (error) {
           console.error('Authentication verification failed:', error);
-          localStorage.removeItem('adminToken');
-          router.replace('/admin');
+          if (!isAgentRoute) {
+            localStorage.removeItem('adminToken');
+            router.replace('/admin');
+          }
         } finally {
           setIsLoading(false);
         }
