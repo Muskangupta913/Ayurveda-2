@@ -334,14 +334,21 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
       const token = localStorage.getItem('adminToken');
       console.log('Fetching clinic navigation items for role:', role);
       
-      const response = await fetch(`/api/admin/navigation/clinic-items?role=${role}`, {
+      const response = await fetch(`/api/navigation/get-by-role?role=${role}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('Navigation response status:', response.status);
+
+      if (!response.ok) {
+        console.warn('Navigation request failed, skipping parsing', { status: response.status, statusText: response.statusText });
+        setNavigationItems([]);
+        return;
+      }
+
       const data = await response.json();
       console.log('Navigation API Response:', data);
       

@@ -170,11 +170,29 @@ const doctorNavigationItems = [
     ],
   },
   {
+    label: "Staff Management",
+    icon: "👥",
+    description: "Manage Staff",
+    moduleKey: "staff_management",
+    order: 5,
+    children: [
+      { label: "Dashboard", path: "/clinic/staff-dashboard", icon: "🏠", order: 1 },
+      { label: "Add Service", path: "/clinic/add-service", icon: "➕", order: 2 },
+      { label: "Patient Registration", path: "/clinic/patient-registration", icon: "🧍‍♂️", order: 3 },
+      { label: "Patient Information", path: "/clinic/patient-information", icon: "📋", order: 4 },
+      { label: "Add EOD Task", path: "/clinic/eodNotes", icon: "✅", order: 5 },
+      { label: "Add Expense", path: "/clinic/AddPettyCashForm", icon: "💸", order: 6 },
+      { label: "Add Vendor", path: "/clinic/add-vendor", icon: "🧑‍💼", order: 7 },
+      { label: "Membership", path: "/clinic/membership", icon: "🧑‍💼", order: 8 },
+      { label: "All Contracts", path: "/clinic/contract", icon: "🧑‍💼", order: 9 },
+    ],
+  },
+  {
     label: "Jobs",
     icon: "💼",
     description: "Job Management",
     moduleKey: "jobs",
-    order: 5,
+    order: 6,
     children: [
       { label: "Post Job", path: "/doctor/create-job", icon: "📢", order: 1 },
       { label: "See Jobs", path: "/doctor/my-jobs", icon: "💼", order: 2 },
@@ -187,7 +205,7 @@ const doctorNavigationItems = [
     icon: "📋",
     description: "View all prescription requests",
     moduleKey: "prescription_requests",
-    order: 6,
+    order: 7,
   },
   {
     label: "Create Agent",
@@ -195,7 +213,7 @@ const doctorNavigationItems = [
     icon: "👤",
     description: "Create agent account",
     moduleKey: "create_agent",
-    order: 7,
+    order: 8,
   },
 ];
 
@@ -266,6 +284,7 @@ export default async function handler(req, res) {
         order: typeof item.order === "number" ? item.order : index + 1,
         moduleKey: `${role}_${moduleKey}`, // Prefix with role to ensure uniqueness
         role: role,
+        parentId: item.parentId || null,
         subModules: Array.isArray(item.children)
           ? item.children.map((child, childIdx) => ({
               name: child.label,
@@ -278,27 +297,55 @@ export default async function handler(req, res) {
       };
     });
 
-    // Delete existing navigation items for this role
-    await ClinicNavigationItem.deleteMany({ role: role });
+    const insertedItems = [];
+    const updatedItems = [];
 
-    // Drop existing unique index on label if it exists (to allow common sidebar items across roles)
-    try {
-      await ClinicNavigationItem.collection.dropIndex('label_1');
-    } catch (err) {
-      // Index doesn't exist or already dropped, ignore error
-      if (err.code !== 27) { // 27 is MongoDB error code for index not found
-        console.warn('Could not drop label_1 index:', err.message);
+    for (const item of itemsToInsert) {
+      const filter = { role: item.role, moduleKey: item.moduleKey };
+      const existing = await ClinicNavigationItem.findOne(filter);
+
+      if (!existing) {
+        const created = await ClinicNavigationItem.create(item);
+        insertedItems.push(created);
+        continue;
+      }
+
+      const payload = {
+        label: item.label,
+        path: item.path,
+        icon: item.icon,
+        description: item.description,
+        badge: item.badge,
+        order: item.order,
+        parentId: item.parentId,
+        subModules: item.subModules,
+        isActive: item.isActive,
+      };
+
+      const hasChanges =
+        existing.label !== payload.label ||
+        existing.path !== payload.path ||
+        existing.icon !== payload.icon ||
+        existing.description !== payload.description ||
+        (existing.badge ?? null) !== payload.badge ||
+        existing.order !== payload.order ||
+        (existing.parentId ? existing.parentId.toString() : null) !== (payload.parentId ? payload.parentId.toString() : null) ||
+        existing.isActive !== payload.isActive ||
+        JSON.stringify(existing.subModules) !== JSON.stringify(payload.subModules);
+
+      if (hasChanges) {
+        Object.assign(existing, payload);
+        await existing.save();
+        updatedItems.push(existing);
       }
     }
-
-    // Insert new navigation items
-    const createdItems = await ClinicNavigationItem.insertMany(itemsToInsert);
 
     return res.status(200).json({ 
       success: true, 
       message: `${role} navigation items seeded successfully`,
-      data: createdItems,
-      count: createdItems.length
+      inserted: insertedItems.length,
+      updated: updatedItems.length,
+      totalTemplates: itemsToInsert.length
     });
   } catch (error) {
     console.error('Error seeding navigation items:', error);
