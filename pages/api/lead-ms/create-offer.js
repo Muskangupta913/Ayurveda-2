@@ -3,6 +3,7 @@ import Offer from "../../../models/CreateOffer";
 import Treatment from "../../../models/Treatment";
 import Clinic from "../../../models/Clinic";  
 import { getUserFromReq, requireRole } from "./auth";
+import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
-   if (!requireRole(user, ["clinic", "admin", "agent"])) {
+   if (!requireRole(user, ["clinic", "admin", "agent", "doctor"])) {
   return res.status(403).json({ success: false, message: "Access denied" });
 }
 
@@ -31,34 +32,43 @@ export default async function handler(req, res) {
     }
 
     // ✅ Resolve clinicId based on role
-    let clinicId;
+    const { clinicId, error, isAdmin } = await getClinicIdFromUser(user);
+    let resolvedClinicId = clinicId;
 
-    if (user.role === "clinic") {
-  const clinic = await Clinic.findOne({ owner: user._id });
-  if (!clinic) {
-    return res.status(404).json({ success: false, message: "No clinic found for this user" });
-  }
-  clinicId = clinic._id;
-} else if (user.role === "admin") {
-  if (!data.clinicId) {
-    return res.status(400).json({ success: false, message: "clinicId is required for admins" });
-  }
-  const clinic = await Clinic.findById(data.clinicId);
-  if (!clinic) {
-    return res.status(404).json({ success: false, message: "Clinic not found" });
-  }
-  clinicId = clinic._id;
-} else if (user.role === "agent") {
-  // Assuming agent has a clinicId field
-  if (!user.clinicId) {
-    return res.status(403).json({ success: false, message: "Agent is not assigned to any clinic" });
-  }
-  const clinic = await Clinic.findById(user.clinicId);
-  if (!clinic) {
-    return res.status(404).json({ success: false, message: "Clinic not found for this agent" });
-  }
-  clinicId = clinic._id;
-}
+    if (error && !isAdmin) {
+      return res.status(404).json({ success: false, message: error });
+    }
+
+    if (isAdmin) {
+      if (!data.clinicId) {
+        return res.status(400).json({ success: false, message: "clinicId is required for admins" });
+      }
+      const clinic = await Clinic.findById(data.clinicId);
+      if (!clinic) {
+        return res.status(404).json({ success: false, message: "Clinic not found" });
+      }
+      resolvedClinicId = clinic._id;
+    }
+
+    if (!resolvedClinicId) {
+      return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+    }
+
+    // ✅ Check permission for creating offers (only for clinic and agent, admin bypasses)
+    if (!isAdmin) {
+      const { hasPermission, error } = await checkClinicPermission(
+        resolvedClinicId,
+        "create_offers",
+        "create"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: error || "You do not have permission to create offers"
+        });
+      }
+    }
 
 
     // ✅ Resolve treatments & subtreatments
@@ -96,7 +106,7 @@ export default async function handler(req, res) {
     }
 
     const offer = new Offer({
-      clinicId,
+      clinicId: resolvedClinicId,
       title: data.title,
       description: data.description || "",
       type: data.type,

@@ -51,6 +51,11 @@ interface ConfirmAction {
 interface JobManagementProps {
   role?: 'clinic' | 'doctor';
   config?: JobConfig;
+  permissions?: {
+    canRead?: boolean;
+    canUpdate?: boolean;
+    canDelete?: boolean;
+  };
 }
 
 type StatusFilterType = 'all' | 'active' | 'inactive' | 'pending' | 'approved' | 'declined';
@@ -118,6 +123,11 @@ const JobManagement: React.FC<JobManagementProps> = ({
     emptyStateTitle: 'No Job Posts Yet',
     emptyStateDescription: 'Start by creating your first job posting to attract healthcare professionals.',
     emptyStateButtonText: 'Create Your First Job'
+  },
+  permissions = {
+    canRead: true,
+    canUpdate: true,
+    canDelete: true,
   }
 }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -132,19 +142,32 @@ const JobManagement: React.FC<JobManagementProps> = ({
   const [selectedJobType, setSelectedJobType] = useState<string>('all');
 
   const fetchJobs = useCallback(async (): Promise<void> => {
+    // Don't fetch if no read permission
+    if (!permissions.canRead) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const token = localStorage.getItem(config.tokenKey);
       const res = await axios.get<{ jobs: Job[] }>('/api/job-postings/my-jobs', {
         headers: { Authorization: `Bearer ${token}` },
+        validateStatus: (status) => status === 200 || status === 403,
       });
+      
+      if (res.status === 403) {
+        setJobs([]);
+        return;
+      }
+      
       setJobs(res.data.jobs);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
       setLoading(false);
     }
-  }, [config.tokenKey]);
+  }, [config.tokenKey, permissions.canRead]);
 
   useEffect(() => {
     fetchJobs();
@@ -201,6 +224,9 @@ const JobManagement: React.FC<JobManagementProps> = ({
   }, [jobs, searchTerm, statusFilter, sortBy, selectedDepartment, selectedJobType]);
 
   const handleToggleJob = (jobId: string, currentStatus: boolean, jobTitle: string): void => {
+    if (!permissions.canUpdate) {
+      return;
+    }
     setConfirmAction({
       type: 'toggle',
       jobId,
@@ -212,6 +238,9 @@ const JobManagement: React.FC<JobManagementProps> = ({
   };
 
   const handleDeleteJob = (jobId: string, jobTitle: string): void => {
+    if (!permissions.canDelete) {
+      return;
+    }
     setConfirmAction({
       type: 'delete',
       jobId,
@@ -395,6 +424,30 @@ const JobManagement: React.FC<JobManagementProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Don't render content if no read permission
+  if (!permissions.canRead) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-8 0V6a2 2 0 00-2 2v6.001" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h3>
+            <p className="text-gray-600 mb-4">
+              You do not have permission to view job postings.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact your administrator to request access to the Jobs module.
+            </p>
           </div>
         </div>
       </div>
@@ -794,26 +847,30 @@ const JobManagement: React.FC<JobManagementProps> = ({
                         
                         {/* Action Buttons */}
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => handleToggleJob(job._id, job.isActive, job.jobTitle)}
-                            disabled={job.status !== 'approved'}
-                            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                              job.status !== 'approved'
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : job.isActive 
-                                ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                                : 'bg-green-500 text-white hover:bg-green-600'
-                            }`}
-                            title={job.status !== 'approved' ? 'Only approved jobs can be activated/deactivated' : ''}
-                          >
-                            {job.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteJob(job._id, job.jobTitle)}
-                            className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-xs font-medium transition-all duration-200"
-                          >
-                            Delete
-                          </button>
+                          {permissions.canUpdate && (
+                            <button
+                              onClick={() => handleToggleJob(job._id, job.isActive, job.jobTitle)}
+                              disabled={job.status !== 'approved'}
+                              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                job.status !== 'approved'
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : job.isActive 
+                                  ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                                  : 'bg-green-500 text-white hover:bg-green-600'
+                              }`}
+                              title={job.status !== 'approved' ? 'Only approved jobs can be activated/deactivated' : ''}
+                            >
+                              {job.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                          )}
+                          {permissions.canDelete && (
+                            <button
+                              onClick={() => handleDeleteJob(job._id, job.jobTitle)}
+                              className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-xs font-medium transition-all duration-200"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

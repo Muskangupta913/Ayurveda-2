@@ -614,6 +614,23 @@ function PettyCashAndExpense() {
             </div>
           </div>
         </div>
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg shadow-sm p-4 sm:p-6 mb-4">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Staff Totals - {selectedDate}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg p-4 text-center">
+              <div className="text-sm text-gray-700 mb-1">Allocated</div>
+              <div className="text-2xl font-bold text-blue-600">د.إ{globalData.globalAllocated}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 text-center">
+              <div className="text-sm text-gray-700 mb-1">Spent</div>
+              <div className="text-2xl font-bold text-red-600">د.إ{globalData.globalSpent}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 text-center">
+              <div className="text-sm text-gray-700 mb-1">Remaining</div>
+              <div className="text-2xl font-bold text-green-600">د.إ{globalData.globalRemaining || 0}</div>
+            </div>
+          </div>
+        </div>
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
@@ -915,23 +932,7 @@ function PettyCashAndExpense() {
         </div>
 
         {/* Staff Totals */}
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg shadow-sm p-4 sm:p-6 mb-4">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Staff Totals - {selectedDate}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-sm text-gray-700 mb-1">Allocated</div>
-              <div className="text-2xl font-bold text-blue-600">د.إ{globalData.globalAllocated}</div>
-            </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-sm text-gray-700 mb-1">Spent</div>
-              <div className="text-2xl font-bold text-red-600">د.إ{globalData.globalSpent}</div>
-            </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-sm text-gray-700 mb-1">Remaining</div>
-              <div className="text-2xl font-bold text-green-600">د.إ{globalData.globalRemaining || 0}</div>
-            </div>
-          </div>
-        </div>
+      
 
         {/* Admin Global Totals */}
         {currentUser.role && ["admin", "super admin"].includes(currentUser.role.toLowerCase()) && (

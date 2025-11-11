@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 const ClinicNavigationItemSchema = new mongoose.Schema({
   label: {
     type: String,
-    required: true
+    required: true,
+    index: false // Explicitly disable unique index on label to allow common sidebar items across roles
   },
   path: {
     type: String,
@@ -36,8 +37,12 @@ const ClinicNavigationItemSchema = new mongoose.Schema({
   },
   moduleKey: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+  },
+  role: {
+    type: String,
+    enum: ['admin', 'clinic', 'doctor'],
+    required: true
   },
   subModules: [{
     name: {
@@ -60,8 +65,9 @@ const ClinicNavigationItemSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Index for efficient queries
-ClinicNavigationItemSchema.index({ moduleKey: 1 });
+ClinicNavigationItemSchema.index({ moduleKey: 1, role: 1 }); // Index for moduleKey and role combination (not unique)
 ClinicNavigationItemSchema.index({ parentId: 1 });
 ClinicNavigationItemSchema.index({ order: 1 });
+ClinicNavigationItemSchema.index({ role: 1 }); // Index for role-based queries
 
 export default mongoose.models.ClinicNavigationItem || mongoose.model('ClinicNavigationItem', ClinicNavigationItemSchema);

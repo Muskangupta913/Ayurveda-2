@@ -17,10 +17,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Email and password are required" });
     }
 
-    // find user with role staff OR doctorStaff
-    const user = await User.findOne({ 
-      email, 
-      role: { $in: ["staff", "doctorStaff"] } 
+    // find user with allowed roles (staff, doctor staff, agent)
+    const user = await User.findOne({
+      email,
+      role: { $in: ["staff", "doctorStaff", "agent"] },
     });
 
     if (!user) {
@@ -47,12 +47,12 @@ export default async function handler(req, res) {
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET); // expires in 7 days
-    console.log("Generated token:", token); // Debug
 
     return res.status(200).json({
       success: true,
       message: "Login successful",
       token,
+      tokenKey: user.role === "agent" ? "agentToken" : "userToken",
       user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
 

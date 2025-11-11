@@ -74,10 +74,12 @@ const Header = ({
   onEditClick,
   hasClinic,
   isEditing,
+  canUpdate,
 }: {
   onEditClick: () => void;
   hasClinic: boolean;
   isEditing: boolean;
+  canUpdate: boolean;
 }) => (
   <header className="bg-white border-b border-gray-100">
     <div className="max-w-6xl mx-auto px-6 py-6">
@@ -98,7 +100,7 @@ const Header = ({
         </div>
 
         {/* Right side - Edit Button */}
-        {hasClinic && !isEditing && (
+        {hasClinic && !isEditing && canUpdate && (
           <button
             onClick={onEditClick}
             className="flex items-center gap-2 px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#247a83] transition-colors font-medium"
@@ -625,8 +627,9 @@ interface ClinicCardProps {
   clinic: Clinic;
   onEdit: (clinic: Clinic) => void;
   getImagePath: (photoPath: string) => string;
+  canUpdate: boolean;
 }
-const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
+const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate }: ClinicCardProps) => (
   <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden max-w-5xl mx-auto">
     {/* Image & Edit Section */}
     <div className="relative">
@@ -652,12 +655,14 @@ const ClinicCard = ({ clinic, onEdit, getImagePath }: ClinicCardProps) => (
         </div>
       )}
 
-      <button
-        onClick={() => onEdit(clinic)}
-        className="absolute top-3 right-3 bg-[#2D9AA5] text-white p-2 rounded-lg hover:bg-[#238891]"
-      >
-        <Edit3 className="w-4 h-4" />
-      </button>
+      {canUpdate && (
+        <button
+          onClick={() => onEdit(clinic)}
+          className="absolute top-3 right-3 bg-[#2D9AA5] text-white p-2 rounded-lg hover:bg-[#238891]"
+        >
+          <Edit3 className="w-4 h-4" />
+        </button>
+      )}
     </div>
 
     {/* Content */}
@@ -797,6 +802,14 @@ function ClinicManagementDashboard() {
   const [geocodingStatus, setGeocodingStatus] = useState<string>("");
   const addressDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const [photoError, setPhotoError] = useState("");
+  
+  // Permission state
+  const [permissions, setPermissions] = useState({
+    canRead: false,
+    canUpdate: false,
+    canDelete: false,
+  });
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
   const getImagePath = (photoPath: string): string => {
     if (!photoPath) return PLACEHOLDER_DATA_URI;
@@ -809,18 +822,124 @@ function ClinicManagementDashboard() {
     return `/uploads/clinic/${photoPath}`;
   };
 
+  // Fetch permissions
   useEffect(() => {
-    const fetchClinics = async () => {
+    const fetchPermissions = async () => {
       try {
         const token = localStorage.getItem("clinicToken");
-        const res = await axios.get("/api/clinics/myallClinic", {
+        if (!token) {
+          setPermissions({
+            canRead: false,
+            canUpdate: false,
+            canDelete: false,
+          });
+          setPermissionsLoaded(true);
+          return;
+        }
+
+        const res = await axios.get("/api/clinic/permissions", {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        const data = res.data;
+        if (data.success && data.data) {
+          const modulePermission = data.data.permissions?.find(
+            (p: any) => p.module === "health_center"
+          );
+
+          if (modulePermission) {
+            const actions = modulePermission.actions || {};
+            
+            // Module-level "all" grants all permissions
+            const moduleAll = actions.all === true;
+            const moduleRead = actions.read === true;
+            const moduleUpdate = actions.update === true;
+            const moduleDelete = actions.delete === true;
+
+            setPermissions({
+              canRead: moduleAll || moduleRead,
+              canUpdate: moduleAll || moduleUpdate,
+              canDelete: moduleAll || moduleDelete,
+            });
+          } else {
+            // No permissions found for this module, default to false
+            setPermissions({
+              canRead: false,
+              canUpdate: false,
+              canDelete: false,
+            });
+          }
+        } else {
+          // API failed or no permissions data, default to false
+          setPermissions({
+            canRead: false,
+            canUpdate: false,
+            canDelete: false,
+          });
+        }
+        setPermissionsLoaded(true);
+      } catch (err: any) {
+        console.error("Error fetching permissions:", err);
+        // On error, default to false (no permissions)
+        setPermissions({
+          canRead: false,
+          canUpdate: false,
+          canDelete: false,
+        });
+        setPermissionsLoaded(true);
+      }
+    };
+
+    fetchPermissions();
+  }, []);
+
+  useEffect(() => {
+    const fetchClinics = async () => {
+      // Wait for permissions to load
+      if (!permissionsLoaded) return;
+
+      // ✅ Don't make API call if we already know user doesn't have read permission
+      // This prevents the 403 error from happening in the first place
+      if (!permissions.canRead) {
+        setClinics([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("clinicToken");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        // Use axios with error handling that prevents Next.js error overlay
+        const res = await axios.get("/api/clinics/myallClinic", {
+          headers: { Authorization: `Bearer ${token}` },
+          // Suppress error overlay for 403 errors
+          validateStatus: (status) => status === 200 || status === 403,
+        });
+        
+        // Check if response is 403
+        if (res.status === 403) {
+          // Handle 403 silently - this is expected when permissions are not granted
+          setPermissions(prev => ({
+            ...prev,
+            canRead: false,
+          }));
+          setClinics([]);
+          setLoading(false);
+          return;
+        }
+        
         setClinics(
           Array.isArray(res.data.clinics) ? res.data.clinics : [res.data.clinic]
         );
-      } catch (err) {
+      } catch (err: any) {
+        // Only catch non-403 errors here (validateStatus handles 403 above)
+        // For other errors (network, server errors, etc.), log and show message
         console.error("Error fetching clinics:", err);
+        toast.error("Failed to fetch clinic information. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -837,9 +956,15 @@ function ClinicManagementDashboard() {
 
     fetchClinics();
     fetchTreatments();
-  }, []);
+  }, [permissionsLoaded, permissions.canRead]);
 
   const handleEdit = (clinic: unknown) => {
+    // Check permission before allowing edit
+    if (!permissions.canUpdate) {
+      toast.error("You do not have permission to update clinic information");
+      return;
+    }
+
     setIsEditing(true);
     setEditingClinicId((clinic as Clinic)._id);
     setEditForm({
@@ -850,6 +975,12 @@ function ClinicManagementDashboard() {
   };
 
   const handleEditFromHeader = () => {
+    // Check permission before allowing edit
+    if (!permissions.canUpdate) {
+      toast.error("You do not have permission to update clinic information");
+      return;
+    }
+
     if (clinics.length > 0) {
       handleEdit(clinics[0]); // Edit the first clinic if available
     }
@@ -998,6 +1129,12 @@ function ClinicManagementDashboard() {
   const handleUpdate = async () => {
     if (!editingClinicId) return;
 
+    // Check permission before updating
+    if (!permissions.canUpdate) {
+      toast.error("You do not have permission to update clinic information");
+      return;
+    }
+
     setUpdating(true);
     try {
       const token = localStorage.getItem("clinicToken");
@@ -1110,6 +1247,7 @@ function ClinicManagementDashboard() {
         onEditClick={handleEditFromHeader}
         hasClinic={clinics.length > 0}
         isEditing={isEditing}
+        canUpdate={permissions.canUpdate}
       />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
@@ -1325,7 +1463,25 @@ function ClinicManagementDashboard() {
           </div>
         ) : (
           <div className="flex justify-center">
-            {clinics.length === 0 ? (
+            {/* Show permission denied message if no read permission */}
+            {!permissions.canRead ? (
+              <div className="text-center py-12 sm:py-16 w-full">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Building2 className="w-8 h-8 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Access Denied
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    You do not have permission to view clinic information.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Please contact your administrator to request access to the Health Center Management module.
+                  </p>
+                </div>
+              </div>
+            ) : clinics.length === 0 ? (
               <div className="text-center py-12 sm:py-16">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 max-w-md mx-auto">
                   <div className="w-16 h-16 bg-[#2D9AA5]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -1347,6 +1503,7 @@ function ClinicManagementDashboard() {
                     clinic={clinic}
                     onEdit={handleEdit}
                     getImagePath={getImagePath}
+                    canUpdate={permissions.canUpdate}
                   />
                 ))}
               </div>

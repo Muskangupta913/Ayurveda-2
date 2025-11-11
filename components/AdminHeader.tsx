@@ -1,7 +1,24 @@
-// import React, { useState, useEffect } from 'react';
+interface AdminHeaderProps {
+  handleToggleDesktop?: () => void;
+  handleToggleMobile?: () => void;
+  isDesktopHidden?: boolean;
+  isMobileOpen?: boolean;
+}
 
-const AdminHeader: React.FC = () => {
-  
+const AdminHeader: React.FC<AdminHeaderProps> = ({
+  handleToggleDesktop,
+  handleToggleMobile,
+  isDesktopHidden = false,
+  isMobileOpen = false,
+}) => {
+  const toggleDesktop = () => {
+    if (handleToggleDesktop) handleToggleDesktop();
+  };
+
+  const toggleMobile = () => {
+    if (handleToggleMobile) handleToggleMobile();
+  };
+
   const storedUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
   const email = storedUser.email;
 
@@ -27,19 +44,43 @@ const AdminHeader: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Left: Toggle + Brand */}
           <div className="flex items-center gap-4">
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-              aria-label="Toggle sidebar"
-            >
-              <svg
-                className="w-5 h-5 text-gray-600 transition-transform duration-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {handleToggleMobile && (
+              <button
+                onClick={toggleMobile}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 lg:hidden"
+                aria-label="Toggle sidebar"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+                <svg
+                  className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${
+                    isMobileOpen ? 'rotate-90' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
+
+            {handleToggleDesktop && (
+              <button
+                onClick={toggleDesktop}
+                className="hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 lg:block"
+                aria-label="Toggle sidebar"
+              >
+                <svg
+                  className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${
+                    isDesktopHidden ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
 
             <div className="flex items-center gap-4">
               <div className="relative">

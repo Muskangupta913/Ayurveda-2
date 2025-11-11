@@ -1,7 +1,7 @@
 import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
 import { getUserFromReq, requireRole } from "./auth";
-import Clinic from "../../../models/Clinic";
+import { getClinicIdFromUser } from "./permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -15,17 +15,9 @@ export default async function handler(req, res) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
-  // Determine clinicId correctly
-  let clinicId;
-  if (me.role === "clinic") {
-    const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
-    clinicId = clinic?._id;
-  } else if (me.role === "agent") {
-    clinicId = me.clinicId;
-  }
-
-  if (!clinicId) {
-    return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+  const { clinicId, error } = await getClinicIdFromUser(me);
+  if (error) {
+    return res.status(404).json({ success: false, message: error });
   }
 
   try {
@@ -33,7 +25,7 @@ export default async function handler(req, res) {
       role: "agent",
       isApproved: true,
       declined: false,
-      clinicId,
+      ...(clinicId ? { clinicId } : {}),
     }).select("_id name email clinicId");
 
     return res.status(200).json({ success: true, users: agents });

@@ -70,7 +70,7 @@ export default async function handler(req, res) {
         }
 
         // Validate actions structure
-        const requiredActions = ['all', 'create', 'read', 'update', 'delete', 'print', 'export', 'approve'];
+        const requiredActions = ['all', 'create', 'read', 'update', 'delete'];
         for (const action of requiredActions) {
           if (typeof permission.actions[action] !== 'boolean') {
             return res.status(400).json({ success: false, message: `Action '${action}' must be a boolean` });
@@ -85,6 +85,12 @@ export default async function handler(req, res) {
             }
             if (!subModule.actions || typeof subModule.actions !== 'object') {
               return res.status(400).json({ success: false, message: 'Sub-module must have actions object' });
+            }
+
+            for (const action of requiredActions) {
+              if (typeof subModule.actions[action] !== 'boolean') {
+                return res.status(400).json({ success: false, message: `Sub-module action '${action}' must be a boolean` });
+              }
             }
           }
         }

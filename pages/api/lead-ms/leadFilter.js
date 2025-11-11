@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   await dbConnect();
 
   const me = await getUserFromReq(req);
-  if (!requireRole(me, ["clinic", "agent"])) {
+  if (!requireRole(me, ["clinic", "agent", "admin"])) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
@@ -21,10 +21,33 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, message: "Agent not linked to any clinic" });
     }
     clinic = await Clinic.findById(me.clinicId);
+  } else if (me.role === "admin") {
+    // Admin can access all leads, but we still need clinicId if provided
+    const { clinicId: adminClinicId } = req.query;
+    if (adminClinicId) {
+      clinic = await Clinic.findById(adminClinicId);
+    }
   }
 
   if (!clinic) {
     return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+  }
+
+  // ✅ Check permission for reading leads (only for clinic and agent, admin bypasses)
+  if (me.role !== "admin" && clinic._id) {
+    const { checkClinicPermission } = await import("./permissions-helper");
+    const { hasPermission, error } = await checkClinicPermission(
+      clinic._id,
+      "lead",
+      "read"
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        success: false,
+        message: error || "You do not have permission to view leads"
+      });
+    }
   }
 
   if (req.method === "GET") {

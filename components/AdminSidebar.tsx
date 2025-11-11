@@ -29,6 +29,13 @@ const navItems: NavItem[] = [
     // badge: 8
   },
   {
+    label: 'Permission Management',
+    path: '/admin/manage-clinic-permissions',
+    icon: '✅',
+    description: 'permission Manage Clinic'
+    // badge: 8
+  },
+  {
     label: 'Approval Doctors',
     path: '/admin/approve-doctors',
     icon: '🏥',

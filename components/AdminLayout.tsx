@@ -2,23 +2,46 @@ import React from 'react';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 
-const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+interface AdminLayoutProps {
+  children: React.ReactNode;
+  hideSidebar?: boolean;
+  hideHeader?: boolean;
+}
+
+const AdminLayout = ({
+  children,
+  hideSidebar = false,
+  hideHeader = false,
+}: AdminLayoutProps) => {
+  if (hideSidebar && hideHeader) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-100" role="application">
       {/* Sidebar */}
-      <div className="h-screen sticky top-0 z-30">
-        <AdminSidebar />
-      </div>
+      {!hideSidebar && (
+        <div className="sticky top-0 z-30 h-screen">
+          <AdminSidebar />
+        </div>
+      )}
 
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-h-screen max-h-screen">
+      <div className="flex min-h-screen max-h-screen flex-1 flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-20">
-          <AdminHeader />
-        </div>
+        {!hideHeader && (
+          <div className="sticky top-0 z-20">
+            <AdminHeader />
+          </div>
+        )}
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" role="main">
+        <main
+          className={`flex-1 overflow-y-auto ${
+            hideSidebar && hideHeader ? '' : 'p-4 sm:p-6 md:p-8'
+          }`}
+          role="main"
+        >
           {children}
         </main>
       </div>

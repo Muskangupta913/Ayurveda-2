@@ -67,6 +67,12 @@ const navigationItems: NavItem[] = [
     description: "View all prescription requests",
   },
   {
+    label: "Create Offers",
+    path: "/doctor/create-offer",
+    icon: "🤑",
+    description: "Manage promotional offers",
+  },
+  {
     label: "Create Agent",
     path: "/doctor/create-agent",
     icon: "👤",

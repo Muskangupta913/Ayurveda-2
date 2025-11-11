@@ -1,30 +1,55 @@
 import dbConnect from "../../../lib/database";
 import Clinic from "../../../models/Clinic";
 import jwt from "jsonwebtoken";
+import { getUserFromReq, requireRole } from "../lead-ms/auth";
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
+  if (req.method !== "GET") {
+    res.setHeader("Allow", ["GET"]);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // ✅ Log decoded info
-    console.log("🔑 Decoded token:", decoded); // 👈 check the id and role
-    console.log("📦 Headers token:", token);
-
-    if (decoded.role !== "clinic") {
-      return res.status(403).json({ message: "Access denied" });
+    const me = await getUserFromReq(req);
+    if (!me || !requireRole(me, ["clinic", "admin"])) {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
 
-    const clinic = await Clinic.findOne({ owner: decoded.userId }).lean();
+    // ✅ Resolve clinicId correctly
+    let clinicId;
+    if (me.role === "clinic") {
+      const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+      if (!clinic) {
+        return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+      }
+      clinicId = clinic._id;
+    }
+
+    // ✅ Check permission for reading clinic (only for clinic, admin bypasses)
+    if (me.role !== "admin" && clinicId) {
+      const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+      const { hasPermission, error } = await checkClinicPermission(
+        clinicId,
+        "health_center",
+        "read"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: error || "You do not have permission to view clinic information"
+        });
+      }
+    }
+
+    const clinic = await Clinic.findOne({ owner: me._id }).lean();
 
     // ✅ Log result of DB query
     console.log("🏥 Clinic found:", clinic);
 
-    if (!clinic) return res.status(404).json({ message: "Clinic not found" });
+    if (!clinic) return res.status(404).json({ success: false, message: "Clinic not found" });
 
     // Helper to get base URL
     function getBaseUrl() {
@@ -61,7 +86,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, clinic });
   } catch (err) {
-    console.error("❌ Token decode or DB error:", err);
-    return res.status(401).json({ message: "Invalid token" });
+    console.error("❌ Error in myallClinic API:", err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }

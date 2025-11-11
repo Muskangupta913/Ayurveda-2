@@ -15,12 +15,24 @@ type Blog = {
 
 interface PublishedBlogsProps {
   tokenKey: "clinicToken" | "doctorToken";
+  permissions?: {
+    canRead?: boolean;
+    canUpdate?: boolean;
+    canDelete?: boolean;
+  };
 }
 
 const ITEMS_PER_PAGE = 10;
 const PRIMARY_COLOR = "#2D9AA5";
 
-const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
+const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ 
+  tokenKey,
+  permissions = {
+    canRead: true,
+    canUpdate: true,
+    canDelete: true,
+  }
+}) => {
   const [drafts, setDrafts] = useState<Blog[]>([]);
   const [published, setPublished] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,12 +64,29 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
 
   useEffect(() => {
     async function loadAll() {
+      // Don't fetch if no read permission
+      if (!permissions.canRead) {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const [draftRes, pubRes] = await Promise.all([
-          axios.get("/api/blog/draft", getAuthHeaders()),
-          axios.get("/api/blog/published", getAuthHeaders()),
+          axios.get("/api/blog/draft", {
+            ...getAuthHeaders(),
+            validateStatus: (status) => status === 200 || status === 403,
+          }),
+          axios.get("/api/blog/published", {
+            ...getAuthHeaders(),
+            validateStatus: (status) => status === 200 || status === 403,
+          }),
         ]);
+
+        if (draftRes.status === 403 || pubRes.status === 403) {
+          setDrafts([]);
+          setPublished([]);
+          return;
+        }
 
         setDrafts(draftRes.data?.drafts || draftRes.data || []);
         setPublished(pubRes.data?.blogs || pubRes.data || []);
@@ -72,7 +101,7 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
       }
     }
     loadAll();
-  }, [tokenKey, getAuthHeaders]);
+  }, [tokenKey, getAuthHeaders, permissions.canRead]);
 
   const filteredBlogs = useMemo(() => {
     const filterBlogs = (blogs: Blog[]) =>
@@ -256,7 +285,7 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {type === 'published' && (
+          {type === 'published' && permissions.canUpdate && (
             <button
               onClick={() => handleEdit(blog)}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg"
@@ -267,25 +296,29 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
             </button>
           )}
 
-          <button
-            onClick={() => {
-              const path = `/${tokenKey === "clinicToken" ? "clinic" : "doctor"}/BlogForm`;
-              const param = type === 'published' ? `blogId=${blog._id}` : `draftId=${blog._id}`;
-              window.location.href = `${path}?${param}`;
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            Edit Blog
-          </button>
+          {permissions.canUpdate && (
+            <button
+              onClick={() => {
+                const path = `/${tokenKey === "clinicToken" ? "clinic" : "doctor"}/BlogForm`;
+                const param = type === 'published' ? `blogId=${blog._id}` : `draftId=${blog._id}`;
+                window.location.href = `${path}?${param}`;
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              Edit Blog
+            </button>
+          )}
 
-          <button
-            onClick={() => handleDelete(blog._id, type)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            
-          </button>
+          {permissions.canDelete && (
+            <button
+              onClick={() => handleDelete(blog._id, type)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              
+            </button>
+          )}
 
           {type === 'published' && (
             <SocialMediaShare
@@ -304,6 +337,28 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
   const currentEditingBlog = useMemo(() => {
     return published.find((b) => b._id === editId);
   }, [published, editId]);
+
+  // Don't render content if no read permission
+  if (!permissions.canRead) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 max-w-md mx-auto">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h3>
+            <p className="text-gray-600 mb-4">
+              You do not have permission to view blogs.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact your administrator to request access to the Blogs module.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -328,13 +383,9 @@ const PublishedBlogs: React.FC<PublishedBlogsProps> = ({ tokenKey }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Blog Management</h1>
-          <p className="text-gray-600">Manage your published blogs and drafts</p>
-        </div>
+    <div className="w-full">
+      <div className="max-w-7xl mx-auto">
+        {/* Removed duplicate header - already in parent BlogForm page */}
 
         {/* Stats and Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

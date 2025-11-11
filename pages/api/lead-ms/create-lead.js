@@ -47,7 +47,7 @@ export default async function handler(req, res) {
   }
 
   const me = await getUserFromReq(req);
-  if (!me || !requireRole(me, ["clinic", "agent"])) {
+  if (!me || !requireRole(me, ["clinic", "agent", "admin"])) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
@@ -64,6 +64,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Agent not tied to a clinic" });
     }
     clinicId = me.clinicId;
+  }
+
+  // ✅ Check permission for creating leads (only for clinic and agent, admin bypasses)
+  if (me.role !== "admin" && clinicId) {
+    const { checkClinicPermission } = await import("./permissions-helper");
+    const { hasPermission, error } = await checkClinicPermission(
+      clinicId,
+      "lead",
+      "create",
+      "Create Lead" // Check "Create Lead" submodule permission
+    );
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        success: false,
+        message: error || "You do not have permission to create leads"
+      });
+    }
   }
 
   const mode = isMultipart ? body.mode || "bulk" : body.mode || "manual";

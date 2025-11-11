@@ -7,6 +7,7 @@ interface Props {
   token: string;
   mode?: "create" | "update";
   offer?: any;
+  actorRole?: "clinic" | "doctor" | "agent" | "admin";
 }
 
 export default function CreateOfferModal({
@@ -16,8 +17,9 @@ export default function CreateOfferModal({
   token,
   mode = "create",
   offer,
+  actorRole = "clinic",
 }: Props) {
-  const [form, setForm] = useState({
+  const getInitialForm = () => ({
     title: "",
     description: "",
     type: "percentage",
@@ -32,62 +34,161 @@ export default function CreateOfferModal({
     usesCount: 0,
     perUserLimit: 1,
     channels: [] as string[],
-    utm: { source: "clinic", medium: "email", campaign: "" },
+    utm: { source: actorRole, medium: "email", campaign: "" },
     conditions: {} as Record<string, any>,
     status: "draft",
     treatments: [] as string[],
   });
+  const [form, setForm] = useState(getInitialForm);
 
   const [clinicId, setClinicId] = useState<string | null>(null);
   const [treatments, setTreatments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [permissions, setPermissions] = useState<{
+    canCreate: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+    canRead: boolean;
+  }>({
+    canCreate: false,
+    canUpdate: false,
+    canDelete: false,
+    canRead: false,
+  });
+  const [resolvedToken, setResolvedToken] = useState<string>("");
+
+  const resolveTokenFromContext = () => {
+    if (token) return token;
+    if (typeof window === "undefined") return "";
+
+    const roleFallbackMap: Record<string, string[]> = {
+      clinic: ["clinicToken"],
+      doctor: ["doctorToken", "clinicToken"],
+      agent: ["agentToken", "clinicToken"],
+      admin: ["adminToken"],
+    };
+
+    const fallbackKeys = [
+      ...(roleFallbackMap[actorRole] || []),
+      "clinicToken",
+      "doctorToken",
+      "agentToken",
+      "adminToken",
+    ];
+
+    const seen = new Set<string>();
+    for (const key of fallbackKeys) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      try {
+        const value =
+          window.localStorage?.getItem(key) ||
+          window.sessionStorage?.getItem(key);
+        if (value) return value;
+      } catch {
+        // ignore access issues
+      }
+    }
+    return "";
+  };
+
+  useEffect(() => {
+    if (!isOpen && !token) {
+      setResolvedToken("");
+      return;
+    }
+    const nextToken = resolveTokenFromContext();
+    setResolvedToken(nextToken);
+  }, [isOpen, token, actorRole]);
 
   useEffect(() => {
     if (!isOpen) return;
 
+    const authToken = resolvedToken;
+    if (!authToken) {
+      setClinicId(null);
+      setTreatments([]);
+      setPermissions({
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canRead: false,
+      });
+      return;
+    }
+
     const fetchClinicData = async () => {
       try {
-        const token = localStorage.getItem("clinicToken");
-        const res = await fetch("/api/lead-ms/get-clinic-treatment", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.success) {
-          setClinicId(data.clinicId);
-          setTreatments(data.treatments || []);
+        // Fetch clinic data and permissions in parallel
+        const [clinicRes, permissionsRes] = await Promise.all([
+          fetch("/api/lead-ms/get-clinic-treatment", {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }),
+          fetch("/api/clinic/permissions", {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }),
+        ]);
+
+        const clinicData = await clinicRes.json();
+        if (clinicData.success) {
+          setClinicId(clinicData.clinicId);
+          setTreatments(clinicData.treatments || []);
+        }
+
+        // Process permissions
+        const permissionsData = await permissionsRes.json();
+        if (permissionsData.success && permissionsData.data) {
+          const modulePermission = permissionsData.data.permissions?.find(
+            (p: any) => p.module === "create_offers"
+          );
+
+          if (modulePermission) {
+            const actions = modulePermission.actions || {};
+            setPermissions({
+              canCreate: actions.all === true || actions.create === true,
+              canUpdate: actions.all === true || actions.update === true,
+              canDelete: actions.all === true || actions.delete === true,
+              canRead: actions.all === true || actions.read === true,
+            });
+          } else {
+            // If no permissions found, default to no access
+            setPermissions({
+              canCreate: false,
+              canUpdate: false,
+              canDelete: false,
+              canRead: false,
+            });
+          }
+        } else {
+          // If permissions API fails, default to no access for safety
+          console.warn("Could not fetch permissions, defaulting to no access");
+          setPermissions({
+            canCreate: false,
+            canUpdate: false,
+            canDelete: false,
+            canRead: false,
+          });
         }
       } catch (err) {
         console.error("Error fetching clinic data", err);
+        // On error, default to no access for safety
+        setPermissions({
+          canCreate: false,
+          canUpdate: false,
+          canDelete: false,
+          canRead: false,
+        });
       }
     };
 
     fetchClinicData();
-  }, [isOpen]);
+  }, [isOpen, resolvedToken]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     if (mode === "create") {
-      setForm({
-        title: "",
-        description: "",
-        type: "percentage",
-        value: 0,
-        currency: "INR",
-        code: "",
-        slug: "",
-        startsAt: "",
-        endsAt: "",
-        timezone: "Asia/Kolkata",
-        maxUses: null,
-        usesCount: 0,
-        perUserLimit: 1,
-        channels: [],
-        utm: { source: "clinic", medium: "email", campaign: "" },
-        conditions: {},
-        status: "draft",
-        treatments: [],
-      });
+      setForm(getInitialForm());
       return;
     }
 
@@ -117,14 +218,14 @@ export default function CreateOfferModal({
         usesCount: offer.usesCount || 0,
         perUserLimit: offer.perUserLimit || 1,
         channels: offer.channels || [],
-        utm: offer.utm || { source: "clinic", medium: "email", campaign: "" },
+        utm: offer.utm || { source: actorRole, medium: "email", campaign: "" },
         conditions: offer.conditions || {},
         status: offer.status || "draft",
         treatments: selectedSlugs,
       });
       setClinicId(offer.clinicId || null);
     }
-  }, [isOpen, mode, offer]);
+  }, [isOpen, mode, offer, actorRole]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -183,8 +284,25 @@ export default function CreateOfferModal({
     e.preventDefault();
     if (!clinicId) return alert("Clinic ID not loaded yet.");
 
+    // Check permissions before submitting
+    if (mode === "create" && !permissions.canCreate) {
+      alert("You do not have permission to create offers");
+      return;
+    }
+    if (mode === "update" && !permissions.canUpdate) {
+      alert("You do not have permission to update offers");
+      return;
+    }
+
     setLoading(true);
     try {
+      const authToken = resolvedToken || resolveTokenFromContext();
+      if (!authToken) {
+        alert("Authentication token missing. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
       const url =
         mode === "create"
           ? "/api/lead-ms/create-offer"
@@ -195,7 +313,7 @@ export default function CreateOfferModal({
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           ...form,
@@ -503,8 +621,15 @@ export default function CreateOfferModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (mode === "create" && !permissions.canCreate) || (mode === "update" && !permissions.canUpdate)}
               className="px-5 py-2 rounded-md bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-sm"
+              title={
+                mode === "create" && !permissions.canCreate
+                  ? "You do not have permission to create offers"
+                  : mode === "update" && !permissions.canUpdate
+                  ? "You do not have permission to update offers"
+                  : ""
+              }
             >
               {loading
                 ? "Saving..."

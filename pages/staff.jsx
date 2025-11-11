@@ -20,13 +20,17 @@ export default function StaffDoctorLogin() {
 
     try {
       const res = await axios.post("/api/staff/login", form);
-      const { token, user } = res.data;
+      const { token, user, tokenKey } = res.data;
 
-      // save single token with role inside
-      localStorage.setItem("userToken", token);
-
-      // send both staff and doctor to the same dashboard
-      router.push("/staff/staff-dashboard");
+      if (tokenKey === "agentToken") {
+        localStorage.setItem("agentToken", token);
+        localStorage.removeItem("userToken");
+        router.push("/agent/dashboard");
+      } else {
+        localStorage.setItem("userToken", token);
+        localStorage.removeItem("agentToken");
+        router.push("/staff/staff-dashboard");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     } finally {

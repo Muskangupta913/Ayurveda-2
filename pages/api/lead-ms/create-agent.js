@@ -1,7 +1,8 @@
 import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
-import Clinic from "../../../models/Clinic";   // ✅ import Clinic model
+import Clinic from "../../../models/Clinic";
 import { getUserFromReq, requireRole } from "../lead-ms/auth";
+import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
 import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
@@ -14,23 +15,50 @@ export default async function handler(req, res) {
   await dbConnect();
   const me = await getUserFromReq(req);
 
-  // Allow admin, clinic, doctor, and agent roles to create agents
-  if (!me || !requireRole(me, ["admin", "clinic", "doctor", "agent"])) {
-    return res.status(403).json({ success: false, message: "Access denied" });
+  if (!me) {
+    return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
   }
 
-  const { name, email, phone, password } = req.body;
-  if (!name || !email || !password) {
+  // Debug: Log who is creating
+  console.log('CREATE Agent - Current User:', { 
+    role: me.role, 
+    _id: me._id.toString(),
+    email: me.email 
+  });
+
+  const { name, email, phone, password, role } = req.body;
+  if (!name || !email || !password || !role) {
     return res
       .status(400)
-      .json({ success: false, message: "Missing required fields" });
+      .json({ success: false, message: "Missing required fields: name, email, password, and role are required" });
+  }
+
+  // Validate role
+  if (!["agent", "doctorStaff"].includes(role)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: "Invalid role. Allowed roles: agent, doctorStaff" 
+    });
   }
 
   try {
+    // For agent creation: Allow admin, clinic, doctor, and agent roles
+    // For doctorStaff creation: Allow admin, clinic, and doctor roles (same as agents)
+    if (role === "agent") {
+      if (!requireRole(me, ["admin", "clinic", "doctor", "agent"])) {
+        return res.status(403).json({ success: false, message: "Access denied" });
+      }
+    } else if (role === "doctorStaff") {
+      if (!requireRole(me, ["admin", "clinic", "doctor"])) {
+        return res.status(403).json({ success: false, message: "Access denied. Admin, clinic, or doctor only for doctorStaff creation" });
+      }
+    }
+
     let clinicId = null;
     
-    // Find clinic based on role
+    // Find clinic based on role - IMPORTANT: Set clinicId for clinic/doctor/agent roles
     if (me.role === "clinic") {
+      // Clinic creating agent or doctorStaff - find their clinic
       const clinic = await Clinic.findOne({ owner: me._id });
       if (!clinic) {
         return res
@@ -38,26 +66,39 @@ export default async function handler(req, res) {
           .json({ success: false, message: "Clinic not found for this user" });
       }
       clinicId = clinic._id;
+      // For agents created by clinic, set clinicId. For doctorStaff, we can optionally set it too
+      if (role === "agent") {
+        // Agent must have clinicId
+      } else if (role === "doctorStaff") {
+        // doctorStaff can optionally have clinicId (to track which clinic they belong to)
+        // Setting it helps with filtering
+      }
     } else if (me.role === "agent") {
-      clinicId = me.clinicId; // agent already has clinicId
+      // Agent creating another agent - use their clinicId
+      clinicId = me.clinicId;
       if (!clinicId) {
         return res
           .status(400)
           .json({ success: false, message: "Clinic not found for this agent" });
       }
+      // Only agents can be created by agents, not doctorStaff
+      if (role === "doctorStaff") {
+        return res.status(403).json({ success: false, message: "Agents cannot create doctorStaff" });
+      }
     } else if (me.role === "doctor") {
-      // Doctor might have a clinicId, or might not (optional)
+      // Doctor creating agent or doctorStaff - use their clinicId if they have one
       clinicId = me.clinicId || null;
+      // If doctor has clinicId, use it. Otherwise, clinicId remains null
+    } else if (me.role === "admin") {
+      // Admin creating agent or doctorStaff - clinicId is null (not tied to any clinic)
+      clinicId = null;
     }
-    // For admin, clinicId is null (agents created by admin are not tied to a clinic)
 
-    // Check if agent already exists with this email
-    // If clinicId is provided, check within that clinic
-    // If no clinicId (admin), check for agents without clinicId (admin-created)
-    const existingQuery = { email, role: "agent" };
-    if (clinicId) {
+    // Check if user already exists with this email and role
+    const existingQuery = { email, role };
+    if (role === "agent" && clinicId) {
       existingQuery.clinicId = clinicId;
-    } else {
+    } else if (role === "agent" && !clinicId) {
       // For admin-created agents (no clinicId), check for agents with null/undefined clinicId
       existingQuery.$or = [
         { clinicId: null },
@@ -69,45 +110,73 @@ export default async function handler(req, res) {
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: clinicId 
-          ? "Agent already exists for this clinic" 
-          : "Agent with this email already exists (admin-created agent)",
+        message: `${role} with this email already exists${role === "agent" && clinicId ? " for this clinic" : ""}`,
       });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create agent - clinicId is optional (for admin-created agents)
-    const agentData = {
+    // Create user (agent or doctorStaff)
+    const userData = {
       name,
       email,
       phone: phone || undefined,
       password: hashedPassword,
-      role: "agent",
-      createdBy: me._id, // ✅ Store who created this agent
+      role,
+      createdBy: me._id, // ✅ Store who created this user
       isApproved: true,
       declined: false,
     };
     
-    if (clinicId) {
-      agentData.clinicId = clinicId;
+    // Set clinicId based on role and creator
+    if (role === "agent") {
+      // Agents should have clinicId if created by clinic, doctor, or agent
+      // Admin-created agents have clinicId as null
+      if (clinicId) {
+        userData.clinicId = clinicId;
+      }
+    } else if (role === "doctorStaff") {
+      // doctorStaff can optionally have clinicId to track which clinic they belong to
+      // This helps with filtering in dashboards
+      if (clinicId) {
+        userData.clinicId = clinicId;
+      }
+      // If clinicId is null (admin-created), that's fine too
     }
 
-    const agent = await User.create(agentData);
+    // Debug: Log what we're creating
+    console.log('CREATE Agent - User Data:', {
+      role: userData.role,
+      clinicId: userData.clinicId?.toString() || null,
+      createdBy: userData.createdBy.toString()
+    });
+
+    const user = await User.create(userData);
+
+    // Debug: Log what was actually created
+    console.log('CREATE Agent - Created User:', {
+      _id: user._id.toString(),
+      role: user.role,
+      clinicId: user.clinicId?.toString() || null,
+      createdBy: user.createdBy?.toString() || null
+    });
 
     return res.status(201).json({
       success: true,
-      agent: {
-        _id: agent._id,
-        name: agent.name,
-        email: agent.email,
-        phone: agent.phone,
-        clinicId: agent.clinicId || null,
+      message: `${role} created successfully`,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        clinicId: user.clinicId || null,
+        createdBy: user.createdBy || null, // Add createdBy to response for debugging
       },
     });
   } catch (err) {
-    console.error("Error creating agent:", err);
+    console.error("Error creating user:", err);
     return res
       .status(500)
       .json({ success: false, message: "Internal Server Error" });

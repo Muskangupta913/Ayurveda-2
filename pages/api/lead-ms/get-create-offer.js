@@ -4,6 +4,7 @@ import Offer from "../../../models/CreateOffer";
 import Treatment from "../../../models/Treatment";
 import Clinic from "../../../models/Clinic"; 
 import { getUserFromReq, requireRole } from "./auth";
+import { checkClinicPermission } from "./permissions-helper";
 
 export default async function handler(req, res) {
   try {
@@ -22,8 +23,8 @@ export default async function handler(req, res) {
         .json({ success: false, message: "User not authenticated" });
     }
 
-    // Allow both clinics and agents
-    if (!requireRole(user, ["clinic", "agent"])) {
+    // Allow clinics, agents, doctors, and admins
+    if (!requireRole(user, ["clinic", "agent", "admin", "doctor"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -45,6 +46,35 @@ export default async function handler(req, res) {
           .json({ success: false, message: "Agent not linked to any clinic" });
       }
       clinicId = user.clinicId;
+    } else if (user.role === "doctor") {
+      if (!user.clinicId) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Doctor not linked to any clinic" });
+      }
+      clinicId = user.clinicId;
+    } else if (user.role === "admin") {
+      // Admin can access all offers, but we still need clinicId if provided
+      const { clinicId: adminClinicId } = req.query;
+      if (adminClinicId) {
+        clinicId = adminClinicId;
+      }
+    }
+
+    // ✅ Check permission for reading offers (only for clinic and agent, admin bypasses)
+    if (user.role !== "admin" && clinicId) {
+      const { hasPermission, error } = await checkClinicPermission(
+        clinicId,
+        "create_offers",
+        "read"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: error || "You do not have permission to view offers"
+        });
+      }
     }
 
     // Fetch offers for the clinic - minimal fields, no populate for speed

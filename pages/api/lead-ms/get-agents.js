@@ -18,54 +18,137 @@ export default async function handler(req, res) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
 
-  // ---------------- GET Agents ----------------
+  // ---------------- GET Agents/DoctorStaff ----------------
   if (req.method === 'GET') {
     try {
-      let query = { role: 'agent' };
+      // Get role filter from query parameter (optional: 'agent', 'doctorStaff', or undefined for both)
+      const roleFilter = req.query.role;
+      
+      // Build role query
+      let roleQuery;
+      if (roleFilter === 'agent') {
+        roleQuery = { role: 'agent' };
+      } else if (roleFilter === 'doctorStaff') {
+        roleQuery = { role: 'doctorStaff' };
+      } else {
+        // If no role specified, default to agent (for backward compatibility)
+        roleQuery = { role: 'agent' };
+      }
 
-      // Filter agents based on who is requesting
+      let query = {};
+
+      // Filter based on who is requesting - STRICT: only show records created by the current user
       if (me.role === 'admin') {
-        // Admin sees all agents they created (without clinicId or with createdBy = admin)
-        query.createdBy = me._id;
+        // Admin sees ONLY agents/doctorStaff they created
+        query = { ...roleQuery, createdBy: me._id };
       } else if (me.role === 'clinic') {
         // Clinic sees agents from their clinic OR agents they created
+        // For doctorStaff, they can ONLY see ones they created (strict filtering by createdBy)
         const clinic = await Clinic.findOne({ owner: me._id });
-        if (clinic) {
-          query.$or = [
-            { clinicId: clinic._id },
-            { createdBy: me._id }
-          ];
+        
+        // Debug: Log clinic lookup
+        console.log('Clinic lookup:', {
+          clinicFound: !!clinic,
+          clinicId: clinic?._id?.toString(),
+          ownerId: me._id.toString()
+        });
+        
+        if (roleFilter === 'agent') {
+          // Only agents - clinic sees agents from their clinic OR agents they created
+          if (clinic) {
+            query = {
+              role: 'agent',
+              $or: [
+                { clinicId: clinic._id },
+                { createdBy: me._id }
+              ]
+            };
+            console.log('Clinic agent query - clinicId:', clinic._id.toString(), 'createdBy:', me._id.toString());
+          } else {
+            query = { role: 'agent', createdBy: me._id };
+            console.log('Clinic agent query (no clinic found) - createdBy:', me._id.toString());
+          }
+        } else if (roleFilter === 'doctorStaff') {
+          // Only doctorStaff - STRICT: clinic can ONLY see ones they created
+          query = { role: 'doctorStaff', createdBy: me._id };
         } else {
-          // If no clinic found, only show agents they created
-          query.createdBy = me._id;
+          // Default to agent if no role filter
+          if (clinic) {
+            query = {
+              role: 'agent',
+              $or: [
+                { clinicId: clinic._id },
+                { createdBy: me._id }
+              ]
+            };
+          } else {
+            query = { role: 'agent', createdBy: me._id };
+          }
         }
       } else if (me.role === 'doctor') {
         // Doctor sees agents from their clinic (if they have one) OR agents they created
-        if (me.clinicId) {
-          query.$or = [
-            { clinicId: me.clinicId },
-            { createdBy: me._id }
-          ];
+        // For doctorStaff, they can ONLY see ones they created (strict filtering by createdBy)
+        if (roleFilter === 'agent') {
+          // Only agents
+          if (me.clinicId) {
+            query = {
+              role: 'agent',
+              $or: [
+                { clinicId: me.clinicId },
+                { createdBy: me._id }
+              ]
+            };
+          } else {
+            query = { role: 'agent', createdBy: me._id };
+          }
+        } else if (roleFilter === 'doctorStaff') {
+          // Only doctorStaff - STRICT: doctor can ONLY see ones they created
+          query = { role: 'doctorStaff', createdBy: me._id };
         } else {
-          // If no clinicId, only show agents they created
-          query.createdBy = me._id;
+          // Default to agent if no role filter
+          if (me.clinicId) {
+            query = {
+              role: 'agent',
+              $or: [
+                { clinicId: me.clinicId },
+                { createdBy: me._id }
+              ]
+            };
+          } else {
+            query = { role: 'agent', createdBy: me._id };
+          }
         }
       } else if (me.role === 'agent') {
-        // Agent sees agents from their clinic
+        // Agent sees only agents from their clinic (not doctorStaff)
         if (me.clinicId) {
-          query.clinicId = me.clinicId;
+          query = { clinicId: me.clinicId, role: 'agent' };
         } else {
           // If agent has no clinicId, return empty
           return res.status(200).json({ success: true, agents: [] });
         }
       }
 
-      const agents = await User.find(query).select('_id name email phone isApproved declined clinicId createdBy');
+      // Debug: Log the query and user info
+      console.log('GET Agents Query:', JSON.stringify(query, null, 2));
+      console.log('Current User:', { role: me.role, _id: me._id.toString() });
 
-      return res.status(200).json({ success: true, agents });
+      const users = await User.find(query).select('_id name email phone isApproved declined clinicId createdBy role');
+
+      // Debug: Log results
+      console.log('Found users:', users.length);
+      if (users.length > 0) {
+        console.log('Sample user:', {
+          name: users[0].name,
+          role: users[0].role,
+          clinicId: users[0].clinicId?.toString(),
+          createdBy: users[0].createdBy?.toString()
+        });
+      }
+
+      return res.status(200).json({ success: true, agents: users });
     } catch (err) {
-      console.error('Error fetching agents:', err);
-      return res.status(500).json({ success: false, message: 'Failed to fetch agents', error: err.message });
+      console.error('Error fetching users:', err);
+      return res.status(500).json({ success: false, message: 'Failed to fetch users', error: err.message });
     }
   }
 
@@ -80,18 +163,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'action must be either "approve", "decline" or "resetPassword"' });
     }
 
-    // Build query to find agent based on who is requesting
-    let agentQuery = { _id: agentId, role: 'agent' };
+    // Build query to find agent or doctorStaff based on who is requesting
+    // STRICT: Only allow modification of records created by the current user (or agents from clinic)
+    let agentQuery = { _id: agentId, role: { $in: ['agent', 'doctorStaff'] } };
 
     if (me.role === 'admin') {
-      // Admin can only modify agents they created
+      // Admin can only modify agents/doctorStaff they created
       agentQuery.createdBy = me._id;
     } else if (me.role === 'clinic') {
       // Clinic can modify agents from their clinic OR agents they created
+      // For doctorStaff, they can ONLY modify ones they created
       const clinic = await Clinic.findOne({ owner: me._id });
       if (clinic) {
         agentQuery.$or = [
-          { clinicId: clinic._id },
+          { role: 'agent', clinicId: clinic._id },
           { createdBy: me._id }
         ];
       } else {
@@ -99,18 +184,20 @@ export default async function handler(req, res) {
       }
     } else if (me.role === 'doctor') {
       // Doctor can modify agents from their clinic OR agents they created
+      // For doctorStaff, they can ONLY modify ones they created
       if (me.clinicId) {
         agentQuery.$or = [
-          { clinicId: me.clinicId },
+          { role: 'agent', clinicId: me.clinicId },
           { createdBy: me._id }
         ];
       } else {
         agentQuery.createdBy = me._id;
       }
     } else if (me.role === 'agent') {
-      // Agent can only modify agents from their clinic
+      // Agent can only modify agents from their clinic (not doctorStaff)
       if (me.clinicId) {
         agentQuery.clinicId = me.clinicId;
+        agentQuery.role = 'agent'; // Agents can't modify doctorStaff
       } else {
         return res.status(403).json({ success: false, message: 'Agent has no clinic assigned' });
       }
@@ -118,7 +205,7 @@ export default async function handler(req, res) {
 
     const agent = await User.findOne(agentQuery);
     if (!agent) {
-      return res.status(404).json({ success: false, message: 'Agent not found or you do not have permission to modify this agent' });
+      return res.status(404).json({ success: false, message: 'User not found or you do not have permission to modify this user' });
     }
 
     if (action === 'approve') {

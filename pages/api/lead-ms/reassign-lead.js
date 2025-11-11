@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   await dbConnect();
 
   const user = await getUserFromReq(req);
-  if (!requireRole(user, ["clinic", "agent"])) {
+  if (!requireRole(user, ["clinic", "agent", "admin"])) {
     return res.status(403).json({ message: "Access denied" });
   }
 
@@ -23,27 +23,60 @@ export default async function handler(req, res) {
 
       const agentsArray = Array.isArray(agentIds) ? agentIds : [agentIds];
 
+      // ✅ First, get the lead to determine which clinic it belongs to
+      const lead = await Lead.findById(leadId);
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+
       // ✅ Determine clinic
       let clinic;
       if (user.role === "clinic") {
         clinic = await Clinic.findOne({ owner: user._id }).select("_id");
+        // Ensure the lead belongs to this clinic
+        if (lead.clinicId.toString() !== clinic._id.toString()) {
+          return res.status(403).json({ message: "Not allowed to access this lead" });
+        }
       } else if (user.role === "agent") {
         if (!user.clinicId) {
           return res.status(403).json({ message: "Agent not linked to any clinic" });
         }
         clinic = await Clinic.findById(user.clinicId).select("_id");
+        // Ensure the lead belongs to this clinic
+        if (lead.clinicId.toString() !== clinic._id.toString()) {
+          return res.status(403).json({ message: "Not allowed to access this lead" });
+        }
+      } else if (user.role === "admin") {
+        // Admin can access any lead
+        clinic = await Clinic.findById(lead.clinicId).select("_id");
+        if (!clinic) {
+          return res.status(404).json({ message: "Clinic not found" });
+        }
       }
 
       if (!clinic) {
         return res.status(404).json({ message: "Clinic not found for this user" });
       }
 
-      // ✅ Ensure agent (if role=agent) is assigned to this lead OR belongs to same clinic
-      const lead = await Lead.findOne({ _id: leadId, clinicId: clinic._id });
-      if (!lead) {
-        return res.status(404).json({ message: "Lead not found for this clinic" });
+      // ✅ Check permission for assigning leads (only for clinic and agent, admin bypasses)
+      if (user.role !== "admin") {
+        const { checkClinicPermission } = await import("./permissions-helper");
+        const { hasPermission, error } = await checkClinicPermission(
+          clinic._id,
+          "lead",
+          "update", // Assigning is an update operation
+          "Assign Lead" // Check "Assign Lead" submodule permission
+        );
+
+        if (!hasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: error || "You do not have permission to assign leads"
+          });
+        }
       }
 
+      // ✅ Ensure agent (if role=agent) is assigned to this lead OR belongs to same clinic
       if (user.role === "agent") {
         const isAssigned = lead.assignedTo.some((a) => a.user.toString() === user._id.toString());
         if (!isAssigned) {

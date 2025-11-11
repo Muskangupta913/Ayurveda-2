@@ -1,27 +1,58 @@
-// pages/api/job-postings/my-jobs.ts
-
+// pages/api/job-postings/my-jobs.js
 import dbConnect from '../../../lib/database';
 import JobPosting from '../../../models/JobPosting';
-import jwt from 'jsonwebtoken';
+import { getUserFromReq, requireRole } from '../lead-ms/auth';
+import { getClinicIdFromUser, checkClinicPermission } from '../lead-ms/permissions-helper';
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') return res.status(405).json({ message: 'Method not allowed' });
+  if (req.method !== 'GET') {
+    res.setHeader("Allow", ["GET"]);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
 
   await dbConnect();
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
-
-  const token = authHeader.split(' ')[1];
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { userId } = decoded;
+    const me = await getUserFromReq(req);
+    if (!me || !requireRole(me, ["clinic", "admin"])) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
 
-    const jobs = await JobPosting.find({ postedBy: userId }).sort({ createdAt: -1 });
+    const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+    if (error && !isAdmin) {
+      return res.status(404).json({ success: false, message: error });
+    }
+
+    // ✅ Check permission for reading jobs (only for clinic, admin bypasses)
+    if (!isAdmin && clinicId) {
+      const { hasPermission, error: permError } = await checkClinicPermission(
+        clinicId,
+        "jobs",
+        "read"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: permError || "You do not have permission to view jobs"
+        });
+      }
+    }
+
+    let match = {};
+    if (!isAdmin) {
+      const orConditions = [{ postedBy: me._id }];
+      if (clinicId) {
+        orConditions.push({ clinicId });
+      }
+      match = { $or: orConditions };
+    }
+
+    const jobs = await JobPosting.find(match).sort({ createdAt: -1 });
 
     return res.status(200).json({ success: true, jobs });
-  } catch {
-    return res.status(401).json({ message: 'Invalid token' });
+  } catch (error) {
+    console.error("Error fetching jobs:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
