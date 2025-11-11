@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import CreateAgentModal from '../../components/CreateAgentModal';
+import AgentPermissionModal from '../../components/AgentPermissionModal';
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth';
 import type { NextPageWithLayout } from '../_app';
@@ -13,12 +14,16 @@ interface Agent {
   phone?: string;
   isApproved: boolean;
   declined: boolean;
+  role?: string;
 }
 
 const ManageAgentsPage: NextPageWithLayout = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [doctorStaff, setDoctorStaff] = useState<Agent[]>([]);
+  const [activeView, setActiveView] = useState<'agents' | 'doctorStaff'>('agents');
   const [menuAgentId, setMenuAgentId] = useState<string | null>(null);
   const [passwordAgent, setPasswordAgent] = useState<Agent | null>(null);
+  const [permissionAgent, setPermissionAgent] = useState<Agent | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -28,7 +33,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
 
   async function loadAgents() {
     try {
-      const { data } = await axios.get('/api/lead-ms/get-agents', {
+      const { data } = await axios.get('/api/lead-ms/get-agents?role=agent', {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
       if (data.success) setAgents(data.agents);
@@ -37,8 +42,23 @@ const ManageAgentsPage: NextPageWithLayout = () => {
     }
   }
 
+  async function loadDoctorStaff() {
+    try {
+      const { data } = await axios.get('/api/lead-ms/get-agents?role=doctorStaff', {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (data.success) setDoctorStaff(data.agents);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function loadAll() {
+    await Promise.all([loadAgents(), loadDoctorStaff()]);
+  }
+
   useEffect(() => {
-    loadAgents();
+    loadAll();
   }, []);
 
   async function handleAction(agentId: string, action: string) {
@@ -51,9 +71,15 @@ const ManageAgentsPage: NextPageWithLayout = () => {
         }
       );
       if (data.success) {
-        setAgents((prev) =>
-          prev.map((a) => (a._id === agentId ? data.agent : a))
-        );
+        if (data.agent.role === 'doctorStaff') {
+          setDoctorStaff((prev) =>
+            prev.map((a) => (a._id === agentId ? data.agent : a))
+          );
+        } else {
+          setAgents((prev) =>
+            prev.map((a) => (a._id === agentId ? data.agent : a))
+          );
+        }
       }
     } catch (err) {
       console.error(err);
@@ -78,7 +104,11 @@ const ManageAgentsPage: NextPageWithLayout = () => {
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
       if (data.success) {
-        setAgents((prev) => prev.map((a) => (a._id === passwordAgent._id ? data.agent : a)));
+        if (data.agent.role === 'doctorStaff') {
+          setDoctorStaff((prev) => prev.map((a) => (a._id === passwordAgent._id ? data.agent : a)));
+        } else {
+          setAgents((prev) => prev.map((a) => (a._id === passwordAgent._id ? data.agent : a)));
+        }
         setPasswordAgent(null);
         setNewPassword('');
         setConfirmPassword('');
@@ -93,9 +123,13 @@ const ManageAgentsPage: NextPageWithLayout = () => {
     }
   }
 
+  const currentList = activeView === 'agents' ? agents : doctorStaff;
   const totalAgents = agents.length;
   const approvedAgents = agents.filter((a: Agent) => a.isApproved).length;
   const declinedAgents = agents.filter((a: Agent) => a.declined).length;
+  const totalDoctorStaff = doctorStaff.length;
+  const approvedDoctorStaff = doctorStaff.filter((a: Agent) => a.isApproved).length;
+  const declinedDoctorStaff = doctorStaff.filter((a: Agent) => a.declined).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -104,6 +138,32 @@ const ManageAgentsPage: NextPageWithLayout = () => {
         <div className="mb-8">
           <h1 className="text-xl font-semibold text-gray-900">Agent management</h1>
           <p className="text-xs text-gray-500 mt-0.5">Create and manage agent accounts</p>
+        </div>
+
+        {/* Toggle Slider - Subtle integration */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+            <button
+              onClick={() => setActiveView('agents')}
+              className={`px-4 py-2 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'agents'
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Agents ({totalAgents})
+            </button>
+            <button
+              onClick={() => setActiveView('doctorStaff')}
+              className={`px-4 py-2 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'doctorStaff'
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Doctor Staff ({totalDoctorStaff})
+            </button>
+          </div>
         </div>
 
         {/* Stats + Create Button */}
@@ -157,7 +217,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {agents.length === 0 ? (
+                {currentList.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-5 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center justify-center">
@@ -182,7 +242,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
                     </td>
                   </tr>
                 ) : (
-                  agents.map((agent) => (
+                  currentList.map((agent) => (
                     <tr key={agent._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3 whitespace-nowrap">
                         <div className="flex items-center">
@@ -255,7 +315,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
                               </svg>
                             </button>
                             {menuAgentId === agent._id && (
-                              <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                              <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-20">
                                 <button
                                   className="w-full text-left px-3 py-2 text-[11px] hover:bg-gray-50 transition-colors"
                                   onClick={() => {
@@ -264,6 +324,15 @@ const ManageAgentsPage: NextPageWithLayout = () => {
                                   }}
                                 >
                                   Change password
+                                </button>
+                                <button
+                                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-gray-50 transition-colors border-t border-gray-200"
+                                  onClick={() => {
+                                    setPermissionAgent(agent);
+                                    setMenuAgentId(null);
+                                  }}
+                                >
+                                  Rights
                                 </button>
                               </div>
                             )}
@@ -283,11 +352,23 @@ const ManageAgentsPage: NextPageWithLayout = () => {
       <CreateAgentModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onCreated={loadAgents}
+        onCreated={loadAll}
         token={undefined}
         doctorToken={undefined}
         adminToken={adminToken || undefined}
       />
+
+      {/* Agent Permission Modal */}
+      {permissionAgent && (
+        <AgentPermissionModal
+          isOpen={!!permissionAgent}
+          onClose={() => setPermissionAgent(null)}
+          agentId={permissionAgent._id}
+          agentName={permissionAgent.name}
+          token={adminToken || null}
+          userRole="admin"
+        />
+      )}
 
       {/* Change Password Modal */}
       {passwordAgent && (
