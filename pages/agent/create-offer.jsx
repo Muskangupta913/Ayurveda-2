@@ -4,13 +4,12 @@ import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import CreateOfferModal from "../../components/CreateOfferModal";
 import AgentLayout from "../../components/AgentLayout"; // ✅ agent layout
 import withAgentAuth from "../../components/withAgentAuth"; // ✅ agent auth
-import type { NextPageWithLayout } from "../_app";
 
 function OffersPage() {
-  const [offers, setOffers] = useState<any[]>([]);
+  const [offers, setOffers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
-  const [editingOfferData, setEditingOfferData] = useState<any>(null);
+  const [editingOfferId, setEditingOfferId] = useState(null);
+  const [editingOfferData, setEditingOfferData] = useState(null);
   const token = typeof window !== "undefined" ? localStorage.getItem("agentToken") : "";
 
   // Fetch all offers
@@ -36,7 +35,7 @@ function OffersPage() {
     fetchOffers();
   }, [token]);
 
-  const openEditModal = async (offerId: string) => {
+  const openEditModal = async (offerId) => {
     if (!token) return alert("Not authorized!");
     setEditingOfferId(offerId);
     setModalOpen(true);
@@ -59,7 +58,7 @@ function OffersPage() {
     }
   };
 
-  const handleOfferSaved = (offer: any, isUpdate: boolean) => {
+  const handleOfferSaved = (offer, isUpdate) => {
     if (isUpdate) {
       setOffers((prev) => prev.map((o) => (o._id === offer._id ? offer : o)));
     } else {
@@ -67,7 +66,7 @@ function OffersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this offer?")) return;
     if (!token) return alert("Not authorized!");
 
@@ -128,7 +127,7 @@ function OffersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {offers.map((offer: any) => (
+                  {offers.map((offer) => (
                     <tr
                       key={offer._id}
                       className="border-b hover:bg-gray-50 transition"
@@ -197,10 +196,10 @@ function OffersPage() {
 }
 
 // Wrap page in AgentLayout
-OffersPage.getLayout = (page: React.ReactNode) => <AgentLayout>{page}</AgentLayout>;
+OffersPage.getLayout = (page) => <AgentLayout>{page}</AgentLayout>;
 
 // Protect page
-const ProtectedOffersPage: NextPageWithLayout = withAgentAuth(OffersPage as any);
+const ProtectedOffersPage = withAgentAuth(OffersPage);
 ProtectedOffersPage.getLayout = OffersPage.getLayout;
 
 export default ProtectedOffersPage;

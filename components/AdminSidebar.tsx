@@ -20,11 +20,13 @@ const navItems: NavItem[] = [
     icon: '🏠',
     description: 'Overview & analytics'
   },
+  
   {
     label: 'Approval Clinic',
-    path: '/admin/AdminClinicApproval',
+    path: '/admin/AdminClinicApproval ',
     icon: '✅',
     description: 'Manage Clinics'
+    // badge: 8
   },
   {
     label: 'Approval Doctors',
@@ -38,11 +40,13 @@ const navItems: NavItem[] = [
     icon: '📝',
     description: 'Add new Treatment'
   },
+
+
   {
     label: 'All Blogs',
     path: '/admin/all-blogs',
-    icon: '📚',
-    description: 'Manage blogs'
+    icon: '👥',
+    description: 'Manage users & roles'
   },
   {
     label: 'User Analytics',
@@ -50,6 +54,26 @@ const navItems: NavItem[] = [
     icon: '📊',
     description: 'View detailed reports'
   },
+
+  {
+    label: 'Request Call Back',
+    path: '/admin/get-in-touch',
+    icon: '📞',
+    description: 'View and export user call back requests'
+  },
+  {
+    label: 'All Blogs',
+    path: '/admin/all-blogs',
+    icon: '👥',
+    description: 'Manage users & roles'
+  },
+  {
+    label: 'User Analytics',
+    path: '/admin/analytics',
+    icon: '📊',
+    description: 'View detailed reports'
+  },
+
   {
     label: 'Request Call Back',
     path: '/admin/get-in-touch',
@@ -59,15 +83,10 @@ const navItems: NavItem[] = [
   {
     label: 'Manage Job',
     path: '/admin/job-manage',
-    icon: '💼',
+    icon: '⚙️',
     description: 'Approve or decline job'
   },
-  {
-    label: 'Contractors',
-    path: '/admin/Contractor',
-    icon: '🏗️',
-    description: 'Manage contractors'
-  },
+ 
   {
     label: "Staff Management",
     icon: "👥",
@@ -103,9 +122,24 @@ const navItems: NavItem[] = [
         path: '/admin/track-expenses',
         icon: '💰',
       },
+      {
+        label: 'Contracts',
+        path: '/admin/contracters',
+        icon: '⚙️',
+      },
     ],
-  }
+  },
+  {
+    label: "Create Agent",
+    path: "/admin/create-agent",
+    icon: "👤",
+    description: "Create agent account",
+  },
+  
+
+
 ];
+
 interface AdminSidebarProps {
   className?: string;
 }
@@ -261,7 +295,7 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
               Admin Management
             </div>
             <div className="space-y-1">
-              {navItems.map((item, index) => {
+              {navItems.map((item) => {
                 const isActive = router.pathname === item.path;
                 const isDropdownOpen = openDropdown === item.label;
                 const hasChildren = item.children && item.children.length > 0;
@@ -269,7 +303,7 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
                 // If item has children => Dropdown
                 if (item.children) {
                   return (
-                    <div key={`${item.label}-${index}`}>
+                    <div key={item.label}>
                       <div
                         className={clsx(
                           "group relative block rounded-lg transition-all duration-200 cursor-pointer p-3 touch-manipulation active:scale-98",
@@ -495,11 +529,11 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
 
                 // ✅ Only wrap in <Link> if item.path exists
                 return item.path ? (
-                  <Link key={`${item.label}-${index}`} href={item.path}>
+                  <Link key={item.label} href={item.path}>
                     {MenuItemContent}
                   </Link>
                 ) : (
-                  <div key={`${item.label}-${index}`}>{MenuItemContent}</div>
+                  <div key={item.label}>{MenuItemContent}</div>
                 );
               })}
             </div>
@@ -558,7 +592,7 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
               </div>
 
               <div className="space-y-1">
-                {navItems.map((item, index) => {
+                {navItems.map((item) => {
                   const isActive = router.pathname === item.path;
 
                   const MenuItemContent = (
@@ -640,11 +674,11 @@ const AdminSidebar: FC<AdminSidebarProps> = ({ className }) => {
 
                   // ✅ Wrap in <Link> only if path exists
                   return item.path ? (
-                    <Link key={`${item.label}-${index}`} href={item.path}>
+                    <Link key={item.label} href={item.path}>
                       {MenuItemContent}
                     </Link>
                   ) : (
-                    <div key={`${item.label}-${index}`}>{MenuItemContent}</div>
+                    <div key={item.label}>{MenuItemContent}</div>
                   );
                 })}
               </div>

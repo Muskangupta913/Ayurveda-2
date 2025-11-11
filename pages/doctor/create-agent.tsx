@@ -2,28 +2,34 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import CreateAgentModal from '../../components/CreateAgentModal';
-import ClinicLayout from '../../components/ClinicLayout';
-import withClinicAuth from '../../components/withClinicAuth';
+import DoctorLayout from '../../components/DoctorLayout';
+import withDoctorAuth from '../../components/withDoctorAuth';
+import type { NextPageWithLayout } from '../_app';
 
-const ManageAgentsPage = () => {
-  const [agents, setAgents] = useState([]);
-  const [aName, setAName] = useState('');
-  const [aEmail, setAEmail] = useState('');
-  const [aPhone, setAPhone] = useState('');
-  const [aPassword, setAPassword] = useState('');
-  const [menuAgentId, setMenuAgentId] = useState(null);
-  const [passwordAgent, setPasswordAgent] = useState(null);
+interface Agent {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  isApproved: boolean;
+  declined: boolean;
+}
+
+const ManageAgentsPage: NextPageWithLayout = () => {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [menuAgentId, setMenuAgentId] = useState<string | null>(null);
+  const [passwordAgent, setPasswordAgent] = useState<Agent | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('clinicToken') : null;
+  const doctorToken =
+    typeof window !== 'undefined' ? localStorage.getItem('doctorToken') : null;
 
   async function loadAgents() {
     try {
       const { data } = await axios.get('/api/lead-ms/get-agents', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${doctorToken}` },
       });
       if (data.success) setAgents(data.agents);
     } catch (err) {
@@ -35,13 +41,13 @@ const ManageAgentsPage = () => {
     loadAgents();
   }, []);
 
-  async function handleAction(agentId, action) {
+  async function handleAction(agentId: string, action: string) {
     try {
       const { data } = await axios.patch(
         '/api/lead-ms/get-agents',
         { agentId, action },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${doctorToken}` },
         }
       );
       if (data.success) {
@@ -54,7 +60,7 @@ const ManageAgentsPage = () => {
     }
   }
 
-  async function handleResetPasswordSubmit(e) {
+  async function handleResetPasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!passwordAgent) return;
     if (!newPassword || newPassword.length < 6) {
@@ -69,7 +75,7 @@ const ManageAgentsPage = () => {
       const { data } = await axios.patch(
         '/api/lead-ms/get-agents',
         { agentId: passwordAgent._id, action: 'resetPassword', newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${doctorToken}` } }
       );
       if (data.success) {
         setAgents((prev) => prev.map((a) => (a._id === passwordAgent._id ? data.agent : a)));
@@ -88,8 +94,8 @@ const ManageAgentsPage = () => {
   }
 
   const totalAgents = agents.length;
-  const approvedAgents = agents.filter((a) => a.isApproved).length;
-  const declinedAgents = agents.filter((a) => a.declined).length;
+  const approvedAgents = agents.filter((a: Agent) => a.isApproved).length;
+  const declinedAgents = agents.filter((a: Agent) => a.declined).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -278,8 +284,8 @@ const ManageAgentsPage = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreated={loadAgents}
-        token={token || undefined}
-        doctorToken={undefined}
+        token={undefined}
+        doctorToken={doctorToken || undefined}
         adminToken={undefined}
       />
 
@@ -342,10 +348,11 @@ const ManageAgentsPage = () => {
 };
 
 // Apply Layout
-ManageAgentsPage.getLayout = (page) => <ClinicLayout>{page}</ClinicLayout>;
+ManageAgentsPage.getLayout = (page: React.ReactNode) => <DoctorLayout>{page}</DoctorLayout>;
 
 // Preserve layout on wrapped component
-const ProtectedManageAgentsPage = withClinicAuth(ManageAgentsPage);
+const ProtectedManageAgentsPage: NextPageWithLayout = withDoctorAuth(ManageAgentsPage) as any;
 ProtectedManageAgentsPage.getLayout = ManageAgentsPage.getLayout;
 
 export default ProtectedManageAgentsPage;
+

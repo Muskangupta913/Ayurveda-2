@@ -31,9 +31,12 @@ export default function withDoctorAuth<P extends object>(
           : null;
 
         if (!token || !user) {
+          console.warn('Missing token or user data. Token:', !!token, 'User:', !!user);
           toast.error('Please login to continue');
           clearStorage();
-          setTimeout(() => router.replace('/doctor/login'), 4000);
+          // Redirect immediately
+          router.replace('/doctor/login');
+          setIsLoading(false);
           return;
         }
 
@@ -48,20 +51,25 @@ export default function withDoctorAuth<P extends object>(
 
           if (response.ok && data.valid) {
             setIsAuthenticated(true);
+            setIsLoading(false);
           } else {
+            console.error('Token verification failed:', data);
+            const errorMessage = data.message || 'Authentication failed';
             if (data.message === 'Token expired') {
-              toast.error('Session expired. Logging out in 4 seconds…');
+              toast.error('Session expired. Please login again.');
             } else {
-              toast.error('Authentication failed. Logging out in 4 seconds…');
+              toast.error(errorMessage);
             }
             clearStorage();
-            setTimeout(() => router.replace('/doctor/login'), 4000);
+            // Redirect immediately instead of waiting 4 seconds
+            router.replace('/doctor/login');
           }
         } catch (error) {
           console.error('Doctor token verification failed:', error);
-          toast.error('Something went wrong. Logging out in 4 seconds…');
+          toast.error('Network error. Please check your connection.');
           clearStorage();
-          setTimeout(() => router.replace('/doctor/login'), 4000);
+          // Redirect immediately instead of waiting 4 seconds
+          router.replace('/doctor/login');
         } finally {
           setIsLoading(false);
         }

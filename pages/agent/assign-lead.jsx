@@ -2,29 +2,10 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import AgentLayout from '../../components/AgentLayout';
 import withAgentAuth from '../../components/withAgentAuth';
-import type { NextPageWithLayout } from '../_app';
 
-interface Lead {
-  _id: string;
-  name: string;
-  phone?: string;
-  treatments?: any[];
-  source?: string;
-  offerTag?: string;
-  status?: string;
-  notes?: any[];
-  assignedTo?: any[];
-  followUps?: any[];
-}
-
-interface Agent {
-  _id: string;
-  name: string;
-}
-
-const LeadsPage: NextPageWithLayout = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
+const LeadsPage = () => {
+  const [leads, setLeads] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [filters, setFilters] = useState({
     treatment: "",
     offer: "",
@@ -34,8 +15,8 @@ const LeadsPage: NextPageWithLayout = () => {
     startDate: "",
     endDate: "",
   });
-  const [selectedLead, setSelectedLead] = useState<string | null>(null);
-  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [selectedAgents, setSelectedAgents] = useState([]);
   const [followUpDate, setFollowUpDate] = useState("");
 
   const token = typeof window !== "undefined" ? localStorage.getItem("agentToken") : null;
@@ -90,7 +71,7 @@ const LeadsPage: NextPageWithLayout = () => {
     }
   };
 
-  const deleteLead = async (leadId: string) => {
+  const deleteLead = async (leadId) => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
     try {
       await axios.delete("/api/lead-ms/lead-delete", {
@@ -217,10 +198,10 @@ const LeadsPage: NextPageWithLayout = () => {
 };
 
 // Wrap page in AgentLayout
-LeadsPage.getLayout = (page: React.ReactNode) => <AgentLayout>{page}</AgentLayout>;
+LeadsPage.getLayout = (page) => <AgentLayout>{page}</AgentLayout>;
 
 // Protect page
-const ProtectedLeadsPage: NextPageWithLayout = withAgentAuth(LeadsPage as any);
+const ProtectedLeadsPage = withAgentAuth(LeadsPage);
 ProtectedLeadsPage.getLayout = LeadsPage.getLayout;
 
 export default ProtectedLeadsPage;

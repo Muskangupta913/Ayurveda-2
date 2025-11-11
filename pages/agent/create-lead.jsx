@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import AgentLayout from "../../components/AgentLayout";
 import withAgentAuth from "../../components/withAgentAuth";
-import type { NextPageWithLayout } from '../_app';
 
 function LeadForm() {
   const [formData, setFormData] = useState({
@@ -23,14 +22,14 @@ function LeadForm() {
 
   const [treatments, setTreatments] = useState([]);
   const [customTreatment, setCustomTreatment] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState(null);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [noteType, setNoteType] = useState("");
   const [customNote, setCustomNote] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef(null);
 
   const token =
     typeof window !== "undefined"
@@ -39,8 +38,8 @@ function LeadForm() {
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && event.target instanceof Node && !dropdownRef.current.contains(event.target)) {
         setOpen(false);
       }
     }
@@ -78,11 +77,11 @@ function LeadForm() {
     }
   }, [token]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleTreatmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTreatmentChange = (e) => {
     const value = e.target.value;
     if (value.includes("-")) {
       const [mainId, subIdx] = value.split("-");
@@ -137,7 +136,7 @@ function LeadForm() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -200,7 +199,7 @@ function LeadForm() {
     }
   };
 
-  const toggleAgentSelection = (agentId: string) => {
+  const toggleAgentSelection = (agentId) => {
     setFormData(prev => ({
       ...prev,
       assignedTo: prev.assignedTo.includes(agentId) 
@@ -624,10 +623,10 @@ function LeadForm() {
 }
 
 // Wrap page in AgentLayout
-LeadForm.getLayout = (page: React.ReactNode) => <AgentLayout>{page}</AgentLayout>;
+LeadForm.getLayout = (page) => <AgentLayout>{page}</AgentLayout>;
 
 // Protect page
-const ProtectedLeadForm: NextPageWithLayout = withAgentAuth(LeadForm as any);
+const ProtectedLeadForm = withAgentAuth(LeadForm);
 ProtectedLeadForm.getLayout = LeadForm.getLayout;
 
 export default ProtectedLeadForm;

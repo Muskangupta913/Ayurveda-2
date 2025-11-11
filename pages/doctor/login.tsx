@@ -13,7 +13,7 @@ interface DoctorLoginResponse {
 }
 
 // Auth utility functions
-const AUTH_STORAGE_KEY = 'doctorAuth';
+const AUTH_STORAGE_KEY = 'doctorUser'; // ✅ Changed from 'doctorAuth' to 'doctorUser' to match HOC
 const TOKEN_KEY = 'doctorToken';
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes

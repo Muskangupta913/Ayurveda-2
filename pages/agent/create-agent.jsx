@@ -2,19 +2,9 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import AgentLayout from "../../components/AgentLayout"; // ✅ agent layout
 import withAgentAuth from "../../components/withAgentAuth"; // ✅ agent auth
-import type { NextPageWithLayout } from '../_app';
 
-interface Agent {
-  _id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  isApproved: boolean;
-  declined: boolean;
-}
-
-const ManageAgentsPage: NextPageWithLayout = () => {
-  const [agents, setAgents] = useState<Agent[]>([]);
+const ManageAgentsPage = () => {
+  const [agents, setAgents] = useState([]);
   const [aName, setAName] = useState('');
   const [aEmail, setAEmail] = useState('');
   const [aPhone, setAPhone] = useState('');
@@ -35,7 +25,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
 
   useEffect(() => { loadAgents(); }, []);
 
-  async function createAgent(e: React.FormEvent) {
+  async function createAgent(e) {
     e.preventDefault();
     try {
       const { data } = await axios.post('/api/lead-ms/create-agent', {
@@ -54,7 +44,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
     }
   }
 
-  async function handleAction(agentId: string, action: 'approve' | 'decline') {
+  async function handleAction(agentId, action) {
     try {
       const { data } = await axios.patch('/api/lead-ms/get-agents', { agentId, action }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -156,10 +146,10 @@ const ManageAgentsPage: NextPageWithLayout = () => {
 
 
 // Wrap page in AgentLayout
-ManageAgentsPage.getLayout = (page: React.ReactNode) => <AgentLayout>{page}</AgentLayout>;
+ManageAgentsPage.getLayout = (page) => <AgentLayout>{page}</AgentLayout>;
 
 // Protect page
-const ProtectedManageAgents: NextPageWithLayout = withAgentAuth(ManageAgentsPage as any);
+const ProtectedManageAgents = withAgentAuth(ManageAgentsPage);
 ProtectedManageAgents.getLayout = ManageAgentsPage.getLayout;
 
 export default ProtectedManageAgents;

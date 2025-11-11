@@ -1,9 +1,8 @@
 import React from "react";
 import AgentLayout from "../../components/AgentLayout"; // ✅ use Agent layout
 import withAgentAuth from "../../components/withAgentAuth"; // ✅ use Agent auth
-import type { NextPageWithLayout } from "../_app";
 
-const AgentDashboard: NextPageWithLayout = () => {
+const AgentDashboard = () => {
   return (
     <div className="min-h-screen p-6 bg-gray-50">
       <div className="max-w-4xl mx-auto bg-white shadow rounded-lg p-8">
@@ -36,13 +35,13 @@ const AgentDashboard: NextPageWithLayout = () => {
 };
 
 // ✅ Attach Agent layout
-AgentDashboard.getLayout = function PageLayout(page: React.ReactNode) {
+AgentDashboard.getLayout = function PageLayout(page) {
   return <AgentLayout>{page}</AgentLayout>;
 };
 
 // ✅ Apply Agent Auth HOC
-const ProtectedAgentDashboard: NextPageWithLayout = withAgentAuth(
-  AgentDashboard as any
+const ProtectedAgentDashboard = withAgentAuth(
+  AgentDashboard
 );
 
 // ✅ Reassign layout for the protected version

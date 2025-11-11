@@ -2,142 +2,21 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { FC, useState, useEffect, useRef } from "react";
 import clsx from "clsx";
+import { clinicNavigationItems } from "../data/clinicNavigationItems";
 
-interface NavItem {
+interface NavItemChild {
   label: string;
-  path?: string; // ✅ Made optional
+  path?: string;
   icon: string;
-  description?: string; // ✅ Made optional
+  description?: string;
   badge?: number;
-  children?: NavItem[]; // ✅ Allow nested nav items
+  order?: number;
 }
 
-const navItems: NavItem[] = [
-  {
-    label: "Dashboard",
-    path: "/clinic/clinic-dashboard",
-    icon: "🏠",
-    description: "Overview & metrics",
-  },
-  {
-    label: "Manage Health Center",
-    path: "/clinic/myallClinic",
-    icon: "📅",
-    description: "Manage Clinic",
-  },
-  {
-    label: "Review",
-    path: "/clinic/getAllReview",
-    icon: "👤",
-    description: "Check all review",
-  },
-  {
-    label: "Enquiry",
-    path: "/clinic/get-Enquiry",
-    icon: "👨‍⚕️",
-    description: "All Patient Enquiries",
-  },
-  {
-    label: "Create Agent",
-    path: "/lead/create-agent",
-    icon: "📅",
-    description: "Manage Clinic",
-  },
-  {
-    label: "Lead",
-    icon: "🧑‍💼",
-    description: "Lead Management",
-    children: [
-      {
-        label: "Create Lead",
-        path: "/lead/create-lead",
-        icon: "👤",
-        description: "Create Lead",
-      },
-      {
-        label: "Assign Lead",
-        path: "/lead/assign-lead",
-        icon: "👨‍⚕️",
-        description: "All Patient Enquiries",
-      },
-    ],
-  },
-  {
-    label: "Create offers",
-    path: "/lead/create-offer",
-    icon: "🤑",
-    description: "Manage Offers",
-  },
-  {
-    label: "Marketing",
-    icon: "📊",
-    description: "Manage Marketing",
-    children: [
-      {
-        label: "SMS marketing",
-        path: "/marketingalltype/sms-marketing",
-        icon: "📩",
-        description: "Create SMS marketing",
-      },
-      {
-        label: "Whatsapp Marketing",
-        path: "/marketingalltype/whatsapp-marketing",
-        icon: "💬",
-        description: "Create Whatsapp marketing",
-      },
-      {
-        label: "Gmail Marketing",
-        path: "/marketingalltype/gmail-marketing",
-        icon: "✉️",
-        description: "Create Gmail marketing",
-      },
-    ],
-  },
-  {
-    label: "Jobs",
-    icon: "💼",
-    description: "Manage job postings",
-    children: [
-      {
-        label: "Job Posting",
-        path: "/clinic/job-posting",
-        icon: "📢",
-      },
-      {
-        label: "See All Jobs",
-        path: "/clinic/my-jobs",
-        icon: "💼",
-      },
-      {
-        label: "See Job Applicants",
-        path: "/clinic/job-applicants",
-        icon: "👥",
-      },
-    ],
-  },
-  {
-    label: "Blogs",
-    icon: "📄",
-    description: "Manage Blogs",
-    children: [
-      {
-        label: "Write Blog",
-        path: "/clinic/BlogForm",
-        icon: "📝",
-      },
-      {
-        label: "Published and Drafts Blogs",
-        path: "/clinic/published-blogs",
-        icon: "📄",
-      },
-      {
-        label: "Analytics of blog",
-        path: "/clinic/getAuthorCommentsAndLikes",
-        icon: "📊",
-      },
-    ],
-  },
-];
+interface NavItem extends NavItemChild {
+  moduleKey?: string;
+  children?: NavItemChild[];
+}
 
 interface ClinicSidebarProps {
   className?: string;
@@ -150,7 +29,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [items, setItems] = useState<NavItem[]>(navItems);
+  const [items, setItems] = useState<NavItem[]>(clinicNavigationItems as NavItem[]);
   const dragItemRef = useRef<
     | { type: 'parent'; parentIdx: number }
     | { type: 'child'; parentIdx: number; childIdx: number }
@@ -714,7 +593,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
               </div>
 
               <div className="space-y-1">
-                {navItems.map((item) => {
+                {items.map((item) => {
                   // If an item is manually selected, only that item should be active
                   // Otherwise, use router pathname to determine active state
                   const isActive = selectedItem 
