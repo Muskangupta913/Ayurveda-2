@@ -22,15 +22,25 @@ type AppPropsWithLayout = AppProps & {
 };
 
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
-  const getLayout = Component.getLayout || ((page: ReactNode) => <Layout>{page}</Layout>);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // ✅ Exclude loader for admin, clinic, and doctor layouts
+  // ✅ Exclude loader for admin, clinic, doctor, and agent layouts
   const isExcludedRoute =
     router.pathname.startsWith('/admin') ||
     router.pathname.startsWith('/clinic') ||
-    router.pathname.startsWith('/doctor');
+    router.pathname.startsWith('/doctor') ||
+    router.pathname.startsWith('/agent');
+
+  // For agent routes, ALWAYS use AgentLayout to ensure consistent sidebar
+  // This overrides any getLayout defined on the component (like AdminLayout)
+  let getLayout = Component.getLayout || ((page: ReactNode) => <Layout>{page}</Layout>);
+  
+  // Force AgentLayout for all /agent/* routes to ensure sidebar consistency
+  if (router.pathname.startsWith('/agent/')) {
+    const AgentLayout = require('../components/AgentLayout').default;
+    getLayout = (page: ReactNode) => <AgentLayout>{page}</AgentLayout>;
+  }
 
   useEffect(() => {
 

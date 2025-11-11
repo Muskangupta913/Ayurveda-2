@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { FC, useState, useEffect, useRef } from "react";
 import clsx from "clsx";
-import { clinicNavigationItems } from "../data/clinicNavigationItems";
+import axios from "axios";
 
 interface NavItemChild {
   label: string;
@@ -18,6 +18,22 @@ interface NavItem extends NavItemChild {
   children?: NavItemChild[];
 }
 
+interface NavigationItemFromAPI {
+  _id: string;
+  label: string;
+  path?: string;
+  icon: string;
+  description?: string;
+  order: number;
+  moduleKey: string;
+  subModules?: Array<{
+    name: string;
+    path?: string;
+    icon: string;
+    order: number;
+  }>;
+}
+
 interface ClinicSidebarProps {
   className?: string;
 }
@@ -29,7 +45,8 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [items, setItems] = useState<NavItem[]>(clinicNavigationItems as NavItem[]);
+  const [items, setItems] = useState<NavItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const dragItemRef = useRef<
     | { type: 'parent'; parentIdx: number }
     | { type: 'child'; parentIdx: number; childIdx: number }
@@ -62,15 +79,85 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
     };
   }, [isMobileOpen]);
 
-  // Load saved sidebar order
+  // Fetch navigation items and permissions
   useEffect(() => {
-    try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('clinicSidebarOrder') : null;
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) setItems(parsed as NavItem[]);
+    const fetchNavigationAndPermissions = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('clinicToken') : null;
+        if (!token) {
+          setItems([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const res = await axios.get("/api/clinic/sidebar-permissions", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.data.success) {
+          // Convert API navigation items to NavItem format
+          const convertedItems: NavItem[] = (res.data.navigationItems || []).map((item: NavigationItemFromAPI): NavItem => {
+            const navItem: NavItem = {
+              label: item.label,
+              path: item.path,
+              icon: item.icon,
+              description: item.description,
+              moduleKey: item.moduleKey,
+              order: item.order,
+            };
+
+            // Convert subModules to children
+            if (item.subModules && item.subModules.length > 0) {
+              navItem.children = item.subModules.map((subModule: { name: string; path?: string; icon: string; order: number }): NavItemChild => ({
+                label: subModule.name,
+                path: subModule.path,
+                icon: subModule.icon,
+                description: subModule.name,
+                order: subModule.order,
+              }));
+            }
+
+            return navItem;
+          });
+
+          // Sort by order
+          convertedItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+          convertedItems.forEach(item => {
+            if (item.children) {
+              item.children.sort((a, b) => (a.order || 0) - (b.order || 0));
+            }
+          });
+
+          // Try to load saved order and merge
+          try {
+            const saved = typeof window !== 'undefined' ? localStorage.getItem('clinicSidebarOrder') : null;
+            if (saved) {
+              const savedOrder = JSON.parse(saved) as NavItem[];
+              // Merge saved order with fetched items (preserve custom order if items match)
+              const mergedItems = convertedItems.map(item => {
+                const savedItem = savedOrder.find(si => si.moduleKey === item.moduleKey || si.label === item.label);
+                return savedItem ? { ...item, ...savedItem, path: item.path } : item;
+              });
+              setItems(mergedItems);
+            } else {
+              setItems(convertedItems);
+            }
+          } catch {
+            setItems(convertedItems);
+          }
+        } else {
+          console.error("Error fetching navigation items:", res.data.message);
+          setItems([]);
+        }
+      } catch (err: any) {
+        console.error("Error fetching navigation items and permissions:", err);
+        setItems([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch {}
+    };
+
+    fetchNavigationAndPermissions();
   }, []);
 
   // Persist order on change
@@ -285,7 +372,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
           <nav className="flex-1 overflow-y-auto custom-scrollbar px-4 py-6 min-h-0">
             
             <div className="space-y-1">
-              {items.map((item, parentIdx) => {
+              {isLoading ? (
+                <div className="text-xs text-gray-500 px-2">Loading menu…</div>
+              ) : (
+                items.map((item, parentIdx) => {
                 const isDropdownOpen = openDropdown === item.label;
                 // If an item is manually selected, only that item should be active
                 // Otherwise, use router pathname to determine active state
@@ -524,7 +614,8 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                     </div>
                   </Link>
                 );
-              })}
+              })
+              )}
             </div>
           </nav>
         </div>
@@ -592,8 +683,11 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                 Health Center Management
               </div>
 
-              <div className="space-y-1">
-                {items.map((item) => {
+              {isLoading ? (
+                <div className="text-xs text-gray-500 px-2">Loading menu…</div>
+              ) : (
+                <div className="space-y-1">
+                  {items.map((item) => {
                   // If an item is manually selected, only that item should be active
                   // Otherwise, use router pathname to determine active state
                   const isActive = selectedItem 
@@ -843,7 +937,8 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                     <div key={item.label}>{MenuItemContent}</div>
                   );
                 })}
-              </div>
+                </div>
+              )}
             </nav>
           </div>
         </aside>
