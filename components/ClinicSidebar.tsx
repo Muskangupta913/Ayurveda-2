@@ -948,3 +948,4 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
 };
 
 export default ClinicSidebar;
+ 
