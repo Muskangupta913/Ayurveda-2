@@ -2,27 +2,35 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import CreateAgentModal from '../../components/CreateAgentModal';
+import AgentPermissionModal from '../../components/AgentPermissionModal';
 import ClinicLayout from '../../components/ClinicLayout';
 import withClinicAuth from '../../components/withClinicAuth';
+import { clinicNavigationItems } from '../../data/clinicNavigationItems';
 
 const ManageAgentsPage = () => {
   const [agents, setAgents] = useState([]);
-  const [aName, setAName] = useState('');
-  const [aEmail, setAEmail] = useState('');
-  const [aPhone, setAPhone] = useState('');
-  const [aPassword, setAPassword] = useState('');
+  const [doctorStaff, setDoctorStaff] = useState([]);
+  const [activeView, setActiveView] = useState('agents');
   const [menuAgentId, setMenuAgentId] = useState(null);
   const [passwordAgent, setPasswordAgent] = useState(null);
+  const [permissionAgent, setPermissionAgent] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('clinicToken') : null;
+  // Get the appropriate token based on what's available (clinic > doctor > admin)
+  // This ensures we use the correct token for the logged-in user
+  const clinicToken = typeof window !== 'undefined' ? localStorage.getItem('clinicToken') : null;
+  const doctorToken = typeof window !== 'undefined' ? localStorage.getItem('doctorToken') : null;
+  const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  
+  // Determine which token to use based on what's available
+  // Priority: clinicToken > doctorToken > adminToken
+  const token = clinicToken || doctorToken || adminToken;
 
   async function loadAgents() {
     try {
-      const { data } = await axios.get('/api/lead-ms/get-agents', {
+      const { data } = await axios.get('/api/lead-ms/get-agents?role=agent', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) setAgents(data.agents);
@@ -31,8 +39,23 @@ const ManageAgentsPage = () => {
     }
   }
 
+  async function loadDoctorStaff() {
+    try {
+      const { data } = await axios.get('/api/lead-ms/get-agents?role=doctorStaff', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data.success) setDoctorStaff(data.agents);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function loadAll() {
+    await Promise.all([loadAgents(), loadDoctorStaff()]);
+  }
+
   useEffect(() => {
-    loadAgents();
+    loadAll();
   }, []);
 
   async function handleAction(agentId, action) {
@@ -45,9 +68,15 @@ const ManageAgentsPage = () => {
         }
       );
       if (data.success) {
-        setAgents((prev) =>
-          prev.map((a) => (a._id === agentId ? data.agent : a))
-        );
+        if (data.agent.role === 'doctorStaff') {
+          setDoctorStaff((prev) =>
+            prev.map((a) => (a._id === agentId ? data.agent : a))
+          );
+        } else {
+          setAgents((prev) =>
+            prev.map((a) => (a._id === agentId ? data.agent : a))
+          );
+        }
       }
     } catch (err) {
       console.error(err);
@@ -72,7 +101,11 @@ const ManageAgentsPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (data.success) {
-        setAgents((prev) => prev.map((a) => (a._id === passwordAgent._id ? data.agent : a)));
+        if (data.agent.role === 'doctorStaff') {
+          setDoctorStaff((prev) => prev.map((a) => (a._id === passwordAgent._id ? data.agent : a)));
+        } else {
+          setAgents((prev) => prev.map((a) => (a._id === passwordAgent._id ? data.agent : a)));
+        }
         setPasswordAgent(null);
         setNewPassword('');
         setConfirmPassword('');
@@ -87,9 +120,13 @@ const ManageAgentsPage = () => {
     }
   }
 
+  const currentList = activeView === 'agents' ? agents : doctorStaff;
   const totalAgents = agents.length;
   const approvedAgents = agents.filter((a) => a.isApproved).length;
   const declinedAgents = agents.filter((a) => a.declined).length;
+  const totalDoctorStaff = doctorStaff.length;
+  const approvedDoctorStaff = doctorStaff.filter((a) => a.isApproved).length;
+  const declinedDoctorStaff = doctorStaff.filter((a) => a.declined).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,6 +135,32 @@ const ManageAgentsPage = () => {
         <div className="mb-8">
           <h1 className="text-xl font-semibold text-gray-900">Agent management</h1>
           <p className="text-xs text-gray-500 mt-0.5">Create and manage agent accounts</p>
+        </div>
+
+        {/* Toggle Slider - Subtle integration */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+            <button
+              onClick={() => setActiveView('agents')}
+              className={`px-4 py-2 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'agents'
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Agents ({totalAgents})
+            </button>
+            <button
+              onClick={() => setActiveView('doctorStaff')}
+              className={`px-4 py-2 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'doctorStaff'
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Doctor Staff ({totalDoctorStaff})
+            </button>
+          </div>
         </div>
 
         {/* Stats + Create Button */}
@@ -151,7 +214,7 @@ const ManageAgentsPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {agents.length === 0 ? (
+                {currentList.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-5 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center justify-center">
@@ -176,7 +239,7 @@ const ManageAgentsPage = () => {
                     </td>
                   </tr>
                 ) : (
-                  agents.map((agent) => (
+                  currentList.map((agent) => (
                     <tr key={agent._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3 whitespace-nowrap">
                         <div className="flex items-center">
@@ -249,7 +312,7 @@ const ManageAgentsPage = () => {
                               </svg>
                             </button>
                             {menuAgentId === agent._id && (
-                              <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                              <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-20">
                                 <button
                                   className="w-full text-left px-3 py-2 text-[11px] hover:bg-gray-50 transition-colors"
                                   onClick={() => {
@@ -258,6 +321,15 @@ const ManageAgentsPage = () => {
                                   }}
                                 >
                                   Change password
+                                </button>
+                                <button
+                                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-gray-50 transition-colors border-t border-gray-200"
+                                  onClick={() => {
+                                    setPermissionAgent(agent);
+                                    setMenuAgentId(null);
+                                  }}
+                                >
+                                  Rights
                                 </button>
                               </div>
                             )}
@@ -277,11 +349,23 @@ const ManageAgentsPage = () => {
       <CreateAgentModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onCreated={loadAgents}
-        token={token || undefined}
-        doctorToken={undefined}
-        adminToken={undefined}
+        onCreated={loadAll}
+        token={clinicToken || undefined}
+        doctorToken={doctorToken || undefined}
+        adminToken={adminToken || undefined}
       />
+
+      {/* Agent Permission Modal */}
+      {permissionAgent && (
+        <AgentPermissionModal
+          isOpen={!!permissionAgent}
+          onClose={() => setPermissionAgent(null)}
+          agentId={permissionAgent._id}
+          agentName={permissionAgent.name}
+          token={token || null}
+          userRole={clinicToken ? 'clinic' : doctorToken ? 'doctor' : 'admin'}
+        />
+      )}
 
       {/* Change Password Modal */}
       {passwordAgent && (
