@@ -1,7 +1,8 @@
 import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
-import Clinic from "../../../models/Clinic";   // ✅ import Clinic model
+import Clinic from "../../../models/Clinic";
 import { getUserFromReq, requireRole } from "../lead-ms/auth";
+import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
 import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
@@ -27,36 +28,47 @@ export default async function handler(req, res) {
   }
 
   try {
-    let clinicId = null;
-    
-    // Find clinic based on role
-    if (me.role === "clinic") {
-      const clinic = await Clinic.findOne({ owner: me._id });
-      if (!clinic) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Clinic not found for this user" });
-      }
-      clinicId = clinic._id;
-    } else if (me.role === "agent") {
-      clinicId = me.clinicId; // agent already has clinicId
-      if (!clinicId) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Clinic not found for this agent" });
-      }
-    } else if (me.role === "doctor") {
-      // Doctor might have a clinicId, or might not (optional)
-      clinicId = me.clinicId || null;
+    const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+    if (error && !isAdmin) {
+      return res.status(404).json({ success: false, message: error });
     }
-    // For admin, clinicId is null (agents created by admin are not tied to a clinic)
+
+    // For admin or doctor without clinicId, allow creation but agent won't be tied to a clinic unless clinicId is provided
+    let resolvedClinicId = clinicId;
+    if (!resolvedClinicId && me.role === "admin" && req.body.clinicId) {
+      const clinic = await Clinic.findById(req.body.clinicId);
+      if (!clinic) {
+        return res.status(404).json({ success: false, message: "Clinic not found" });
+      }
+      resolvedClinicId = clinic._id;
+    }
+
+    if (!isAdmin && !resolvedClinicId) {
+      return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+    }
+
+    // Permission checks for clinic/agent roles
+    if (!isAdmin && resolvedClinicId) {
+      const { hasPermission, error: permError } = await checkClinicPermission(
+        resolvedClinicId,
+        "create_agent",
+        "create"
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: permError || "You do not have permission to create agents",
+        });
+      }
+    }
 
     // Check if agent already exists with this email
     // If clinicId is provided, check within that clinic
     // If no clinicId (admin), check for agents without clinicId (admin-created)
     const existingQuery = { email, role: "agent" };
-    if (clinicId) {
-      existingQuery.clinicId = clinicId;
+    if (resolvedClinicId) {
+      existingQuery.clinicId = resolvedClinicId;
     } else {
       // For admin-created agents (no clinicId), check for agents with null/undefined clinicId
       existingQuery.$or = [
@@ -90,8 +102,8 @@ export default async function handler(req, res) {
       declined: false,
     };
     
-    if (clinicId) {
-      agentData.clinicId = clinicId;
+    if (resolvedClinicId) {
+      agentData.clinicId = resolvedClinicId;
     }
 
     const agent = await User.create(agentData);

@@ -1,8 +1,8 @@
 // pages/api/job-postings/my-jobs.js
 import dbConnect from '../../../lib/database';
 import JobPosting from '../../../models/JobPosting';
-import Clinic from '../../../models/Clinic';
 import { getUserFromReq, requireRole } from '../lead-ms/auth';
+import { getClinicIdFromUser, checkClinicPermission } from '../lead-ms/permissions-helper';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -18,35 +18,37 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
-    // ✅ Resolve clinicId correctly
-    let clinicId;
-    if (me.role === "clinic") {
-      const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
-      if (!clinic) {
-        return res.status(404).json({ success: false, message: "Clinic not found for this user" });
-      }
-      clinicId = clinic._id;
+    const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+    if (error && !isAdmin) {
+      return res.status(404).json({ success: false, message: error });
     }
 
     // ✅ Check permission for reading jobs (only for clinic, admin bypasses)
-    if (me.role !== "admin" && clinicId) {
-      const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
-      const { hasPermission, error } = await checkClinicPermission(
+    if (!isAdmin && clinicId) {
+      const { hasPermission, error: permError } = await checkClinicPermission(
         clinicId,
         "jobs",
-        "read",
-        "See All Jobs" // Check "See All Jobs" submodule permission
+        "read"
       );
 
       if (!hasPermission) {
         return res.status(403).json({
           success: false,
-          message: error || "You do not have permission to view jobs"
+          message: permError || "You do not have permission to view jobs"
         });
       }
     }
 
-    const jobs = await JobPosting.find({ postedBy: me._id }).sort({ createdAt: -1 });
+    let match = {};
+    if (!isAdmin) {
+      const orConditions = [{ postedBy: me._id }];
+      if (clinicId) {
+        orConditions.push({ clinicId });
+      }
+      match = { $or: orConditions };
+    }
+
+    const jobs = await JobPosting.find(match).sort({ createdAt: -1 });
 
     return res.status(200).json({ success: true, jobs });
   } catch (error) {

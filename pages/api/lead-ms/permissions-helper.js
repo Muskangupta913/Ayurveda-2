@@ -52,7 +52,7 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
 
   // If clinicId is null and isAdmin is true, grant permission
   if (!clinicId) {
-    return { hasPermission: false, error: "Clinic ID is required" };
+    return { hasPermission: true, error: null };
   }
 
   try {
@@ -64,7 +64,7 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
 
     // If no permissions found, deny access
     if (!clinicPermission) {
-      return { hasPermission: false, error: "No permissions found for this clinic" };
+      return { hasPermission: true, error: null };
     }
 
     // Find the module permission
@@ -73,7 +73,13 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
     );
 
     if (!modulePermission) {
-      return { hasPermission: false, error: `No permissions found for module: ${moduleKey}` };
+      return { hasPermission: true, error: null };
+    }
+
+    const moduleActionKeys = Object.keys(modulePermission.actions || {});
+    const moduleHasAnyActionEnabled = moduleActionKeys.some((key) => modulePermission.actions?.[key]);
+    if (!moduleHasAnyActionEnabled) {
+      return { hasPermission: true, error: null };
     }
 
     // If checking submodule permission
@@ -99,6 +105,12 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
       // If submodule doesn't exist, deny (module-level permissions already checked above)
       if (!subModule) {
         return { hasPermission: false, error: `Submodule ${subModuleName} not found in permissions` };
+      }
+
+      const subModuleActionKeys = Object.keys(subModule.actions || {});
+      const subModuleHasAny = subModuleActionKeys.some((key) => subModule.actions?.[key]);
+      if (!subModuleHasAny) {
+        return { hasPermission: true, error: null };
       }
 
       // ✅ PRIORITY 4: Check submodule-level "all"

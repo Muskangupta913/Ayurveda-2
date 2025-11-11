@@ -2,8 +2,8 @@
 
 import dbConnect from "../../../lib/database";
 import Blog from "../../../models/Blog";
-import Clinic from "../../../models/Clinic";
 import { getUserFromReq, requireRole } from "../lead-ms/auth";
+import { getClinicIdFromUser, checkClinicPermission } from "../lead-ms/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -18,28 +18,23 @@ export default async function handler(req, res) {
             return res.status(403).json({ success: false, message: "Access denied" });
           }
 
-          let clinicId;
-          if (me.role === "clinic") {
-            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
-            if (!clinic) {
-              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
-            }
-            clinicId = clinic._id;
+          const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+          const isDoctor = me.role === "doctor";
+          if (error && !isAdmin && !isDoctor) {
+            return res.status(404).json({ success: false, message: error });
           }
 
           // ✅ Check permission for reading published blogs (only for clinic, admin bypasses)
-          if (me.role !== "admin" && clinicId) {
-            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
-            const { hasPermission, error } = await checkClinicPermission(
+          if (!isAdmin && !isDoctor && clinicId) {
+            const { hasPermission, error: permError } = await checkClinicPermission(
               clinicId,
               "blogs",
-              "read",
-              "Published and Drafts Blogs" // Check "Published and Drafts Blogs" submodule permission
+              "read"
             );
             if (!hasPermission) {
               return res.status(403).json({
                 success: false,
-                message: error || "You do not have permission to view published blogs"
+                message: permError || "You do not have permission to view published blogs"
               });
             }
           }
@@ -92,19 +87,15 @@ export default async function handler(req, res) {
             return res.status(403).json({ success: false, message: "Access denied" });
           }
 
-          let clinicId;
-          if (me.role === "clinic") {
-            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
-            if (!clinic) {
-              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
-            }
-            clinicId = clinic._id;
+          const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+          const isDoctor = me.role === "doctor";
+          if (error && !isAdmin && !isDoctor) {
+            return res.status(404).json({ success: false, message: error });
           }
 
           // ✅ Check permission for creating published blogs (only for clinic, admin bypasses)
-          if (me.role !== "admin" && clinicId) {
-            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
-            const { hasPermission, error } = await checkClinicPermission(
+          if (!isAdmin && !isDoctor && clinicId) {
+            const { hasPermission, error: permError } = await checkClinicPermission(
               clinicId,
               "blogs",
               "create",
@@ -113,7 +104,7 @@ export default async function handler(req, res) {
             if (!hasPermission) {
               return res.status(403).json({
                 success: false,
-                message: error || "You do not have permission to create blogs"
+                message: permError || "You do not have permission to create blogs"
               });
             }
           }
@@ -191,19 +182,15 @@ export default async function handler(req, res) {
             });
           }
 
-          let clinicId;
-          if (me.role === "clinic") {
-            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
-            if (!clinic) {
-              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
-            }
-            clinicId = clinic._id;
+          const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+          const isDoctor = me.role === "doctor";
+          if (error && !isAdmin && !isDoctor) {
+            return res.status(404).json({ success: false, message: error });
           }
 
           // ✅ Check permission for updating published blogs (only for clinic, admin bypasses)
-          if (me.role !== "admin" && clinicId) {
-            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
-            const { hasPermission, error } = await checkClinicPermission(
+          if (!isAdmin && !isDoctor && clinicId) {
+            const { hasPermission, error: permError } = await checkClinicPermission(
               clinicId,
               "blogs",
               "update",
@@ -212,7 +199,7 @@ export default async function handler(req, res) {
             if (!hasPermission) {
               return res.status(403).json({
                 success: false,
-                message: error || "You do not have permission to update blogs"
+                message: permError || "You do not have permission to update blogs"
               });
             }
           }
@@ -281,19 +268,15 @@ export default async function handler(req, res) {
             });
           }
 
-          let clinicId;
-          if (me.role === "clinic") {
-            const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
-            if (!clinic) {
-              return res.status(404).json({ success: false, message: "Clinic not found for this user" });
-            }
-            clinicId = clinic._id;
+          const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+          const isDoctor = me.role === "doctor";
+          if (error && !isAdmin && !isDoctor) {
+            return res.status(404).json({ success: false, message: error });
           }
 
           // ✅ Check permission for deleting published blogs (only for clinic, admin bypasses)
-          if (me.role !== "admin" && clinicId) {
-            const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
-            const { hasPermission, error } = await checkClinicPermission(
+          if (!isAdmin && !isDoctor && clinicId) {
+            const { hasPermission, error: permError } = await checkClinicPermission(
               clinicId,
               "blogs",
               "delete",
@@ -302,7 +285,7 @@ export default async function handler(req, res) {
             if (!hasPermission) {
               return res.status(403).json({
                 success: false,
-                message: error || "You do not have permission to delete blogs"
+                message: permError || "You do not have permission to delete blogs"
               });
             }
           }

@@ -3,6 +3,7 @@ import dbConnect from '../../../lib/database';
 import JobPosting from '../../../models/JobPosting';
 import Clinic from '../../../models/Clinic';
 import { getUserFromReq, requireRole } from '../lead-ms/auth';
+import { getClinicIdFromUser, checkClinicPermission } from '../lead-ms/permissions-helper';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,30 +19,36 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
-    // ✅ Resolve clinicId correctly
-    let clinicId;
-    if (me.role === "clinic") {
-      const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
-      if (!clinic) {
-        return res.status(404).json({ success: false, message: "Clinic not found for this user" });
-      }
-      clinicId = clinic._id;
+    const { clinicId, error, isAdmin } = await getClinicIdFromUser(me);
+    let resolvedClinicId = clinicId;
+
+    if (error && !isAdmin) {
+      return res.status(404).json({ success: false, message: error });
     }
 
-    // ✅ Check permission for creating jobs (only for clinic, admin bypasses)
-    if (me.role !== "admin" && clinicId) {
-      const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
-      const { hasPermission, error } = await checkClinicPermission(
-        clinicId,
+    if (isAdmin && req.body.clinicId) {
+      const clinic = await Clinic.findById(req.body.clinicId).select("_id");
+      if (!clinic) {
+        return res.status(404).json({ success: false, message: "Clinic not found" });
+      }
+      resolvedClinicId = clinic._id;
+    }
+
+    if (!isAdmin && !resolvedClinicId) {
+      return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+    }
+
+    if (!isAdmin && resolvedClinicId) {
+      const { hasPermission, error: permError } = await checkClinicPermission(
+        resolvedClinicId,
         "jobs",
-        "create",
-        "Job Posting" // Check "Job Posting" submodule permission
+        "create"
       );
 
       if (!hasPermission) {
         return res.status(403).json({
           success: false,
-          message: error || "You do not have permission to create jobs"
+          message: permError || "You do not have permission to create jobs"
         });
       }
     }
@@ -49,6 +56,7 @@ export default async function handler(req, res) {
     const newJob = await JobPosting.create({
       ...req.body,
       postedBy: me._id,
+      clinicId: resolvedClinicId || undefined,
       role: me.role,
       status: 'pending',
     });

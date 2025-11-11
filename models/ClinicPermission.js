@@ -16,10 +16,7 @@ const ModulePermissionSchema = new mongoose.Schema({
       create: { type: Boolean, default: false },
       read: { type: Boolean, default: false },
       update: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false },
-      print: { type: Boolean, default: false },
-      export: { type: Boolean, default: false },
-      approve: { type: Boolean, default: false }
+      delete: { type: Boolean, default: false }
     }
   }],
   actions: {
@@ -27,10 +24,7 @@ const ModulePermissionSchema = new mongoose.Schema({
     create: { type: Boolean, default: false },
     read: { type: Boolean, default: false },
     update: { type: Boolean, default: false },
-    delete: { type: Boolean, default: false },
-    print: { type: Boolean, default: false },
-    export: { type: Boolean, default: false },
-    approve: { type: Boolean, default: false }
+    delete: { type: Boolean, default: false }
   }
 });
 
@@ -52,7 +46,6 @@ const ClinicPermissionSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Index for efficient queries
-ClinicPermissionSchema.index({ clinicId: 1 });
 ClinicPermissionSchema.index({ 'permissions.module': 1 });
 
 export default mongoose.models.ClinicPermission || mongoose.model('ClinicPermission', ClinicPermissionSchema);
