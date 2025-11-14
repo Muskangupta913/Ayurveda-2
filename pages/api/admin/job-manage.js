@@ -1,22 +1,33 @@
 // pages/api/admin/jobs/manage.ts
 import dbConnect from '../../../lib/database';
 import JobPosting from '../../../models/JobPosting';
-import jwt from 'jsonwebtoken';
+import { getUserFromReq } from '../lead-ms/auth';
+import { checkAgentPermission } from '../agent/permissions-helper';
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
-
-  const token = authHeader.split(' ')[1];
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { role } = decoded;
-
-    if (role !== 'admin') {
-      return res.status(403).json({ message: 'Unauthorized, admin only' });
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ message: 'Unauthorized: Missing or invalid token' });
+    }
+    
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission } = await checkAgentPermission(me._id, "admin_manage_job", "read");
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          message: "Permission denied: You do not have read permission for manage job module" 
+        });
+      }
+    } else if (me.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin or agent role required' });
     }
 
     // Fetch jobs grouped by status

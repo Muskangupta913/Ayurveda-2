@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Search, Download, Users, Filter, ChevronLeft, ChevronRight, Mail, Phone, User } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { Search, Download, Users, Filter, ChevronLeft, ChevronRight, Mail, Phone, User, X } from 'lucide-react';
 
 import AdminLayout from '../../components/AdminLayout';
-import withAdminAuth from '../../components/withAdminAuth'; 
+import withAdminAuth from '../../components/withAdminAuth';
+import { useAgentPermissions } from '../../hooks/useAgentPermissions'; 
 
 type NextPageWithLayout = React.FC & {
   getLayout?: (page: React.ReactNode) => React.ReactNode;
@@ -26,27 +28,106 @@ function UserProfile() {
   const [sortDirection, setSortDirection] = useState('asc');
   const [loading, setLoading] = useState(true);
 
+  const router = useRouter();
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Analytics - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        // On agent route with agentToken = treat as agent (even if adminToken exists)
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        // Not on agent route, or no agentToken = treat as admin if adminToken exists
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        // Has agentToken but not on agent route = treat as agent
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        // No tokens = neither
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // Pass null as moduleKey if not an agent to skip the API call
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_user_analytics" : (null as any));
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/admin/analytics');
-        const data = await res.json();
-        setUsers(data.users);
-        setFilteredUsers(data.users);
-      } catch (error: unknown) {
-        let message = 'Failed to fetch users';
-        if (typeof error === 'object' && error !== null && 'message' in error) {
-          message = (error as { message?: string }).message || message;
+        // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+        const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+        const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+        const token = adminToken || agentToken;
+
+        const res = await fetch('/api/admin/analytics', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          if (res.status === 403) {
+            setUsers([]);
+            setFilteredUsers([]);
+            setLoading(false);
+            return;
+          }
+          throw new Error('Failed to fetch users');
         }
-        console.error('Failed to fetch users:', message);
+
+        const data = await res.json();
+        setUsers(data.users || []);
+        setFilteredUsers(data.users || []);
+      } catch (error: any) {
+        console.error('Failed to fetch users:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
-  }, []);
+    // Fetch users immediately for admins
+    // For agents: only fetch if read permission is granted
+    if (isAdmin) {
+      fetchUsers();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        // Check if agent has read permission
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchUsers();
+        } else {
+          // Agent doesn't have read permission - stop loading
+          setLoading(false);
+        }
+      }
+      // If permissions are still loading, keep loading state true
+    } else {
+      // Neither admin nor agent - stop loading
+      setLoading(false);
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   // Filter users based on search term
   useEffect(() => {
@@ -87,6 +168,17 @@ function UserProfile() {
 
   // Download CSV
   const downloadCSV = () => {
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    // But only if on agent route OR isAgent is true
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canExport !== true && agentPermissions.canAll !== true) {
+      alert("You do not have permission to export user data");
+      return;
+    }
     const headers = ['Name', 'Email', 'Phone', 'Role'];
     const csvContent = [
       headers.join(','),
@@ -109,7 +201,10 @@ function UserProfile() {
     document.body.removeChild(link);
   };
 
-  if (loading) {
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  if (loading || (isAgent && permissionsLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-7xl mx-auto">
@@ -119,6 +214,23 @@ function UserProfile() {
               <span className="ml-4 text-lg text-gray-600">Loading user analytics...</span>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show permission denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view user analytics. Please contact your administrator to request access.
+          </p>
         </div>
       </div>
     );
@@ -178,13 +290,47 @@ return (
 
          {/* Actions */}
          <div className="flex flex-col xs:flex-row gap-3">
-           <button
-             onClick={downloadCSV}
-             className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#267982] transition-colors text-sm sm:text-base"
-           >
-             <Download className="h-4 w-4 mr-2" />
-             Download CSV
-           </button>
+           {/* Download CSV button: Only show for admins OR agents with explicit export permission */}
+           {(() => {
+             const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+             const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+             const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+             
+             // Admin always sees button - but ONLY if NOT on agent route AND adminToken exists
+             if (!isAgentRoute && adminTokenExists && isAdmin) {
+               return (
+                 <button
+                   onClick={downloadCSV}
+                   className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#267982] transition-colors text-sm sm:text-base"
+                 >
+                   <Download className="h-4 w-4 mr-2" />
+                   Download CSV
+                 </button>
+               );
+             }
+             
+             // For agents: Only show if permissions are loaded AND export permission is explicitly true
+             if ((isAgentRoute || isAgent) && agentTokenExists) {
+               if (permissionsLoading || !agentPermissions) {
+                 return null;
+               }
+               
+               const hasExportPermission = agentPermissions.canExport === true || agentPermissions.canAll === true;
+               if (hasExportPermission) {
+                 return (
+                   <button
+                     onClick={downloadCSV}
+                     className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#267982] transition-colors text-sm sm:text-base"
+                   >
+                     <Download className="h-4 w-4 mr-2" />
+                     Download CSV
+                   </button>
+                 );
+               }
+             }
+             
+             return null;
+           })()}
            <div className="flex items-center gap-2">
              <Filter className="h-4 w-4 text-gray-500 flex-shrink-0" />
              <select

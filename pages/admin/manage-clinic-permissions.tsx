@@ -1,10 +1,12 @@
 // pages/admin/manage-clinic-permissions.tsx
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/router';
 import type { ReactNode } from 'react';
 import type { NextPageWithLayout } from '../_app';
 import AdminLayout from '../../components/AdminLayout';
 import ClinicPermissionManagerNew from '../../components/ClinicPermissionManagerNew';
 import withAdminAuth from '../../components/withAdminAuth';
+import { useAgentPermissions } from '../../hooks/useAgentPermissions';
 
 interface Clinic {
   _id: string;
@@ -97,6 +99,49 @@ interface NavigationItem {
 const ACTION_KEYS: Array<keyof ModulePermission['actions']> = ['all', 'create', 'read', 'update', 'delete'];
 
 const ManageClinicPermissionsPage: NextPageWithLayout = () => {
+  const router = useRouter();
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Manage Clinic Permissions - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // Using admin_staff_management module with "Manage Clinic Permissions" submodule
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_staff_management" : (null as any), "Manage Clinic Permissions");
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
+
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [clinicPermissions, setClinicPermissions] = useState<ClinicPermission[]>([]);
@@ -165,8 +210,9 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
 
   const fetchClinics = useCallback(async (): Promise<Clinic[]> => {
     try {
-      const token = localStorage.getItem('adminToken');
-      console.log('Admin token:', token ? 'Present' : 'Missing');
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
       
       const response = await fetch('/api/admin/approved-clinics', {
         headers: {
@@ -175,24 +221,31 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
         }
       });
       
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('API Response:', data);
+      if (!response.ok) {
+        // Handle 403 permission denied errors
+        if (response.status === 403) {
+          setClinics([]);
+          return [];
+        }
+        throw new Error(`Failed to fetch clinics: ${response.statusText}`);
+      }
       
+      const data = await response.json();
       const clinicsData: Clinic[] = data?.clinics || [];
-      console.log('Found clinics:', clinicsData.length);
       setClinics(clinicsData);
       return clinicsData;
     } catch (error) {
       console.error('Error fetching clinics:', error);
+      setClinics([]);
       return [];
     }
   }, []);
 
   const fetchDoctors = useCallback(async (): Promise<Doctor[]> => {
     try {
-      const token = localStorage.getItem('adminToken');
-      console.log('Fetching doctors list...');
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
 
       const response = await fetch('/api/admin/getAllDoctors', {
         headers: {
@@ -201,12 +254,18 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
         }
       });
 
-      console.log('Doctors response status:', response.status);
+      if (!response.ok) {
+        // Handle 403 permission denied errors
+        if (response.status === 403) {
+          setDoctors([]);
+          return [];
+        }
+        throw new Error(`Failed to fetch doctors: ${response.statusText}`);
+      }
+
       const data = await response.json();
-      console.log('Doctors API response:', data);
 
       if (!data?.success) {
-        console.log('No doctors found or API reported failure.');
         setDoctors([]);
         return [];
       }
@@ -221,7 +280,6 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
         userId: profile?.user?._id,
       }));
 
-      console.log('Found doctors:', normalizedDoctors.length);
       setDoctors(normalizedDoctors);
       return normalizedDoctors;
     } catch (error) {
@@ -277,7 +335,9 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
     entityOptionsOverride?: EntityOption[],
   ) => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
       console.log('Fetching clinic permissions for role:', role);
       
       const response = await fetch(`/api/admin/permissions/clinic?role=${role}`, {
@@ -287,9 +347,16 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
         }
       });
       
-      console.log('Permissions response status:', response.status);
+      if (!response.ok) {
+        // Handle 403 permission denied errors
+        if (response.status === 403) {
+          setClinicPermissions([]);
+          return;
+        }
+        throw new Error(`Failed to fetch clinic permissions: ${response.statusText}`);
+      }
+      
       const data = await response.json();
-      console.log('Permissions API Response:', data);
       
       if (data.success) {
         const permissionsArray = Array.isArray(data.data) ? data.data : data.data ? [data.data] : [];
@@ -331,8 +398,9 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
 
   const fetchNavigationItems = useCallback(async (role: 'clinic' | 'doctor') => {
     try {
-      const token = localStorage.getItem('adminToken');
-      console.log('Fetching clinic navigation items for role:', role);
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
       
       const response = await fetch(`/api/navigation/get-by-role?role=${role}`, {
         headers: {
@@ -341,27 +409,28 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
         }
       });
 
-      console.log('Navigation response status:', response.status);
-
       if (!response.ok) {
-        console.warn('Navigation request failed, skipping parsing', { status: response.status, statusText: response.statusText });
+        // Handle 403 permission denied errors
+        if (response.status === 403) {
+          setNavigationItems([]);
+          return;
+        }
+        console.warn('Navigation request failed', { status: response.status, statusText: response.statusText });
         setNavigationItems([]);
         return;
       }
 
       const data = await response.json();
-      console.log('Navigation API Response:', data);
       
       if (data.success) {
         const items = Array.isArray(data.data) ? data.data : [];
-        console.log('Found navigation items:', items.length);
         setNavigationItems(items as NavigationItem[]);
       } else {
-        console.log('No navigation items found or error:', data.message);
         setNavigationItems([]);
       }
     } catch (error) {
       console.error('Error fetching navigation items:', error);
+      setNavigationItems([]);
     }
   }, []);
 
@@ -371,38 +440,82 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
   );
 
   useEffect(() => {
-    let cancelled = false;
+    if (isAdmin) {
+      let cancelled = false;
 
-    const loadRoleData = async () => {
-      setRoleLoading(true);
-      setSelectedEntity('');
-      setPermissions([]);
+      const loadRoleData = async () => {
+        setRoleLoading(true);
+        setSelectedEntity('');
+        setPermissions([]);
 
-      try {
-        const entityList = await fetchEntitiesForRole(selectedRole);
-        const entityOptionsOverride: EntityOption[] = entityList.map((entity) => ({
-          id: entity._id,
-          label: entity.name || (selectedRole === 'clinic' ? 'Unnamed clinic' : 'Unnamed doctor'),
-        }));
+        try {
+          const entityList = await fetchEntitiesForRole(selectedRole);
+          const entityOptionsOverride: EntityOption[] = entityList.map((entity) => ({
+            id: entity._id,
+            label: entity.name || (selectedRole === 'clinic' ? 'Unnamed clinic' : 'Unnamed doctor'),
+          }));
 
-        await Promise.all([
-          fetchClinicPermissions(selectedRole, entityOptionsOverride),
-          fetchNavigationItems(selectedRole),
-        ]);
-      } finally {
-        if (!cancelled) {
-          setRoleLoading(false);
+          await Promise.all([
+            fetchClinicPermissions(selectedRole, entityOptionsOverride),
+            fetchNavigationItems(selectedRole),
+          ]);
+        } finally {
+          if (!cancelled) {
+            setRoleLoading(false);
+            setLoading(false);
+          }
+        }
+      };
+
+      loadRoleData();
+
+      return () => {
+        cancelled = true;
+      };
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          let cancelled = false;
+
+          const loadRoleData = async () => {
+            setRoleLoading(true);
+            setSelectedEntity('');
+            setPermissions([]);
+
+            try {
+              const entityList = await fetchEntitiesForRole(selectedRole);
+              const entityOptionsOverride: EntityOption[] = entityList.map((entity) => ({
+                id: entity._id,
+                label: entity.name || (selectedRole === 'clinic' ? 'Unnamed clinic' : 'Unnamed doctor'),
+              }));
+
+              await Promise.all([
+                fetchClinicPermissions(selectedRole, entityOptionsOverride),
+                fetchNavigationItems(selectedRole),
+              ]);
+            } finally {
+              if (!cancelled) {
+                setRoleLoading(false);
+                setLoading(false);
+              }
+            }
+          };
+
+          loadRoleData();
+
+          return () => {
+            cancelled = true;
+          };
+        } else {
           setLoading(false);
+          setRoleLoading(false);
         }
       }
-    };
-
-    loadRoleData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedRole, fetchEntitiesForRole, fetchClinicPermissions, fetchNavigationItems]);
+    } else {
+      setLoading(false);
+      setRoleLoading(false);
+    }
+  }, [selectedRole, fetchEntitiesForRole, fetchClinicPermissions, fetchNavigationItems, isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   const handleEntitySelect = (entityId: string) => {
     setSelectedEntity(entityId);
@@ -428,6 +541,19 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
 
   const autoSavePermissions = useCallback(async (permissionsPayload: ModulePermission[]) => {
     if (!selectedEntity || !selectedRole) return;
+    
+    // Check permissions for agents
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
+      if (agentPermissions.canUpdate !== true && agentPermissions.canAll !== true) {
+        alert("You do not have permission to update clinic permissions");
+        return;
+      }
+    }
+    
     console.log('Auto-saving permissions for entity:', selectedEntity, 'role:', selectedRole);
     console.log('Payload:', permissionsPayload);
     if (saveStatusTimeout.current) {
@@ -437,7 +563,9 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
     setSaving(true);
     setSaveStatus('saving');
     try {
-      const token = localStorage.getItem('adminToken');
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
       const response = await fetch('/api/admin/permissions/clinic', {
         method: 'POST',
         headers: {
@@ -472,7 +600,7 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
     } finally {
       setSaving(false);
     }
-  }, [selectedEntity, selectedRole, fetchClinicPermissions, entityOptions]);
+  }, [selectedEntity, selectedRole, fetchClinicPermissions, entityOptions, router, isAgent, agentPermissions]);
 
   useEffect(() => {
     return () => {
@@ -518,11 +646,36 @@ const ManageClinicPermissionsPage: NextPageWithLayout = () => {
     return selectedRole === 'clinic' ? 'Unknown Clinic' : 'Unknown Doctor';
   };
 
-  if (loading) {
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  // Show loading spinner while checking permissions
+  if (loading || (isAgent && permissionsLoading)) {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <AdminLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="text-center max-w-md mx-auto">
+            <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600 mb-4">
+              You do not have permission to view clinic permissions. Please contact your administrator to request access.
+            </p>
+          </div>
         </div>
       </AdminLayout>
     );

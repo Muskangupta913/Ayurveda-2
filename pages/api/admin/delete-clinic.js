@@ -4,6 +4,8 @@ import Clinic from "../../../models/Clinic";
 import User from "../../../models/Users";
 import Review from "../../../models/Review"; // import Review model
 import Enquiry from "../../../models/Enquiry"; // import Enquiry model
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -21,6 +23,29 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
+    }
+
+    // If user is an agent, check delete permission for approval_clinic module
+    if (['agent', 'doctorStaff'].includes(me.role)) {
+      const { hasPermission, error: permissionError } = await checkAgentPermission(
+        me._id,
+        "approval_clinic", // moduleKey
+        "delete", // action
+        null // subModuleName
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: permissionError || "You do not have permission to delete clinics"
+        });
+      }
+    }
+    // Admin users bypass permission checks
     // Find the clinic and populate its owner
     const clinic = await Clinic.findById(clinicId).populate('owner');
     

@@ -1,8 +1,10 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import axios from 'axios';
 import AdminLayout from '../../components/AdminLayout';
-import withAdminAuth from '../../components/withAdminAuth'; 
+import withAdminAuth from '../../components/withAdminAuth';
+import { useAgentPermissions } from '../../hooks/useAgentPermissions'; 
 
 type SubTreatment = {
   name: string;
@@ -33,6 +35,65 @@ const AddTreatment: NextPageWithLayout = () => {
   const [treatmentToDelete, setTreatmentToDelete] = useState<{id: string, name: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
+  const router = useRouter();
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Add Treatment - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        // On agent route with agentToken = treat as agent (even if adminToken exists)
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        // Not on agent route, or no agentToken = treat as admin if adminToken exists
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        // Has agentToken but not on agent route = treat as agent
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        // No tokens = neither
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // Pass null as moduleKey if not an agent to skip the API call
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_add_treatment" : (null as any));
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
+
+  // Debug logging - always log to see what's happening
+  useEffect(() => {
+    console.log('Add Treatment - State Update:', {
+      isAdmin,
+      isAgent,
+      permissionsLoading,
+      hasAgentPermissions: !!agentPermissions,
+      canDelete: agentPermissions?.canDelete,
+      canAll: agentPermissions?.canAll
+    });
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
+
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -48,17 +109,32 @@ const AddTreatment: NextPageWithLayout = () => {
   };
 
   const fetchTreatments = async () => {
-  try {
-    const res = await axios.get<{ treatments: Treatment[] }>('/api/doctor/getTreatment');
-    setTreatments(res.data.treatments);
-  } catch (err) {
-    console.error('Failed to fetch treatments', err);
-  }
-};
+    try {
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+
+      const res = await axios.get<{ treatments: Treatment[] }>('/api/doctor/getTreatment', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTreatments(res.data.treatments);
+    } catch (err) {
+      console.error('Failed to fetch treatments', err);
+    }
+  };
 
   useEffect(() => {
-    fetchTreatments();
-  }, []);
+    // Fetch treatments immediately for admins, or for agents after permissions load
+    if (isAdmin || !isAgent || !permissionsLoading) {
+      fetchTreatments();
+    }
+  }, [isAdmin, isAgent, permissionsLoading]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -80,14 +156,33 @@ const AddTreatment: NextPageWithLayout = () => {
       return;
     }
 
+    // Check permissions only for agents - admins bypass all checks
+    if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canCreate && !agentPermissions.canAll) {
+      showToast('You do not have permission to create treatments', 'error');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+
+      if (!token) {
+        showToast('No token found. Please login again.', 'error');
+        setLoading(false);
+        return;
+      }
+
       const res = await axios.post('/api/admin/addTreatment', {
         name: newMainTreatment,
         slug: newMainTreatment.toLowerCase().replace(/\s+/g, '-'),
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.status === 201) {
@@ -122,15 +217,34 @@ const AddTreatment: NextPageWithLayout = () => {
       return;
     }
 
+    // Check permissions only for agents - admins bypass all checks
+    if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canCreate && !agentPermissions.canAll) {
+      showToast('You do not have permission to create sub-treatments', 'error');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+
+      if (!token) {
+        showToast('No token found. Please login again.', 'error');
+        setLoading(false);
+        return;
+      }
+
       const res = await axios.post('/api/admin/addSubTreatment', {
         mainTreatmentId: selectedMainTreatment,
         subTreatmentName: newSubTreatment,
         subTreatmentSlug: newSubTreatment.toLowerCase().replace(/\s+/g, '-'),
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.status === 201) {
@@ -163,16 +277,37 @@ const AddTreatment: NextPageWithLayout = () => {
   const handleDeleteConfirm = async () => {
     if (!treatmentToDelete) return;
 
+    // Check permissions only for agents - admins bypass all checks
+    if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canDelete && !agentPermissions.canAll) {
+      showToast('You do not have permission to delete treatments', 'error');
+      setShowDeleteModal(false);
+      setTreatmentToDelete(null);
+      return;
+    }
+
     setIsDeleting(true);
     
     try {
-      await axios.delete(`/api/admin/deleteTreatment?id=${treatmentToDelete.id}`);
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+
+      if (!token) {
+        showToast('No token found. Please login again.', 'error');
+        setIsDeleting(false);
+        return;
+      }
+
+      await axios.delete(`/api/admin/deleteTreatment?id=${treatmentToDelete.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       showToast('Treatment deleted successfully', 'success');
       fetchTreatments();
       setShowDeleteModal(false);
       setTreatmentToDelete(null);
-    } catch {
-      showToast('Error deleting treatment', 'error');
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Error deleting treatment', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -192,6 +327,21 @@ const AddTreatment: NextPageWithLayout = () => {
       }
     }
   };
+
+  // Show access denied message only for agents without read permission - admins always have access
+  if (!isAdmin && isAgent && !permissionsLoading && agentPermissions && !agentPermissions.canRead && !agentPermissions.canAll) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+          <svg className="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
+          <p className="text-slate-600">You do not have permission to view treatments. Please contact your administrator.</p>
+        </div>
+      </div>
+    );
+  }
 
  return (
     <div className="min-h-screen bg-gray-50">
@@ -242,17 +392,20 @@ const AddTreatment: NextPageWithLayout = () => {
                   />
                 </div>
 
-                <button
-                  onClick={handleAddMainTreatment}
-                  disabled={loading}
-                  className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all ${
-                    loading
-                      ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                      : 'bg-[#2D9AA5] hover:bg-[#247A83] text-white'
-                  }`}
-                >
-                  {loading ? 'Adding...' : 'Add Main Treatment'}
-                </button>
+                {/* Always show Add Main Treatment button for admins, conditionally for agents */}
+                {(isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canCreate || agentPermissions.canAll))) && (
+                  <button
+                    onClick={handleAddMainTreatment}
+                    disabled={loading || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)}
+                    className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all ${
+                      loading || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                        : 'bg-[#2D9AA5] hover:bg-[#247A83] text-white'
+                    }`}
+                  >
+                    {loading ? 'Adding...' : 'Add Main Treatment'}
+                  </button>
+                )}
 
                 {/* Divider */}
                 <div className="border-t border-gray-200 pt-4">
@@ -286,17 +439,20 @@ const AddTreatment: NextPageWithLayout = () => {
                     />
                   </div>
 
-                  <button
-                    onClick={handleAddSubTreatment}
-                    disabled={loading || !selectedMainTreatment}
-                    className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all ${
-                      loading || !selectedMainTreatment
-                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
-                  >
-                    {loading ? 'Adding...' : 'Add Sub-Treatment'}
-                  </button>
+                  {/* Always show Add Sub-Treatment button for admins, conditionally for agents */}
+                  {(isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canCreate || agentPermissions.canAll))) && (
+                    <button
+                      onClick={handleAddSubTreatment}
+                      disabled={loading || !selectedMainTreatment || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)}
+                      className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all ${
+                        loading || !selectedMainTreatment || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)
+                          ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {loading ? 'Adding...' : 'Add Sub-Treatment'}
+                    </button>
+                  )}
                 </div>
 
                 {/* Messages */}
@@ -358,14 +514,95 @@ const AddTreatment: NextPageWithLayout = () => {
                               {treatment.name}
                             </h4>
                           </div>
-                          <button
-                            onClick={() => handleDeleteClick(treatment._id, treatment.name)}
-                            className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          {/* Delete button: Only show for admins OR agents with explicit delete permission */}
+                          {(() => {
+                            // CRITICAL: Check route and tokens to determine if user is admin or agent
+                            const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                            const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                            const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                            
+                            // Admin always sees delete button - but ONLY if NOT on agent route AND adminToken exists
+                            if (!isAgentRoute && adminTokenExists && isAdmin) {
+                              return (
+                                <button
+                                  key={`delete-admin-${treatment._id}`}
+                                  onClick={() => handleDeleteClick(treatment._id, treatment.name)}
+                                  className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              );
+                            }
+                            
+                            // For agents: Only show if permissions are loaded AND delete permission is explicitly true
+                            // ALWAYS log this check to see what's happening
+                            console.log('Add Treatment - Delete Button Render Check:', {
+                              treatmentId: treatment._id,
+                              isAdmin,
+                              isAgent,
+                              isAgentRoute,
+                              adminTokenExists,
+                              agentTokenExists,
+                              permissionsLoading,
+                              hasAgentPermissions: !!agentPermissions,
+                              canDelete: agentPermissions?.canDelete,
+                              canAll: agentPermissions?.canAll
+                            });
+                            
+                            // Show button for agents if on agent route OR if isAgent is true
+                            if ((isAgentRoute || isAgent) && agentTokenExists) {
+                              // Don't show if permissions are still loading
+                              if (permissionsLoading) {
+                                console.log('Add Treatment - Permissions still loading, hiding button');
+                                return null;
+                              }
+                              
+                              // Don't show if permissions object doesn't exist
+                              if (!agentPermissions) {
+                                console.log('Add Treatment - No permissions object:', { isAgent, agentPermissions });
+                                return null;
+                              }
+                              
+                              // Only show if canDelete is explicitly true OR canAll is explicitly true
+                              // Triple-check: ensure we're checking actual boolean true, not truthy values
+                              const canDeleteValue = agentPermissions.canDelete;
+                              const canAllValue = agentPermissions.canAll;
+                              const hasDeletePermission = (canDeleteValue === true) || (canAllValue === true);
+                              
+                              console.log('Add Treatment - Delete Button Permission Check:', {
+                                treatmentId: treatment._id,
+                                canDelete: canDeleteValue,
+                                canDeleteType: typeof canDeleteValue,
+                                canDeleteStrict: canDeleteValue === true,
+                                canAll: canAllValue,
+                                canAllType: typeof canAllValue,
+                                canAllStrict: canAllValue === true,
+                                hasDeletePermission,
+                                willShow: hasDeletePermission
+                              });
+                              
+                              if (hasDeletePermission) {
+                                return (
+                                  <button
+                                    key={`delete-agent-${treatment._id}-${canDeleteValue}-${canAllValue}`}
+                                    onClick={() => handleDeleteClick(treatment._id, treatment.name)}
+                                    className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                );
+                              } else {
+                                console.log('Add Treatment - Delete permission denied, hiding button');
+                              }
+                            }
+                            
+                            // Default: Don't show button
+                            return null;
+                          })()}
                         </div>
                         
                         {treatment.subcategories && treatment.subcategories.length > 0 && (

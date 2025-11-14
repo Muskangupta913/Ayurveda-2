@@ -5,13 +5,21 @@ import Clinic from "../../../../models/Clinic";
 import User from "../../../../models/Users";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   const allowedRoles = ['admin', 'clinic', 'doctor'];
 
-  // Verify admin token
+  // Get the logged-in user
+  const me = await getUserFromReq(req);
+  if (!me) {
+    return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
+  }
+
+  // Verify admin token (for backward compatibility)
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) {
     return res.status(401).json({ success: false, message: 'No token provided' });
@@ -21,7 +29,7 @@ export default async function handler(req, res) {
 
   try {
     adminPayload = jwt.verify(token, process.env.JWT_SECRET);
-    if (adminPayload.role !== 'admin') {
+    if (adminPayload.role !== 'admin' && me.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
   } catch (error) {
@@ -93,6 +101,19 @@ export default async function handler(req, res) {
   };
 
   if (req.method === 'GET') {
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "read", "Manage Clinic Permissions");
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          success: false,
+          message: "Permission denied: You do not have read permission for Manage Clinic Permissions submodule" 
+        });
+      }
+    } else if (me.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
+    }
+
     try {
       const { clinicId, role, includeAdmin } = req.query;
 
@@ -135,6 +156,19 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "update", "Manage Clinic Permissions");
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          success: false,
+          message: "Permission denied: You do not have update permission for Manage Clinic Permissions submodule" 
+        });
+      }
+    } else if (me.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
+    }
+
     try {
       const { clinicId, permissions, role = 'clinic' } = req.body;
 

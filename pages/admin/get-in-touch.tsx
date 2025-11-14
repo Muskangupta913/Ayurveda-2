@@ -1,10 +1,12 @@
 import React from "react";
 import { useEffect, useState, useMemo } from "react";
-import { Search, Download, Filter,Phone, MapPin, MessageSquare, ChevronLeft, ChevronRight, RotateCcw, SortAsc, SortDesc,TrendingUp, Clock } from "lucide-react";
+import { useRouter } from "next/router";
+import { Search, Download, Filter,Phone, MapPin, MessageSquare, ChevronLeft, ChevronRight, RotateCcw, SortAsc, SortDesc,TrendingUp, Clock, X } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from "recharts";
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth';
 import type { NextPageWithLayout } from '../_app';
+import { useAgentPermissions } from '../../hooks/useAgentPermissions';
 
 // Add Lead interface
 interface Lead {
@@ -19,6 +21,8 @@ interface Lead {
 type SortField = keyof Lead;
 
 function LeadsPage() {
+    const router = useRouter();
+    
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -30,16 +34,104 @@ function LeadsPage() {
     const [showFilters, setShowFilters] = useState(false);
     const itemsPerPage = 25;
     const filtersRef = React.useRef<HTMLDivElement>(null);
+    
+    // Check if user is an admin or agent - use state to ensure reactivity
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [isAgent, setIsAgent] = useState<boolean>(false);
+    
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const adminToken = !!localStorage.getItem('adminToken');
+            const agentToken = !!localStorage.getItem('agentToken');
+            const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+            
+            console.log('Get In Touch - Initial Token Check:', { 
+                adminToken, 
+                agentToken, 
+                isAgentRoute,
+                pathname: router.pathname,
+                locationPath: window.location.pathname
+            });
+            
+            // CRITICAL: If on agent route, prioritize agentToken over adminToken
+            if (isAgentRoute && agentToken) {
+                setIsAdmin(false);
+                setIsAgent(true);
+            } else if (adminToken) {
+                setIsAdmin(true);
+                setIsAgent(false);
+            } else if (agentToken) {
+                setIsAdmin(false);
+                setIsAgent(true);
+            } else {
+                setIsAdmin(false);
+                setIsAgent(false);
+            }
+        }
+    }, [router.pathname]);
+    
+    // Always call the hook (React rules), but only use it if isAgent is true
+    const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_request_callback" : (null as any));
+    const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+    const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
     useEffect(() => {
-        fetch("/api/admin/getintouch")
-            .then((res) => res.json())
-            .then((data) => {
+        const fetchLeads = async () => {
+            try {
+                setLoading(true);
+                // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+                const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+                const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+                const token = adminToken || agentToken;
+
+                if (!token) {
+                    console.error("No token found");
+                    setLoading(false);
+                    return;
+                }
+
+                const res = await fetch("/api/admin/getintouch", {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (!res.ok) {
+                    if (res.status === 403) {
+                        setLeads([]);
+                        setLoading(false);
+                        return;
+                    }
+                    throw new Error('Failed to fetch leads');
+                }
+
+                const data = await res.json();
                 setLeads(data.data || []);
+            } catch (error: any) {
+                console.error('Failed to fetch leads:', error);
+            } finally {
                 setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    }, []);
+            }
+        };
+
+        // Fetch leads immediately for admins
+        // For agents: only fetch if read permission is granted
+        if (isAdmin) {
+            fetchLeads();
+        } else if (isAgent) {
+            if (!permissionsLoading) {
+                // Check if agent has read permission
+                if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+                    fetchLeads();
+                } else {
+                    // Agent doesn't have read permission - stop loading
+                    setLoading(false);
+                }
+            }
+            // If permissions are still loading, keep loading state true
+        } else {
+            // Neither admin nor agent - stop loading
+            setLoading(false);
+        }
+    }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
     // Get unique locations for filter dropdown
     const uniqueLocations = useMemo(() => {
@@ -179,6 +271,17 @@ function LeadsPage() {
     );
 
     const downloadCSV = () => {
+        // CRITICAL: Check route and tokens to determine if user is admin or agent
+        const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+        const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+        const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+        
+        // Check permissions only for agents - admins bypass all checks
+        if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canExport !== true && agentPermissions.canAll !== true) {
+            alert("You do not have permission to export call back requests");
+            return;
+        }
+        
         if (!filteredAndSortedLeads.length) return;
 
         const headers = ["Name", "Phone", "Location", "Query", "Date"];
@@ -223,12 +326,32 @@ function LeadsPage() {
         return sortDirection === "asc" ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />;
     };
 
-    if (loading) {
+    // Check if agent has read permission
+    const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+    if (loading || (isAgent && permissionsLoading)) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#2D9AA5] border-t-transparent mx-auto mb-4"></div>
                     <p className="text-gray-600 text-lg">Loading requests...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show permission denied message if agent doesn't have read permission
+    if (isAgent && !hasReadPermission) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md mx-auto">
+                    <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <X className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+                    <p className="text-gray-600 mb-4">
+                        You do not have permission to view callback requests. Please contact your administrator to request access.
+                    </p>
                 </div>
             </div>
         );
@@ -269,15 +392,51 @@ function LeadsPage() {
                                 Filters
                             </button>
 
-                            <button
-                                onClick={downloadCSV}
-                                disabled={!filteredAndSortedLeads.length}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D9AA5] text-white font-medium shadow-sm hover:bg-[#2D9AA5]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">Download CSV</span>
-                                <span className="sm:hidden">CSV</span>
-                            </button>
+                            {/* Download CSV button: Only show for admins OR agents with explicit export permission */}
+                            {(() => {
+                                const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                                const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                                const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                                
+                                // Admin always sees button - but ONLY if NOT on agent route AND adminToken exists
+                                if (!isAgentRoute && adminTokenExists && isAdmin) {
+                                    return (
+                                        <button
+                                            onClick={downloadCSV}
+                                            disabled={!filteredAndSortedLeads.length}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D9AA5] text-white font-medium shadow-sm hover:bg-[#2D9AA5]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Download CSV</span>
+                                            <span className="sm:hidden">CSV</span>
+                                        </button>
+                                    );
+                                }
+                                
+                                // For agents: Only show if permissions are loaded AND export permission is explicitly true
+                                if ((isAgentRoute || isAgent) && agentTokenExists) {
+                                    if (permissionsLoading || !agentPermissions) {
+                                        return null;
+                                    }
+                                    
+                                    const hasExportPermission = agentPermissions.canExport === true || agentPermissions.canAll === true;
+                                    if (hasExportPermission) {
+                                        return (
+                                            <button
+                                                onClick={downloadCSV}
+                                                disabled={!filteredAndSortedLeads.length}
+                                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D9AA5] text-white font-medium shadow-sm hover:bg-[#2D9AA5]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                <span className="hidden sm:inline">Download CSV</span>
+                                                <span className="sm:hidden">CSV</span>
+                                            </button>
+                                        );
+                                    }
+                                }
+                                
+                                return null;
+                            })()}
                         </div>
                     </div>
 

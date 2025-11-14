@@ -1,27 +1,33 @@
 import dbConnect from "../../../lib/database";
 import Vendor from "../../../models/VendorProfile";
-import jwt from "jsonwebtoken"; // optional, if you use tokens
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "POST") {
     try {
-      let createdBy = req.body.createdBy;
-
-      // ✅ Option 1: extract from JWT if provided
-      if (!createdBy && req.headers.authorization) {
-        try {
-          const token = req.headers.authorization.split(" ")[1];
-          const decoded = jwt.verify(token, process.env.JWT_SECRET);
-          createdBy = decoded?.name || decoded?.email || "Unknown User";
-        } catch (err) {
-          console.warn("JWT decode failed:", err.message);
-        }
+      // Get the logged-in user
+      const me = await getUserFromReq(req);
+      if (!me) {
+        return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
       }
-
-      // ✅ Option 2: fallback if still empty
-      if (!createdBy) createdBy = "System";
+      
+      // Check permissions for agents - admins bypass all checks
+      if (me.role === 'agent' || me.role === 'doctorStaff') {
+        const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "create", "Create Vendor");
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            success: false,
+            message: "Permission denied: You do not have create permission for Create Vendor submodule" 
+          });
+        }
+      } else if (me.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
+      }
+      
+      let createdBy = req.body.createdBy || me.name || me.email || "System";
 
       // commissionPercentage removed — rest stays same
       const vendor = new Vendor({

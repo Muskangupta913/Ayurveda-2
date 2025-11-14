@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
+import { useRouter } from "next/router";
 import { Trash2, Eye, X, Search } from "lucide-react";
 import withAdminAuth from "../../components/withAdminAuth";
 import AdminLayout from "../../components/AdminLayout";
 import type { NextPageWithLayout } from "../_app";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 // ✅ Blog interface
 interface Blog {
@@ -59,6 +61,65 @@ const AdminBlogs = () => {
   const [loading, setLoading] = useState(true); // <-- Add loading state
   const blogsPerPage = 20;
 
+  const router = useRouter();
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('All Blogs - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        // On agent route with agentToken = treat as agent (even if adminToken exists)
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        // Not on agent route, or no agentToken = treat as admin if adminToken exists
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        // Has agentToken but not on agent route = treat as agent
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        // No tokens = neither
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // Pass null as moduleKey if not an agent to skip the API call
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_all_blogs" : (null as any));
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
+
+  // Debug logging - always log to see what's happening
+  useEffect(() => {
+    console.log('All Blogs - State Update:', {
+      isAdmin,
+      isAgent,
+      permissionsLoading,
+      hasAgentPermissions: !!agentPermissions,
+      canDelete: agentPermissions?.canDelete,
+      canAll: agentPermissions?.canAll
+    });
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
+
   const processBlogs = (blogs: Blog[]) => {
     return blogs.map(blog => ({
       ...blog,
@@ -68,7 +129,17 @@ const AdminBlogs = () => {
   };
 
   const fetchBlogs = useCallback(async () => {
-    const token = localStorage.getItem("adminToken");
+    // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+    const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+    const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+    const token = adminToken || agentToken;
+
+    if (!token) {
+      console.error("No token found");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await axios.get<{ blogs: Blog[] }>("/api/admin/get-blogs", {
@@ -77,12 +148,19 @@ const AdminBlogs = () => {
       const processedBlogs = processBlogs(res.data.blogs);
       setBlogs(processedBlogs);
       setFilteredBlogs(processedBlogs);
-    } catch {
-      // console.error("Error fetching blogs:", err);
+    } catch (err) {
+      console.error("Error fetching blogs:", err);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    // Fetch blogs immediately for admins, or for agents after permissions load
+    if (isAdmin || !isAgent || !permissionsLoading) {
+      fetchBlogs();
+    }
+  }, [isAdmin, isAgent, permissionsLoading, fetchBlogs]);
 
   // ✅ Search functionality
   const handleSearch = (term: string) => {
@@ -101,7 +179,25 @@ const AdminBlogs = () => {
   };
 
   const deleteBlog = async (id: string) => {
-    const token = localStorage.getItem("adminToken");
+    // Check permissions only for agents - admins bypass all checks
+    if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canDelete && !agentPermissions.canAll) {
+      alert("You do not have permission to delete blogs");
+      setShowDeleteModal(false);
+      setSelectedBlog(null);
+      return;
+    }
+
+    // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+    const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+    const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+    const token = adminToken || agentToken;
+
+    if (!token) {
+      alert("No token found. Please login again.");
+      setShowDeleteModal(false);
+      setSelectedBlog(null);
+      return;
+    }
 
     try {
       await axios.delete(`/api/admin/deleteBlog/${id}`, {
@@ -116,8 +212,9 @@ const AdminBlogs = () => {
 
       setShowDeleteModal(false);
       setSelectedBlog(null);
-    } catch  {
-      // console.error(err);
+    } catch (err: any) {
+      console.error("Error deleting blog:", err);
+      alert(err.response?.data?.message || "Failed to delete blog");
     }
   };
 
@@ -162,9 +259,20 @@ const AdminBlogs = () => {
     return img ? img.src : null;
   };
 
-  useEffect(() => {
-    fetchBlogs();
-  }, [fetchBlogs]);
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !permissionsLoading && agentPermissions && !agentPermissions.canRead && !agentPermissions.canAll) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+          <svg className="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
+          <p className="text-slate-600">You do not have permission to view blogs. Please contact your administrator.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6">
@@ -354,12 +462,91 @@ const AdminBlogs = () => {
                         <Eye size={16} className="inline-block mr-1" />
                         Read More
                       </button>
-                      <button
-                        onClick={() => handleDeleteClick(blog)}
-                        className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {/* Delete button: Only show for admins OR agents with explicit delete permission */}
+                      {(() => {
+                        // CRITICAL: Check route and tokens to determine if user is admin or agent
+                        const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                        const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                        const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                        
+                        // Admin always sees delete button - but ONLY if NOT on agent route AND adminToken exists
+                        if (!isAgentRoute && adminTokenExists && isAdmin) {
+                          return (
+                            <button
+                              key={`delete-admin-${blog._id}`}
+                              onClick={() => handleDeleteClick(blog)}
+                              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          );
+                        }
+                        
+                        // For agents: Only show if permissions are loaded AND delete permission is explicitly true
+                        // ALWAYS log this check to see what's happening
+                        console.log('All Blogs - Delete Button Render Check:', {
+                          blogId: blog._id,
+                          isAdmin,
+                          isAgent,
+                          isAgentRoute,
+                          adminTokenExists,
+                          agentTokenExists,
+                          permissionsLoading,
+                          hasAgentPermissions: !!agentPermissions,
+                          canDelete: agentPermissions?.canDelete,
+                          canAll: agentPermissions?.canAll
+                        });
+                        
+                        // Show button for agents if on agent route OR if isAgent is true
+                        if ((isAgentRoute || isAgent) && agentTokenExists) {
+                          // Don't show if permissions are still loading
+                          if (permissionsLoading) {
+                            console.log('All Blogs - Permissions still loading, hiding button');
+                            return null;
+                          }
+                          
+                          // Don't show if permissions object doesn't exist
+                          if (!agentPermissions) {
+                            console.log('All Blogs - No permissions object:', { isAgent, agentPermissions });
+                            return null;
+                          }
+                          
+                          // Only show if canDelete is explicitly true OR canAll is explicitly true
+                          // Triple-check: ensure we're checking actual boolean true, not truthy values
+                          const canDeleteValue = agentPermissions.canDelete;
+                          const canAllValue = agentPermissions.canAll;
+                          const hasDeletePermission = (canDeleteValue === true) || (canAllValue === true);
+                          
+                          console.log('All Blogs - Delete Button Permission Check:', {
+                            blogId: blog._id,
+                            canDelete: canDeleteValue,
+                            canDeleteType: typeof canDeleteValue,
+                            canDeleteStrict: canDeleteValue === true,
+                            canAll: canAllValue,
+                            canAllType: typeof canAllValue,
+                            canAllStrict: canAllValue === true,
+                            hasDeletePermission,
+                            willShow: hasDeletePermission
+                          });
+                          
+                          if (hasDeletePermission) {
+                            return (
+                              <button
+                                key={`delete-agent-${blog._id}-${canDeleteValue}-${canAllValue}`}
+                                onClick={() => handleDeleteClick(blog)}
+                                className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            );
+                          } else {
+                            console.log('All Blogs - Delete permission denied, hiding button');
+                          }
+                        }
+                        
+                        // Default: Don't show button
+                        return null;
+                      })()}
                     </div>
                   </div>
                 </div>

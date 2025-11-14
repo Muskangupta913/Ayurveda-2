@@ -88,8 +88,8 @@ export default async function handler(req, res) {
     });
 
     // Filter navigation items based on permissions
-    // Show module only if agent has "read" or "all" permission at module level
-    // Show submodule only if agent has "read" or "all" permission at submodule level
+    // Show module if agent has ANY permission at module level OR any submodule has permissions
+    // Only hide module if NO permissions are granted at module level AND no submodules have permissions
     const filteredNavigationItems = navigationItems
       .map(item => {
         // Try multiple lookup strategies for moduleKey matching
@@ -97,29 +97,66 @@ export default async function handler(req, res) {
                           permissionMap[item.moduleKey.replace(`${navigationRole}_`, '')] ||
                           permissionMap[item.moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
         
-        // Check if module has read permission
-        const hasModuleRead = modulePerm && (
-          modulePerm.moduleActions.read === true || 
-          modulePerm.moduleActions.all === true
+        // Check if module has ANY permission at module level
+        const hasModulePermission = modulePerm && (
+          modulePerm.moduleActions.all === true ||
+          modulePerm.moduleActions.create === true ||
+          modulePerm.moduleActions.read === true ||
+          modulePerm.moduleActions.update === true ||
+          modulePerm.moduleActions.delete === true ||
+          modulePerm.moduleActions.approve === true ||
+          modulePerm.moduleActions.print === true ||
+          modulePerm.moduleActions.export === true
         );
 
-        if (!hasModuleRead) {
-          return null; // Don't show this module at all
-        }
+        // Check if module-level "all" is enabled
+        const moduleAllEnabled = modulePerm && modulePerm.moduleActions.all === true;
 
         // Filter submodules based on permissions
         let filteredSubModules = [];
         if (item.subModules && item.subModules.length > 0) {
-          filteredSubModules = item.subModules.filter(subModule => {
-            const subModulePerm = modulePerm?.subModules[subModule.name];
-            return subModulePerm && (
-              subModulePerm.read === true || 
-              subModulePerm.all === true
-            );
-          });
+          filteredSubModules = item.subModules
+            .map(subModule => {
+              // Handle Mongoose documents - convert to plain object if needed
+              const subModuleObj = subModule.toObject ? subModule.toObject() : subModule;
+              return subModuleObj;
+            })
+            .filter(subModule => {
+              // Get submodule name (handle both plain objects and Mongoose documents)
+              const subModuleName = subModule.name || subModule._doc?.name;
+              if (!subModuleName) return false;
+              
+              // ✅ CRITICAL FIX: If module-level "all" is true, show ALL submodules
+              if (moduleAllEnabled) {
+                return true; // Show all submodules when module-level "all" is enabled
+              }
+              
+              // Otherwise, check if submodule has ANY permission
+              const subModulePerm = modulePerm?.subModules[subModuleName];
+              return subModulePerm && (
+                subModulePerm.all === true ||
+                subModulePerm.create === true ||
+                subModulePerm.read === true ||
+                subModulePerm.update === true ||
+                subModulePerm.delete === true ||
+                subModulePerm.approve === true ||
+                subModulePerm.print === true ||
+                subModulePerm.export === true
+              );
+            });
         }
 
-        // Convert path from admin/clinic/doctor routes to agent routes
+        // ✅ CRITICAL FIX: Show module if EITHER:
+        // 1. Module has any permission, OR
+        // 2. Any submodule has permissions (even if module doesn't)
+        const hasAnySubModulePermission = filteredSubModules.length > 0;
+        const shouldShowModule = hasModulePermission || hasAnySubModulePermission;
+
+        if (!shouldShowModule) {
+          return null; // Don't show this module if no permissions are granted at module or submodule level
+        }
+
+        // Convert path from admin/clinic/doctor/staff routes to agent routes
         let agentPath = item.path;
         if (agentPath) {
           // Convert /admin/* to /agent/*
@@ -134,19 +171,35 @@ export default async function handler(req, res) {
           else if (agentPath.startsWith('/doctor/')) {
             agentPath = agentPath.replace('/doctor/', '/agent/');
           }
+          // Convert /staff/* to /agent/*
+          else if (agentPath.startsWith('/staff/')) {
+            agentPath = agentPath.replace('/staff/', '/agent/');
+          }
         }
 
         // Convert submodule paths as well
-        const convertedSubModules = filteredSubModules.map(subModule => ({
-          ...subModule,
-          path: subModule.path ? (
-            subModule.path.startsWith('/admin/') ? subModule.path.replace('/admin/', '/agent/') :
-            subModule.path.startsWith('/clinic/') ? subModule.path.replace('/clinic/', '/agent/') :
-            subModule.path.startsWith('/doctor/') ? subModule.path.replace('/doctor/', '/agent/') :
-            subModule.path
-          ) : subModule.path
-        }));
+        const convertedSubModules = filteredSubModules.map(subModule => {
+          // Handle Mongoose documents - get path from _doc if needed
+          const subModulePath = subModule.path || subModule._doc?.path || '';
+          const subModuleName = subModule.name || subModule._doc?.name || '';
+          const subModuleIcon = subModule.icon || subModule._doc?.icon || '';
+          const subModuleOrder = subModule.order || subModule._doc?.order || 0;
+          
+          return {
+            name: subModuleName,
+            path: subModulePath ? (
+              subModulePath.startsWith('/admin/') ? subModulePath.replace('/admin/', '/agent/') :
+              subModulePath.startsWith('/clinic/') ? subModulePath.replace('/clinic/', '/agent/') :
+              subModulePath.startsWith('/doctor/') ? subModulePath.replace('/doctor/', '/agent/') :
+              subModulePath.startsWith('/staff/') ? subModulePath.replace('/staff/', '/agent/') :
+              subModulePath
+            ) : subModulePath,
+            icon: subModuleIcon,
+            order: subModuleOrder
+          };
+        });
 
+        // modulePerm is already defined above (line 96), reuse it here
         return {
           _id: item._id,
           label: item.label,
@@ -155,7 +208,16 @@ export default async function handler(req, res) {
           description: item.description,
           order: item.order,
           moduleKey: item.moduleKey,
-          subModules: convertedSubModules
+          subModules: convertedSubModules.map(subModule => {
+            // Add permission details to each submodule
+            const subModulePerm = modulePerm?.subModules[subModule.name];
+            return {
+              ...subModule,
+              permissions: subModulePerm || null
+            };
+          }),
+          // Add module-level permissions
+          permissions: modulePerm?.moduleActions || null
         };
       })
       .filter(item => item !== null); // Remove null items

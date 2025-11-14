@@ -1,11 +1,13 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useRouter } from 'next/router';
 import CreateAgentModal from '../../components/CreateAgentModal';
 import AgentPermissionModal from '../../components/AgentPermissionModal';
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth';
 import type { NextPageWithLayout } from '../_app';
+import { useAgentPermissions } from '../../hooks/useAgentPermissions';
 
 interface Agent {
   _id: string;
@@ -28,28 +30,82 @@ const ManageAgentsPage: NextPageWithLayout = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
+  const router = useRouter();
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Create Agent - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "create_agent" : (null as any));
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
+
   const adminToken =
     typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  const agentToken =
+    typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
 
   async function loadAgents() {
     try {
+      const token = adminToken || agentToken;
       const { data } = await axios.get('/api/lead-ms/get-agents?role=agent', {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) setAgents(data.agents);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      // Handle 403 permission denied errors
+      if (err.response?.status === 403) {
+        setAgents([]);
+      }
     }
   }
 
   async function loadDoctorStaff() {
     try {
+      const token = adminToken || agentToken;
       const { data } = await axios.get('/api/lead-ms/get-agents?role=doctorStaff', {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) setDoctorStaff(data.agents);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      // Handle 403 permission denied errors
+      if (err.response?.status === 403) {
+        setDoctorStaff([]);
+      }
     }
   }
 
@@ -58,16 +114,42 @@ const ManageAgentsPage: NextPageWithLayout = () => {
   }
 
   useEffect(() => {
-    loadAll();
-  }, []);
+    if (isAdmin) {
+      loadAll();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          loadAll();
+        }
+      }
+    } else {
+      // Neither admin nor agent - don't fetch
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   async function handleAction(agentId: string, action: string) {
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
+      if (action === 'approve' || action === 'decline') {
+        if (agentPermissions.canApprove !== true && agentPermissions.canAll !== true) {
+          alert("You do not have permission to approve/decline agents");
+          return;
+        }
+      }
+    }
+    
+    const token = adminToken || agentToken;
     try {
       const { data } = await axios.patch(
         '/api/lead-ms/get-agents',
         { agentId, action },
         {
-          headers: { Authorization: `Bearer ${adminToken}` },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (data.success) {
@@ -97,11 +179,25 @@ const ManageAgentsPage: NextPageWithLayout = () => {
       alert('Passwords do not match');
       return;
     }
+    
+    // Check permissions for agents
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
+      if (agentPermissions.canUpdate !== true && agentPermissions.canAll !== true) {
+        alert("You do not have permission to reset passwords");
+        return;
+      }
+    }
+    
+    const token = adminToken || agentToken;
     try {
       const { data } = await axios.patch(
         '/api/lead-ms/get-agents',
         { agentId: passwordAgent._id, action: 'resetPassword', newPassword },
-        { headers: { Authorization: `Bearer ${adminToken}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       if (data.success) {
         if (data.agent.role === 'doctorStaff') {
@@ -130,6 +226,40 @@ const ManageAgentsPage: NextPageWithLayout = () => {
   const totalDoctorStaff = doctorStaff.length;
   const approvedDoctorStaff = doctorStaff.filter((a: Agent) => a.isApproved).length;
   const declinedDoctorStaff = doctorStaff.filter((a: Agent) => a.declined).length;
+
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  // Show loading spinner while checking permissions
+  if (isAgent && permissionsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm sm:text-base text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view agent management. Please contact your administrator to request access.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -182,9 +312,41 @@ const ManageAgentsPage: NextPageWithLayout = () => {
               <div className="mt-2 text-2xl font-semibold text-red-600">{declinedAgents}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex items-center justify-end">
-              <button onClick={() => setIsCreateOpen(true)} className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-xs font-medium rounded-md transition-colors w-full sm:w-auto shadow-sm">
-                + Create agent
-              </button>
+              {(() => {
+                const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                
+                // Helper function to check if action should be shown
+                const shouldShowAction = (action: 'create' | 'update' | 'approve') => {
+                  // Admin always sees all actions - but ONLY if NOT on agent route
+                  if (!isAgentRoute && adminTokenExists && isAdmin) {
+                    return true;
+                  }
+                  
+                  // For agents: Check permissions
+                  if ((isAgentRoute || isAgent) && agentTokenExists) {
+                    if (permissionsLoading || !agentPermissions) {
+                      return false;
+                    }
+                    
+                    if (action === 'create') {
+                      return agentPermissions.canCreate === true || agentPermissions.canAll === true;
+                    }
+                    if (action === 'approve') {
+                      return agentPermissions.canApprove === true || agentPermissions.canAll === true;
+                    }
+                  }
+                  
+                  return false;
+                };
+                
+                return shouldShowAction('create') ? (
+                  <button onClick={() => setIsCreateOpen(true)} className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-xs font-medium rounded-md transition-colors w-full sm:w-auto shadow-sm">
+                    + Create agent
+                  </button>
+                ) : null;
+              })()}
             </div>
           </div>
         </div>
@@ -281,28 +443,63 @@ const ManageAgentsPage: NextPageWithLayout = () => {
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap text-xs font-medium relative">
                         <div className="flex gap-2 items-center">
-                          <button
-                            onClick={() => handleAction(agent._id, 'approve')}
-                            disabled={agent.isApproved}
-                            className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-                              agent.isApproved
-                                ? 'bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200'
-                                : 'bg-gray-900 text-white hover:bg-gray-800 shadow-sm'
-                            }`}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleAction(agent._id, 'decline')}
-                            disabled={agent.declined}
-                            className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-                              agent.declined
-                                ? 'bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                            }`}
-                          >
-                            Decline
-                          </button>
+                          {(() => {
+                            const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                            const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                            const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                            
+                            // Helper function to check if action should be shown
+                            const shouldShowAction = (action: 'create' | 'update' | 'approve') => {
+                              // Admin always sees all actions - but ONLY if NOT on agent route
+                              if (!isAgentRoute && adminTokenExists && isAdmin) {
+                                return true;
+                              }
+                              
+                              // For agents: Check permissions
+                              if ((isAgentRoute || isAgent) && agentTokenExists) {
+                                if (permissionsLoading || !agentPermissions) {
+                                  return false;
+                                }
+                                
+                                if (action === 'approve') {
+                                  return agentPermissions.canApprove === true || agentPermissions.canAll === true;
+                                }
+                              }
+                              
+                              return false;
+                            };
+                            
+                            return (
+                              <>
+                                {shouldShowAction('approve') && (
+                                  <>
+                                    <button
+                                      onClick={() => handleAction(agent._id, 'approve')}
+                                      disabled={agent.isApproved}
+                                      className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                                        agent.isApproved
+                                          ? 'bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200'
+                                          : 'bg-gray-900 text-white hover:bg-gray-800 shadow-sm'
+                                      }`}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleAction(agent._id, 'decline')}
+                                      disabled={agent.declined}
+                                      className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                                        agent.declined
+                                          ? 'bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200'
+                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                                      }`}
+                                    >
+                                      Decline
+                                    </button>
+                                  </>
+                                )}
+                              </>
+                            );
+                          })()}
                           <div className="relative">
                             <button
                               type="button"
@@ -353,7 +550,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreated={loadAll}
-        token={undefined}
+        token={agentToken || undefined}
         doctorToken={undefined}
         adminToken={adminToken || undefined}
       />
