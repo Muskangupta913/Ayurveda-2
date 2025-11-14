@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import axios from "axios";
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
 import type { NextPageWithLayout } from "../_app";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 import {
   Search,
   User,
@@ -17,6 +19,7 @@ import {
   Key,
   Eye,
   EyeOff,
+  X,
 } from "lucide-react";
 
 interface Doctor {
@@ -82,33 +85,154 @@ function AdminDoctors() {
 
   const itemsPerPage = 12;
 
+  const router = useRouter();
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Approve Doctors - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        // On agent route with agentToken = treat as agent (even if adminToken exists)
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        // Not on agent route, or no agentToken = treat as admin if adminToken exists
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        // Has agentToken but not on agent route = treat as agent
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        // No tokens = neither
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // Pass null as moduleKey if not an agent to skip the API call
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_approval_doctors" : (null as any));
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
+
   const fetchDoctors = async () => {
     setLoading(true);
     try {
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+
+      if (!token) {
+        console.error("No token found");
+        setLoading(false);
+        return;
+      }
+
       const res = await axios.get<{ doctorProfiles: Doctor[] }>(
-        "/api/admin/getAllDoctors"
-      );
-      setDoctors(res.data.doctorProfiles);
-    } catch (err) {
-      console.error("Failed to fetch doctors", err);
+        "/api/admin/getAllDoctors",
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      ).catch(err => {
+        // If 403 (permission denied), return empty array
+        if (err.response?.status === 403) {
+          return { data: { doctorProfiles: [] } };
+        }
+        throw err;
+      });
+      setDoctors(res.data.doctorProfiles || []);
+    } catch (error: any) {
+      console.error("Failed to fetch doctors", error);
+      // If permission denied, set empty array
+      if (error.response?.status === 403) {
+        setDoctors([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDoctors();
-  }, []);
+    // Fetch doctors immediately for admins
+    // For agents: only fetch if read permission is granted
+    if (isAdmin) {
+      fetchDoctors();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        // Check if agent has read permission
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchDoctors();
+        } else {
+          // Agent doesn't have read permission - stop loading
+          setLoading(false);
+        }
+      }
+      // If permissions are still loading, keep loading state true
+    } else {
+      // Neither admin nor agent - stop loading
+      setLoading(false);
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   const handleAction = async (
     userId: string,
     action: "approve" | "decline" | "delete"
   ) => {
     try {
-      await axios.post("/api/admin/action", { userId, action });
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+
+      if (!token) {
+        alert("No token found. Please login again.");
+        return;
+      }
+
+      // CRITICAL: Check route and tokens to determine if user is admin or agent
+      const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+      const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+      
+      // Check permissions only for agents - admins bypass all checks
+      // But only if on agent route OR isAgent is true
+      if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
+        // Strict boolean checks
+        if ((action === "approve" || action === "decline") && agentPermissions.canApprove !== true && agentPermissions.canAll !== true) {
+          alert("You do not have permission to approve/decline doctors");
+          return;
+        }
+        if (action === "delete" && agentPermissions.canDelete !== true && agentPermissions.canAll !== true) {
+          alert("You do not have permission to delete doctors");
+          return;
+        }
+      }
+
+      await axios.post("/api/admin/action", { userId, action }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       fetchDoctors();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error:", err);
+      alert(err.response?.data?.message || `Failed to ${action} doctor`);
     }
   };
 
@@ -117,17 +241,42 @@ function AdminDoctors() {
       // alert("Password is required");
       return;
     }
+
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    // But only if on agent route OR isAgent is true
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canUpdate !== true && agentPermissions.canAll !== true) {
+      alert("You do not have permission to update doctor credentials");
+      return;
+    }
+
     try {
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+
+      if (!token) {
+        alert("No token found. Please login again.");
+        return;
+      }
+
       await axios.post("/api/admin/setDoctorCredentials", {
         userId,
         password: newPassword,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       setSettingId(null);
       setNewPassword("");
       fetchDoctors();
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      console.error(err.message || "An error occurred");
+    } catch (error: any) {
+      console.error(error);
+      alert(error.response?.data?.message || "An error occurred");
     }
   };
 
@@ -233,12 +382,47 @@ function AdminDoctors() {
   const counts = getDoctorCounts();
 
   const getTabActions = (tab: string) => {
-    const actions = {
+    const allActions = {
       pending: ["approve", "decline", "delete"],
       approved: ["decline", "delete"],
       declined: ["approve", "delete"],
     };
-    return actions[tab as keyof typeof actions] || [];
+    
+    const availableActions = allActions[tab as keyof typeof allActions] || [];
+    
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Admin users always see all actions - but ONLY if NOT on agent route AND adminToken exists
+    if (!isAgentRoute && adminTokenExists && isAdmin) {
+      return availableActions;
+    }
+    
+    // If user is an agent, filter actions based on permissions (only after permissions are loaded)
+    if ((isAgentRoute || isAgent) && agentTokenExists) {
+      // If permissions are still loading, return empty array to prevent showing buttons prematurely
+      if (permissionsLoading || !agentPermissions) {
+        return [];
+      }
+      
+      return availableActions.filter(action => {
+        // Strict boolean checks - only show if explicitly true
+        if (action === "approve" || action === "decline") {
+          // Approve and decline require "approve" permission
+          return agentPermissions.canApprove === true || agentPermissions.canAll === true;
+        }
+        if (action === "delete") {
+          // Delete requires "delete" permission
+          return agentPermissions.canDelete === true || agentPermissions.canAll === true;
+        }
+        return true;
+      });
+    }
+    
+    // Default: return empty array for safety (non-admin, non-agent users)
+    return [];
   };
 
   // const toggleExpansion = (doctorId: string) => {
@@ -538,12 +722,45 @@ function AdminDoctors() {
                         </span>
                       )}
                     </div>
-                    <button
-                      className="text-blue-600 hover:text-blue-800 text-sm underline"
-                      onClick={() => setSettingId(doctor.user._id)}
-                    >
-                      {hasPassword ? "Change Password" : "Set Credentials"}
-                    </button>
+                    {/* Only show Set Credentials button if agent has update permission */}
+                    {(() => {
+                      const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                      const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                      const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                      
+                      // Admin always sees button - but ONLY if NOT on agent route
+                      if (!isAgentRoute && adminTokenExists && isAdmin) {
+                        return (
+                          <button
+                            className="text-blue-600 hover:text-blue-800 text-sm underline"
+                            onClick={() => setSettingId(doctor.user._id)}
+                          >
+                            {hasPassword ? "Change Password" : "Set Credentials"}
+                          </button>
+                        );
+                      }
+                      
+                      // For agents: Only show if permissions are loaded AND update permission is explicitly true
+                      if ((isAgentRoute || isAgent) && agentTokenExists) {
+                        if (permissionsLoading || !agentPermissions) {
+                          return null;
+                        }
+                        
+                        const hasUpdatePermission = agentPermissions.canUpdate === true || agentPermissions.canAll === true;
+                        if (hasUpdatePermission) {
+                          return (
+                            <button
+                              className="text-blue-600 hover:text-blue-800 text-sm underline"
+                              onClick={() => setSettingId(doctor.user._id)}
+                            >
+                              {hasPassword ? "Change Password" : "Set Credentials"}
+                            </button>
+                          );
+                        }
+                      }
+                      
+                      return null;
+                    })()}
                   </div>
                 )}
               </div>
@@ -581,12 +798,32 @@ function AdminDoctors() {
     );
   };
 
-  if (loading) {
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  if (loading || (isAgent && permissionsLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-black">Loading doctors...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show permission denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view doctor approvals. Please contact your administrator to request access.
+          </p>
         </div>
       </div>
     );
@@ -630,7 +867,12 @@ function AdminDoctors() {
                   count: counts.declined,
                   color: "red",
                 },
-              ].map((tab) => (
+              ]
+              .filter(tab => {
+                // Only show tabs if user has read permission
+                return hasReadPermission;
+              })
+              .map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => {

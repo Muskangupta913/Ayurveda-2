@@ -2,22 +2,42 @@ import dbConnect from '../../../lib/database';
 import JobPosting from '../../../models/JobPosting';
 import JobApplication from '../../../models/JobApplication';
 import Notification from '../../../models/Notification';
-import jwt from 'jsonwebtoken';
+import { getUserFromReq } from '../lead-ms/auth';
+import { checkAgentPermission } from '../agent/permissions-helper';
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
-
-  const token = authHeader.split(' ')[1];
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { role } = decoded;
-
-    if (role !== 'admin') {
-      return res.status(403).json({ message: 'Unauthorized, admin only' });
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ message: 'Unauthorized: Missing or invalid token' });
+    }
+    
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      // Approve / Decline
+      if (req.method === 'PATCH') {
+        const { hasPermission } = await checkAgentPermission(me._id, "admin_manage_job", "approve");
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            message: "Permission denied: You do not have approve permission for manage job module" 
+          });
+        }
+      }
+      
+      // Delete
+      if (req.method === 'DELETE') {
+        const { hasPermission } = await checkAgentPermission(me._id, "admin_manage_job", "delete");
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            message: "Permission denied: You do not have delete permission for manage job module" 
+          });
+        }
+      }
+    } else if (me.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin or agent role required' });
     }
 
     // Approve / Decline

@@ -3,6 +3,7 @@ import User from "../../../models/Users";
 import Clinic from "../../../models/Clinic";
 import { getUserFromReq, requireRole } from "../lead-ms/auth";
 import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
+import { checkAgentPermission } from "../agent/permissions-helper";
 import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
@@ -17,6 +18,17 @@ export default async function handler(req, res) {
 
   if (!me) {
     return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
+  }
+
+  // Check permissions for agents - admins bypass all checks
+  if (me.role === 'agent' || me.role === 'doctorStaff') {
+    const { hasPermission } = await checkAgentPermission(me._id, "create_agent", "create");
+    if (!hasPermission) {
+      return res.status(403).json({ 
+        success: false,
+        message: "Permission denied: You do not have create permission for create agent module" 
+      });
+    }
   }
 
   // Debug: Log who is creating

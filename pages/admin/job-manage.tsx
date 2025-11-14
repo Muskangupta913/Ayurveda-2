@@ -1,10 +1,12 @@
 import axios from "axios";
 import React, { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/router";
 
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
 import type { NextPageWithLayout } from "../_app";
-import { Building2, MapPin, DollarSign, Clock, Users, Calendar, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { Building2, MapPin, DollarSign, Clock, Users, Calendar, CheckCircle, XCircle, Trash2, X } from "lucide-react";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 
 // Define a Job interface
@@ -64,6 +66,8 @@ interface ConfirmationModal {
 const JOBS_PER_PAGE = 15;
 
 function AdminJobs() {
+  const router = useRouter();
+  
   const [jobs, setJobs] = useState<JobsData>({
     pending: [],
     approved: [],
@@ -87,26 +91,123 @@ function AdminJobs() {
     jobId: '',
     jobTitle: '',
   });
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Job Manage - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_manage_job" : (null as any));
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    setIsLoading(true);
-    axios
-      .get<JobsData>("/api/admin/job-manage", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        setJobs(res.data);
+    const fetchJobs = async () => {
+      try {
+        const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+        const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+        const token = adminToken || agentToken;
+        
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+        
+        setIsLoading(true);
+        const res = await axios.get<JobsData>("/api/admin/job-manage", {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(err => {
+          // If 403 (permission denied), return empty data
+          if (err.response?.status === 403) {
+            return { data: { pending: [], approved: [], declined: [] } };
+          }
+          throw err;
+        });
+        
+        setJobs(res.data || { pending: [], approved: [], declined: [] });
+      } catch (error: any) {
+        console.error('Failed to fetch jobs:', error);
+        // If permission denied, set empty arrays
+        if (error.response?.status === 403) {
+          setJobs({ pending: [], approved: [], declined: [] });
+        }
+      } finally {
         setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setIsLoading(false);
-      });
-  }, []);
+      }
+    };
+
+    // Fetch jobs immediately for admins
+    // For agents: only fetch if read permission is granted
+    if (isAdmin) {
+      fetchJobs();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        // Check if agent has read permission
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchJobs();
+        } else {
+          // Agent doesn't have read permission - stop loading
+          setIsLoading(false);
+        }
+      }
+      // If permissions are still loading, keep loading state true
+    } else {
+      // Neither admin nor agent - stop loading
+      setIsLoading(false);
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   const deleteJob = (jobId: string) => {
-    const token = localStorage.getItem("adminToken");
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canDelete !== true && agentPermissions.canAll !== true) {
+      alert("You do not have permission to delete jobs");
+      return;
+    }
+    
+    const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+    const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+    const token = adminToken || agentToken;
+
+    if (!token) {
+      alert("No token found. Please login again.");
+      return;
+    }
 
     axios
       .delete(`/api/admin/job-updateStatus?jobId=${jobId}`, {
@@ -117,7 +218,26 @@ function AdminJobs() {
   };
 
   const updateStatus = (jobId: string, status: "approved" | "declined") => {
-    const token = localStorage.getItem("adminToken");
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canApprove !== true && agentPermissions.canAll !== true) {
+      alert("You do not have permission to approve/decline jobs");
+      return;
+    }
+    
+    const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+    const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+    const token = adminToken || agentToken;
+
+    if (!token) {
+      alert("No token found. Please login again.");
+      return;
+    }
+    
     axios
       .patch(
         "/api/admin/job-updateStatus",
@@ -235,13 +355,33 @@ function AdminJobs() {
     return jobs[status].length;
   };
 
-  if (isLoading) {
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  if (isLoading || (isAgent && permissionsLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <div className="w-6 h-6 bg-[#2D9AA5] rounded-full animate-pulse"></div>
           <div className="w-6 h-6 bg-[#2D9AA5] rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
           <div className="w-6 h-6 bg-[#2D9AA5] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show permission denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view job management. Please contact your administrator to request access.
+          </p>
         </div>
       </div>
     );
@@ -566,67 +706,115 @@ function AdminJobs() {
 
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
-                      {activeTab === "pending" && (
-                        <>
-                          <button
-                            onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Decline
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </>
-                      )}
-                      {activeTab === "approved" && (
-                        <>
-                          <button
-                            onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Decline
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </>
-                      )}
-                      {activeTab === "declined" && (
-                        <>
-                          <button
-                            onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </>
-                      )}
+                      {(() => {
+                        const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                        const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                        const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                        
+                        // Helper function to check if action should be shown
+                        const shouldShowAction = (action: 'approve' | 'decline' | 'delete') => {
+                          // Admin always sees all actions - but ONLY if NOT on agent route
+                          if (!isAgentRoute && adminTokenExists && isAdmin) {
+                            return true;
+                          }
+                          
+                          // For agents: Check permissions
+                          if ((isAgentRoute || isAgent) && agentTokenExists) {
+                            if (permissionsLoading || !agentPermissions) {
+                              return false;
+                            }
+                            
+                            if (action === 'approve' || action === 'decline') {
+                              return agentPermissions.canApprove === true || agentPermissions.canAll === true;
+                            }
+                            if (action === 'delete') {
+                              return agentPermissions.canDelete === true || agentPermissions.canAll === true;
+                            }
+                          }
+                          
+                          return false;
+                        };
+                        
+                        return (
+                          <>
+                            {activeTab === "pending" && (
+                              <>
+                                {shouldShowAction('approve') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
+                                    className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                    Approve
+                                  </button>
+                                )}
+                                {shouldShowAction('decline') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
+                                    className="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                    Decline
+                                  </button>
+                                )}
+                                {shouldShowAction('delete') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
+                                    className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            {activeTab === "approved" && (
+                              <>
+                                {shouldShowAction('decline') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
+                                    className="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                    Decline
+                                  </button>
+                                )}
+                                {shouldShowAction('delete') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
+                                    className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            {activeTab === "declined" && (
+                              <>
+                                {shouldShowAction('approve') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
+                                    className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                    Approve
+                                  </button>
+                                )}
+                                {shouldShowAction('delete') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
+                                    className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -874,3 +1062,4 @@ const ProtectedDashboard: NextPageWithLayout = withAdminAuth(AdminJobs);
 ProtectedDashboard.getLayout = AdminJobs.getLayout;
 
 export default ProtectedDashboard;
+

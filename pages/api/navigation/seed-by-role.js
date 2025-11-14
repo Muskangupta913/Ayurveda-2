@@ -115,7 +115,7 @@ const adminNavigationItems = [
       },
       {
         label: 'Contracts',
-        path: '/admin/contracters',
+        path: '/admin/Contractor',
         icon: '⚙️',
         order: 7,
       },

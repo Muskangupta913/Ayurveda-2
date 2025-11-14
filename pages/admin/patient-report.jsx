@@ -1,10 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { Search, FileText, FileSpreadsheet, X, ChevronLeft, ChevronRight } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 const AdminPatientClaims = () => {
+  const router = useRouter();
+  
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [summary, setSummary] = useState({});
@@ -14,12 +18,57 @@ const AdminPatientClaims = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const patientsPerPage = 20;
-
-  const token = typeof window !== 'undefined' ? localStorage.getItem("adminToken") : null;
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAgent, setIsAgent] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Patient Report - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // This page is under Staff Management -> Patient Report submodule
+  const agentPermissionsData = useAgentPermissions(isAgent ? "admin_staff_management" : null, isAgent ? "Patient Report" : null);
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
   const fetchPatients = async (status = "") => {
     try {
       setLoading(true);
+      
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+      
       const url = `/api/admin/getPatientClaims${status ? `?statusFilter=${status}` : ""}`;
 
       const res = await fetch(url, {
@@ -32,6 +81,13 @@ const AdminPatientClaims = () => {
 
       if (!res.ok) {
         const errorData = await res.json();
+        // Handle 403 permission denied errors
+        if (res.status === 403) {
+          setPatients([]);
+          setFilteredPatients([]);
+          setSummary({});
+          throw new Error(errorData.message || 'Permission denied');
+        }
         throw new Error(errorData.message || 'Failed to fetch patient claims');
       }
 
@@ -49,8 +105,20 @@ const AdminPatientClaims = () => {
   };
 
   useEffect(() => {
-    fetchPatients();
-  }, []);
+    if (isAdmin) {
+      fetchPatients();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchPatients();
+        } else {
+          setLoading(false); // Agent doesn't have read permission - stop loading
+        }
+      }
+    } else {
+      setLoading(false); // Neither admin nor agent - stop loading
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   const handleFilterChange = (e) => {
     const status = e.target.value;
@@ -89,6 +157,17 @@ const AdminPatientClaims = () => {
   const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
 
   const downloadCSV = () => {
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canExport !== true && agentPermissions.canAll !== true) {
+      alert("You do not have permission to export patient reports");
+      return;
+    }
+    
     if (filteredPatients.length === 0) {
       alert("No data to download");
       return;
@@ -146,6 +225,17 @@ const AdminPatientClaims = () => {
   };
 
   const downloadPDF = () => {
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canPrint !== true && agentPermissions.canAll !== true) {
+      alert("You do not have permission to print patient reports");
+      return;
+    }
+    
     if (filteredPatients.length === 0) {
       alert("No data to download");
       return;
@@ -232,6 +322,38 @@ const AdminPatientClaims = () => {
     return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  // Show loading spinner while checking permissions
+  if (loading || (isAgent && permissionsLoading)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm sm:text-base text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view patient reports. Please contact your administrator to request access.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-2 sm:p-4 md:p-6 lg:p-8">
       <div className="w-full max-w-[1600px] mx-auto">
@@ -284,22 +406,73 @@ const AdminPatientClaims = () => {
               </div>
 
               <div className="flex gap-2 sm:gap-3">
-                <button
-                  onClick={downloadCSV}
-                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow-md flex-1 sm:flex-none"
-                  title="Download CSV"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span className="hidden xs:inline">CSV</span>
-                </button>
-                <button
-                  onClick={downloadPDF}
-                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow-md flex-1 sm:flex-none"
-                  title="Download PDF"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span className="hidden xs:inline">PDF</span>
-                </button>
+                {/* Download CSV button: Only show for admins OR agents with explicit export permission */}
+                {(() => {
+                  const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                  const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                  const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                  
+                  // Admin always sees button - but ONLY if NOT on agent route
+                  if (!isAgentRoute && adminTokenExists && isAdmin) {
+                    return (
+                      <>
+                        <button
+                          onClick={downloadCSV}
+                          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow-md flex-1 sm:flex-none"
+                          title="Download CSV"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          <span className="hidden xs:inline">CSV</span>
+                        </button>
+                        <button
+                          onClick={downloadPDF}
+                          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow-md flex-1 sm:flex-none"
+                          title="Download PDF"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span className="hidden xs:inline">PDF</span>
+                        </button>
+                      </>
+                    );
+                  }
+                  
+                  // For agents: Only show if permissions are loaded AND export/print permission is explicitly true
+                  if ((isAgentRoute || isAgent) && agentTokenExists) {
+                    if (permissionsLoading || !agentPermissions) {
+                      return null;
+                    }
+                    
+                    const hasExportPermission = agentPermissions.canExport === true || agentPermissions.canAll === true;
+                    const hasPrintPermission = agentPermissions.canPrint === true || agentPermissions.canAll === true;
+                    
+                    return (
+                      <>
+                        {hasExportPermission && (
+                          <button
+                            onClick={downloadCSV}
+                            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow-md flex-1 sm:flex-none"
+                            title="Download CSV"
+                          >
+                            <FileSpreadsheet className="w-4 h-4" />
+                            <span className="hidden xs:inline">CSV</span>
+                          </button>
+                        )}
+                        {hasPrintPermission && (
+                          <button
+                            onClick={downloadPDF}
+                            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow-md flex-1 sm:flex-none"
+                            title="Download PDF"
+                          >
+                            <FileText className="w-4 h-4" />
+                            <span className="hidden xs:inline">PDF</span>
+                          </button>
+                        )}
+                      </>
+                    );
+                  }
+                  
+                  return null;
+                })()}
               </div>
             </div>
           </div>

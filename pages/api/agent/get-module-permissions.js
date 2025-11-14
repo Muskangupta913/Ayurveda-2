@@ -1,8 +1,8 @@
-// pages/api/agent/check-permission.js
-// API endpoint to check if an agent has permission for a specific module/submodule and action
+// pages/api/agent/get-module-permissions.js
+// API endpoint to get full permission details for a specific module
 import dbConnect from "../../../lib/database";
 import { getUserFromReq } from "../lead-ms/auth";
-import { checkAgentPermission, getAgentModulePermissions } from "./permissions-helper";
+import { getAgentModulePermissions } from "./permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -23,35 +23,45 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, message: 'Access denied. Agent role required' });
     }
 
-    const { moduleKey, action, subModuleName } = req.query;
+    const { moduleKey } = req.query;
 
-    if (!moduleKey || !action) {
+    if (!moduleKey) {
       return res.status(400).json({ 
         success: false, 
-        message: 'moduleKey and action are required' 
+        message: 'moduleKey is required' 
       });
     }
 
-    // Check permission
-    const { hasPermission, error } = await checkAgentPermission(
+    // Get module permissions
+    const { permissions, error } = await getAgentModulePermissions(
       me._id,
-      moduleKey,
-      action,
-      subModuleName || null
+      moduleKey
     );
+
+    if (error) {
+      return res.status(200).json({
+        success: true,
+        permissions: null,
+        error,
+        agentId: me._id.toString(),
+        moduleKey
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      hasPermission,
-      error: error || null,
+      permissions: {
+        module: permissions.module,
+        actions: permissions.actions || {},
+        subModules: permissions.subModules || []
+      },
+      error: null,
       agentId: me._id.toString(),
-      moduleKey,
-      action,
-      subModuleName: subModuleName || null
+      moduleKey
     });
 
   } catch (error) {
-    console.error('Error checking agent permission:', error);
+    console.error('Error getting agent module permissions:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Internal server error', 

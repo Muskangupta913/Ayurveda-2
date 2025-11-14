@@ -1,7 +1,7 @@
 import dbConnect from "../../../lib/database";
 import Vendor from "../../../models/VendorProfile";
-import jwt from "jsonwebtoken";
-import { checkAgentPermission } from "../../../lib/checkAgentPermission";
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -11,40 +11,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    let userRole = null;
-    let userId = null;
-
-    // Extract user info from JWT if provided
-    if (req.headers.authorization) {
-      try {
-        const token = req.headers.authorization.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        userRole = decoded?.role;
-        userId = decoded?.userId || decoded?.id;
-      } catch (err) {
-        console.warn("JWT decode failed:", err.message);
-        // If token is invalid, we'll check permissions anyway
-      }
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
     }
-
-    // Check agent permissions if user is an agent
-    if (userRole === 'agent' || userRole === 'doctorStaff') {
-      const hasPermission = await checkAgentPermission(
-        userId, 
-        'staff_management', 
-        'read', 
-        'Add Vendor'
-      ) || await checkAgentPermission(userId, 'staff_management', 'all');
-      
+    
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "read", "Create Vendor");
       if (!hasPermission) {
         return res.status(403).json({ 
-          success: false, 
-          message: "You don't have permission to view vendors" 
+          success: false,
+          message: "Permission denied: You do not have read permission for Create Vendor submodule" 
         });
       }
+    } else if (me.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
     }
-
-    // Fetch vendors
+    
     const vendors = await Vendor.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: vendors });
   } catch (error) {

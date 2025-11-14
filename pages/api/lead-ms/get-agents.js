@@ -4,6 +4,7 @@ import User from '../../../models/Users';
 import Clinic from '../../../models/Clinic';   // ✅ import Clinic
 import bcrypt from 'bcryptjs';
 import { getUserFromReq, requireRole } from './auth';
+import { checkAgentPermission } from '../agent/permissions-helper';
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -20,6 +21,16 @@ export default async function handler(req, res) {
 
   // ---------------- GET Agents/DoctorStaff ----------------
   if (req.method === 'GET') {
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission } = await checkAgentPermission(me._id, "create_agent", "read");
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          success: false,
+          message: "Permission denied: You do not have read permission for create agent module" 
+        });
+      }
+    }
     try {
       // Get role filter from query parameter (optional: 'agent', 'doctorStaff', or undefined for both)
       const roleFilter = req.query.role;
@@ -161,6 +172,24 @@ export default async function handler(req, res) {
     }
     if (!action || !['approve', 'decline', 'resetPassword'].includes(action)) {
       return res.status(400).json({ success: false, message: 'action must be either "approve", "decline" or "resetPassword"' });
+    }
+
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      let requiredAction = 'update';
+      if (action === 'approve' || action === 'decline') {
+        requiredAction = 'approve';
+      } else if (action === 'resetPassword') {
+        requiredAction = 'update';
+      }
+      
+      const { hasPermission } = await checkAgentPermission(me._id, "create_agent", requiredAction);
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          success: false,
+          message: `Permission denied: You do not have ${requiredAction} permission for create agent module` 
+        });
+      }
     }
 
     // Build query to find agent or doctorStaff based on who is requesting

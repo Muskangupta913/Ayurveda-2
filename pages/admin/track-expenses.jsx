@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { Search, ChevronLeft, ChevronRight, Eye, X, User, Wallet } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 function AllPettyCashAdmin() {
+  const router = useRouter();
+  
   const [data, setData] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [staffList, setStaffList] = useState([]);
@@ -15,6 +19,47 @@ function AllPettyCashAdmin() {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const perPage = 20;
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAgent, setIsAgent] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Track Expenses - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // This page is under Staff Management -> Track Expenses submodule
+  const agentPermissionsData = useAgentPermissions(isAgent ? "admin_staff_management" : null, isAgent ? "Track Expenses" : null);
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -43,12 +88,26 @@ function AllPettyCashAdmin() {
       const params = new URLSearchParams({ startDate: s, endDate: e });
       if (staff) params.append("staffName", staff);
 
-      const token = localStorage.getItem("adminToken");
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+      
       const res = await fetch(`/api/admin/getAllPettyCash?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) {
+        // Handle 403 permission denied errors
+        if (res.status === 403) {
+          setData([]);
+          setFiltered([]);
+          setGlobalAmounts({ globalTotalAmount: 0, globalSpentAmount: 0, globalRemainingAmount: 0 });
+          showToast("Permission denied", "error");
+          return;
+        }
+        throw new Error("Failed to fetch");
+      }
       const json = await res.json();
 
       setData(json.data || []);
@@ -64,10 +123,24 @@ function AllPettyCashAdmin() {
   };
 
   useEffect(() => {
-    const today = getToday();
-    setFilters({ staff: "", start: today, end: today, search: "" });
-    fetchData();
-  }, []);
+    if (isAdmin) {
+      const today = getToday();
+      setFilters({ staff: "", start: today, end: today, search: "" });
+      fetchData();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          const today = getToday();
+          setFilters({ staff: "", start: today, end: today, search: "" });
+          fetchData();
+        } else {
+          setLoading(false); // Agent doesn't have read permission - stop loading
+        }
+      }
+    } else {
+      setLoading(false); // Neither admin nor agent - stop loading
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   useEffect(() => {
     const result = data.filter(item =>
@@ -89,6 +162,38 @@ function AllPettyCashAdmin() {
   const isImage = (url) => /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
   const isPDF = (url) => /\.pdf$/i.test(url);
   const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  // Show loading spinner while checking permissions
+  if (loading || (isAgent && permissionsLoading)) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm sm:text-base text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view track expenses. Please contact your administrator to request access.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-6">

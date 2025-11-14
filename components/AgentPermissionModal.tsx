@@ -354,18 +354,49 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         modulePermission.actions[actionKey] = value;
       });
       
-      // Also update all submodules' actions
-      if (modulePermission.subModules && modulePermission.subModules.length > 0) {
-        modulePermission.subModules = modulePermission.subModules.map(subModule => ({
-          ...subModule,
-          actions: {
-            all: value,
-            create: value,
-            read: value,
-            update: value,
-            delete: value,
+      // ✅ CRITICAL FIX: When module-level "all" is clicked, also set all submodule actions to true
+      // First, ensure all submodules from navigationItems are initialized
+      const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
+      if (navItem && navItem.subModules && navItem.subModules.length > 0) {
+        // Initialize submodules if they don't exist
+        if (!modulePermission.subModules) {
+          modulePermission.subModules = [];
+        }
+        
+        // Add missing submodules from navigationItems
+        navItem.subModules.forEach(navSubModule => {
+          let subModule = modulePermission.subModules.find(sm => sm.name === navSubModule.name);
+          if (!subModule) {
+            subModule = {
+              name: navSubModule.name,
+              path: navSubModule.path || '',
+              icon: navSubModule.icon || '📄',
+              order: navSubModule.order || 0,
+              actions: {
+                all: false,
+                create: false,
+                read: false,
+                update: false,
+                delete: false,
+                print: false,
+                export: false,
+                approve: false
+              }
+            };
+            modulePermission.subModules.push(subModule);
           }
-        }));
+        });
+        
+        // Now set all actions for all submodules
+        modulePermission.subModules.forEach(subModule => {
+          // Set all actions for each submodule
+          const subModuleActions = Object.keys(subModule.actions).filter(key => key !== 'all');
+          subModuleActions.forEach(actionKey => {
+            (subModule.actions as any)[actionKey] = value;
+          });
+          // Also set the "all" flag for the submodule
+          subModule.actions.all = value;
+        });
       }
     } else {
       // When individual action is toggled, update that action

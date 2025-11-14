@@ -1,7 +1,7 @@
 import dbConnect from "../../../lib/database";
 import Vendor from "../../../models/VendorProfile";
-import jwt from "jsonwebtoken";
-import { checkAgentPermission } from "../../../lib/checkAgentPermission";
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -13,38 +13,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    let userRole = null;
-    let userId = null;
-
-    // Extract user info from JWT if provided
-    if (req.headers.authorization) {
-      try {
-        const token = req.headers.authorization.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        userRole = decoded?.role;
-        userId = decoded?.userId || decoded?.id;
-      } catch (err) {
-        console.warn("JWT decode failed:", err.message);
-      }
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
     }
-
-    // Check agent permissions if user is an agent
-    if (userRole === 'agent' || userRole === 'doctorStaff') {
-      const hasPermission = await checkAgentPermission(
-        userId, 
-        'staff_management', 
-        'delete', 
-        'Add Vendor'
-      ) || await checkAgentPermission(userId, 'staff_management', 'all');
-      
+    
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "delete", "Create Vendor");
       if (!hasPermission) {
         return res.status(403).json({ 
-          success: false, 
-          message: "You don't have permission to delete vendors" 
+          success: false,
+          message: "Permission denied: You do not have delete permission for Create Vendor submodule" 
         });
       }
+    } else if (me.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
     }
-
+    
     const deleted = await Vendor.findByIdAndDelete(id);
     if (!deleted) {
       return res.status(404).json({ success: false, message: "Vendor not found" });
