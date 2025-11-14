@@ -72,14 +72,6 @@ export const clinicNavigationItems = [
     order: 7,
   },
   {
-    label: "Create offers",
-    path: "/lead/create-offer",
-    icon: "🤑",
-    description: "Manage Offers",
-    moduleKey: "create_offers",
-    order: 8,
-  },
-  {
     label: "Staff Management",
     icon: "👥",
     description: "Manage Staff",
@@ -150,6 +142,14 @@ export const clinicNavigationItems = [
         order: 9,
       },
     ],
+  },
+  {
+    label: "Create offers",
+    path: "/lead/create-offer",
+    icon: "🤑",
+    description: "Manage Offers",
+    moduleKey: "create_offers",
+    order: 8,
   },
   {
     label: "Marketing",

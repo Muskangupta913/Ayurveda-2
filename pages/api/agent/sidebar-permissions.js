@@ -93,9 +93,14 @@ export default async function handler(req, res) {
     const filteredNavigationItems = navigationItems
       .map(item => {
         // Try multiple lookup strategies for moduleKey matching
+        // item.moduleKey from DB is like "clinic_marketing", permission might be stored as "marketing" or "clinic_marketing"
+        const moduleKeyWithoutRole = item.moduleKey.replace(/^(admin|clinic|doctor)_/, '');
+        const moduleKeyWithRole = `${navigationRole}_${moduleKeyWithoutRole}`;
+        
         const modulePerm = permissionMap[item.moduleKey] || 
-                          permissionMap[item.moduleKey.replace(`${navigationRole}_`, '')] ||
-                          permissionMap[item.moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+                          permissionMap[moduleKeyWithoutRole] ||
+                          permissionMap[moduleKeyWithRole] ||
+                          permissionMap[item.moduleKey.replace(`${navigationRole}_`, '')];
         
         // Check if module has read permission
         const hasModuleRead = modulePerm && (
@@ -108,9 +113,11 @@ export default async function handler(req, res) {
         }
 
         // Filter submodules based on permissions
+        // Only show submodules that the agent has explicit permission for
         let filteredSubModules = [];
         if (item.subModules && item.subModules.length > 0) {
           filteredSubModules = item.subModules.filter(subModule => {
+            // Check if this specific submodule has permission
             const subModulePerm = modulePerm?.subModules[subModule.name];
             return subModulePerm && (
               subModulePerm.read === true || 
@@ -119,11 +126,15 @@ export default async function handler(req, res) {
           });
         }
 
-        // Convert path from admin/clinic/doctor routes to agent routes
+        // Convert path from admin/clinic/doctor/staff routes to agent routes
         let agentPath = item.path;
         if (agentPath) {
+          // Convert /staff/* to /agent/*
+          if (agentPath.startsWith('/staff/')) {
+            agentPath = agentPath.replace('/staff/', '/agent/');
+          }
           // Convert /admin/* to /agent/*
-          if (agentPath.startsWith('/admin/')) {
+          else if (agentPath.startsWith('/admin/')) {
             agentPath = agentPath.replace('/admin/', '/agent/');
           }
           // Convert /clinic/* to /agent/*
@@ -134,17 +145,45 @@ export default async function handler(req, res) {
           else if (agentPath.startsWith('/doctor/')) {
             agentPath = agentPath.replace('/doctor/', '/agent/');
           }
+          // Convert /lead/* to /agent/lead/*
+          else if (agentPath.startsWith('/lead/')) {
+            agentPath = agentPath.replace('/lead/', '/agent/lead/');
+          }
+          // Convert /lead to /agent/lead
+          else if (agentPath === '/lead') {
+            agentPath = '/agent/lead';
+          }
+          // Convert /marketingalltype/* to /agent/marketing/*
+          else if (agentPath.startsWith('/marketingalltype/')) {
+            agentPath = agentPath.replace('/marketingalltype/', '/agent/marketing/');
+          }
+          // Convert /marketingalltype to /agent/marketing
+          else if (agentPath === '/marketingalltype') {
+            agentPath = '/agent/marketing';
+          }
+          // Convert /staff to /agent
+          else if (agentPath === '/staff') {
+            agentPath = '/agent';
+          }
         }
 
         // Convert submodule paths as well
         const convertedSubModules = filteredSubModules.map(subModule => ({
-          ...subModule,
+          name: subModule.name,
           path: subModule.path ? (
+            subModule.path.startsWith('/staff/') ? subModule.path.replace('/staff/', '/agent/') :
+            subModule.path === '/staff' ? '/agent' :
             subModule.path.startsWith('/admin/') ? subModule.path.replace('/admin/', '/agent/') :
             subModule.path.startsWith('/clinic/') ? subModule.path.replace('/clinic/', '/agent/') :
             subModule.path.startsWith('/doctor/') ? subModule.path.replace('/doctor/', '/agent/') :
+            subModule.path.startsWith('/lead/') ? subModule.path.replace('/lead/', '/agent/lead/') :
+            subModule.path === '/lead' ? '/agent/lead' :
+            subModule.path.startsWith('/marketingalltype/') ? subModule.path.replace('/marketingalltype/', '/agent/marketing/') :
+            subModule.path === '/marketingalltype' ? '/agent/marketing' :
             subModule.path
-          ) : subModule.path
+          ) : '',
+          icon: subModule.icon || '',
+          order: subModule.order || 0
         }));
 
         return {

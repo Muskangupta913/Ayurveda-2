@@ -1,68 +1,67 @@
-import dbConnect from '../../../lib/database';
-import User from '../../../models/Users';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import dbConnect from "../../../lib/database";
+import User from "../../../models/Users";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, message: "Method not allowed" });
   }
 
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
+    }
+
+    // find user with allowed roles (doctor, staff, doctorStaff, agent)
+    const user = await User.findOne({
+      email,
+      role: { $in: ["doctor", "staff", "doctorStaff", "agent"] },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // check approval
+    if (!user.isApproved || user.declined) {
+      return res.status(403).json({ success: false, message: "Account not approved" });
+    }
+
+    // check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    // generate token with name included
+    const payload = {
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET); // expires in 7 days
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      doctor: {
+        name: user.name,
+        email: user.email,
+      },
+      token,
+      tokenKey: user.role === "agent" ? "agentToken" : "doctorToken",
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
+
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
-
-  const doctor = await User.findOne({ email, role: 'doctor' });
-
-  // If no doctor found with that email and role
-  if (!doctor) {
-    return res.status(404).json({ message: 'Doctor not found' });
-  }
-
-  // If password is not set yet
-  if (!doctor.password) {
-    return res.status(403).json({ message: 'Password not set. Please contact admin.' });
-  }
-
-  // If password does not match
-  const isMatch = await bcrypt.compare(password, doctor.password);
-  if (!isMatch) {
-    return res.status(400).json({ message: 'Invalid email or password' });
-  }
-
-  // If admin has not approved the account
-  if (!doctor.isApproved) {
-    return res.status(403).json({ message: 'Admin has not approved your account yet.' });
-  }
-
-  // If account is declined
-  if (doctor.declined) {
-    return res.status(403).json({ message: 'Your account has been declined by admin.' });
-  }
-
-  // Create JWT token
-  const token = jwt.sign(
-    {
-      userId: doctor._id,
-      email: doctor.email,
-      role: doctor.role,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: '1d' }
-  );
-
-  res.status(200).json({
-    message: 'Login successful',
-    token,
-    doctor: {
-      id: doctor._id,
-      name: doctor.name,
-      email: doctor.email,
-      phone: doctor.phone,
-    },
-  });
 }

@@ -106,10 +106,126 @@ export default function VendorForm() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, vendorId: null });
+  const [permissions, setPermissions] = useState({
+    canCreate: false,
+    canUpdate: false,
+    canDelete: false,
+    canRead: undefined, // undefined means not loaded yet
+  });
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const token = typeof window !== "undefined" ? localStorage.getItem("agentToken") : "";
+
+  // Check if we're in agent context
+  const isAgent = typeof window !== "undefined" && localStorage.getItem("agentToken");
+
+  // Fetch permissions - same pattern as create-offer page
+  const fetchPermissions = async () => {
+    if (!token || !isAgent) {
+      // If not an agent, allow all permissions
+      setPermissions({
+        canCreate: true,
+        canUpdate: true,
+        canDelete: true,
+        canRead: true,
+      });
+      setPermissionsLoaded(true);
+      return;
+    }
+    
+    try {
+      const res = await fetch("/api/agent/my-permissions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const modulePermission = data.data.permissions?.find((p) => {
+          if (!p?.module) return false;
+          if (p.module === "staff_management") return true;
+          if (p.module === "clinic_staff_management") return true;
+          if (p.module.startsWith("clinic_") && p.module.slice(7) === "staff_management") {
+            return true;
+          }
+          return false;
+        });
+        
+        if (modulePermission) {
+          const actions = modulePermission.actions || {};
+          
+          // Log the actions for debugging
+          console.log("Vendor Permission Actions:", actions);
+          
+          // Check for "Add Vendor" submodule
+          const addVendorSubModule = modulePermission.subModules?.find(
+            (sm) => sm.name === "Add Vendor"
+          );
+          
+          // If submodule exists, use its actions, otherwise use module-level actions
+          const effectiveActions = addVendorSubModule?.actions || actions;
+          
+          // If actions.all is true, grant all permissions
+          // Otherwise, check individual action flags
+          const hasAll = effectiveActions.all === true;
+          
+          setPermissions({
+            // If "all" is true, grant all permissions, otherwise check individual flags
+            canCreate: hasAll || effectiveActions.create === true,
+            canUpdate: hasAll || effectiveActions.update === true,
+            canDelete: hasAll || effectiveActions.delete === true,
+            canRead: hasAll || effectiveActions.read === true,
+          });
+          
+          // Log the final permissions
+          console.log("Vendor Final Permissions:", {
+            canCreate: hasAll || effectiveActions.create === true,
+            canUpdate: hasAll || effectiveActions.update === true,
+            canDelete: hasAll || effectiveActions.delete === true,
+            canRead: hasAll || effectiveActions.read === true,
+            hasSubModule: !!addVendorSubModule,
+          });
+        } else {
+          // No permissions found, default to false
+          console.log("No module permission found for staff_management");
+          setPermissions({
+            canCreate: false,
+            canUpdate: false,
+            canDelete: false,
+            canRead: false,
+          });
+        }
+      } else {
+        // API failed, default to false
+        console.log("Vendor API failed or no data:", data);
+        setPermissions({
+          canCreate: false,
+          canUpdate: false,
+          canDelete: false,
+          canRead: false,
+        });
+      }
+      setPermissionsLoaded(true);
+    } catch (err) {
+      console.error("Error fetching vendor permissions:", err);
+      // On error, default to false
+      setPermissions({
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canRead: false,
+      });
+      setPermissionsLoaded(true);
+    }
+  };
 
   useEffect(() => {
-    fetchVendors();
-  }, []);
+    fetchPermissions();
+  }, [token]);
+
+  useEffect(() => {
+    // Fetch vendors after permissions are loaded
+    if (permissionsLoaded) {
+      fetchVendors();
+    }
+  }, [permissionsLoaded, permissions.canRead]);
 
   useEffect(() => {
     const filtered = vendors.filter((v) =>
@@ -125,15 +241,54 @@ export default function VendorForm() {
   };
 
   const fetchVendors = async () => {
+    if (!token && !isAgent) {
+      // For non-agents, try to get clinic/doctor token
+      const clinicToken = typeof window !== "undefined" ? localStorage.getItem("clinicToken") : null;
+      const doctorToken = typeof window !== "undefined" ? localStorage.getItem("doctorToken") : null;
+      if (!clinicToken && !doctorToken) {
+        showToast("Authentication required", "error");
+        return;
+      }
+    }
+    
+    // Wait for permissions to load
+    if (!permissionsLoaded) return;
+    
+    // Check if user has read permission
+    if (isAgent && permissions.canRead === false) {
+      setVendors([]);
+      setFilteredVendors([]);
+      return;
+    }
+
     try {
-      const res = await axios.get("/api/admin/get-vendors");
+      const tokenToUse = token || 
+        (typeof window !== "undefined" 
+          ? (localStorage.getItem("clinicToken") || localStorage.getItem("doctorToken"))
+          : null);
+      
+      if (!tokenToUse) {
+        showToast("Authentication required", "error");
+        return;
+      }
+
+      const res = await axios.get("/api/admin/get-vendors", {
+        headers: { Authorization: `Bearer ${tokenToUse}` }
+      });
+      
       if (res.data.success) {
         setVendors(res.data.data);
         setFilteredVendors(res.data.data);
       }
     } catch (err) {
       console.error("Error fetching vendors:", err);
-      showToast("Failed to fetch vendors", "error");
+      if (err.response?.status === 403) {
+        showToast(err.response.data?.message || "You don't have permission to view vendors", "error");
+        setVendors([]);
+        setFilteredVendors([]);
+      } else {
+        showToast("Failed to fetch vendors", "error");
+      }
     }
   };
 
@@ -144,8 +299,28 @@ export default function VendorForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check permissions before submitting (frontend validation)
+    if (isAgent) {
+      if (editId) {
+        // Updating existing vendor
+        if (!permissions.canUpdate) {
+          showToast("You don't have permission to update vendors. Please contact your administrator.", "error");
+          return;
+        }
+      } else {
+        // Creating new vendor
+        if (!permissions.canCreate) {
+          showToast("You don't have permission to create vendors. Please contact your administrator.", "error");
+          return;
+        }
+      }
+    }
+
     try {
-      const token = localStorage.getItem("userToken");
+      const token = typeof window !== "undefined" 
+        ? (localStorage.getItem("agentToken") || localStorage.getItem("clinicToken") || localStorage.getItem("doctorToken"))
+        : null;
       const config = {
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
@@ -160,6 +335,18 @@ export default function VendorForm() {
         );
         if (res.data.success) {
           showToast("Vendor updated successfully!", "success");
+          // Reset form and close modal on success
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            trnNumber: "",
+            note: "",
+          });
+          setEditId(null);
+          setIsModalOpen(false);
+          fetchVendors();
         }
       } else {
         const res = await axios.post(
@@ -169,39 +356,63 @@ export default function VendorForm() {
         );
         if (res.data.success) {
           showToast("Vendor created successfully!", "success");
+          // Reset form and close modal on success
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            trnNumber: "",
+            note: "",
+          });
+          setEditId(null);
+          setIsModalOpen(false);
+          fetchVendors();
         }
       }
-
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        address: "",
-        commissionPercentage: "",
-        note: "",
-      });
-      setEditId(null);
-      setIsModalOpen(false);
-      fetchVendors();
     } catch (err) {
-      console.error("Error submitting vendor form:", err);
-      showToast(err.response?.data?.message || "Error saving vendor!", "error");
+      // Handle permission errors from API
+      if (err.response?.status === 403) {
+        showToast(err.response.data?.message || "You don't have permission to perform this action", "error");
+      } else {
+        console.error("Error submitting vendor form:", err);
+        showToast(err.response?.data?.message || "Error saving vendor!", "error");
+      }
     }
   };
 
   const handleDelete = async (id) => {
+    // Check permissions before deleting
+    if (isAgent && !permissions.canDelete) {
+      showToast("You don't have permission to delete vendors", "error");
+      return;
+    }
+
     try {
-      const token = localStorage.getItem("userToken");
+      const token = typeof window !== "undefined" 
+        ? (localStorage.getItem("agentToken") || localStorage.getItem("clinicToken") || localStorage.getItem("doctorToken"))
+        : null;
+      
+      if (!token) {
+        showToast("Authentication required", "error");
+        return;
+      }
+
       const res = await axios.delete(`/api/admin/delete-vendor?id=${id}`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
+        headers: { Authorization: `Bearer ${token}` },
       });
+      
       if (res.data.success) {
         showToast("Vendor deleted successfully!", "success");
         fetchVendors();
       }
     } catch (err) {
-      console.error(err);
-      showToast("Failed to delete vendor!", "error");
+      console.error("Error deleting vendor:", err);
+      if (err.response?.status === 403) {
+        showToast(err.response.data?.message || "You don't have permission to delete vendors", "error");
+      } else {
+        showToast("Failed to delete vendor!", "error");
+      }
     }
   };
 
@@ -245,6 +456,31 @@ export default function VendorForm() {
   };
 
 
+  // Show loading state while permissions are being fetched
+  if (isAgent && !permissionsLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if agent doesn't have read permission
+  if (isAgent && permissions.canRead === false) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-md max-w-md">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+          <p className="text-gray-600">You don't have permission to view vendors.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -254,13 +490,17 @@ export default function VendorForm() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Vendor Management</h1>
             <p className="text-gray-800 mt-1">Manage your vendors efficiently</p>
           </div>
-          <button
-            onClick={openModal}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">Add Vendor</span>
-          </button>
+          {/* Only show Add Vendor button if not agent OR if agent has create permission */}
+          {permissions.canCreate && (
+            <button
+              onClick={openModal}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isAgent && !permissions.canCreate}
+            >
+              <Plus className="w-5 h-5" />
+              <span className="font-medium">Add Vendor</span>
+            </button>
+          )}
         </div>
 
         {/* Toast Notification */}
@@ -300,20 +540,28 @@ export default function VendorForm() {
                     {vendor.name}
                   </h3>
                   <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => handleEdit(vendor)}
-                      className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all"
-                      title="Edit Vendor"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setConfirmDialog({ isOpen: true, vendorId: vendor._id })}
-                      className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
-                      title="Delete Vendor"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Only show edit button if not agent OR if agent has update permission */}
+                    {permissions.canUpdate && (
+                      <button
+                        onClick={() => handleEdit(vendor)}
+                        className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all"
+                        title="Edit Vendor"
+                        disabled={isAgent && !permissions.canUpdate}
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {/* Only show delete button if not agent OR if agent has delete permission */}
+                    {permissions.canDelete && (
+                      <button
+                        onClick={() => setConfirmDialog({ isOpen: true, vendorId: vendor._id })}
+                        className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
+                        title="Delete Vendor"
+                        disabled={isAgent && !permissions.canDelete}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -363,11 +611,23 @@ export default function VendorForm() {
               <Search className="w-12 h-12 text-gray-800" />
             </div>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
-              No vendors found
+              {searchQuery ? "No vendors found" : "No vendors yet"}
             </h3>
-            <p className="text-gray-800 text-sm sm:text-base">
+            <p className="text-gray-800 text-sm sm:text-base mb-4">
               {searchQuery ? "Try adjusting your search criteria" : "Get started by adding your first vendor"}
             </p>
+            {!searchQuery && permissions.canCreate && (
+              <button
+                onClick={openModal}
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Your First Vendor</span>
+              </button>
+            )}
+            {!searchQuery && isAgent && !permissions.canCreate && (
+              <p className="text-red-500 text-xs">You do not have permission to create vendors</p>
+            )}
           </div>
         )}
 

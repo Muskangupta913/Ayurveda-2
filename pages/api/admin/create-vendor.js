@@ -1,6 +1,7 @@
 import dbConnect from "../../../lib/database";
 import Vendor from "../../../models/VendorProfile";
-import jwt from "jsonwebtoken"; // optional, if you use tokens
+import jwt from "jsonwebtoken";
+import { checkAgentPermission } from "../../../lib/checkAgentPermission";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -8,15 +9,36 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     try {
       let createdBy = req.body.createdBy;
+      let userRole = null;
+      let userId = null;
 
-      // ✅ Option 1: extract from JWT if provided
-      if (!createdBy && req.headers.authorization) {
+      // Extract user info from JWT if provided
+      if (req.headers.authorization) {
         try {
           const token = req.headers.authorization.split(" ")[1];
           const decoded = jwt.verify(token, process.env.JWT_SECRET);
           createdBy = decoded?.name || decoded?.email || "Unknown User";
+          userRole = decoded?.role;
+          userId = decoded?.userId || decoded?.id;
         } catch (err) {
           console.warn("JWT decode failed:", err.message);
+        }
+      }
+
+      // Check agent permissions if user is an agent
+      if (userRole === 'agent' || userRole === 'doctorStaff') {
+        const hasPermission = await checkAgentPermission(
+          userId, 
+          'staff_management', 
+          'create', 
+          'Add Vendor'
+        ) || await checkAgentPermission(userId, 'staff_management', 'all');
+        
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            success: false, 
+            message: "You don't have permission to create vendors" 
+          });
         }
       }
 
