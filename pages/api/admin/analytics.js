@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       .status(405)
       .json({ success: false, message: "Method not allowed" });
   }
-
+  
   try {
     // Get the logged-in user
     const me = await getUserFromReq(req);
