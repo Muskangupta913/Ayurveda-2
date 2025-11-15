@@ -121,11 +121,29 @@ export default async function handler(req, res) {
         }
 
         // Filter submodules based on permissions
-        // If module has permission, show all submodules (don't filter by individual submodule permissions)
+        // Only show submodules that have explicit read or all permission
         let filteredSubModules = [];
         if (item.subModules && item.subModules.length > 0) {
-          // Since the module has read/all permission, show all submodules
-          filteredSubModules = item.subModules;
+          filteredSubModules = item.subModules
+            .map(subModule => {
+              const subModulePerm = modulePerm?.subModules[subModule.name];
+              const hasSubModuleRead = subModulePerm && (
+                subModulePerm.read === true || 
+                subModulePerm.all === true
+              );
+              
+              // Only include submodule if it has read permission
+              if (hasSubModuleRead) {
+                return {
+                  name: subModule.name,
+                  path: transformPath(subModule.path || ''),
+                  icon: subModule.icon || '',
+                  order: subModule.order || 0
+                };
+              }
+              return null;
+            })
+            .filter(subModule => subModule !== null);
         }
 
         return {
@@ -136,12 +154,7 @@ export default async function handler(req, res) {
           description: item.description,
           order: item.order,
           moduleKey: item.moduleKey,
-          subModules: filteredSubModules.map(subModule => ({
-            name: subModule.name,
-            path: transformPath(subModule.path || ''),
-            icon: subModule.icon || '',
-            order: subModule.order || 0
-          }))
+          subModules: filteredSubModules
         };
       })
       .filter(item => item !== null); // Remove null items

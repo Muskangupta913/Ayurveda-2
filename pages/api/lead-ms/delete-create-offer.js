@@ -3,6 +3,7 @@ import Offer from "../../../models/CreateOffer";
 import Clinic from "../../../models/Clinic";
 import { getUserFromReq } from "./auth";
 import { checkClinicPermission } from "./permissions-helper";
+import { checkAgentPermission } from "../agent/permissions-helper";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -62,17 +63,34 @@ export default async function handler(req, res) {
       filter.clinicId = clinic._id;
 
       // ✅ Check permission for deleting offers (only for clinic and agent, admin bypasses)
-      const { hasPermission, error } = await checkClinicPermission(
+      // First check if clinic has delete permission
+      const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
         clinic._id,
         "create_offers",
         "delete"
       );
 
-      if (!hasPermission) {
+      if (!clinicHasPermission) {
         return res.status(403).json({
           success: false,
-          message: error || "You do not have permission to delete offers"
+          message: clinicError || "You do not have permission to delete offers"
         });
+      }
+
+      // If user is an agent, also check agent-specific permissions
+      if (user.role === "agent") {
+        const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+          user._id,
+          "create_offers",
+          "delete"
+        );
+
+        if (!agentHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: agentError || "You do not have permission to delete offers"
+          });
+        }
       }
     } else if (user.role === "admin") {
       // Admin can delete any offer

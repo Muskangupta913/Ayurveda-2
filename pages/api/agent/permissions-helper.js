@@ -56,10 +56,22 @@ export async function checkAgentPermission(agentId, moduleKey, action, subModule
       return { hasPermission: false, error: `Module ${moduleKey} not found in agent permissions` };
     }
 
+    // Check module-level "all" permission first (before submodule checks)
+    // Handle both boolean true and string "true" cases
+    const hasAllPermission = modulePermission.actions?.all === true || 
+                             modulePermission.actions?.all === "true" ||
+                             String(modulePermission.actions?.all).toLowerCase() === "true";
+    
+    if (hasAllPermission) {
+      console.log('[agent-permissions-helper] Module has "all" permission, granting access');
+      return { hasPermission: true, error: null };
+    }
+
     // If checking submodule permission
     if (subModuleName) {
       // PRIORITY 1: Check module-level "all" first - this grants all permissions including submodules
-      if (Boolean(modulePermission.actions?.all)) {
+      // (Already checked above, but keeping for clarity)
+      if (hasAllPermission) {
         return { hasPermission: true, error: null };
       }
 
@@ -92,13 +104,21 @@ export async function checkAgentPermission(agentId, moduleKey, action, subModule
     }
 
     // Check module-level permission
-    // If "all" action is enabled, grant all permissions
-    if (Boolean(modulePermission.actions?.all)) {
+    // If "all" action is enabled, grant all permissions (already checked above, but keeping for safety)
+    const hasAllPermissionFinal = modulePermission.actions?.all === true || 
+                                   modulePermission.actions?.all === "true" ||
+                                   String(modulePermission.actions?.all).toLowerCase() === "true";
+    
+    if (hasAllPermissionFinal) {
       return { hasPermission: true, error: null };
     }
 
-    // Check specific action
-    if (Boolean(modulePermission.actions?.[action])) {
+    // Check specific action - handle both boolean and string cases
+    const hasSpecificAction = modulePermission.actions?.[action] === true || 
+                               modulePermission.actions?.[action] === "true" ||
+                               String(modulePermission.actions?.[action]).toLowerCase() === "true";
+    
+    if (hasSpecificAction) {
       return { hasPermission: true, error: null };
     }
 

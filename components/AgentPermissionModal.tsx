@@ -108,14 +108,52 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
   const [navigationItems, setNavigationItems] = useState<NavigationItem[]>([]);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [clinicPermissions, setClinicPermissions] = useState<ModulePermission[] | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isOpen && token) {
-      fetchNavigationItems();
-      fetchAgentPermissions();
+      if (userRole === 'clinic') {
+        fetchClinicPermissions().then(() => {
+          fetchAgentPermissions();
+        });
+      } else {
+        fetchNavigationItems();
+        fetchAgentPermissions();
+      }
     }
   }, [isOpen, token, userRole, agentId]);
+
+  // Fetch navigation items when clinic permissions are loaded or when not clinic role
+  useEffect(() => {
+    if (userRole === 'clinic') {
+      // For clinic, wait for permissions to be loaded
+      if (clinicPermissions !== null) {
+        fetchNavigationItems();
+      }
+    } else {
+      // For admin/doctor, fetch immediately if modal is open
+      if (isOpen && token) {
+        fetchNavigationItems();
+      }
+    }
+  }, [clinicPermissions, userRole, isOpen, token]);
+
+  const fetchClinicPermissions = async () => {
+    try {
+      const { data } = await axios.get('/api/clinic/permissions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data.success && data.data && data.data.permissions) {
+        setClinicPermissions(data.data.permissions);
+      } else {
+        setClinicPermissions(null);
+      }
+    } catch (err) {
+      console.error('Error fetching clinic permissions:', err);
+      setClinicPermissions(null);
+    }
+  };
 
   const fetchNavigationItems = async () => {
     try {
@@ -123,9 +161,87 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) {
-        setNavigationItems(data.data || []);
+        let items = data.data || [];
+        
+        // If userRole is 'clinic' and we have clinic permissions, filter navigation items
+        if (userRole === 'clinic' && clinicPermissions && clinicPermissions.length > 0) {
+          // Build permission map for quick lookup
+          const permissionMap: Record<string, { moduleActions: any; subModules: Record<string, any> }> = {};
+          clinicPermissions.forEach(perm => {
+            const moduleKey = perm.module;
+            const moduleKeyWithoutPrefix = moduleKey.replace(/^(admin|clinic|doctor)_/, '');
+            const moduleKeyWithPrefix = `clinic_${moduleKeyWithoutPrefix}`;
+            
+            const permissionData: { moduleActions: any; subModules: Record<string, any> } = {
+              moduleActions: perm.actions,
+              subModules: {}
+            };
+            
+            permissionMap[moduleKey] = permissionData;
+            permissionMap[moduleKeyWithoutPrefix] = permissionData;
+            permissionMap[moduleKeyWithPrefix] = permissionData;
+            
+            if (perm.subModules && perm.subModules.length > 0) {
+              perm.subModules.forEach(subModule => {
+                if (subModule && subModule.name) {
+                  permissionData.subModules[subModule.name] = subModule.actions;
+                }
+              });
+            }
+          });
+
+          // Filter navigation items based on clinic permissions
+          items = items
+            .map((item: NavigationItem) => {
+              // Try multiple lookup strategies for moduleKey matching
+              const modulePerm = permissionMap[item.moduleKey] || 
+                                permissionMap[item.moduleKey.replace('clinic_', '')] ||
+                                permissionMap[item.moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+              
+              // Check if module has read permission
+              const hasModuleRead = modulePerm && (
+                modulePerm.moduleActions.read === true || 
+                modulePerm.moduleActions.all === true
+              );
+
+              if (!hasModuleRead) {
+                return null; // Don't show this module at all
+              }
+
+              // Filter submodules based on permissions
+              let filteredSubModules = [];
+              if (item.subModules && item.subModules.length > 0) {
+                filteredSubModules = item.subModules
+                  .map((subModule: any) => {
+                    if (!subModule || !subModule.name) {
+                      return null;
+                    }
+                    const subModulePerm = modulePerm?.subModules[subModule.name];
+                    const hasSubModuleRead = subModulePerm && (
+                      subModulePerm.read === true || 
+                      subModulePerm.all === true
+                    );
+                    
+                    // Only include submodule if it has read permission
+                    if (hasSubModuleRead) {
+                      return subModule;
+                    }
+                    return null;
+                  })
+                  .filter((subModule: any) => subModule !== null);
+              }
+
+              return {
+                ...item,
+                subModules: filteredSubModules
+              };
+            })
+            .filter((item: NavigationItem) => item !== null);
+        }
+        
+        setNavigationItems(items);
         // Auto-expand modules with sub-modules
-        const modulesWithSubModules = data.data.filter((item: NavigationItem) => 
+        const modulesWithSubModules = items.filter((item: NavigationItem) => 
           item.subModules && item.subModules.length > 0
         );
         setExpandedModules(new Set(modulesWithSubModules.map((item: NavigationItem) => item.moduleKey)));
@@ -274,6 +390,60 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     };
   };
 
+  // Helper function to check if clinic has permission for a specific action
+  const clinicHasAction = (moduleKey: string, action: ActionKey, subModuleName?: string): boolean => {
+    if (userRole !== 'clinic' || !clinicPermissions || clinicPermissions.length === 0) {
+      return true; // Admin/doctor can grant all permissions
+    }
+
+    // Build permission map
+    const permissionMap: Record<string, { moduleActions: any; subModules: Record<string, any> }> = {};
+    clinicPermissions.forEach(perm => {
+      const modKey = perm.module;
+      const modKeyWithoutPrefix = modKey.replace(/^(admin|clinic|doctor)_/, '');
+      const modKeyWithPrefix = `clinic_${modKeyWithoutPrefix}`;
+      
+      const permissionData: { moduleActions: any; subModules: Record<string, any> } = {
+        moduleActions: perm.actions,
+        subModules: {}
+      };
+      
+      permissionMap[modKey] = permissionData;
+      permissionMap[modKeyWithoutPrefix] = permissionData;
+      permissionMap[modKeyWithPrefix] = permissionData;
+      
+      if (perm.subModules && perm.subModules.length > 0) {
+        perm.subModules.forEach(subModule => {
+          if (subModule && subModule.name) {
+            permissionData.subModules[subModule.name] = subModule.actions;
+          }
+        });
+      }
+    });
+
+    // Find module permission
+    const modulePerm = permissionMap[moduleKey] || 
+                      permissionMap[moduleKey.replace('clinic_', '')] ||
+                      permissionMap[moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+
+    if (!modulePerm) {
+      return false; // Module not found in clinic permissions
+    }
+
+    // If checking submodule action
+    if (subModuleName) {
+      const subModulePerm = modulePerm.subModules[subModuleName];
+      if (!subModulePerm) {
+        return false; // Submodule not found
+      }
+      // Check if clinic has this action for the submodule
+      return subModulePerm.all === true || subModulePerm[action] === true;
+    }
+
+    // Check module-level action
+    return modulePerm.moduleActions.all === true || modulePerm.moduleActions[action] === true;
+  };
+
   const autoSavePermissions = async (permissionsToSave: ModulePermission[]) => {
     if (!token) return;
     
@@ -315,6 +485,12 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
   };
 
   const handleModuleActionChange = (moduleKey: string, action: string, value: boolean) => {
+    // Check if clinic has permission for this action
+    if (value && !clinicHasAction(moduleKey, action as ActionKey)) {
+      alert(`You do not have permission to grant "${action}" action for this module. You can only grant permissions that you have been granted.`);
+      return;
+    }
+
     const newPermissions = [...permissions];
     let modulePermission = newPermissions.find(p => p.module === moduleKey);
 
@@ -365,9 +541,9 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         
         // Add missing submodules from navigationItems
         navItem.subModules.forEach(navSubModule => {
-          let subModule = modulePermission.subModules.find(sm => sm.name === navSubModule.name);
-          if (!subModule) {
-            subModule = {
+          const existingSubModule = modulePermission.subModules.find(sm => sm.name === navSubModule.name);
+          if (!existingSubModule) {
+            const newSubModule: SubModule = {
               name: navSubModule.name,
               path: navSubModule.path || '',
               icon: navSubModule.icon || '📄',
@@ -377,13 +553,10 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
                 create: false,
                 read: false,
                 update: false,
-                delete: false,
-                print: false,
-                export: false,
-                approve: false
+                delete: false
               }
             };
-            modulePermission.subModules.push(subModule);
+            modulePermission.subModules.push(newSubModule);
           }
         });
         
@@ -414,6 +587,12 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
   };
 
   const handleSubModuleActionChange = (moduleKey: string, subModuleName: string, action: string, value: boolean) => {
+    // Check if clinic has permission for this action
+    if (value && !clinicHasAction(moduleKey, action as ActionKey, subModuleName)) {
+      alert(`You do not have permission to grant "${action}" action for this submodule. You can only grant permissions that you have been granted.`);
+      return;
+    }
+
     const newPermissions = [...permissions];
     let modulePermission = newPermissions.find(p => p.module === moduleKey);
 
@@ -508,8 +687,14 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     label: string,
     current: boolean,
     onSelect: (value: boolean) => void,
-    disabled: boolean = false
+    disabled: boolean = false,
+    moduleKey?: string,
+    subModuleName?: string
   ) => {
+    // Check if clinic has permission for this action (only for clinic role)
+    const hasClinicPermission = !moduleKey || clinicHasAction(moduleKey, actionKey, subModuleName);
+    const isDisabled = disabled || (userRole === 'clinic' && !hasClinicPermission);
+    
     const style = ACTION_STYLES[actionKey];
     const trackClasses = current
       ? `${style.accent} bg-opacity-70`
@@ -520,10 +705,11 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         type="button"
         role="switch"
         aria-checked={current}
-        onClick={() => !disabled && onSelect(!current)}
+        onClick={() => !isDisabled && onSelect(!current)}
         className={`group inline-flex items-center gap-2.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
           current ? style.active : style.inactive
-        } ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:brightness-105'}`}
+        } ${isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:brightness-105'}`}
+        title={isDisabled && userRole === 'clinic' && !hasClinicPermission ? `You don't have "${label}" permission for this module` : ''}
       >
         <span>{label}</span>
         <span
@@ -674,7 +860,8 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
                                   label,
                                   modulePermission.actions[key] || false,
                                   (checked) => handleModuleActionChange(item.moduleKey, key, checked),
-                                  saving
+                                  saving,
+                                  item.moduleKey
                                 )
                               )}
                             </div>
@@ -725,7 +912,9 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
                                             label,
                                             subModulePermission.actions[key] || false,
                                             (checked) => handleSubModuleActionChange(item.moduleKey, subModule.name, key, checked),
-                                            saving
+                                            saving,
+                                            item.moduleKey,
+                                            subModule.name
                                           )
                                         )}
                                       </div>

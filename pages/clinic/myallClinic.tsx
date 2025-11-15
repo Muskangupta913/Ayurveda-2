@@ -297,7 +297,9 @@ const TreatmentManager = ({
         );
 
         // Refresh available treatments
-        const treatmentsResponse = await axios.get("/api/doctor/getTreatment");
+        const treatmentsResponse = await axios.get("/api/doctor/getTreatment", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setAvailableTreatments(treatmentsResponse.data.treatments || []);
       } catch (error) {
         console.error("Error adding custom sub-treatment to database:", error);
@@ -953,7 +955,10 @@ function ClinicManagementDashboard() {
 
     const fetchTreatments = async () => {
       try {
-        const res = await axios.get("/api/doctor/getTreatment");
+        const token = localStorage.getItem("clinicToken");
+        const res = await axios.get("/api/doctor/getTreatment", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setAvailableTreatments(res.data.treatments || []);
       } catch (err) {
         console.error("Error fetching treatments:", err);
@@ -1048,7 +1053,10 @@ function ClinicManagementDashboard() {
         if (response.data.success) {
           // Refresh available treatments
           const treatmentsResponse = await axios.get(
-            "/api/doctor/getTreatment"
+            "/api/doctor/getTreatment",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
           );
           setAvailableTreatments(treatmentsResponse.data.treatments || []);
         }

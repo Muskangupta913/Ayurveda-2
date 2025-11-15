@@ -2,7 +2,9 @@
 // Example API endpoint that uses agent permissions for approve action
 import dbConnect from "../../../lib/database";
 import Lead from "../../../models/Lead";
+import Clinic from "../../../models/Clinic";
 import { getUserFromReq } from "../lead-ms/auth";
+import { checkClinicPermission } from "./permissions-helper";
 import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
@@ -33,17 +35,37 @@ export default async function handler(req, res) {
     // For other status updates, check "update" permission
     const action = ['Approved', 'Declined'].includes(status) ? 'approve' : 'update';
     
-    const { hasPermission, error: permissionError } = await checkAgentPermission(
+    // First check if clinic has the required permission
+    if (me.clinicId) {
+      const clinic = await Clinic.findById(me.clinicId);
+      if (clinic) {
+        const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
+          clinic._id,
+          "lead",
+          action
+        );
+
+        if (!clinicHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: clinicError || `You do not have permission to ${action} leads`
+          });
+        }
+      }
+    }
+
+    // Then check agent-specific permissions
+    const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
       me._id,
       "lead", // moduleKey
       action, // action: "approve" or "update"
       null // subModuleName (optional)
     );
 
-    if (!hasPermission) {
+    if (!agentHasPermission) {
       return res.status(403).json({
         success: false,
-        message: permissionError || `You do not have permission to ${action} leads`
+        message: agentError || `You do not have permission to ${action} leads`
       });
     }
 
