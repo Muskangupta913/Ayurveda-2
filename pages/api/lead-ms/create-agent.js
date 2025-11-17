@@ -21,7 +21,8 @@ export default async function handler(req, res) {
   }
 
   // Check permissions for agents - admins bypass all checks
-  if (me.role === 'agent' || me.role === 'doctorStaff') {
+  // Explicitly check if user is NOT admin before checking permissions
+  if (me.role !== 'admin' && (me.role === 'agent' || me.role === 'doctorStaff')) {
     const { hasPermission } = await checkAgentPermission(me._id, "create_agent", "create");
     if (!hasPermission) {
       return res.status(403).json({ 

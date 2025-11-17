@@ -550,7 +550,7 @@ const ManageAgentsPage: NextPageWithLayout = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreated={loadAll}
-        token={agentToken || undefined}
+        token={undefined}
         doctorToken={undefined}
         adminToken={adminToken || undefined}
       />

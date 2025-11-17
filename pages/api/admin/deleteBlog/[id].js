@@ -1,7 +1,7 @@
 import dbConnect from "../../../../lib/database";
 import Blog from "../../../../models/Blog";
-import { getUserFromReq } from "../../../lead-ms/auth";
-import { checkAgentPermission } from "../../../agent/permissions-helper";
+import { getUserFromReq } from "../../lead-ms/auth";
+import { checkAgentPermission } from "../../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
