@@ -77,7 +77,7 @@ const AgentSidebar: FC<AgentSidebarProps> = ({
   useEffect(() => {
     const fetchNavigationAndPermissions = async () => {
       try {
-        const token = localStorage.getItem("agentToken");
+        const token = typeof window !== "undefined" ? localStorage.getItem("agentToken") : null;
         if (!token) {
           setNavigationItems([]);
           setIsLoading(false);

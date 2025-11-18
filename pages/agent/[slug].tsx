@@ -19,13 +19,14 @@ const routeMap: { [key: string]: () => Promise<any> } = {
   'get-in-touch': () => import('../admin/get-in-touch'),
   'job-manage': () => import('../admin/job-manage'),
   'manage-clinic-permissions': () => import('../admin/manage-clinic-permissions'),
+  'create-agent': () => import('../admin/create-agent'),
   'create-staff': () => import('../admin/create-staff'),
   'admin-add-service': () => import('../admin/admin-add-service'),
   'admin-create-vendor': () => import('../admin/admin-create-vendor'),
   'getAllEodNotes': () => import('../admin/getAllEodNotes'),
   'patient-report': () => import('../admin/patient-report'),
   'track-expenses': () => import('../admin/track-expenses'),
-  'contracters': () => import('../admin/contracters'),
+  'contracters': () => import('../admin/contractor'),
   'dashboard-admin': () => import('../admin/dashboard-admin'),
   'seed-navigation': () => import('../admin/seed-navigation'),
   'all-clinic': () => import('../admin/all-clinic'),
@@ -46,6 +47,17 @@ const routeMap: { [key: string]: () => Promise<any> } = {
   'review-form': () => import('../clinic/review-form'),
   'clinic-seed-navigation': () => import('../clinic/seed-navigation'),
   
+  // Staff Management routes (staff pages)
+  'staff-dashboard': () => import('../staff/staff-dashboard'),
+  'add-service': () => import('../staff/add-service'),
+  'patient-registration': () => import('../staff/patient-registration'),
+  'patient-information': () => import('../staff/patient-information'),
+  'eodNotes': () => import('../staff/eodNotes'),
+  'AddPettyCashForm': () => import('../staff/AddPettyCashForm'),
+  'add-vendor': () => import('../staff/add-vendor'),
+  'membership': () => import('../staff/membership'),
+  'contract': () => import('../staff/contract'),
+  
   // Doctor routes
   'doctor-dashboard': () => import('../doctor/doctor-dashboard'),
   'manageDoctor': () => import('../doctor/manageDoctor'),
@@ -57,7 +69,6 @@ const routeMap: { [key: string]: () => Promise<any> } = {
   'doctor-my-jobs': () => import('../doctor/my-jobs'),
   'doctor-job-applicants': () => import('../doctor/job-applicants'),
   'prescription-requests': () => import('../doctor/prescription-requests'),
-  'create-agent': () => import('../doctor/create-agent'),
   'doctor-seed-navigation': () => import('../doctor/seed-navigation'),
 };
 
@@ -93,7 +104,6 @@ const AgentDynamicPage = () => {
         // Since we're already protected by withAgentAuth on this page,
         // we need to temporarily provide an adminToken to bypass the check
         // OR we need to extract the underlying component
-        
         // The exported component is wrapped with withAdminAuth
         // withAdminAuth will check for adminToken and redirect if not found
         // Since we can't easily unwrap it, we'll render it as-is

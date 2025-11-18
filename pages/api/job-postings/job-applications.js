@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   try {
     const me = await getUserFromReq(req);
-    if (!me || !requireRole(me, ["clinic", "admin"])) {
+    if (!me || !requireRole(me, ["clinic", "admin", "doctor"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -24,12 +24,14 @@ export default async function handler(req, res) {
       return res.status(404).json({ success: false, message: error });
     }
 
-    // ✅ Check permission for reading job applications (only for clinic, admin bypasses)
+    // ✅ Check permission for reading job applications (only for clinic and doctor, admin bypasses)
     if (!isAdmin && clinicId) {
       const { hasPermission, error: permError } = await checkClinicPermission(
         clinicId,
         "jobs",
-        "read"
+        "read",
+        null, // subModuleName
+        me.role === "doctor" ? "doctor" : me.role === "clinic" ? "clinic" : null
       );
 
       if (!hasPermission) {

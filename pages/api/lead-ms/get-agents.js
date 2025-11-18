@@ -4,6 +4,8 @@ import User from '../../../models/Users';
 import Clinic from '../../../models/Clinic';   // ✅ import Clinic
 import bcrypt from 'bcryptjs';
 import { getUserFromReq, requireRole } from './auth';
+import { checkClinicPermission } from './permissions-helper';
+import { checkAgentPermission } from '../agent/permissions-helper';
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -20,6 +22,40 @@ export default async function handler(req, res) {
 
   // ---------------- GET Agents/DoctorStaff ----------------
   if (req.method === 'GET') {
+    // ✅ Check permissions for reading agents (admin bypasses all checks)
+    if (me.role !== 'admin') {
+      // For clinic role: Check clinic permissions
+      if (me.role === 'clinic') {
+        const clinic = await Clinic.findOne({ owner: me._id });
+        if (clinic) {
+          const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
+            clinic._id,
+            "create_agent",
+            "read"
+          );
+          if (!clinicHasPermission) {
+            return res.status(403).json({
+              success: false,
+              message: clinicError || "You do not have permission to view agents"
+            });
+          }
+        }
+      }
+      // For agent/doctorStaff role: Check agent permissions
+      else if (me.role === 'agent' || me.role === 'doctorStaff') {
+        const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+          me._id,
+          "create_agent",
+          "read"
+        );
+        if (!agentHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: agentError || "You do not have permission to view agents"
+          });
+        }
+      }
+    }
     try {
       // Get role filter from query parameter (optional: 'agent', 'doctorStaff', or undefined for both)
       const roleFilter = req.query.role;
@@ -161,6 +197,48 @@ export default async function handler(req, res) {
     }
     if (!action || !['approve', 'decline', 'resetPassword'].includes(action)) {
       return res.status(400).json({ success: false, message: 'action must be either "approve", "decline" or "resetPassword"' });
+    }
+
+    // ✅ Check permissions for updating agents (admin bypasses all checks)
+    if (me.role !== 'admin') {
+      let requiredAction = 'update';
+      if (action === 'approve' || action === 'decline') {
+        requiredAction = 'approve';
+      } else if (action === 'resetPassword') {
+        requiredAction = 'update';
+      }
+
+      // For clinic role: Check clinic permissions
+      if (me.role === 'clinic') {
+        const clinic = await Clinic.findOne({ owner: me._id });
+        if (clinic) {
+          const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
+            clinic._id,
+            "create_agent",
+            requiredAction
+          );
+          if (!clinicHasPermission) {
+            return res.status(403).json({
+              success: false,
+              message: clinicError || `You do not have permission to ${requiredAction} agents`
+            });
+          }
+        }
+      }
+      // For agent/doctorStaff role: Check agent permissions
+      else if (me.role === 'agent' || me.role === 'doctorStaff') {
+        const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+          me._id,
+          "create_agent",
+          requiredAction
+        );
+        if (!agentHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: agentError || `You do not have permission to ${requiredAction} agents`
+          });
+        }
+      }
     }
 
     // Build query to find agent or doctorStaff based on who is requesting

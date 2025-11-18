@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
 import PatientRegistration from "../../../models/PatientRegistration";
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -12,16 +14,24 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ message: "No token provided" });
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const admin = await User.findById(decoded.id);
-
-    if (!admin) return res.status(404).json({ message: "Admin not found" });
-    if (admin.role !== "admin")
-      return res.status(403).json({ message: "Access denied: Admins only" });
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ message: "Unauthorized: Missing or invalid token" });
+    }
+    
+    // Check permissions for agents - admins bypass all checks
+    if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "read", "Patient Report");
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          message: "Permission denied: You do not have read permission for Patient Report submodule" 
+        });
+      }
+    } else if (me.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied. Admin or agent role required" });
+    }
 
     const { statusFilter } = req.query;
 

@@ -1,7 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import axios from "axios";
 import { CheckCircle, AlertCircle, Trash2, Edit3, Plus, X, Search, Mail, Phone, MapPin, Hash, Info, AlertTriangle } from "lucide-react";
+import { useAgentPermissions } from "../hooks/useAgentPermissions";
 
 // Toast Component
 const Toast = ({ message, type, onClose }) => {
@@ -90,6 +92,8 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
 };
 
 export default function VendorForm() {
+  const router = useRouter();
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -106,10 +110,61 @@ export default function VendorForm() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, vendorId: null });
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAgent, setIsAgent] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('VendorForm - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // This page is under Staff Management -> Create Vendor submodule
+  const agentPermissionsData = useAgentPermissions(isAgent ? "admin_staff_management" : null, isAgent ? "Create Vendor" : null);
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
   useEffect(() => {
-    fetchVendors();
-  }, []);
+    if (isAdmin) {
+      fetchVendors();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchVendors();
+        }
+      }
+    } else {
+      // Neither admin nor agent - don't fetch
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   useEffect(() => {
     const filtered = vendors.filter((v) =>
@@ -125,15 +180,39 @@ export default function VendorForm() {
   };
 
   const fetchVendors = async () => {
+    // Wait for permissions to load if agent
+    if (isAgent && permissionsLoading) return;
+    
+    // Check if user has read permission
+    if (isAgent && agentPermissions && agentPermissions.canRead === false && agentPermissions.canAll !== true) {
+      setVendors([]);
+      setFilteredVendors([]);
+      return;
+    }
+
     try {
-      const res = await axios.get("/api/admin/get-vendors");
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+      
+      const res = await axios.get("/api/admin/get-vendors", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       if (res.data.success) {
         setVendors(res.data.data);
         setFilteredVendors(res.data.data);
       }
     } catch (err) {
       console.error("Error fetching vendors:", err);
-      showToast("Failed to fetch vendors", "error");
+      // Handle 403 permission denied errors
+      if (err.response?.status === 403) {
+        setVendors([]);
+        setFilteredVendors([]);
+        showToast(err.response?.data?.message || "Permission denied", "error");
+      } else {
+        showToast("Failed to fetch vendors", "error");
+      }
     }
   };
 
@@ -144,8 +223,33 @@ export default function VendorForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if (editId) {
+      // Update operation
+      if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canUpdate !== true && agentPermissions.canAll !== true) {
+        showToast("You do not have permission to update vendors", "error");
+        return;
+      }
+    } else {
+      // Create operation
+      if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canCreate !== true && agentPermissions.canAll !== true) {
+        showToast("You do not have permission to create vendors", "error");
+        return;
+      }
+    }
+    
     try {
-      const token = localStorage.getItem("userToken");
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+      
       const config = {
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
@@ -160,6 +264,18 @@ export default function VendorForm() {
         );
         if (res.data.success) {
           showToast("Vendor updated successfully!", "success");
+          // Reset form and close modal on success
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            trnNumber: "",
+            note: "",
+          });
+          setEditId(null);
+          setIsModalOpen(false);
+          fetchVendors();
         }
       } else {
         const res = await axios.post(
@@ -169,6 +285,18 @@ export default function VendorForm() {
         );
         if (res.data.success) {
           showToast("Vendor created successfully!", "success");
+          // Reset form and close modal on success
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            trnNumber: "",
+            note: "",
+          });
+          setEditId(null);
+          setIsModalOpen(false);
+          fetchVendors();
         }
       }
 
@@ -177,31 +305,56 @@ export default function VendorForm() {
         email: "",
         phone: "",
         address: "",
-        commissionPercentage: "",
+        trnNumber: "",
         note: "",
       });
       setEditId(null);
       setIsModalOpen(false);
       fetchVendors();
     } catch (err) {
-      console.error("Error submitting vendor form:", err);
-      showToast(err.response?.data?.message || "Error saving vendor!", "error");
+      // Handle permission errors from API
+      if (err.response?.status === 403) {
+        showToast(err.response.data?.message || "You don't have permission to perform this action", "error");
+      } else {
+        console.error("Error submitting vendor form:", err);
+        showToast(err.response?.data?.message || "Error saving vendor!", "error");
+      }
     }
   };
 
   const handleDelete = async (id) => {
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canDelete !== true && agentPermissions.canAll !== true) {
+      showToast("You do not have permission to delete vendors", "error");
+      return;
+    }
+    
     try {
-      const token = localStorage.getItem("userToken");
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+      
       const res = await axios.delete(`/api/admin/delete-vendor?id=${id}`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
+        headers: { Authorization: `Bearer ${token}` },
       });
+      
       if (res.data.success) {
         showToast("Vendor deleted successfully!", "success");
         fetchVendors();
       }
     } catch (err) {
-      console.error(err);
-      showToast("Failed to delete vendor!", "error");
+      console.error("Error deleting vendor:", err);
+      if (err.response?.status === 403) {
+        showToast(err.response.data?.message || "You don't have permission to delete vendors", "error");
+      } else {
+        showToast("Failed to delete vendor!", "error");
+      }
     }
   };
 
@@ -245,6 +398,38 @@ export default function VendorForm() {
   };
 
 
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  // Show loading spinner while checking permissions
+  if (isAgent && permissionsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm sm:text-base text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view vendors. Please contact your administrator to request access.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -254,13 +439,47 @@ export default function VendorForm() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Vendor Management</h1>
             <p className="text-gray-800 mt-1">Manage your vendors efficiently</p>
           </div>
-          <button
-            onClick={openModal}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">Add Vendor</span>
-          </button>
+          {/* Add Vendor button: Only show for admins OR agents with explicit create permission */}
+          {(() => {
+            const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+            const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+            const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+            
+            // Admin always sees button - but ONLY if NOT on agent route
+            if (!isAgentRoute && adminTokenExists && isAdmin) {
+              return (
+                <button
+                  onClick={openModal}
+                  className="flex items-center gap-2 bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">Add Vendor</span>
+                </button>
+              );
+            }
+            
+            // For agents: Only show if permissions are loaded AND create permission is explicitly true
+            if ((isAgentRoute || isAgent) && agentTokenExists) {
+              if (permissionsLoading || !agentPermissions) {
+                return null;
+              }
+              
+              const hasCreatePermission = agentPermissions.canCreate === true || agentPermissions.canAll === true;
+              if (hasCreatePermission) {
+                return (
+                  <button
+                    onClick={openModal}
+                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span className="font-medium">Add Vendor</span>
+                  </button>
+                );
+              }
+            }
+            
+            return null;
+          })()}
         </div>
 
         {/* Toast Notification */}
@@ -300,20 +519,89 @@ export default function VendorForm() {
                     {vendor.name}
                   </h3>
                   <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => handleEdit(vendor)}
-                      className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all"
-                      title="Edit Vendor"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setConfirmDialog({ isOpen: true, vendorId: vendor._id })}
-                      className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
-                      title="Delete Vendor"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Edit button: Only show for admins OR agents with explicit update permission */}
+                    {(() => {
+                      const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                      const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                      const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                      
+                      // Admin always sees edit button - but ONLY if NOT on agent route
+                      if (!isAgentRoute && adminTokenExists && isAdmin) {
+                        return (
+                          <button
+                            onClick={() => handleEdit(vendor)}
+                            className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all"
+                            title="Edit Vendor"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        );
+                      }
+                      
+                      // For agents: Only show if permissions are loaded AND update permission is explicitly true
+                      if ((isAgentRoute || isAgent) && agentTokenExists) {
+                        if (permissionsLoading || !agentPermissions) {
+                          return null;
+                        }
+                        
+                        const hasUpdatePermission = agentPermissions.canUpdate === true || agentPermissions.canAll === true;
+                        if (hasUpdatePermission) {
+                          return (
+                            <button
+                              onClick={() => handleEdit(vendor)}
+                              className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all"
+                              title="Edit Vendor"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                          );
+                        }
+                      }
+                      
+                      return null;
+                    })()}
+                    
+                    {/* Delete button: Only show for admins OR agents with explicit delete permission */}
+                    {(() => {
+                      const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                      const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                      const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                      
+                      // Admin always sees delete button - but ONLY if NOT on agent route
+                      if (!isAgentRoute && adminTokenExists && isAdmin) {
+                        return (
+                          <button
+                            onClick={() => setConfirmDialog({ isOpen: true, vendorId: vendor._id })}
+                            className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
+                            title="Delete Vendor"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        );
+                      }
+                      
+                      // For agents: Only show if permissions are loaded AND delete permission is explicitly true
+                      if ((isAgentRoute || isAgent) && agentTokenExists) {
+                        if (permissionsLoading || !agentPermissions) {
+                          return null;
+                        }
+                        
+                        const hasDeletePermission = agentPermissions.canDelete === true || agentPermissions.canAll === true;
+                        if (hasDeletePermission) {
+                          return (
+                            <button
+                              onClick={() => setConfirmDialog({ isOpen: true, vendorId: vendor._id })}
+                              className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
+                              title="Delete Vendor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          );
+                        }
+                      }
+                      
+                      return null;
+                    })()}
                   </div>
                 </div>
 
@@ -363,11 +651,23 @@ export default function VendorForm() {
               <Search className="w-12 h-12 text-gray-800" />
             </div>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
-              No vendors found
+              {searchQuery ? "No vendors found" : "No vendors yet"}
             </h3>
-            <p className="text-gray-800 text-sm sm:text-base">
+            <p className="text-gray-800 text-sm sm:text-base mb-4">
               {searchQuery ? "Try adjusting your search criteria" : "Get started by adding your first vendor"}
             </p>
+            {!searchQuery && (isAdmin || (isAgent && agentPermissions && (agentPermissions.canCreate === true || agentPermissions.canAll === true))) && (
+              <button
+                onClick={openModal}
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Your First Vendor</span>
+              </button>
+            )}
+            {!searchQuery && isAgent && agentPermissions && agentPermissions.canCreate !== true && agentPermissions.canAll !== true && (
+              <p className="text-red-500 text-xs">You do not have permission to create vendors</p>
+            )}
           </div>
         )}
 

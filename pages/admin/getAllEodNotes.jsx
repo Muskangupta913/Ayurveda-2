@@ -1,10 +1,15 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import axios from "axios";
+import { Search, ChevronLeft, ChevronRight, Eye, X, User, Wallet } from "lucide-react"
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 const AdminEodNotes = () => {
+  const router = useRouter();
+  
   const [notes, setNotes] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [staffList, setStaffList] = useState([]);
@@ -14,11 +19,55 @@ const AdminEodNotes = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedNotes, setExpandedNotes] = useState({});
-
-  const token = typeof window !== 'undefined' ? window.localStorage?.getItem("adminToken") : null;
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAgent, setIsAgent] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('GetAllEodNotes - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // This page is under Staff Management -> View EOD Report submodule
+  const agentPermissionsData = useAgentPermissions(isAgent ? "admin_staff_management" : null, isAgent ? "View EOD Report" : null);
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
   const fetchAllNotes = async (date = "", staff = "") => {
     try {
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+      
       const query = [];
       if (date) query.push(`date=${date}`);
       if (staff) query.push(`staffName=${encodeURIComponent(staff)}`);
@@ -34,13 +83,31 @@ const AdminEodNotes = () => {
       setDoctorStaffList(res.data.doctorStaffList || []);
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Error fetching notes");
+      // Handle 403 permission denied errors
+      if (err.response?.status === 403) {
+        setNotes([]);
+        setStaffList([]);
+        setDoctorStaffList([]);
+        alert(err.response?.data?.message || "Permission denied");
+      } else {
+        alert(err.response?.data?.message || "Error fetching notes");
+      }
     }
   };
 
   useEffect(() => {
-    fetchAllNotes();
-  }, []);
+    if (isAdmin) {
+      fetchAllNotes();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchAllNotes();
+        }
+      }
+    } else {
+      // Neither admin nor agent - don't fetch
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   const handleFilterChange = () => {
     fetchAllNotes(selectedDate, selectedStaff);
@@ -99,6 +166,38 @@ const AdminEodNotes = () => {
     
     return true;
   });
+
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  // Show loading spinner while checking permissions
+  if (isAgent && permissionsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm sm:text-base text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view EOD notes. Please contact your administrator to request access.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-3 sm:p-4 md:p-6 lg:p-8">

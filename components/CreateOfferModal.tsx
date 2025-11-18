@@ -138,9 +138,15 @@ export default function CreateOfferModal({
         // Process permissions
         const permissionsData = await permissionsRes.json();
         if (permissionsData.success && permissionsData.data) {
-          const modulePermission = permissionsData.data.permissions?.find(
-            (p: any) => p.module === "create_offers"
-          );
+          const modulePermission = permissionsData.data.permissions?.find((p: any) => {
+            if (!p?.module) return false;
+            if (p.module === "create_offers") return true;
+            if (p.module === "clinic_create_offers") return true;
+            if (p.module.startsWith("clinic_") && p.module.slice(7) === "create_offers") {
+              return true;
+            }
+            return false;
+          });
 
           if (modulePermission) {
             const actions = modulePermission.actions || {};

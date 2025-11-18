@@ -1,7 +1,9 @@
-import dbConnect from "../../../lib/database"; 
+ 
 import User from "../../../models/Users";
 import DoctorProfile from "../../../models/DoctorProfile";
 import Review from "../../../models/Review"; // ✅ Import Review model
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -16,6 +18,35 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
+    }
+
+    // If user is an agent, check permissions based on action
+    if (['agent', 'doctorStaff'].includes(me.role)) {
+      let requiredAction = action;
+      if (action === "approve" || action === "decline") {
+        requiredAction = "approve"; // Both approve and decline require "approve" permission
+      }
+      // delete action requires "delete" permission
+
+      const { hasPermission, error: permissionError } = await checkAgentPermission(
+        me._id,
+        "approval_doctors", // moduleKey
+        requiredAction, // action: "approve" or "delete"
+        null // subModuleName
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: permissionError || `You do not have permission to ${action} doctors`
+        });
+      }
+    }
+    // Admin users bypass permission checks
     if (action === "delete") {
       // Delete DoctorProfile
       const doctorProfile = await DoctorProfile.findOneAndDelete({ user: userId });

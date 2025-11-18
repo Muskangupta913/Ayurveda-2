@@ -1,10 +1,28 @@
 import React from "react";
-import { useEffect, useState, useMemo } from "react";
-import { Search, Download, Filter,Phone, MapPin, MessageSquare, ChevronLeft, ChevronRight, RotateCcw, SortAsc, SortDesc,TrendingUp, Clock } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from "recharts";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/router";
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth';
 import type { NextPageWithLayout } from '../_app';
+import { useAgentPermissions } from '../../hooks/useAgentPermissions';
+import {
+  PhoneIcon,
+  MagnifyingGlassIcon,
+  ArrowDownTrayIcon,
+  FunnelIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MapPinIcon,
+  ChatBubbleLeftRightIcon,
+  XCircleIcon,
+  CheckCircleIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon,
+  ClockIcon,
+  ArrowPathIcon,
+} from "@heroicons/react/24/outline";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 // Add Lead interface
 interface Lead {
@@ -15,10 +33,64 @@ interface Lead {
     createdAt: string;
 }
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+// Toast Component
+const Toast = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircleIcon className="w-4 h-4" />,
+    error: <XCircleIcon className="w-4 h-4" />,
+    info: <InformationCircleIcon className="w-4 h-4" />,
+    warning: <ExclamationTriangleIcon className="w-4 h-4" />,
+  };
+
+  const colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    warning: 'bg-yellow-500',
+  };
+
+  return (
+    <div
+      className={`${colors[toast.type]} text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs animate-slide-in`}
+    >
+      {icons[toast.type]}
+      <span className="flex-1 font-medium">{toast.message}</span>
+      <button
+        onClick={onClose}
+        className="hover:bg-white/20 rounded p-0.5 transition-colors"
+      >
+        <XMarkIcon className="w-3 h-3" />
+      </button>
+    </div>
+  );
+};
+
+// Toast Container
+const ToastContainer = ({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) => (
+  <div className="fixed top-4 right-4 z-50 space-y-2">
+    {toasts.map((toast) => (
+      <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+    ))}
+  </div>
+);
+
 // Add type for sortable fields
 type SortField = keyof Lead;
 
 function LeadsPage() {
+    const router = useRouter();
+    const [toasts, setToasts] = useState<Toast[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -29,17 +101,105 @@ function LeadsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [showFilters, setShowFilters] = useState(false);
     const itemsPerPage = 25;
-    const filtersRef = React.useRef<HTMLDivElement>(null);
+    const searchBarRef = React.useRef<HTMLInputElement>(null);
+    
+    // Toast helper functions
+    const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+      const id = Math.random().toString(36).substr(2, 9);
+      setToasts((prev) => [...prev, { id, message, type }]);
+    }, []);
+
+    const removeToast = useCallback((id: string) => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, []);
+    
+    // Check if user is an admin or agent
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [isAgent, setIsAgent] = useState<boolean>(false);
+    
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const adminToken = !!localStorage.getItem('adminToken');
+            const agentToken = !!localStorage.getItem('agentToken');
+            const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+            
+            if (isAgentRoute && agentToken) {
+                setIsAdmin(false);
+                setIsAgent(true);
+            } else if (adminToken) {
+                setIsAdmin(true);
+                setIsAgent(false);
+            } else if (agentToken) {
+                setIsAdmin(false);
+                setIsAgent(true);
+            } else {
+                setIsAdmin(false);
+                setIsAgent(false);
+            }
+        }
+    }, [router.pathname]);
+    
+    const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_request_callback" : (null as any));
+    const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+    const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
     useEffect(() => {
-        fetch("/api/admin/getintouch")
-            .then((res) => res.json())
-            .then((data) => {
-                setLeads(data.data || []);
+        const fetchLeads = async () => {
+            try {
+                setLoading(true);
+                const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+                const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+                const token = adminToken || agentToken;
+
+                if (!token) {
+                    console.error("No token found");
+                    setLoading(false);
+                    showToast('No authentication token found', 'error');
+                    return;
+                }
+
+                const res = await fetch("/api/admin/getintouch", {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (!res.ok) {
+                    if (res.status === 403) {
+                        setLeads([]);
+                        showToast('You do not have permission to view callback requests', 'error');
+                        setLoading(false);
+                        return;
+                    }
+                    throw new Error('Failed to fetch leads');
+                }
+
+                const data = await res.json();
+                const leadsData = data.data || [];
+                setLeads(leadsData);
+                if (leadsData.length > 0) {
+                  showToast(`Loaded ${leadsData.length} callback request(s)`, 'success');
+                }
+            } catch (error: any) {
+                console.error('Failed to fetch leads:', error);
+                showToast('Failed to load callback requests', 'error');
+            } finally {
                 setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    }, []);
+            }
+        };
+
+        if (isAdmin) {
+            fetchLeads();
+        } else if (isAgent) {
+            if (!permissionsLoading) {
+                if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+                    fetchLeads();
+                } else {
+                    setLoading(false);
+                }
+            }
+        } else {
+            setLoading(false);
+        }
+    }, [isAdmin, isAgent, permissionsLoading, agentPermissions, showToast]);
 
     // Get unique locations for filter dropdown
     const uniqueLocations = useMemo(() => {
@@ -93,22 +253,6 @@ function LeadsPage() {
             .slice(0, 5)
             .map(([location, count]) => ({ location, count }));
 
-        // Hourly distribution (for pie chart)
-        const hourlyData: Record<string, number> = {};
-        leads.forEach(lead => {
-            const hour = new Date(lead.createdAt).getHours();
-            const timeSlot = hour < 6 ? 'Night' :
-                hour < 12 ? 'Morning' :
-                    hour < 17 ? 'Afternoon' : 'Evening';
-            hourlyData[timeSlot] = (hourlyData[timeSlot] || 0) + 1;
-        });
-
-        const timeDistribution = Object.entries(hourlyData).map(([time, count]) => ({
-            time,
-            count,
-            percentage: ((count / leads.length) * 100).toFixed(1)
-        }));
-
         // Recent activity (last 30 days vs previous 30 days)
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -130,7 +274,6 @@ function LeadsPage() {
             dailyRequests: last7Days,
             monthWiseData,
             topLocations,
-            timeDistribution,
             recentRequests,
             growthPercentage: parseFloat(growthPercentage.toFixed(1))
         };
@@ -153,7 +296,6 @@ function LeadsPage() {
             return matchesSearch && matchesDate && matchesLocation;
         });
 
-        // Sort - Fixed TypeScript errors
         filtered.sort((a, b) => {
             let aVal: string | Date = a[sortField];
             let bVal: string | Date = b[sortField];
@@ -179,24 +321,41 @@ function LeadsPage() {
     );
 
     const downloadCSV = () => {
-        if (!filteredAndSortedLeads.length) return;
+        const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+        const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+        const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+        
+        if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canExport !== true && agentPermissions.canAll !== true) {
+            showToast("You do not have permission to export callback requests", 'error');
+            return;
+        }
+        
+        if (!filteredAndSortedLeads.length) {
+          showToast('No data to export', 'warning');
+          return;
+        }
 
-        const headers = ["Name", "Phone", "Location", "Query", "Date"];
-        const rows = filteredAndSortedLeads.map((lead) => [
-            lead.name,
-            lead.phone,
-            lead.location,
-            `"${lead.query?.replace(/"/g, '""') || ''}"`,
-            new Date(lead.createdAt).toLocaleString(),
-        ]);
+        try {
+          const headers = ["Name", "Phone", "Location", "Query", "Date"];
+          const rows = filteredAndSortedLeads.map((lead) => [
+              lead.name,
+              lead.phone,
+              lead.location,
+              `"${lead.query?.replace(/"/g, '""') || ''}"`,
+              new Date(lead.createdAt).toLocaleString(),
+          ]);
 
-        const csvContent = [headers, ...rows].map((e) => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `request-callback_${Date.now()}.csv`;
-        link.click();
+          const csvContent = [headers, ...rows].map((e) => e.join(",")).join("\n");
+          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `request-callback_${Date.now()}.csv`;
+          link.click();
+          showToast('CSV file downloaded successfully', 'success');
+        } catch (error) {
+          showToast('Failed to download CSV file', 'error');
+        }
     };
 
     const clearFilters = () => {
@@ -206,6 +365,7 @@ function LeadsPage() {
         setSortField("createdAt");
         setSortDirection("desc");
         setCurrentPage(1);
+        showToast('Filters cleared', 'info');
     };
 
     const handleSort = (field: SortField) => {
@@ -216,119 +376,159 @@ function LeadsPage() {
             setSortDirection("asc");
         }
         setCurrentPage(1);
+        showToast(`Sorted by ${field} (${sortDirection === "asc" ? "ascending" : "descending"})`, 'info');
     };
 
     const SortIcon = ({ field }: { field: SortField }) => {
-        if (sortField !== field) return <SortAsc className="w-4 h-4 opacity-30" />;
-        return sortDirection === "asc" ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />;
+        if (sortField !== field) return <ChevronLeftIcon className="w-3 h-3 opacity-30 rotate-90" />;
+        return sortDirection === "asc" ? <ChevronLeftIcon className="w-3 h-3 rotate-90" /> : <ChevronLeftIcon className="w-3 h-3 -rotate-90" />;
     };
 
-    if (loading) {
+    // Check if agent has read permission
+    const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+    if (loading || (isAgent && permissionsLoading)) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#2D9AA5] border-t-transparent mx-auto mb-4"></div>
-                    <p className="text-gray-600 text-lg">Loading requests...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800 mx-auto"></div>
+                    <p className="mt-3 text-sm text-gray-700">Loading requests...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (isAgent && !hasReadPermission) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-lg shadow-sm p-6 max-w-sm w-full text-center">
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <XCircleIcon className="w-6 h-6 text-red-600" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h2>
+                    <p className="text-sm text-gray-700">
+                        You do not have permission to view callback requests.
+                    </p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
+            
+            <div className="max-w-7xl mx-auto space-y-4">
                 {/* Header */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-[#2D9AA5]/10 rounded-lg">
-                                <Phone className="w-6 h-6 text-[#2D9AA5]" />
+                            <div className="bg-gray-800 p-2 rounded-lg">
+                                <PhoneIcon className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">Request Call Back</h1>
-                                <p className="text-gray-600 text-sm mt-1">Manage and track customer callback requests</p>
+                                <h1 className="text-lg font-semibold text-gray-900">Request Call Back</h1>
+                                <p className="text-xs text-gray-700">Manage and track customer callback requests</p>
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex gap-2">
                             <button
                                 onClick={() => {
                                     setShowFilters(!showFilters);
-                                    setTimeout(() => {
-                                        if (!showFilters && filtersRef.current) {
-                                            filtersRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }
-                                    }, 100);
+                                    if (!showFilters) {
+                                        setTimeout(() => {
+                                            searchBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            searchBarRef.current?.focus();
+                                        }, 100);
+                                    }
                                 }}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
-                                    ? 'bg-[#2D9AA5] text-white border-[#2D9AA5]'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                    }`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    showFilters
+                                        ? 'bg-gray-800 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
                             >
-                                <Filter className="w-4 h-4" />
+                                <FunnelIcon className="w-4 h-4" />
                                 Filters
                             </button>
 
-                            <button
-                                onClick={downloadCSV}
-                                disabled={!filteredAndSortedLeads.length}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D9AA5] text-white font-medium shadow-sm hover:bg-[#2D9AA5]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">Download CSV</span>
-                                <span className="sm:hidden">CSV</span>
-                            </button>
+                            {(() => {
+                                const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                                const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                                const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                                
+                                const canExport = isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canExport || agentPermissions.canAll));
+                                
+                                if (canExport) {
+                                    return (
+                                        <button
+                                            onClick={downloadCSV}
+                                            disabled={!filteredAndSortedLeads.length}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <ArrowDownTrayIcon className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Export CSV</span>
+                                            <span className="sm:hidden">CSV</span>
+                                        </button>
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
-                        <div className="bg-gradient-to-r from-[#2D9AA5]/10 to-[#2D9AA5]/5 rounded-lg p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-200">
+                        <div className="bg-gray-50 rounded-lg p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Requests</p>
-                                    <p className="text-2xl font-bold text-[#2D9AA5]">{leads.length}</p>
+                                    <p className="text-xs text-gray-700 mb-1">Total Requests</p>
+                                    <p className="text-xl font-bold text-gray-900">{leads.length}</p>
                                 </div>
-                                <Phone className="w-8 h-8 text-[#2D9AA5]/60" />
+                                <PhoneIcon className="w-6 h-6 text-gray-700" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-green-50 to-green-25 rounded-lg p-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">This Month</p>
-                                    <p className="text-2xl font-bold text-green-600">{analyticsData.recentRequests}</p>
-                                    <div className="flex items-center gap-1 mt-1">
-                                        <TrendingUp className={`w-3 h-3 ${analyticsData.growthPercentage >= 0 ? 'text-green-500' : 'text-red-500'}`} />
-                                        <span className={`text-xs font-medium ${analyticsData.growthPercentage >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                            {analyticsData.growthPercentage >= 0 ? '+' : ''}{analyticsData.growthPercentage}% from last month
-                                        </span>
-                                    </div>
+                                    <p className="text-xs text-gray-700 mb-1">This Month</p>
+                                    <p className="text-xl font-bold text-gray-900">{analyticsData.recentRequests}</p>
+                                    <p className={`text-xs mt-1 ${analyticsData.growthPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {analyticsData.growthPercentage >= 0 ? '+' : ''}{analyticsData.growthPercentage}%
+                                    </p>
                                 </div>
-                                <Clock className="w-8 h-8 text-green-400" />
+                                <ClockIcon className="w-6 h-6 text-gray-700" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-blue-50 to-blue-25 rounded-lg p-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Active Locations</p>
-                                    <p className="text-2xl font-bold text-blue-600">{uniqueLocations.length}</p>
+                                    <p className="text-xs text-gray-700 mb-1">Locations</p>
+                                    <p className="text-xl font-bold text-gray-900">{uniqueLocations.length}</p>
                                 </div>
-                                <MapPin className="w-8 h-8 text-blue-400" />
+                                <MapPinIcon className="w-6 h-6 text-gray-700" />
                             </div>
                         </div>
                     </div>
 
-                    {/* Month-wise Graphical Representation */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 my-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Month-wise Requests (Last 12 Months)</h3>
-                        <div className="h-72">
+                    {/* Bar Chart - Month-wise Requests */}
+                    <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3">Monthly Requests (Last 12 Months)</h3>
+                        <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={analyticsData.monthWiseData}>
+                                <BarChart data={analyticsData.monthWiseData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} angle={-45} textAnchor="end" height={60} interval={0} />
-                                    <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} allowDecimals={false} />
+                                    <XAxis 
+                                        dataKey="month" 
+                                        tick={{ fontSize: 11, fill: '#6b7280' }} 
+                                        angle={-45} 
+                                        textAnchor="end" 
+                                        height={80}
+                                    />
+                                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
                                     <Tooltip
                                         contentStyle={{
                                             backgroundColor: "#fff",
@@ -336,11 +536,11 @@ function LeadsPage() {
                                             borderRadius: "8px",
                                             boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                                         }}
-                                        labelStyle={{ color: "black", fontWeight: 600 }}   // x-axis label (month)
-                                        itemStyle={{ color: "black" }}                     // values (count)
+                                        labelStyle={{ color: "#374151", fontWeight: 600 }}
+                                        itemStyle={{ color: "#374151" }}
                                     />
-                                    <Line type="monotone" dataKey="count" stroke="#2D9AA5" strokeWidth={3} dot={{ fill: '#2D9AA5', strokeWidth: 2, r: 4 }} activeDot={{ r: 6, stroke: '#2D9AA5', strokeWidth: 2 }} />
-                                </LineChart>
+                                    <Bar dataKey="count" fill="#1f2937" radius={[4, 4, 0, 0]} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -348,25 +548,26 @@ function LeadsPage() {
 
                 {/* Filters */}
                 {showFilters && (
-                    <div ref={filtersRef} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-gray-900">Filters</h3>
                             <button
                                 onClick={clearFilters}
-                                className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#2D9AA5] transition-colors"
+                                className="flex items-center gap-1 text-xs text-gray-700 hover:text-gray-900 transition-colors"
                             >
-                                <RotateCcw className="w-4 h-4" />
-                                Clear All
+                                <ArrowPathIcon className="w-3 h-3" />
+                                Clear
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="relative w-full max-w-lg mx-auto">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 w-4 h-4 sm:w-5 sm:h-5" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="relative">
+                                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-700" />
                                 <input
+                                    ref={searchBarRef}
                                     type="text"
                                     placeholder="Search name, phone, location, or query..."
-                                    className="text-black w-full pl-10 pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] outline-none transition-colors"
+                                    className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
                                     value={searchTerm}
                                     onChange={(e) => {
                                         setSearchTerm(e.target.value);
@@ -375,9 +576,9 @@ function LeadsPage() {
                                 />
                             </div>
                             <div className="relative">
-                                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 w-4 h-4" />
+                                <MapPinIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-700" />
                                 <select
-                                    className="text-black w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] outline-none transition-colors appearance-none bg-white"
+                                    className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
                                     value={locationFilter}
                                     onChange={(e) => {
                                         setLocationFilter(e.target.value);
@@ -395,12 +596,12 @@ function LeadsPage() {
                 )}
 
                 {/* Data Table */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     {filteredAndSortedLeads.length === 0 ? (
                         <div className="text-center py-12">
-                            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests found</h3>
-                            <p className="text-gray-500">
+                            <ChatBubbleLeftRightIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <h3 className="text-base font-semibold text-gray-900 mb-2">No requests found</h3>
+                            <p className="text-sm text-gray-700">
                                 {leads.length === 0
                                     ? "No callback requests have been submitted yet."
                                     : "Try adjusting your filters to see more results."}
@@ -422,10 +623,10 @@ function LeadsPage() {
                                             ].map(({ key, label }) => (
                                                 <th
                                                     key={key}
-                                                    className="text-left p-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 transition-colors"
+                                                    className="text-left p-3 text-xs font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 transition-colors"
                                                     onClick={() => handleSort(key)}
                                                 >
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1">
                                                         {label}
                                                         <SortIcon field={key} />
                                                     </div>
@@ -436,31 +637,31 @@ function LeadsPage() {
                                     <tbody>
                                         {paginatedLeads.map((lead, index) => (
                                             <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                                <td className="p-4">
-                                                    <div className="font-medium text-gray-900">{lead.name}</div>
+                                                <td className="p-3">
+                                                    <div className="text-sm font-medium text-gray-900">{lead.name}</div>
                                                 </td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-2 text-gray-700">
-                                                        <Phone className="w-4 h-4 text-[#2D9AA5]" />
+                                                <td className="p-3">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                        <PhoneIcon className="w-4 h-4 text-gray-600" />
                                                         {lead.phone}
                                                     </div>
                                                 </td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-2 text-gray-700">
-                                                        <MapPin className="w-4 h-4 text-[#2D9AA5]" />
+                                                <td className="p-3">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                        <MapPinIcon className="w-4 h-4 text-gray-600" />
                                                         {lead.location}
                                                     </div>
                                                 </td>
-                                                <td className="p-4">
-                                                    <div className="max-w-xs text-gray-700 line-clamp-2" title={lead.query}>
+                                                <td className="p-3">
+                                                    <div className="max-w-xs text-sm text-gray-700 line-clamp-2" title={lead.query}>
                                                         {lead.query}
                                                     </div>
                                                 </td>
-                                                <td className="p-4">
-                                                    <div className="text-gray-700">
+                                                <td className="p-3">
+                                                    <div className="text-sm text-gray-700">
                                                         {new Date(lead.createdAt).toLocaleDateString()}
                                                     </div>
-                                                    <div className="text-sm text-gray-500">
+                                                    <div className="text-xs text-gray-600">
                                                         {new Date(lead.createdAt).toLocaleTimeString()}
                                                     </div>
                                                 </td>
@@ -475,27 +676,27 @@ function LeadsPage() {
                                 {paginatedLeads.map((lead, index) => (
                                     <div key={index} className="p-4 border-b border-gray-100 last:border-b-0">
                                         <div className="flex justify-between items-start mb-3">
-                                            <h3 className="font-semibold text-gray-900 text-lg">{lead.name}</h3>
-                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                            <h3 className="font-semibold text-gray-900 text-sm">{lead.name}</h3>
+                                            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
                                                 {new Date(lead.createdAt).toLocaleDateString()}
                                             </span>
                                         </div>
 
                                         <div className="space-y-2 mb-3">
-                                            <div className="flex items-center gap-2 text-gray-700">
-                                                <Phone className="w-4 h-4 text-[#2D9AA5]" />
-                                                <span className="text-sm">{lead.phone}</span>
+                                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                <PhoneIcon className="w-4 h-4 text-gray-600" />
+                                                <span>{lead.phone}</span>
                                             </div>
 
-                                            <div className="flex items-center gap-2 text-gray-700">
-                                                <MapPin className="w-4 h-4 text-[#2D9AA5]" />
-                                                <span className="text-sm">{lead.location}</span>
+                                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                <MapPinIcon className="w-4 h-4 text-gray-600" />
+                                                <span>{lead.location}</span>
                                             </div>
                                         </div>
 
                                         <div className="bg-gray-50 rounded-lg p-3">
                                             <div className="flex items-start gap-2">
-                                                <MessageSquare className="w-4 h-4 text-[#2D9AA5] mt-0.5 flex-shrink-0" />
+                                                <ChatBubbleLeftRightIcon className="w-4 h-4 text-gray-600 mt-0.5 flex-shrink-0" />
                                                 <p className="text-sm text-gray-700 leading-relaxed">{lead.query}</p>
                                             </div>
                                         </div>
@@ -505,18 +706,21 @@ function LeadsPage() {
 
                             {/* Pagination */}
                             {totalPages > 1 && (
-                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-gray-50 border-t border-gray-200">
-                                    <div className="text-sm text-gray-700 order-2 sm:order-1">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-gray-50 border-t border-gray-200">
+                                    <div className="text-xs text-gray-700">
                                         Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSortedLeads.length)} of {filteredAndSortedLeads.length} results
                                     </div>
 
-                                    <div className="flex items-center gap-2 order-1 sm:order-2">
+                                    <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => setCurrentPage(currentPage - 1)}
+                                            onClick={() => {
+                                              setCurrentPage(currentPage - 1);
+                                              showToast('Previous page', 'info');
+                                            }}
                                             disabled={currentPage === 1}
-                                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            <ChevronLeft className="w-4 h-4" />
+                                            <ChevronLeftIcon className="w-4 h-4" />
                                             Previous
                                         </button>
 
@@ -528,11 +732,15 @@ function LeadsPage() {
                                                 return (
                                                     <button
                                                         key={page}
-                                                        onClick={() => setCurrentPage(page)}
-                                                        className={`w-10 h-10 text-sm font-medium rounded-lg transition-colors ${currentPage === page
-                                                            ? 'bg-[#2D9AA5] text-white'
-                                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                                            }`}
+                                                        onClick={() => {
+                                                          setCurrentPage(page);
+                                                          showToast(`Page ${page}`, 'info');
+                                                        }}
+                                                        className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
+                                                            currentPage === page
+                                                                ? 'bg-gray-800 text-white'
+                                                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                                        }`}
                                                     >
                                                         {page}
                                                     </button>
@@ -541,12 +749,15 @@ function LeadsPage() {
                                         </div>
 
                                         <button
-                                            onClick={() => setCurrentPage(currentPage + 1)}
+                                            onClick={() => {
+                                              setCurrentPage(currentPage + 1);
+                                              showToast('Next page', 'info');
+                                            }}
                                             disabled={currentPage === totalPages}
-                                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             Next
-                                            <ChevronRight className="w-4 h-4" />
+                                            <ChevronRightIcon className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>

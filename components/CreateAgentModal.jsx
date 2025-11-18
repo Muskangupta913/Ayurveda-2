@@ -12,9 +12,9 @@ const CreateAgentModal = ({ isOpen, onClose, onCreated, token, doctorToken, admi
   if (!isOpen) return null;
 
   // Determine which token to use: priority order should match the logged-in user
-  // token = clinicToken, doctorToken = doctorToken, adminToken = adminToken
-  // Use the first available token (this should be the logged-in user's token)
-  const authToken = token || doctorToken || adminToken || null;
+  // Priority: adminToken > doctorToken > token (clinicToken/agentToken)
+  // This ensures admins always use adminToken even if they have other tokens
+  const authToken = adminToken || doctorToken || token || null;
   
   if (!authToken) {
     console.error('No authentication token provided');

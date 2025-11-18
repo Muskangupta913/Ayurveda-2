@@ -1,32 +1,50 @@
 import dbConnect from "../../../../lib/database";
 import Blog from "../../../../models/Blog";
-import jwt from "jsonwebtoken";
+import { getUserFromReq } from "../../lead-ms/auth";
+import { checkAgentPermission } from "../../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: "No token provided" });
+  if (req.method !== "DELETE") {
+    return res.status(405).json({ message: "Method not allowed" });
+  }
 
-  const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (decoded.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden - Admin only" });
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
     }
 
-    if (req.method === "DELETE") {
-      const { id } = req.query;
-      const blog = await Blog.findByIdAndDelete(id);
+    // If user is an agent, check delete permission for all_blogs module
+    if (['agent', 'doctorStaff'].includes(me.role)) {
+      const { hasPermission, error: permissionError } = await checkAgentPermission(
+        me._id,
+        "all_blogs", // moduleKey
+        "delete", // action
+        null // subModuleName
+      );
 
-      if (!blog) return res.status(404).json({ message: "Blog not found" });
-
-      return res.status(200).json({ success: true, message: "Blog deleted" });
-    } else {
-      return res.status(405).json({ message: "Method not allowed" });
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: permissionError || "You do not have permission to delete blogs"
+        });
+      }
     }
-  } catch { 
+    // Admin users bypass permission checks
+
+    const { id } = req.query;
+    const blog = await Blog.findByIdAndDelete(id);
+
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+    return res.status(200).json({ success: true, message: "Blog deleted" });
+  } catch (error) {
+    console.error("Error deleting blog:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 }
+
+return res.status(200).json({ Success: true, message:"Blog deleted successfully"})

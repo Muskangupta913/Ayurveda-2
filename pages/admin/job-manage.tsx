@@ -1,11 +1,33 @@
+"use client";
+
 import axios from "axios";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/router";
 
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
 import type { NextPageWithLayout } from "../_app";
-import { Building2, MapPin, DollarSign, Clock, Users, Calendar, CheckCircle, XCircle, Trash2 } from "lucide-react";
-
+import {
+  BriefcaseIcon,
+  MapPinIcon,
+  CurrencyDollarIcon,
+  ClockIcon,
+  UserGroupIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  TrashIcon,
+  XMarkIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  BuildingOfficeIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  ArrowPathIcon,
+  Squares2X2Icon as GridIcon,
+  Bars3Icon as ListIcon,
+} from "@heroicons/react/24/outline";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 // Define a Job interface
 interface Job {
@@ -61,9 +83,64 @@ interface ConfirmationModal {
   jobTitle: string;
 }
 
-const JOBS_PER_PAGE = 15;
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+// Toast Component
+const Toast = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircleIcon className="w-4 h-4" />,
+    error: <XCircleIcon className="w-4 h-4" />,
+    info: <InformationCircleIcon className="w-4 h-4" />,
+    warning: <ExclamationTriangleIcon className="w-4 h-4" />,
+  };
+
+  const colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    warning: 'bg-yellow-500',
+  };
+
+  return (
+    <div
+      className={`${colors[toast.type]} text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs animate-slide-in`}
+    >
+      {icons[toast.type]}
+      <span className="flex-1 font-medium">{toast.message}</span>
+      <button
+        onClick={onClose}
+        className="hover:bg-white/20 rounded p-0.5 transition-colors"
+      >
+        <XMarkIcon className="w-3 h-3" />
+      </button>
+    </div>
+  );
+};
+
+// Toast Container
+const ToastContainer = ({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) => (
+  <div className="fixed top-4 right-4 z-50 space-y-2">
+    {toasts.map((toast) => (
+      <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+    ))}
+  </div>
+);
+
+const JOBS_PER_PAGE = 12;
 
 function AdminJobs() {
+  const router = useRouter();
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  
   const [jobs, setJobs] = useState<JobsData>({
     pending: [],
     approved: [],
@@ -81,51 +158,181 @@ function AdminJobs() {
     department: "",
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [confirmationModal, setConfirmationModal] = useState<ConfirmationModal>({
     isOpen: false,
     type: null,
     jobId: '',
     jobTitle: '',
   });
-
-  useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    setIsLoading(true);
-    axios
-      .get<JobsData>("/api/admin/job-manage", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        setJobs(res.data);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setIsLoading(false);
-      });
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [showJobDetails, setShowJobDetails] = useState(false);
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAgent, setIsAgent] = useState<boolean>(false);
+  
+  // Toast helper functions
+  const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
   }, []);
 
-  const deleteJob = (jobId: string) => {
-    const token = localStorage.getItem("adminToken");
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_manage_job" : (null as any));
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
-    axios
-      .delete(`/api/admin/job-updateStatus?jobId=${jobId}`, {
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+        const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+        const token = adminToken || agentToken;
+        
+        if (!token) {
+          setIsLoading(false);
+          showToast('No authentication token found', 'error');
+          return;
+        }
+        
+        setIsLoading(true);
+        const res = await axios.get<JobsData>("/api/admin/job-manage", {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(err => {
+          if (err.response?.status === 403) {
+            showToast('Permission denied: You do not have access to view jobs', 'error');
+            return { data: { pending: [], approved: [], declined: [] } };
+          }
+          throw err;
+        });
+        
+        setJobs(res.data || { pending: [], approved: [], declined: [] });
+        showToast(`Loaded ${(res.data?.pending?.length || 0) + (res.data?.approved?.length || 0) + (res.data?.declined?.length || 0)} jobs successfully`, 'success');
+      } catch (error: any) {
+        console.error('Failed to fetch jobs:', error);
+        if (error.response?.status === 403) {
+          setJobs({ pending: [], approved: [], declined: [] });
+        } else {
+          showToast(error.response?.data?.message || 'Failed to fetch jobs', 'error');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isAdmin) {
+      fetchJobs();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchJobs();
+        } else {
+          setIsLoading(false);
+        }
+      }
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions, showToast]);
+
+  const deleteJob = async (jobId: string) => {
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canDelete !== true && agentPermissions.canAll !== true) {
+      showToast("You do not have permission to delete jobs", 'error');
+      return;
+    }
+    
+    const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+    const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+    const token = adminToken || agentToken;
+
+    if (!token) {
+      showToast("No token found. Please login again.", 'error');
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/admin/job-updateStatus?jobId=${jobId}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      .then(() => window.location.reload())
-      .catch((err) => console.error(err));
+      });
+      showToast('Job deleted successfully', 'success');
+      // Refetch jobs
+      const res = await axios.get<JobsData>("/api/admin/job-manage", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJobs(res.data || { pending: [], approved: [], declined: [] });
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Failed to delete job', 'error');
+    }
   };
 
-  const updateStatus = (jobId: string, status: "approved" | "declined") => {
-    const token = localStorage.getItem("adminToken");
-    axios
-      .patch(
+  const updateStatus = async (jobId: string, status: "approved" | "declined") => {
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canApprove !== true && agentPermissions.canAll !== true) {
+      showToast("You do not have permission to approve/decline jobs", 'error');
+      return;
+    }
+    
+    const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+    const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+    const token = adminToken || agentToken;
+
+    if (!token) {
+      showToast("No token found. Please login again.", 'error');
+      return;
+    }
+    
+    try {
+      await axios.patch(
         "/api/admin/job-updateStatus",
         { jobId, status },
         { headers: { Authorization: `Bearer ${token}` } }
-      )
-      .then(() => window.location.reload())
-      .catch((err) => console.error(err));
+      );
+      showToast(`Job ${status} successfully`, 'success');
+      // Refetch jobs
+      const res = await axios.get<JobsData>("/api/admin/job-manage", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJobs(res.data || { pending: [], approved: [], declined: [] });
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.response?.data?.message || `Failed to ${status} job`, 'error');
+    }
   };
 
   const openConfirmationModal = (type: 'approve' | 'decline' | 'delete', jobId: string, jobTitle: string) => {
@@ -185,13 +392,11 @@ function AdminJobs() {
       const matchesLocation = !filters.location || job.location === filters.location;
       const matchesDepartment = !filters.department || job.department === filters.department;
 
-      // Basic salary filtering (assuming salary is a string like "50000" or "50k-80k")
       const matchesSalary = () => {
         if (!filters.salaryMin && !filters.salaryMax) return true;
 
         const salaryStr = job.salary?.toLowerCase().replace(/[^0-9.-]/g, '') ?? '';
         const salaryNum = parseInt(salaryStr) || 0;
-
 
         const minSalary = filters.salaryMin ? parseInt(filters.salaryMin) : 0;
         const maxSalary = filters.salaryMax ? parseInt(filters.salaryMax) : Infinity;
@@ -226,6 +431,7 @@ function AdminJobs() {
       salaryMax: "",
       department: "",
     });
+    showToast('Filters cleared', 'info');
   };
 
   const getTabCount = (status: keyof JobsData) => {
@@ -235,37 +441,130 @@ function AdminJobs() {
     return jobs[status].length;
   };
 
-  if (isLoading) {
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  if (isLoading || (isAgent && permissionsLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 bg-[#2D9AA5] rounded-full animate-pulse"></div>
-          <div className="w-6 h-6 bg-[#2D9AA5] rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-          <div className="w-6 h-6 bg-[#2D9AA5] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading jobs...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <XCircleIcon className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-700 mb-4">
+            You do not have permission to view job management. Please contact your administrator to request access.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Job Management</h1>
-          <p className="text-gray-600">Manage and review job listings across different statuses</p>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="bg-gray-800 p-3 rounded-lg">
+                <BriefcaseIcon className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Job Management
+                </h1>
+                <p className="text-gray-700">
+                  Manage and review job listings across different statuses
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowFilters(!showFilters);
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  showFilters
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <FunnelIcon className="w-4 h-4" />
+                Filters
+              </button>
+
+              <div className="flex items-center gap-2 border border-gray-300 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 ${viewMode === "grid" ? "bg-gray-800 text-white" : "text-gray-700 hover:bg-gray-100"}`}
+                >
+                  <GridIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 ${viewMode === "list" ? "bg-gray-800 text-white" : "text-gray-700 hover:bg-gray-100"}`}
+                >
+                  <ListIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+            {[
+              { title: 'Pending', value: jobs.pending.length, icon: ClockIcon, color: 'bg-yellow-500' },
+              { title: 'Approved', value: jobs.approved.length, icon: CheckCircleIcon, color: 'bg-green-500' },
+              { title: 'Declined', value: jobs.declined.length, icon: XCircleIcon, color: 'bg-red-500' },
+            ].map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wider mb-1">{stat.title}</p>
+                      <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    </div>
+                    <div className={`${stat.color} p-3 rounded-lg text-white`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-6">
-          <nav className="flex space-x-8 border-b border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <nav className="flex space-x-6 border-b border-gray-200">
             {(['pending', 'approved', 'declined'] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm capitalize transition-colors duration-200 ${activeTab === tab
-                  ? 'border-[#2D9AA5] text-[#2D9AA5]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                onClick={() => {
+                  setActiveTab(tab);
+                  setCurrentPage(1);
+                  showToast(`Switched to ${tab} jobs`, 'info');
+                }}
+                className={`py-2 px-1 border-b-2 font-medium text-sm capitalize transition-colors duration-200 ${
+                  activeTab === tab
+                    ? 'border-gray-800 text-gray-800'
+                    : 'border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300'
                   }`}
               >
                 {tab} ({getTabCount(tab)})
@@ -275,13 +574,15 @@ function AdminJobs() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        {showFilters && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900 mb-4 lg:mb-0">Filters & Search</h3>
             <button
               onClick={clearFilters}
-              className="text-[#2D9AA5] hover:text-[#2D9AA5]/80 text-sm font-medium transition-colors duration-200"
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900 text-sm font-medium transition-colors duration-200"
             >
+                <ArrowPathIcon className="w-4 h-4" />
               Clear all filters
             </button>
           </div>
@@ -290,13 +591,16 @@ function AdminJobs() {
             {/* Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-700" />
               <input
                 type="text"
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 placeholder="Job title, company, department..."
-                className="text-gray-900 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-transparent"
               />
+                </div>
             </div>
 
             {/* Job Type Filter */}
@@ -305,7 +609,7 @@ function AdminJobs() {
               <select
                 value={filters.jobType}
                 onChange={(e) => handleFilterChange('jobType', e.target.value)}
-                className="text-gray-900 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-transparent"
               >
                 <option value="">All Types</option>
                 {filterOptions.jobTypes.map((type) => (
@@ -320,7 +624,7 @@ function AdminJobs() {
               <select
                 value={filters.location}
                 onChange={(e) => handleFilterChange('location', e.target.value)}
-                className="text-gray-900 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-transparent"
               >
                 <option value="">All Locations</option>
                 {filterOptions.locations.map((location) => (
@@ -335,7 +639,7 @@ function AdminJobs() {
               <select
                 value={filters.department}
                 onChange={(e) => handleFilterChange('department', e.target.value)}
-                className="text-gray-900 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-transparent"
               >
                 <option value="">All Departments</option>
                 {filterOptions.departments.map((department) => (
@@ -353,294 +657,230 @@ function AdminJobs() {
                   value={filters.salaryMin}
                   onChange={(e) => handleFilterChange('salaryMin', e.target.value)}
                   placeholder="Min salary"
-                  className="text-gray-900 flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-transparent"
                 />
-                <span className="flex items-center text-gray-500">to</span>
+                  <span className="flex items-center text-gray-700">to</span>
                 <input
                   type="number"
                   value={filters.salaryMax}
                   onChange={(e) => handleFilterChange('salaryMax', e.target.value)}
                   placeholder="Max salary"
-                  className="text-gray-900 flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-transparent"
                 />
               </div>
             </div>
           </div>
         </div>
+        )}
 
         {/* Results Summary */}
-        <div className="mb-4">
-          <p className="text-gray-600">
-            Showing {filteredJobs.length} {activeTab} job{filteredJobs.length !== 1 ? 's' : ''}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <p className="text-sm text-gray-700">
+            Showing {startIndex + 1}-{Math.min(startIndex + JOBS_PER_PAGE, filteredJobs.length)} of {filteredJobs.length} {activeTab} job{filteredJobs.length !== 1 ? 's' : ''}
             {Object.values(filters).some(filter => filter) && ' (filtered)'}
           </p>
         </div>
 
         {/* Job Cards */}
-        <div className="space-y-8 mb-8">
           {paginatedJobs.length > 0 ? (
-            paginatedJobs.map((job) => (
-              <div key={job._id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
-                {/* Header Section */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-100">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">{job.jobTitle}</h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Building2 className="w-4 h-4" />
-                          <span className="font-medium">{job.companyName}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{job.location}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {job.postedBy && (
-                      <div className="text-right text-xs text-gray-500">
-                        <div className="font-medium">Posted by</div>
-                        <div className="text-gray-700">{job.postedBy.name}</div>
-                        <div className="text-gray-500">{job.postedBy.role}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Main Content */}
-                <div className="p-6">
-                  {/* Key Details Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <DollarSign className="w-4 h-4 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 font-medium">SALARY</div>
-                        <div className="font-semibold text-green-600">{job.salary} {job.salaryType && `/ ${job.salaryType}`}</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Clock className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 font-medium">TYPE</div>
-                        <div className="font-semibold text-blue-600">{job.jobType}</div>
-                      </div>
-                    </div>
-
-                    {job.noOfOpenings !== undefined && (
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <Users className="w-4 h-4 text-purple-600" />
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 font-medium">OPENINGS</div>
-                          <div className="font-semibold text-purple-600">{job.noOfOpenings}</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Detailed Information */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 mb-6">
-                    <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-sm font-medium text-gray-500">Department</span>
-                      <span className="text-sm text-gray-900">{job.department}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-sm font-medium text-gray-500">Qualification</span>
-                      <span className="text-sm text-gray-900">{job.qualification}</span>
-                    </div>
-                    {job.workingDays && (
-                      <div className="flex justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">Working Days</span>
-                        <span className="text-sm text-gray-900">{job.workingDays}</span>
-                      </div>
-                    )}
-                    {job.jobTiming && (
-                      <div className="flex justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">Timing</span>
-                        <span className="text-sm text-gray-900">{job.jobTiming}</span>
-                      </div>
-                    )}
-                    {job.experience && (
-                      <div className="flex justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">Experience</span>
-                        <span className="text-sm text-gray-900">{job.experience}</span>
-                      </div>
-                    )}
-                    {job.establishment && (
-                      <div className="flex justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">Established</span>
-                        <span className="text-sm text-gray-900">{job.establishment}</span>
-                      </div>
-                    )}
+          <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
+            {paginatedJobs.map((job) => (
+              <div key={job._id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                {/* Compact Header */}
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="text-base font-semibold text-gray-900 line-clamp-2 flex-1">{job.jobTitle}</h3>
                     {job.status && (
-                      <div className="flex justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">Status</span>
-                        <span className={`text-sm px-2 py-1 rounded-full text-xs font-medium ${job.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                        job.status === 'approved' ? 'bg-green-100 text-green-800' :
                             job.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                           }`}>
-                          {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                        {job.status}
                         </span>
-                      </div>
                     )}
-                    {job.isActive !== undefined && (
-                      <div className="flex justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">Active</span>
-                        <span className={`text-sm font-medium ${job.isActive ? 'text-green-600' : 'text-red-600'}`}>{job.isActive ? 'Yes' : 'No'}</span>
                       </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-700">
+                    <div className="flex items-center gap-1">
+                      <BuildingOfficeIcon className="w-3 h-3" />
+                      <span className="truncate">{job.companyName}</span>
+                  </div>
+                    <div className="flex items-center gap-1">
+                      <MapPinIcon className="w-3 h-3" />
+                      <span className="truncate">{job.location}</span>
+                          </div>
+                        </div>
+                          </div>
+
+                {/* Compact Details */}
+                <div className="p-4 space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {job.salary && (
+                      <div className="flex items-center gap-1 text-gray-700">
+                        <CurrencyDollarIcon className="w-3 h-3 text-green-600" />
+                        <span className="truncate">{job.salary} {job.salaryType || ''}</span>
+                        </div>
+                      )}
+                    <div className="flex items-center gap-1 text-gray-700">
+                      <ClockIcon className="w-3 h-3 text-blue-600" />
+                      <span className="truncate">{job.jobType}</span>
+                          </div>
+                    {job.noOfOpenings !== undefined && (
+                      <div className="flex items-center gap-1 text-gray-700">
+                        <UserGroupIcon className="w-3 h-3 text-purple-600" />
+                        <span>{job.noOfOpenings} openings</span>
+                        </div>
+                      )}
+                    {job.department && (
+                      <div className="flex items-center gap-1 text-gray-700">
+                        <BriefcaseIcon className="w-3 h-3 text-gray-600" />
+                        <span className="truncate">{job.department}</span>
+                    </div>
                     )}
                   </div>
 
-                  {/* Skills, Perks, Languages */}
-                  {(job.skills?.length || 0) > 0 || (job.perks?.length || 0) > 0 || (job.languagesPreferred?.length || 0) > 0 ? (
-                    <div className="space-y-4 mb-6">
-                      {(job.skills?.length || 0) > 0 && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Skills Required</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {(job.skills || []).map((skill, index) => (
-                              <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">{skill}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {(job.perks?.length || 0) > 0 && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Perks & Benefits</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {(job.perks || []).map((perk, index) => (
-                              <span key={index} className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">{perk}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {(job.languagesPreferred?.length || 0) > 0 && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Languages Preferred</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {(job.languagesPreferred || []).map((language, index) => (
-                              <span key={index} className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">{language}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-
-                  {/* Description */}
-                  {job.description && (
-                    <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Job Description</h4>
-                      <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg leading-relaxed">{job.description}</div>
+                  {job.postedBy && (
+                    <div className="text-xs text-gray-700 pt-2 border-t border-gray-100">
+                      <span className="font-medium">Posted by:</span> {job.postedBy.name} ({job.postedBy.role})
                     </div>
                   )}
-                </div>
 
-                {/* Footer with Actions and Timestamps */}
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
-                  <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
-                    {/* Timestamps */}
-                    <div className="text-xs text-gray-500 space-y-1">
                       {job.createdAt && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>Created: {new Date(job.createdAt).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-1 text-xs text-gray-700">
+                      <CalendarIcon className="w-3 h-3" />
+                      <span>{new Date(job.createdAt).toLocaleDateString()}</span>
                         </div>
                       )}
-                      {job.updatedAt && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>Updated: {new Date(job.updatedAt).toLocaleDateString()}</span>
                         </div>
-                      )}
-                      {job.postedBy?.email && (
-                        <div className="text-gray-500">Contact: {job.postedBy.email}</div>
-                      )}
+
+                {/* See Full Details Button */}
+                <div className="px-4 pb-2">
+                  <button
+                    onClick={() => {
+                      setSelectedJob(job);
+                      setShowJobDetails(true);
+                    }}
+                    className="w-full px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                  >
+                    <InformationCircleIcon className="w-3 h-3" />
+                    See Full Details
+                  </button>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-2">
-                      {activeTab === "pending" && (
-                        <>
-                          <button
-                            onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Decline
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </>
-                      )}
-                      {activeTab === "approved" && (
-                        <>
-                          <button
-                            onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Decline
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </>
-                      )}
-                      {activeTab === "declined" && (
-                        <>
-                          <button
-                            onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
-                            className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </>
-                      )}
+                <div className="p-4 pt-0 flex flex-wrap gap-2">
+                      {(() => {
+                        const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                        const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                        const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                        
+                        const shouldShowAction = (action: 'approve' | 'decline' | 'delete') => {
+                          if (!isAgentRoute && adminTokenExists && isAdmin) {
+                            return true;
+                          }
+                          
+                          if ((isAgentRoute || isAgent) && agentTokenExists) {
+                            if (permissionsLoading || !agentPermissions) {
+                              return false;
+                            }
+                            
+                            if (action === 'approve' || action === 'decline') {
+                              return agentPermissions.canApprove === true || agentPermissions.canAll === true;
+                            }
+                            if (action === 'delete') {
+                              return agentPermissions.canDelete === true || agentPermissions.canAll === true;
+                            }
+                          }
+                          
+                          return false;
+                        };
+                        
+                        return (
+                          <>
+                            {activeTab === "pending" && (
+                              <>
+                                {shouldShowAction('approve') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
+                                className="flex-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                                  >
+                                <CheckCircleIcon className="w-3 h-3" />
+                                    Approve
+                                  </button>
+                                )}
+                                {shouldShowAction('decline') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
+                                className="flex-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                                  >
+                                <XCircleIcon className="w-3 h-3" />
+                                    Decline
+                                  </button>
+                                )}
+                                {shouldShowAction('delete') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
+                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                                  >
+                                <TrashIcon className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            {activeTab === "approved" && (
+                              <>
+                                {shouldShowAction('decline') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('decline', job._id, job.jobTitle)}
+                                className="flex-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                                  >
+                                <XCircleIcon className="w-3 h-3" />
+                                    Decline
+                                  </button>
+                                )}
+                                {shouldShowAction('delete') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
+                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                                  >
+                                <TrashIcon className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            {activeTab === "declined" && (
+                              <>
+                                {shouldShowAction('approve') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('approve', job._id, job.jobTitle)}
+                                className="flex-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                                  >
+                                <CheckCircleIcon className="w-3 h-3" />
+                                    Approve
+                                  </button>
+                                )}
+                                {shouldShowAction('delete') && (
+                                  <button
+                                    onClick={() => openConfirmationModal('delete', job._id, job.jobTitle)}
+                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+                                  >
+                                <TrashIcon className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
+            ))}
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-24 h-24 mx-auto mb-4 opacity-20">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-full h-full">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+            <BriefcaseIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
-              <p className="text-gray-500 mb-4">
+            <p className="text-gray-700 mb-4">
                 {Object.values(filters).some(filter => filter)
                   ? "Try adjusting your filters or search terms"
                   : `No ${activeTab} jobs available`}
@@ -648,110 +888,393 @@ function AdminJobs() {
               {Object.values(filters).some(filter => filter) && (
                 <button
                   onClick={clearFilters}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#2D9AA5] hover:bg-[#2D9AA5]/90 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-800 hover:bg-gray-700 transition-colors duration-200"
                 >
                   Clear Filters
                 </button>
               )}
             </div>
           )}
-        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg">
-            <div className="flex flex-1 justify-between sm:hidden">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
             </div>
-            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                  <span className="font-medium">{Math.min(startIndex + JOBS_PER_PAGE, filteredJobs.length)}</span> of{' '}
-                  <span className="font-medium">{filteredJobs.length}</span> results
-                </p>
               </div>
-              <div>
-                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+          </div>
+        )}
+
+        {/* Job Details Modal */}
+        {showJobDetails && selectedJob && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="bg-gray-800 rounded-t-2xl p-6 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
+                <div className="relative flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                      <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                        <BriefcaseIcon className="w-5 h-5" />
+                      </div>
+                      {selectedJob.jobTitle}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-white/90">
+                      <div className="flex items-center gap-1">
+                        <BuildingOfficeIcon className="w-4 h-4" />
+                        <span>{selectedJob.companyName}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPinIcon className="w-4 h-4" />
+                        <span>{selectedJob.location}</span>
+                      </div>
+                      {selectedJob.status && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedJob.status === 'approved' ? 'bg-green-500 text-white' :
+                          selectedJob.status === 'pending' ? 'bg-yellow-500 text-white' :
+                          'bg-red-500 text-white'
+                        }`}>
+                          {selectedJob.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => {
+                      setShowJobDetails(false);
+                      setSelectedJob(null);
+                    }}
+                    className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
                   >
-                    <span className="sr-only">Previous</span>
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                    </svg>
+                    <XMarkIcon className="w-6 h-6" />
                   </button>
+                </div>
+              </div>
 
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Key Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {selectedJob.salary && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <CurrencyDollarIcon className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-700 font-medium uppercase tracking-wider">Salary</div>
+                        <div className="font-semibold text-gray-900">{selectedJob.salary} {selectedJob.salaryType || ''}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <ClockIcon className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-700 font-medium uppercase tracking-wider">Job Type</div>
+                      <div className="font-semibold text-gray-900">{selectedJob.jobType}</div>
+                    </div>
+                  </div>
+
+                  {selectedJob.noOfOpenings !== undefined && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <UserGroupIcon className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-700 font-medium uppercase tracking-wider">Openings</div>
+                        <div className="font-semibold text-gray-900">{selectedJob.noOfOpenings}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Detailed Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between py-2 border-b border-gray-200">
+                      <span className="text-sm font-medium text-gray-700">Department</span>
+                      <span className="text-sm text-gray-900">{selectedJob.department}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-gray-200">
+                      <span className="text-sm font-medium text-gray-700">Qualification</span>
+                      <span className="text-sm text-gray-900">{selectedJob.qualification}</span>
+                    </div>
+                    {selectedJob.experience && (
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Experience</span>
+                        <span className="text-sm text-gray-900">{selectedJob.experience}</span>
+                      </div>
+                    )}
+                    {selectedJob.establishment && (
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Established</span>
+                        <span className="text-sm text-gray-900">{selectedJob.establishment}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {selectedJob.workingDays && (
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Working Days</span>
+                        <span className="text-sm text-gray-900">{selectedJob.workingDays}</span>
+                      </div>
+                    )}
+                    {selectedJob.jobTiming && (
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Timing</span>
+                        <span className="text-sm text-gray-900">{selectedJob.jobTiming}</span>
+                      </div>
+                    )}
+                    {selectedJob.isActive !== undefined && (
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Active</span>
+                        <span className={`text-sm font-medium ${selectedJob.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                          {selectedJob.isActive ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    )}
+                    {selectedJob.createdAt && (
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Created</span>
+                        <span className="text-sm text-gray-900">{new Date(selectedJob.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {selectedJob.updatedAt && (
+                      <div className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">Updated</span>
+                        <span className="text-sm text-gray-900">{new Date(selectedJob.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Posted By */}
+                {selectedJob.postedBy && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Posted By</h4>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <div><span className="font-medium">Name:</span> {selectedJob.postedBy.name}</div>
+                      <div><span className="font-medium">Email:</span> {selectedJob.postedBy.email}</div>
+                      <div><span className="font-medium">Role:</span> {selectedJob.postedBy.role}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Skills */}
+                {(selectedJob.skills?.length || 0) > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Skills Required</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(selectedJob.skills || []).map((skill, index) => (
+                        <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Perks */}
+                {(selectedJob.perks?.length || 0) > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Perks & Benefits</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(selectedJob.perks || []).map((perk, index) => (
+                        <span key={index} className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                          {perk}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Languages */}
+                {(selectedJob.languagesPreferred?.length || 0) > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Languages Preferred</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(selectedJob.languagesPreferred || []).map((language, index) => (
+                        <span key={index} className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                          {language}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {selectedJob.description && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Job Description</h4>
+                    <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg leading-relaxed whitespace-pre-wrap">
+                      {selectedJob.description}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer with Actions */}
+              <div className="border-t border-gray-200 p-6 bg-gray-50">
+                <div className="flex flex-wrap gap-2 justify-end">
                   {(() => {
-                    const delta = 2;
-                    const range = [];
-                    const rangeWithDots = [];
-
-                    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-                      range.push(i);
-                    }
-
-                    if (currentPage - delta > 2) {
-                      rangeWithDots.push(1, '...');
-                    } else {
-                      rangeWithDots.push(1);
-                    }
-
-                    rangeWithDots.push(...range);
-
-                    if (currentPage + delta < totalPages - 1) {
-                      rangeWithDots.push('...', totalPages);
-                    } else {
-                      rangeWithDots.push(totalPages);
-                    }
-
-                    return rangeWithDots.map((pageNum, index) => (
-                      <React.Fragment key={index}>
-                        {pageNum === '...' ? (
-                          <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
-                            ...
-                          </span>
-                        ) : (
+                    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                    
+                    const shouldShowAction = (action: 'approve' | 'decline' | 'delete') => {
+                      if (!isAgentRoute && adminTokenExists && isAdmin) {
+                        return true;
+                      }
+                      
+                      if ((isAgentRoute || isAgent) && agentTokenExists) {
+                        if (permissionsLoading || !agentPermissions) {
+                          return false;
+                        }
+                        
+                        if (action === 'approve' || action === 'decline') {
+                          return agentPermissions.canApprove === true || agentPermissions.canAll === true;
+                        }
+                        if (action === 'delete') {
+                          return agentPermissions.canDelete === true || agentPermissions.canAll === true;
+                        }
+                      }
+                      
+                      return false;
+                    };
+                    
+                    return (
+                      <>
+                        {activeTab === "pending" && (
+                          <>
+                            {shouldShowAction('approve') && (
                           <button
-                            onClick={() => setCurrentPage(pageNum as number)}
-                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === pageNum
-                              ? 'z-10 bg-[#2D9AA5] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2D9AA5]'
-                              : 'text-gray-900'
-                              }`}
-                          >
-                            {pageNum}
+                                onClick={() => {
+                                  setShowJobDetails(false);
+                                  openConfirmationModal('approve', selectedJob._id, selectedJob.jobTitle);
+                                }}
+                                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <CheckCircleIcon className="w-4 h-4" />
+                                Approve
                           </button>
                         )}
-                      </React.Fragment>
-                    ));
-                  })()}
-
+                            {shouldShowAction('decline') && (
                   <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span className="sr-only">Next</span>
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                    </svg>
+                                onClick={() => {
+                                  setShowJobDetails(false);
+                                  openConfirmationModal('decline', selectedJob._id, selectedJob.jobTitle);
+                                }}
+                                className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <XCircleIcon className="w-4 h-4" />
+                                Decline
                   </button>
-                </nav>
+                            )}
+                            {shouldShowAction('delete') && (
+                              <button
+                                onClick={() => {
+                                  setShowJobDetails(false);
+                                  openConfirmationModal('delete', selectedJob._id, selectedJob.jobTitle);
+                                }}
+                                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                                Delete
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {activeTab === "approved" && (
+                          <>
+                            {shouldShowAction('decline') && (
+                              <button
+                                onClick={() => {
+                                  setShowJobDetails(false);
+                                  openConfirmationModal('decline', selectedJob._id, selectedJob.jobTitle);
+                                }}
+                                className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <XCircleIcon className="w-4 h-4" />
+                                Decline
+                              </button>
+                            )}
+                            {shouldShowAction('delete') && (
+                              <button
+                                onClick={() => {
+                                  setShowJobDetails(false);
+                                  openConfirmationModal('delete', selectedJob._id, selectedJob.jobTitle);
+                                }}
+                                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                                Delete
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {activeTab === "declined" && (
+                          <>
+                            {shouldShowAction('approve') && (
+                              <button
+                                onClick={() => {
+                                  setShowJobDetails(false);
+                                  openConfirmationModal('approve', selectedJob._id, selectedJob.jobTitle);
+                                }}
+                                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <CheckCircleIcon className="w-4 h-4" />
+                                Approve
+                              </button>
+                            )}
+                            {shouldShowAction('delete') && (
+                              <button
+                                onClick={() => {
+                                  setShowJobDetails(false);
+                                  openConfirmationModal('delete', selectedJob._id, selectedJob.jobTitle);
+                                }}
+                                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                                Delete
+                              </button>
+                            )}
+                          </>
+                        )}
+                        <button
+                          onClick={() => {
+                            setShowJobDetails(false);
+                            setSelectedJob(null);
+                          }}
+                          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200"
+                        >
+                          Close
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>
@@ -759,102 +1282,62 @@ function AdminJobs() {
 
         {/* Confirmation Modal */}
         {confirmationModal.isOpen && (
-          <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              {/* Enhanced Background overlay with blur */}
-              <div
-                className="fixed inset-0 bg-black/40 backdrop-blur-md transition-all duration-300 ease-out"
-                aria-hidden="true"
-                onClick={closeConfirmationModal}
-              ></div>
-
-              {/* Center modal */}
-              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-              {/* Enhanced Modal panel */}
-              <div className="relative inline-block align-bottom bg-white/95 backdrop-blur-xl rounded-2xl px-6 pt-6 pb-5 text-left overflow-hidden shadow-2xl transform transition-all duration-300 ease-out sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-8 border border-white/20">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    {/* Enhanced Icon with glow effect */}
-                    <div className="mb-6">
-                      {confirmationModal.type === 'approve' && (
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-green-200 shadow-lg ring-1 ring-green-200/50">
-                          <svg className="h-7 w-7 text-green-600 drop-shadow-sm" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 max-w-md w-full transform transition-all duration-300 ease-out">
+              <div className="text-center">
+                <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center">
+                  {confirmationModal.type === "approve" && (
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                      <CheckCircleIcon className="w-8 h-8 text-green-600" />
                         </div>
                       )}
-                      {confirmationModal.type === 'decline' && (
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-yellow-200 shadow-lg ring-1 ring-yellow-200/50">
-                          <svg className="h-7 w-7 text-amber-600 drop-shadow-sm" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                          </svg>
+                  {confirmationModal.type === "decline" && (
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <ClockIcon className="w-8 h-8 text-yellow-600" />
                         </div>
                       )}
-                      {confirmationModal.type === 'delete' && (
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-red-100 to-rose-200 shadow-lg ring-1 ring-red-200/50">
-                          <svg className="h-7 w-7 text-red-600 drop-shadow-sm" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                          </svg>
+                  {confirmationModal.type === "delete" && (
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                      <XCircleIcon className="w-8 h-8 text-red-600" />
                         </div>
                       )}
                     </div>
 
-                    {/* Enhanced Title */}
-                    <h3 className="text-xl leading-7 font-semibold text-gray-900 mb-3 text-center tracking-tight" id="modal-title">
-                      {confirmationModal.type === 'approve' && 'Approve Job Application'}
-                      {confirmationModal.type === 'decline' && 'Decline Job Application'}
-                      {confirmationModal.type === 'delete' && 'Delete Job Posting'}
-                    </h3>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2 capitalize">
+                  Confirm {confirmationModal.type}
+                </h2>
 
-                    {/* Enhanced Message */}
-                    <div className="mb-8">
-                      <p className="text-base text-gray-600 text-center leading-relaxed">
-                        {confirmationModal.type === 'approve' && (
-                          <>
-                            You&apos;re about to approve <span className="font-medium text-gray-800">&quot;{confirmationModal.jobTitle}&quot;</span>. This will notify the applicant and move the job forward in the process.
-                          </>
-                        )}
-                        {confirmationModal.type === 'decline' && (
-                          <>
-                            You&apos;re about to decline <span className="font-medium text-gray-800">&quot;{confirmationModal.jobTitle}&quot;</span>. The applicant will be notified of this decision.
-                          </>
-                        )}
-                        {confirmationModal.type === 'delete' && (
-                          <>
-                            You&apos;re about to permanently delete <span className="font-medium text-gray-800">&quot;{confirmationModal.jobTitle}&quot;</span>.
-                            <span className="block mt-2 text-sm text-red-600 font-medium">This action cannot be undone and all associated data will be lost.</span>
-                          </>
+                <p className="text-base text-gray-700 mb-8 leading-relaxed">
+                  Are you sure you want to {confirmationModal.type} this job?
+                  {confirmationModal.type === "delete" && (
+                    <span className="block mt-2 text-red-600 font-medium text-sm">
+                      This action cannot be undone.
+                    </span>
                         )}
                       </p>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Enhanced Action buttons */}
-                <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 sm:justify-center">
+                <div className="flex gap-3">
                   <button
-                    type="button"
-                    className="w-full inline-flex justify-center items-center rounded-xl border border-gray-200 shadow-sm px-6 py-3 bg-white/80 backdrop-blur-sm text-base font-medium text-gray-700 hover:bg-gray-50/90 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 sm:w-auto sm:text-sm transition-all duration-200 ease-out transform hover:scale-[1.02] active:scale-[0.98]"
                     onClick={closeConfirmationModal}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-medium text-base transition-all duration-200 hover:shadow-md"
                   >
                     Cancel
                   </button>
                   <button
-                    type="button"
-                    className={`w-full inline-flex justify-center items-center rounded-xl border border-transparent shadow-lg px-6 py-3 text-base font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm transition-all duration-200 ease-out transform hover:scale-[1.02] active:scale-[0.98] ${confirmationModal.type === 'approve'
-                      ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:ring-green-500 shadow-green-500/25' :
-                      confirmationModal.type === 'decline'
-                        ? 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 focus:ring-amber-500 shadow-amber-500/25' :
-                        'bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 focus:ring-red-500 shadow-red-500/25'
-                      }`}
                     onClick={handleConfirmAction}
+                    className={`flex-1 text-white px-6 py-3 rounded-xl font-medium text-base transition-all duration-200 hover:shadow-md ${
+                      confirmationModal.type === "approve"
+                        ? "bg-gray-800 hover:bg-gray-700"
+                        : confirmationModal.type === "decline"
+                          ? "bg-yellow-500 hover:bg-yellow-600"
+                          : "bg-red-500 hover:bg-red-600"
+                    }`}
                   >
-                    <span className="drop-shadow-sm">
-                      {confirmationModal.type === 'approve' && 'Approve Application'}
-                      {confirmationModal.type === 'decline' && 'Decline Application'}
-                      {confirmationModal.type === 'delete' && 'Delete Permanently'}
-                    </span>
+                    {confirmationModal.type === "approve"
+                      ? "Approve"
+                      : confirmationModal.type === "decline"
+                        ? "Decline"
+                        : "Delete"}
                   </button>
                 </div>
               </div>

@@ -47,7 +47,7 @@ export default async function handler(req, res) {
   }
 
   const me = await getUserFromReq(req);
-  if (!me || !requireRole(me, ["clinic", "agent", "admin"])) {
+  if (!me || !requireRole(me, ["clinic", "agent", "admin", "doctor"])) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
@@ -64,23 +64,48 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Agent not tied to a clinic" });
     }
     clinicId = me.clinicId;
+  } else if (me.role === "doctor") {
+    if (!me.clinicId) {
+      return res.status(400).json({ success: false, message: "Doctor not tied to a clinic" });
+    }
+    clinicId = me.clinicId;
   }
 
-  // ✅ Check permission for creating leads (only for clinic and agent, admin bypasses)
+  // ✅ Check permission for creating leads (only for clinic, agent, and doctor; admin bypasses)
   if (me.role !== "admin" && clinicId) {
+    // First check if clinic has create permission
     const { checkClinicPermission } = await import("./permissions-helper");
-    const { hasPermission, error } = await checkClinicPermission(
+    const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
       clinicId,
       "lead",
       "create",
-      "Create Lead" // Check "Create Lead" submodule permission
+      "Create Lead", // Check "Create Lead" submodule permission
+      me.role === "doctor" ? "doctor" : me.role === "clinic" ? "clinic" : null
     );
 
-    if (!hasPermission) {
+    if (!clinicHasPermission) {
       return res.status(403).json({
         success: false,
-        message: error || "You do not have permission to create leads"
+        message: clinicError || "You do not have permission to create leads"
       });
+    }
+
+    // If user is an agent, also check agent-specific permissions
+    if (me.role === "agent") {
+      const { checkAgentPermission } = await import("../agent/permissions-helper");
+      const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+        me._id,
+        "lead",
+        "create",
+        "Create Lead"
+      );
+
+      if (!agentHasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: agentError || "You do not have permission to create leads"
+        });
+      }
     }
   }
 

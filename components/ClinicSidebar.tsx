@@ -90,11 +90,24 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
           return;
         }
 
-        const res = await axios.get("/api/clinic/sidebar-permissions", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        let res;
+        try {
+          res = await axios.get("/api/clinic/sidebar-permissions", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch (error: any) {
+          // Handle 401 and other errors gracefully
+          if (error.response?.status === 401) {
+            console.log("ClinicSidebar: Unauthorized - clinic token may be invalid or expired");
+            setItems([]);
+            setIsLoading(false);
+            return;
+          }
+          // Re-throw other errors to be handled by outer catch
+          throw error;
+        }
 
-        if (res.data.success) {
+        if (res && res.data && res.data.success) {
           // Convert API navigation items to NavItem format
           const convertedItems: NavItem[] = (res.data.navigationItems || []).map((item: NavigationItemFromAPI): NavItem => {
             const navItem: NavItem = {
@@ -150,7 +163,10 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
           setItems([]);
         }
       } catch (err: any) {
-        console.error("Error fetching navigation items and permissions:", err);
+        // Only log non-401 errors to avoid console spam
+        if (err.response?.status !== 401) {
+          console.error("Error fetching navigation items and permissions:", err);
+        }
         setItems([]);
       } finally {
         setIsLoading(false);
@@ -399,7 +415,7 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                         className={clsx(
                           "group relative block rounded-lg transition-all duration-200 cursor-pointer p-2",
                           {
-                            "bg-[#2D9AA5] text-white shadow-sm": isDropdownOpen,
+                            "bg-[#2D9AA5] !text-white shadow-sm": isDropdownOpen,
                             "hover:bg-gray-50 text-gray-700 hover:text-gray-900":
                               !isDropdownOpen,
                           }
@@ -410,21 +426,42 @@ const ClinicSidebar: FC<ClinicSidebarProps> = ({ className }) => {
                         })}
                       >
                         <div className="flex items-center space-x-2">
-                          <div className="text-base p-1.5 rounded-lg bg-gray-100 text-gray-600 group-hover:bg-[#2D9AA5]/10 group-hover:text-[#2D9AA5]">
+                          <div className={clsx(
+                            "text-base p-1.5 rounded-lg transition-all duration-200",
+                            {
+                              "bg-white bg-opacity-20 !text-white": isDropdownOpen,
+                              "bg-gray-100 text-gray-600 group-hover:bg-[#2D9AA5]/10 group-hover:text-[#2D9AA5]": !isDropdownOpen,
+                            }
+                          )}>
                             {item.icon}
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium text-xs">
+                            <div className={clsx(
+                              "font-medium text-xs",
+                              {
+                                "!text-white": isDropdownOpen,
+                                "text-gray-900": !isDropdownOpen,
+                              }
+                            )}>
                               {item.label}
                             </div>
-                            <div className="text-[10px] text-gray-500">
+                            <div className={clsx(
+                              "text-[10px]",
+                              {
+                                "!text-white opacity-80": isDropdownOpen,
+                                "text-gray-500": !isDropdownOpen,
+                              }
+                            )}>
                               {item.description}
                             </div>
                           </div>
                           <svg
                             className={clsx(
-                              "w-3.5 h-3.5 transition-transform duration-200",
-                              isDropdownOpen && "rotate-90"
+                              "w-3.5 h-3.5 transition-transform duration-200 flex-shrink-0",
+                              {
+                                "rotate-90 !text-white": isDropdownOpen,
+                                "text-gray-600": !isDropdownOpen,
+                              }
                             )}
                             fill="currentColor"
                             viewBox="0 0 20 20"

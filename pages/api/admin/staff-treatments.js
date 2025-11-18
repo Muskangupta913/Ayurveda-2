@@ -1,15 +1,36 @@
 // /pages/api/admin/staff-treatments.js
 import dbConnect from "../../../lib/database";
 import StaffTreatment from "../../../models/StaffTreatment";
+import { getUserFromReq } from "../lead-ms/auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   try {
+    // Get the logged-in user
+    const me = await getUserFromReq(req);
+    if (!me) {
+      return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
+    }
+    
     // -------------------------------
     // GET → Fetch all staff treatments
     // -------------------------------
     if (req.method === "GET") {
+      // Check permissions for agents - admins bypass all checks
+      if (me.role === 'agent' || me.role === 'doctorStaff') {
+        const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "read", "Create Services");
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            success: false,
+            message: "Permission denied: You do not have read permission for Create Services submodule" 
+          });
+        }
+      } else if (me.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
+      }
+      
       const treatments = await StaffTreatment.find().sort({ createdAt: -1 });
       return res.status(200).json({ success: true, data: treatments });
     }
@@ -18,6 +39,18 @@ export default async function handler(req, res) {
     // POST → Add a new staff treatment
     // -------------------------------
     if (req.method === "POST") {
+      // Check permissions for agents - admins bypass all checks
+      if (me.role === 'agent' || me.role === 'doctorStaff') {
+        const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "create", "Create Services");
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            success: false,
+            message: "Permission denied: You do not have create permission for Create Services submodule" 
+          });
+        }
+      } else if (me.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
+      }
       const { package: pkg, treatment, packagePrice, treatmentPrice, packageUnits } = req.body;
 
       // Must provide at least one field
@@ -58,6 +91,19 @@ export default async function handler(req, res) {
     // PUT → Update existing treatment
     // -------------------------------
     if (req.method === "PUT") {
+      // Check permissions for agents - admins bypass all checks
+      if (me.role === 'agent' || me.role === 'doctorStaff') {
+        const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "update", "Create Services");
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            success: false,
+            message: "Permission denied: You do not have update permission for Create Services submodule" 
+          });
+        }
+      } else if (me.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
+      }
+      
       const { id, package: pkg, treatment, packagePrice, treatmentPrice, packageUnits } = req.body;
 
       if (!id) {
@@ -109,6 +155,19 @@ export default async function handler(req, res) {
     // DELETE → Remove a treatment
     // -------------------------------
     if (req.method === "DELETE") {
+      // Check permissions for agents - admins bypass all checks
+      if (me.role === 'agent' || me.role === 'doctorStaff') {
+        const { hasPermission } = await checkAgentPermission(me._id, "admin_staff_management", "delete", "Create Services");
+        if (!hasPermission) {
+          return res.status(403).json({ 
+            success: false,
+            message: "Permission denied: You do not have delete permission for Create Services submodule" 
+          });
+        }
+      } else if (me.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Access denied. Admin or agent role required" });
+      }
+      
       const { id } = req.query;
 
       if (!id) {

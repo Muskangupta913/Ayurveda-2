@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/router";
 import axios from "axios";
 import AdminLayout from "../../components/AdminLayout";
 import withAdminAuth from "../../components/withAdminAuth";
 import { Plus, Edit2, Trash2, Package, Activity, X, Check, CheckCircle, XCircle, AlertCircle, Info, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 // Toast Component
 function Toast({ message, type, onClose }) {
@@ -159,6 +161,8 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 }
 
 function AdminStaffTreatments() {
+  const router = useRouter();
+  
   const [formData, setFormData] = useState({ package: "", treatment: "", packagePrice: "", treatmentPrice: "" });
   const [treatments, setTreatments] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -173,6 +177,47 @@ function AdminStaffTreatments() {
   const formRef = useRef(null);
 
   const ITEMS_PER_PAGE = 7;
+  
+  // Check if user is an admin or agent - use state to ensure reactivity
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAgent, setIsAgent] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = !!localStorage.getItem('adminToken');
+      const agentToken = !!localStorage.getItem('agentToken');
+      const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
+      
+      console.log('Admin Add Service - Initial Token Check:', { 
+        adminToken, 
+        agentToken, 
+        isAgentRoute,
+        pathname: router.pathname,
+        locationPath: window.location.pathname
+      });
+      
+      // CRITICAL: If on agent route, prioritize agentToken over adminToken
+      if (isAgentRoute && agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else if (adminToken) {
+        setIsAdmin(true);
+        setIsAgent(false);
+      } else if (agentToken) {
+        setIsAdmin(false);
+        setIsAgent(true);
+      } else {
+        setIsAdmin(false);
+        setIsAgent(false);
+      }
+    }
+  }, [router.pathname]);
+  
+  // Always call the hook (React rules), but only use it if isAgent is true
+  // This page is under Staff Management -> Create Services submodule
+  const agentPermissionsData = useAgentPermissions(isAgent ? "admin_staff_management" : null, isAgent ? "Create Services" : null);
+  const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
+  const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
   const showToast = (message, type = "info") => {
     const id = Date.now();
@@ -204,26 +249,52 @@ function AdminStaffTreatments() {
   const fetchTreatments = async () => {
     try {
       setFetching(true);
-      const res = await axios.get("/api/admin/staff-treatments");
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
+      
+      const res = await axios.get("/api/admin/staff-treatments", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       if (res.data.success) {
         setTreatments(res.data.data);
         showToast("Treatments loaded successfully", "success");
       } else {
+       
         setTreatments([]);
         showToast("No treatments found", "info");
       }
     } catch (err) {
       console.error("Error fetching treatments:", err);
-      showToast("Failed to load treatments", "error");
-      setTreatments([]);
+      // Handle 403 permission denied errors
+      if (err.response?.status === 403) {
+        setTreatments([]);
+        showToast(err.response?.data?.message || "Permission denied", "error");
+      } else {
+        showToast("Failed to load treatments", "error");
+        setTreatments([]);
+      }
     } finally {
       setFetching(false);
     }
   };
 
   useEffect(() => {
-    fetchTreatments();
-  }, []);
+    if (isAdmin) {
+      fetchTreatments();
+    } else if (isAgent) {
+      if (!permissionsLoading) {
+        if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
+          fetchTreatments();
+        } else {
+          setFetching(false); // Agent doesn't have read permission - stop loading
+        }
+      }
+    } else {
+      setFetching(false); // Neither admin nor agent - stop loading
+    }
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   // Reset to page 1 when tab or search changes
   useEffect(() => {
@@ -236,6 +307,17 @@ function AdminStaffTreatments() {
   };
 
   const handleAdd = async () => {
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canCreate !== true && agentPermissions.canAll !== true) {
+      showToast("You do not have permission to create services", "error");
+      return;
+    }
+    
     if (!formData.package.trim() && !formData.treatment.trim()) {
       showToast("Please enter at least a package or a treatment", "warning");
       return;
@@ -243,6 +325,11 @@ function AdminStaffTreatments() {
 
     try {
       setLoading(true);
+      
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
 
       const payload = {};
       if (formData.package.trim()) payload.package = formData.package.trim();
@@ -250,7 +337,9 @@ function AdminStaffTreatments() {
       if (formData.packagePrice !== "") payload.packagePrice = Number(formData.packagePrice);
       if (formData.treatmentPrice !== "") payload.treatmentPrice = Number(formData.treatmentPrice);
 
-      const res = await axios.post("/api/admin/staff-treatments", payload);
+      const res = await axios.post("/api/admin/staff-treatments", payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
 
       if (res.data.success) {
         showToast("Record added successfully", "success");
@@ -280,9 +369,25 @@ function AdminStaffTreatments() {
 
   const handleUpdate = async () => {
     if (!editingId) return;
+    
+    // CRITICAL: Check route and tokens to determine if user is admin or agent
+    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+    
+    // Check permissions only for agents - admins bypass all checks
+    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canUpdate !== true && agentPermissions.canAll !== true) {
+      showToast("You do not have permission to update services", "error");
+      return;
+    }
 
     try {
       setLoading(true);
+      
+      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
+      const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+      const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
+      const token = adminToken || agentToken;
 
       const payload = { id: editingId };
       payload.package = formData.package.trim() || "";
@@ -290,7 +395,9 @@ function AdminStaffTreatments() {
       if (formData.packagePrice !== "") payload.packagePrice = Number(formData.packagePrice);
       if (formData.treatmentPrice !== "") payload.treatmentPrice = Number(formData.treatmentPrice);
 
-      const res = await axios.put("/api/admin/staff-treatments", payload);
+      const res = await axios.put("/api/admin/staff-treatments", payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
 
       if (res.data.success) {
         showToast("Record updated successfully", "success");
@@ -365,6 +472,38 @@ function AdminStaffTreatments() {
   const allCount = treatments.filter(t => (t.package && t.package.trim()) || (t.treatment && t.treatment.trim())).length;
   const packagesCount = treatments.filter(t => t.package && t.package.trim()).length;
   const treatmentsCount = treatments.filter(t => t.treatment && t.treatment.trim()).length;
+
+  // Check if agent has read permission
+  const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+
+  // Show loading spinner while checking permissions
+  if (fetching || (isAgent && permissionsLoading)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm sm:text-base text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied message if agent doesn't have read permission
+  if (isAgent && !hasReadPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to view staff treatments. Please contact your administrator to request access.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-4 md:p-6 lg:p-8">
@@ -490,34 +629,134 @@ function AdminStaffTreatments() {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-            {!editingId ? (
-              <button
-                onClick={handleAdd}
-                disabled={loading}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-emerald-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                {loading ? "Adding..." : "Add Record"}
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={handleUpdate}
-                  disabled={loading}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-blue-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Check className="w-4 h-4 sm:w-5 sm:h-5" />
-                  {loading ? "Updating..." : "Update Record"}
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-medium hover:bg-slate-300 transition-colors"
-                >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Cancel
-                </button>
-              </>
-            )}
+            {(() => {
+              const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+              const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+              const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+              
+              if (!editingId) {
+                // Add Record button
+                // Admin always sees button - but ONLY if NOT on agent route
+                if (!isAgentRoute && adminTokenExists && isAdmin) {
+                  return (
+                    <button
+                      onClick={handleAdd}
+                      disabled={loading}
+                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-emerald-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                      {loading ? "Adding..." : "Add Record"}
+                    </button>
+                  );
+                }
+                
+                // For agents: Only show if permissions are loaded AND create permission is explicitly true
+                if ((isAgentRoute || isAgent) && agentTokenExists) {
+                  if (permissionsLoading || !agentPermissions) {
+                    return null;
+                  }
+                  
+                  const hasCreatePermission = agentPermissions.canCreate === true || agentPermissions.canAll === true;
+                  if (hasCreatePermission) {
+                    return (
+                      <button
+                        onClick={handleAdd}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-emerald-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                        {loading ? "Adding..." : "Add Record"}
+                      </button>
+                    );
+                  }
+                }
+                
+                return null;
+              } else {
+                // Update Record button
+                // Admin always sees button - but ONLY if NOT on agent route
+                if (!isAgentRoute && adminTokenExists && isAdmin) {
+                  return (
+                    <>
+                      <button
+                        onClick={handleUpdate}
+                        disabled={loading}
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-blue-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                        {loading ? "Updating..." : "Update Record"}
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-medium hover:bg-slate-300 transition-colors"
+                      >
+                        <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Cancel
+                      </button>
+                    </>
+                  );
+                }
+                
+                // For agents: Only show if permissions are loaded AND update permission is explicitly true
+                if ((isAgentRoute || isAgent) && agentTokenExists) {
+                  if (permissionsLoading || !agentPermissions) {
+                    return (
+                      <button
+                        onClick={handleCancel}
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-medium hover:bg-slate-300 transition-colors"
+                      >
+                        <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Cancel
+                      </button>
+                    );
+                  }
+                  
+                  const hasUpdatePermission = agentPermissions.canUpdate === true || agentPermissions.canAll === true;
+                  if (hasUpdatePermission) {
+                    return (
+                      <>
+                        <button
+                          onClick={handleUpdate}
+                          disabled={loading}
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-blue-600 text-white rounded-lg sm:rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                          {loading ? "Updating..." : "Update Record"}
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-medium hover:bg-slate-300 transition-colors"
+                        >
+                          <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                          Cancel
+                        </button>
+                      </>
+                    );
+                  } else {
+                    // No update permission, only show cancel
+                    return (
+                      <button
+                        onClick={handleCancel}
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-medium hover:bg-slate-300 transition-colors"
+                      >
+                        <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Cancel
+                      </button>
+                    );
+                  }
+                }
+                
+                return (
+                  <button
+                    onClick={handleCancel}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-medium hover:bg-slate-300 transition-colors"
+                  >
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Cancel
+                  </button>
+                );
+              }
+            })()}
           </div>
         </div>
 
@@ -665,20 +904,89 @@ function AdminStaffTreatments() {
                       </div>
 
                       <div className="flex gap-2 pt-3 sm:pt-4 border-t border-slate-100">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium text-xs sm:text-sm"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item._id)}
-                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors font-medium text-xs sm:text-sm"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          <span>Delete</span>
-                        </button>
+                        {/* Edit button: Only show for admins OR agents with explicit update permission */}
+                        {(() => {
+                          const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                          const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                          const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                          
+                          // Admin always sees edit button - but ONLY if NOT on agent route
+                          if (!isAgentRoute && adminTokenExists && isAdmin) {
+                            return (
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium text-xs sm:text-sm"
+                              >
+                                <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span>Edit</span>
+                              </button>
+                            );
+                          }
+                          
+                          // For agents: Only show if permissions are loaded AND update permission is explicitly true
+                          if ((isAgentRoute || isAgent) && agentTokenExists) {
+                            if (permissionsLoading || !agentPermissions) {
+                              return null;
+                            }
+                            
+                            const hasUpdatePermission = agentPermissions.canUpdate === true || agentPermissions.canAll === true;
+                            if (hasUpdatePermission) {
+                              return (
+                                <button
+                                  onClick={() => handleEdit(item)}
+                                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium text-xs sm:text-sm"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <span>Edit</span>
+                                </button>
+                              );
+                            }
+                          }
+                          
+                          return null;
+                        })()}
+                        
+                        {/* Delete button: Only show for admins OR agents with explicit delete permission */}
+                        {(() => {
+                          const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                          const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                          const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                          
+                          // Admin always sees delete button - but ONLY if NOT on agent route
+                          if (!isAgentRoute && adminTokenExists && isAdmin) {
+                            return (
+                              <button
+                                onClick={() => handleDelete(item._id)}
+                                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors font-medium text-xs sm:text-sm"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span>Delete</span>
+                              </button>
+                            );
+                          }
+                          
+                          // For agents: Only show if permissions are loaded AND delete permission is explicitly true
+                          if ((isAgentRoute || isAgent) && agentTokenExists) {
+                            if (permissionsLoading || !agentPermissions) {
+                              return null;
+                            }
+                            
+                            const hasDeletePermission = agentPermissions.canDelete === true || agentPermissions.canAll === true;
+                            if (hasDeletePermission) {
+                              return (
+                                <button
+                                  onClick={() => handleDelete(item._id)}
+                                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors font-medium text-xs sm:text-sm"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <span>Delete</span>
+                                </button>
+                              );
+                            }
+                          }
+                          
+                          return null;
+                        })()}
                       </div>
                     </div>
                   </div>

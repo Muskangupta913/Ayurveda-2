@@ -175,7 +175,18 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({
     };
 
     fetchNavigationAndPermissions();
-  }, []);
+
+    // Re-fetch on route changes to ensure permissions are always up-to-date
+    const handleRouteChange = () => {
+      fetchNavigationAndPermissions();
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
 
   // Close mobile sidebar with ESC key
   useEffect(() => {

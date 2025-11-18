@@ -28,9 +28,15 @@ function OffersPage() {
       });
       const data = await res.json();
       if (data.success && data.data) {
-        const modulePermission = data.data.permissions?.find(
-          (p) => p.module === "create_offers"
-        );
+        const modulePermission = data.data.permissions?.find((p) => {
+          if (!p?.module) return false;
+          if (p.module === "create_offers") return true;
+          if (p.module === "clinic_create_offers") return true;
+          if (p.module.startsWith("clinic_") && p.module.slice(7) === "create_offers") {
+            return true;
+          }
+          return false;
+        });
         if (modulePermission) {
           const actions = modulePermission.actions || {};
           setPermissions({

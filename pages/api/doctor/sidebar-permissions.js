@@ -32,6 +32,36 @@ export default async function handler(req, res) {
       isActive: true 
     }).sort({ order: 1 });
 
+    // Helper function to transform paths to /doctor paths
+    const transformPath = (path) => {
+      if (!path) return path;
+      // Transform /staff/* to /doctor/*
+      if (path.startsWith('/staff/')) {
+        return path.replace('/staff/', '/doctor/');
+      }
+      // Transform /staff to /doctor
+      if (path === '/staff') {
+        return '/doctor';
+      }
+      // Transform /lead/* to /doctor/lead/*
+      if (path.startsWith('/lead/')) {
+        return path.replace('/lead/', '/doctor/lead/');
+      }
+      // Transform /lead to /doctor/lead
+      if (path === '/lead') {
+        return '/doctor/lead';
+      }
+      // Transform /marketingalltype/* to /doctor/marketing/*
+      if (path.startsWith('/marketingalltype/')) {
+        return path.replace('/marketingalltype/', '/doctor/marketing/');
+      }
+      // Transform /marketingalltype to /doctor/marketing
+      if (path === '/marketingalltype') {
+        return '/doctor/marketing';
+      }
+      return path;
+    };
+
     // For now, doctors see all navigation items
     // This can be extended later with DoctorPermission model if needed
     return res.status(200).json({
@@ -40,12 +70,17 @@ export default async function handler(req, res) {
       navigationItems: navigationItems.map(item => ({
         _id: item._id,
         label: item.label,
-        path: item.path,
+        path: transformPath(item.path),
         icon: item.icon,
         description: item.description,
         order: item.order,
         moduleKey: item.moduleKey,
-        subModules: item.subModules || []
+        subModules: (item.subModules || []).map(subModule => ({
+          name: subModule.name,
+          path: transformPath(subModule.path || ''),
+          icon: subModule.icon || '',
+          order: subModule.order || 0
+        }))
       })),
       doctorId: me._id.toString()
     });

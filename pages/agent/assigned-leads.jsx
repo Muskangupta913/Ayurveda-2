@@ -4,6 +4,7 @@ import AgentLayout from "../../components/AgentLayout";
 import withAgentAuth from "../../components/withAgentAuth";
 import FilterAssignedLead from "../../components/Filter-assigned-lead";
 import WhatsAppChat from "../../components/WhatsAppChat";
+import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 
 const AssignedLeadsPage = () => {
   const [loading, setLoading] = useState(true);
@@ -16,6 +17,9 @@ const AssignedLeadsPage = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [activeLead, setActiveLead] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // Fetch permissions for lead module (for read, update, delete, approve operations)
+  const { permissions } = useAgentPermissions("lead");
 
   useEffect(() => {
     const t = localStorage.getItem("agentToken");
@@ -62,6 +66,12 @@ const AssignedLeadsPage = () => {
       return;
     }
 
+    // Check update permission
+    if (!permissions.canUpdate && !permissions.canAll) {
+      alert("You do not have permission to update leads");
+      return;
+    }
+
     if (!followUpsdate[leadId]) {
       alert("Please select a follow-up date before saving.");
       return;
@@ -104,6 +114,66 @@ const AssignedLeadsPage = () => {
       alert("Server error while saving follow-up date");
     } finally {
       setSaving((prev) => ({ ...prev, [leadId]: false }));
+    }
+  };
+
+  const deleteLead = async (leadId) => {
+    // Check delete permission
+    if (!permissions.canDelete && !permissions.canAll) {
+      alert("You do not have permission to delete leads");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this lead?")) return;
+    
+    try {
+      const res = await axios.delete("/api/lead-ms/lead-delete", {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { leadId },
+      });
+      
+      if (res.data.success) {
+        alert("Lead deleted successfully");
+        // Remove lead from list
+        setLeads((prevLeads) => prevLeads.filter((lead) => lead._id !== leadId));
+        setTotalAssigned((prev) => Math.max(0, prev - 1));
+      } else {
+        alert(res.data.message || "Failed to delete lead");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Error deleting lead");
+    }
+  };
+
+  const approveLead = async (leadId) => {
+    // Check approve permission
+    if (!permissions.canApprove && !permissions.canAll) {
+      alert("You do not have permission to approve leads");
+      return;
+    }
+
+    try {
+      const res = await axios.put(
+        "/api/lead-ms/update-lead-status",
+        { leadId, status: "Approved" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (res.data.success) {
+        alert("Lead approved successfully");
+        // Update lead status in list
+        setLeads((prevLeads) =>
+          prevLeads.map((lead) =>
+            lead._id === leadId ? { ...lead, status: "Approved" } : lead
+          )
+        );
+      } else {
+        alert(res.data.message || "Failed to approve lead");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Error approving lead");
     }
   };
 
@@ -425,8 +495,9 @@ const AssignedLeadsPage = () => {
                       />
                       <button
                         onClick={() => saveFollowUp(lead._id)}
-                        disabled={saving[lead._id] || !followUpsdate[lead._id]}
+                        disabled={saving[lead._id] || !followUpsdate[lead._id] || (!permissions.canUpdate && !permissions.canAll)}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:from-sky-600 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        title={(!permissions.canUpdate && !permissions.canAll) ? "You don't have permission to update leads" : "Schedule follow-up"}
                       >
                         {saving[lead._id] ? (
                           <>
@@ -447,7 +518,7 @@ const AssignedLeadsPage = () => {
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-end xl:col-span-1">
+                    <div className="flex flex-col items-end gap-2 xl:col-span-1">
                       <button
                         onClick={() => {
                           setActiveLead(lead);
@@ -460,6 +531,42 @@ const AssignedLeadsPage = () => {
                         </svg>
                         Quick chat
                       </button>
+                      
+                      {/* Action buttons based on permissions */}
+                      <div className="flex gap-2">
+                        {/* Approve button - only show if permission granted */}
+                        {(permissions.canApprove || permissions.canAll) && (
+                          <button
+                            onClick={() => approveLead(lead._id)}
+                            disabled={lead.status === "Approved"}
+                            className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow transition ${
+                              lead.status === "Approved"
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-green-500 hover:bg-green-600"
+                            }`}
+                            title={lead.status === "Approved" ? "Already approved" : "Approve lead"}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Approve
+                          </button>
+                        )}
+                        
+                        {/* Delete button - only show if permission granted */}
+                        {(permissions.canDelete || permissions.canAll) && (
+                          <button
+                            onClick={() => deleteLead(lead._id)}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-red-600"
+                            title="Delete lead"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

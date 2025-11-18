@@ -2,7 +2,8 @@ import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
 import Clinic from "../../../models/Clinic";
 import { getUserFromReq, requireRole } from "../lead-ms/auth";
-import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
+import {checkClinicPermission } from "./permissions-helper";
+import { checkAgentPermission } from "../agent/permissions-helper";
 import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
@@ -17,6 +18,41 @@ export default async function handler(req, res) {
 
   if (!me) {
     return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
+  }
+
+  // ✅ Check permissions for creating agents (admin bypasses all checks)
+  if (me.role !== 'admin') {
+    // For clinic role: Check clinic permissions
+    if (me.role === 'clinic') {
+      const clinic = await Clinic.findOne({ owner: me._id });
+      if (clinic) {
+        const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
+          clinic._id,
+          "create_agent",
+          "create"
+        );
+        if (!clinicHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: clinicError || "You do not have permission to create agents"
+          });
+        }
+      }
+    }
+    // For agent/doctorStaff role: Check agent permissions
+    else if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+        me._id,
+        "create_agent",
+        "create"
+      );
+      if (!agentHasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: agentError || "You do not have permission to create agents"
+        });
+      }
+    }
   }
 
   // Debug: Log who is creating

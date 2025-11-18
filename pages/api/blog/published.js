@@ -29,7 +29,9 @@ export default async function handler(req, res) {
             const { hasPermission, error: permError } = await checkClinicPermission(
               clinicId,
               "blogs",
-              "read"
+              "read",
+              null, // subModuleName
+              me.role === "doctor" ? "doctor" : me.role === "clinic" ? "clinic" : null
             );
             if (!hasPermission) {
               return res.status(403).json({

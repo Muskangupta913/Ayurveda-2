@@ -1,6 +1,7 @@
 import dbConnect from "../../../lib/database";
 import Contract from "../../../models/Contract";
 import jwt from "jsonwebtoken";
+import { checkAgentPermission } from "../../../lib/checkAgentPermission";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -18,11 +19,37 @@ export default async function handler(req, res) {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log(decoded);
-    if (!decoded || decoded.role !== "staff") {
-      return res.status(403).json({ success: false, message: "Access denied. Staff only." });
+    
+    // Allow multiple roles: staff, agent, clinic, doctor
+    const allowedRoles = ["staff", "agent", "clinic", "doctor", "doctorStaff"];
+    if (!decoded || !allowedRoles.includes(decoded.role)) {
+      return res.status(403).json({ success: false, message: "Access denied. Invalid role." });
     }
 
-    // Fetch contracts assigned to this staff member
+    // Check agent permissions for reading contracts
+    // All Contracts is a submodule under staff_management
+    if (decoded.role === 'agent' || decoded.role === 'doctorStaff') {
+      console.log(`Checking read permission for user ${decoded.userId} on contracts submodule`);
+      const hasPermission = await checkAgentPermission(
+        decoded.userId, 
+        'staff_management', 
+        'read',
+        'All Contracts'
+      ) || await checkAgentPermission(decoded.userId, 'staff_management', 'all', 'All Contracts')
+      || await checkAgentPermission(decoded.userId, 'clinic_staff_management', 'read', 'All Contracts')
+      || await checkAgentPermission(decoded.userId, 'clinic_staff_management', 'all', 'All Contracts');
+      
+      console.log(`Read permission result for contracts:`, hasPermission);
+      
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "You don't have permission to view contracts" 
+        });
+      }
+    }
+
+    // Fetch contracts assigned to this user
     console.log("Looking for contracts with responsiblePerson:", decoded.userId);
     const contracts = await Contract.find({
       responsiblePerson: decoded.userId,
