@@ -752,11 +752,8 @@ const ManageAgentsPage: NextPageWithLayout = () => {
       <CreateAgentModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onCreated={() => {
-          loadAll();
-          toast.success('Agent created successfully');
-        }}
-        token={agentToken || undefined}
+        onCreated={loadAll}
+        token={undefined}
         doctorToken={undefined}
         adminToken={adminToken || undefined}
       />

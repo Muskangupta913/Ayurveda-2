@@ -180,21 +180,11 @@ export default function VendorForm() {
   };
 
   const fetchVendors = async () => {
-    if (!token && !isAgent) {
-      // For non-agents, try to get clinic/doctor token
-      const clinicToken = typeof window !== "undefined" ? localStorage.getItem("clinicToken") : null;
-      const doctorToken = typeof window !== "undefined" ? localStorage.getItem("doctorToken") : null;
-      if (!clinicToken && !doctorToken) {
-        showToast("Authentication required", "error");
-        return;
-      }
-    }
-    
-    // Wait for permissions to load
-    if (!permissionsLoaded) return;
+    // Wait for permissions to load if agent
+    if (isAgent && permissionsLoading) return;
     
     // Check if user has read permission
-    if (isAgent && permissions.canRead === false) {
+    if (isAgent && agentPermissions && agentPermissions.canRead === false && agentPermissions.canAll !== true) {
       setVendors([]);
       setFilteredVendors([]);
       return;
@@ -666,7 +656,7 @@ export default function VendorForm() {
             <p className="text-gray-800 text-sm sm:text-base mb-4">
               {searchQuery ? "Try adjusting your search criteria" : "Get started by adding your first vendor"}
             </p>
-            {!searchQuery && permissions.canCreate && (
+            {!searchQuery && (isAdmin || (isAgent && agentPermissions && (agentPermissions.canCreate === true || agentPermissions.canAll === true))) && (
               <button
                 onClick={openModal}
                 className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
@@ -675,7 +665,7 @@ export default function VendorForm() {
                 <span>Add Your First Vendor</span>
               </button>
             )}
-            {!searchQuery && isAgent && !permissions.canCreate && (
+            {!searchQuery && isAgent && agentPermissions && agentPermissions.canCreate !== true && agentPermissions.canAll !== true && (
               <p className="text-red-500 text-xs">You do not have permission to create vendors</p>
             )}
           </div>
