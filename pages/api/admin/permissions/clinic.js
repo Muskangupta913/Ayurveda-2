@@ -3,10 +3,13 @@ import dbConnect from "../../../../lib/database";
 import ClinicPermission from "../../../../models/ClinicPermission";
 import Clinic from "../../../../models/Clinic";
 import User from "../../../../models/Users";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
   await dbConnect();
+
+  const allowedRoles = ['admin', 'clinic', 'doctor'];
 
   // Verify admin token
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -14,26 +17,113 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, message: 'No token provided' });
   }
 
+  let adminPayload;
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== 'admin') {
+    adminPayload = jwt.verify(token, process.env.JWT_SECRET);
+    if (adminPayload.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
   } catch (error) {
+    console.error('Invalid admin token for clinic permissions:', error);
     return res.status(401).json({ success: false, message: 'Invalid token' });
   }
 
+  const resolveAdminIdCandidates = (payload) => {
+    if (!payload) {
+      return { ids: [], emails: [] };
+    }
+
+    const ids = [
+      payload?.userId,
+      payload?._id,
+      payload?.id,
+      payload?.user?._id,
+      payload?.user?.id,
+      payload?.user?.userId,
+      payload?.data?.userId,
+      payload?.data?.id,
+      payload?.data?._id,
+      payload?.data?.user?._id,
+      payload?.data?.user?.id,
+      payload?.sub,
+    ].filter(Boolean);
+
+    const emails = [
+      payload?.email,
+      payload?.user?.email,
+      payload?.data?.email,
+      payload?.data?.user?.email,
+    ].filter(Boolean);
+
+    return { ids, emails };
+  };
+
+  const resolveAdminObjectId = async (payload) => {
+    const { ids, emails } = resolveAdminIdCandidates(payload);
+
+    for (const candidateId of ids) {
+      if (!candidateId) continue;
+      if (!mongoose.Types.ObjectId.isValid(candidateId)) {
+        continue;
+      }
+
+      const adminUser = await User.findOne(
+        { _id: candidateId, role: 'admin' },
+        { _id: 1 }
+      );
+
+      if (adminUser?._id) {
+        return adminUser._id;
+      }
+    }
+
+    for (const candidateEmail of emails) {
+      const adminUser = await User.findOne(
+        { email: candidateEmail, role: 'admin' },
+        { _id: 1 }
+      );
+
+      if (adminUser?._id) {
+        return adminUser._id;
+      }
+    }
+
+    return null;
+  };
+
   if (req.method === 'GET') {
     try {
-      const { clinicId } = req.query;
-      
+      const { clinicId, role, includeAdmin } = req.query;
+
+      const baseFilter = {};
+      if (clinicId) {
+        baseFilter.clinicId = clinicId;
+      }
+
+      let roleFilter = null;
+      if (role) {
+        const normalizedRole = String(role).toLowerCase();
+        if (!allowedRoles.includes(normalizedRole)) {
+          return res.status(400).json({ success: false, message: 'Invalid role parameter' });
+        }
+        roleFilter =
+          normalizedRole === 'clinic'
+            ? { $or: [{ role: normalizedRole }, { role: { $exists: false } }] }
+            : { role: normalizedRole };
+      } else if (includeAdmin !== 'true') {
+        roleFilter = { role: { $ne: 'admin' } };
+      }
+
+      const combinedFilter = roleFilter ? { ...baseFilter, ...roleFilter } : baseFilter;
+
       if (clinicId) {
         // Get specific clinic permissions
-        const permissions = await ClinicPermission.findOne({ clinicId }).populate('clinicId', 'name');
+        const permissions = await ClinicPermission.findOne(combinedFilter).populate('clinicId', 'name');
         return res.status(200).json({ success: true, data: permissions });
       } else {
         // Get all clinic permissions
-        const permissions = await ClinicPermission.find({ isActive: true })
+        const permissions = await ClinicPermission.find({ isActive: true, ...combinedFilter })
           .populate('clinicId', 'name')
           .populate('grantedBy', 'name email');
         return res.status(200).json({ success: true, data: permissions });
@@ -46,9 +136,14 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const { clinicId, permissions } = req.body;
+      const { clinicId, permissions, role = 'clinic' } = req.body;
 
-      console.log('Received clinic permission request:', { clinicId, permissions });
+      const normalizedRole = String(role).toLowerCase();
+      if (!allowedRoles.includes(normalizedRole)) {
+        return res.status(400).json({ success: false, message: 'Invalid role provided' });
+      }
+
+      console.log('Received clinic permission request:', { clinicId, role: normalizedRole, permissions });
 
       if (!clinicId || !permissions) {
         return res.status(400).json({ success: false, message: 'Clinic ID and permissions are required' });
@@ -102,22 +197,48 @@ export default async function handler(req, res) {
         return res.status(404).json({ success: false, message: 'Clinic not found' });
       }
 
-      // Get admin user ID from token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+      // Get admin user ID from verified token payload
+      const adminObjectId = await resolveAdminObjectId(adminPayload);
+
+      if (!adminObjectId) {
+        console.error('Unable to resolve admin id from token payload:', adminPayload);
+        return res.status(401).json({ success: false, message: 'Invalid admin token payload' });
+      }
+
+      // Backfill legacy documents without role or grantedBy to prevent duplicate key violations
+      await ClinicPermission.updateMany(
+        { clinicId, $or: [{ role: { $exists: false } }, { role: null }] },
+        {
+          $set: {
+            role: normalizedRole,
+            grantedBy: adminObjectId,
+            isActive: true,
+            lastModified: new Date(),
+          },
+        },
+        { runValidators: false }
+      );
+
       console.log('Creating/updating clinic permissions for clinic:', clinicId);
       
       // Create or update clinic permissions
       const clinicPermission = await ClinicPermission.findOneAndUpdate(
-        { clinicId },
+        { clinicId, role: normalizedRole },
         {
           clinicId,
+          role: normalizedRole,
           permissions,
-          grantedBy: decoded.userId,
+          grantedBy: adminObjectId,
           lastModified: new Date(),
-          isActive: true
+          isActive: true,
         },
-        { upsert: true, new: true }
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true,
+          runValidators: true,
+          context: 'query',
+        }
       );
 
       console.log('Clinic permission saved successfully:', clinicPermission._id);
@@ -135,14 +256,19 @@ export default async function handler(req, res) {
 
   if (req.method === 'DELETE') {
     try {
-      const { clinicId } = req.body;
+      const { clinicId, role } = req.body;
 
-      if (!clinicId) {
-        return res.status(400).json({ success: false, message: 'Clinic ID is required' });
+      if (!clinicId || !role) {
+        return res.status(400).json({ success: false, message: 'Clinic ID and role are required' });
+      }
+
+      const normalizedRole = String(role).toLowerCase();
+      if (!allowedRoles.includes(normalizedRole)) {
+        return res.status(400).json({ success: false, message: 'Invalid role provided' });
       }
 
       await ClinicPermission.findOneAndUpdate(
-        { clinicId },
+        { clinicId, role: normalizedRole },
         { isActive: false }
       );
 

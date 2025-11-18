@@ -33,7 +33,14 @@ const ClinicPermissionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Clinic',
     required: true,
-    unique: true
+    index: true
+  },
+  role: {
+    type: String,
+    enum: ['admin', 'clinic', 'doctor'],
+    required: true,
+    default: 'clinic',
+    index: true
   },
   permissions: [ModulePermissionSchema],
   isActive: { type: Boolean, default: true },
@@ -47,5 +54,10 @@ const ClinicPermissionSchema = new mongoose.Schema({
 
 // Index for efficient queries
 ClinicPermissionSchema.index({ 'permissions.module': 1 });
+ClinicPermissionSchema.index({ clinicId: 1, role: 1 }, { unique: true });
 
-export default mongoose.models.ClinicPermission || mongoose.model('ClinicPermission', ClinicPermissionSchema);
+if (mongoose.models.ClinicPermission) {
+  delete mongoose.models.ClinicPermission;
+}
+
+export default mongoose.model('ClinicPermission', ClinicPermissionSchema);

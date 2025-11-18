@@ -5,7 +5,6 @@ import { useRouter } from "next/router";
 import { FC, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import axios from "axios";
-import { agentNavigationItems } from "../data/agentNavigationItems";
 
 interface NavItemChild {
   label: string;
@@ -14,10 +13,28 @@ interface NavItemChild {
   description?: string;
   badge?: number;
   permissionKey?: string;
+  order?: number;
 }
 
 interface NavItem extends NavItemChild {
   children?: NavItemChild[];
+  moduleKey?: string;
+}
+
+interface NavigationItemFromAPI {
+  _id: string;
+  label: string;
+  path?: string;
+  icon: string;
+  description?: string;
+  order: number;
+  moduleKey: string;
+  subModules?: Array<{
+    name: string;
+    path?: string;
+    icon: string;
+    order: number;
+  }>;
 }
 
 interface AgentSidebarProps {
@@ -43,7 +60,8 @@ const AgentSidebar: FC<AgentSidebarProps> = ({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [permissions, setPermissions] = useState<string[] | null>(null);
+  const [navigationItems, setNavigationItems] = useState<NavItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -55,44 +73,96 @@ const AgentSidebar: FC<AgentSidebarProps> = ({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isMobileOpen, handleCloseMobile]);
 
+  // Fetch navigation items and permissions on mount and route changes
   useEffect(() => {
-    const fetchPermissions = async () => {
+    const fetchNavigationAndPermissions = async () => {
       try {
         const token = localStorage.getItem("agentToken");
         if (!token) {
-          setPermissions([]);
+          setNavigationItems([]);
+          setIsLoading(false);
           return;
         }
-        const res = await axios.get("/api/agent/agent-dashboard-access", {
+
+        const res = await axios.get("/api/agent/sidebar-permissions", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setPermissions(res.data.permissions || []);
-      } catch (err) {
-        console.error("Error fetching permissions", err);
-        setPermissions([]);
+
+        if (res.data.success) {
+          // Convert API navigation items to NavItem format
+          const convertedItems: NavItem[] = (res.data.navigationItems || []).map((item: NavigationItemFromAPI): NavItem => {
+            const navItem: NavItem = {
+              label: item.label,
+              path: item.path,
+              icon: item.icon,
+              description: item.description,
+              moduleKey: item.moduleKey,
+              order: item.order,
+            };
+
+            // Convert subModules to children
+            if (item.subModules && item.subModules.length > 0) {
+              navItem.children = item.subModules.map((subModule: { name: string; path?: string; icon: string; order: number }): NavItemChild => ({
+                label: subModule.name,
+                path: subModule.path,
+                icon: subModule.icon,
+                description: subModule.name,
+                order: subModule.order,
+              }));
+            }
+
+            return navItem;
+          });
+
+          // Sort by order
+          convertedItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+          convertedItems.forEach(item => {
+            if (item.children) {
+              item.children.sort((a, b) => (a.order || 0) - (b.order || 0));
+            }
+          });
+
+          setNavigationItems(convertedItems);
+        } else {
+          console.error("Error fetching navigation items:", res.data.message);
+          setNavigationItems([]);
+        }
+      } catch (err: any) {
+        console.error("Error fetching navigation items and permissions:", err);
+        setNavigationItems([]);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchPermissions();
-  }, []);
+
+    fetchNavigationAndPermissions();
+
+    // Re-fetch on route changes to ensure permissions are always up-to-date
+    const handleRouteChange = () => {
+      fetchNavigationAndPermissions();
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
 
   const filteredItems = useMemo(() => {
-    const filterItems = (items: NavItem[]): NavItem[] =>
-      items
-        .filter((item) => {
-          if (item.path === "/agent/assigned-leads") return true;
-          if (!item.permissionKey || permissions === null) return true;
-          return permissions.includes(item.permissionKey);
-        })
-        .map((item) => ({
+    // Navigation items are already filtered by the API based on permissions
+    // Just return them as-is, but ensure children are properly structured
+    return navigationItems.map(item => ({
           ...item,
-          children: item.children ? filterItems(item.children as NavItem[]) : undefined,
-        }))
-        .filter((item) => !item.children || item.children.length > 0);
-
-    return filterItems(agentNavigationItems);
-  }, [permissions]);
-
-  const isLoading = permissions === null;
+      children: item.children && item.children.length > 0 ? item.children : undefined,
+    })).filter(item => {
+      // Remove items with no path and no children (empty modules)
+      if (!item.path && (!item.children || item.children.length === 0)) {
+        return false;
+      }
+      return true;
+    });
+  }, [navigationItems]);
 
   return (
     <>

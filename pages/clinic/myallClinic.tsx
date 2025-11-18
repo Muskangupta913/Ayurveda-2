@@ -843,9 +843,15 @@ function ClinicManagementDashboard() {
 
         const data = res.data;
         if (data.success && data.data) {
-          const modulePermission = data.data.permissions?.find(
-            (p: any) => p.module === "health_center"
-          );
+          const modulePermission = data.data.permissions?.find((p: any) => {
+            if (!p?.module) return false;
+            if (p.module === "health_center") return true;
+            if (p.module === "clinic_health_center") return true;
+            if (p.module.startsWith("clinic_") && p.module.slice(7) === "health_center") {
+              return true;
+            }
+            return false;
+          });
 
           if (modulePermission) {
             const actions = modulePermission.actions || {};

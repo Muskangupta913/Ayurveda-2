@@ -22,6 +22,7 @@ interface ClinicNavigationItem {
   description?: string;
   order: number;
   moduleKey: string;
+  role?: 'admin' | 'clinic' | 'doctor';
   subModules?: Array<{
     name: string;
     path?: string;
@@ -32,9 +33,11 @@ interface ClinicNavigationItem {
 
 interface ClinicPermissionManagerProps {
   permissions: ModulePermission[];
+  navigationItems: ClinicNavigationItem[];
   onPermissionsChange: (permissions: ModulePermission[], meta?: { trigger?: 'user' | 'sync' }) => void;
   disabled?: boolean;
   title?: string;
+  isLoading?: boolean;
 }
 
 type ActionKey = 'all' | 'create' | 'read' | 'update' | 'delete';
@@ -101,79 +104,72 @@ const sanitizeModulePermission = (permission: ModulePermission): ModulePermissio
   })),
 });
 
+const areModulePermissionsEqual = (left: ModulePermission[], right: ModulePermission[]) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
 const ClinicPermissionManagerNew: React.FC<ClinicPermissionManagerProps> = ({
   permissions,
+  navigationItems,
   onPermissionsChange,
   disabled = false,
   title = 'Permission Matrix',
+  isLoading = false,
 }) => {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [localPermissions, setLocalPermissions] = useState<ModulePermission[]>(
     permissions.map(sanitizeModulePermission)
   );
-  const [navigationItems, setNavigationItems] = useState<ClinicNavigationItem[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchClinicNavigationItems();
-  }, []);
+    const autoExpanded = navigationItems
+      .filter((item) => item.subModules?.length)
+      .map((item) => item.moduleKey);
+    setExpandedModules(new Set(autoExpanded));
+  }, [navigationItems]);
 
   useEffect(() => {
-    setLocalPermissions(permissions.map(sanitizeModulePermission));
-  }, [permissions]);
+    const sanitized = permissions.map(sanitizeModulePermission);
+    const allowedModules = new Set(navigationItems.map((item) => item.moduleKey));
+    const filtered = allowedModules.size
+      ? sanitized.filter((permission) => allowedModules.has(permission.module))
+      : sanitized;
 
-  useEffect(() => {
-    if (navigationItems.length > 0) {
-      const currentModules = localPermissions.map((p) => p.module);
-      const missing = navigationItems.filter((navItem) => !currentModules.includes(navItem.moduleKey));
+    const existingModules = new Set(filtered.map((permission) => permission.module));
+    const missing = navigationItems.filter((navItem) => !existingModules.has(navItem.moduleKey));
 
-      if (missing.length > 0) {
-        const filler = missing.map((navItem) => ({
-          module: navItem.moduleKey,
-          subModules:
-            navItem.subModules?.map((subModule) => ({
-            name: subModule.name,
-            path: subModule.path || '',
-            icon: subModule.icon,
-            order: subModule.order,
-              actions: createBlankActions(),
-          })) || [],
+    const filler = missing.map((navItem) => ({
+      module: navItem.moduleKey,
+      subModules:
+        navItem.subModules?.map((subModule) => ({
+          name: subModule.name,
+          path: subModule.path || '',
+          icon: subModule.icon,
+          order: subModule.order,
           actions: createBlankActions(),
-        }));
-        const next = [...localPermissions, ...filler].map(sanitizeModulePermission);
-        setLocalPermissions(next);
-        onPermissionsChange(next, { trigger: 'sync' });
-      }
-    }
-  }, [navigationItems, localPermissions, onPermissionsChange]);
+        })) || [],
+      actions: createBlankActions(),
+    }));
 
-  const fetchClinicNavigationItems = async () => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/admin/navigation/clinic-items', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setNavigationItems(data.data);
-        const autoExpanded = data.data
-          .filter((item: ClinicNavigationItem) => item.subModules?.length)
-          .map((item: ClinicNavigationItem) => item.moduleKey);
-        setExpandedModules(new Set(autoExpanded));
-      }
-    } catch (error) {
-      console.error('Error fetching clinic navigation items:', error);
-    } finally {
-      setLoading(false);
+    const next = [...filtered, ...filler].map(sanitizeModulePermission);
+    const shouldSync =
+      missing.length > 0 ||
+      filtered.length !== permissions.length;
+
+    if (!areModulePermissionsEqual(localPermissions, next)) {
+      setLocalPermissions(next);
     }
-  };
+    if (shouldSync) {
+      onPermissionsChange(next, { trigger: 'sync' });
+    }
+  }, [permissions, navigationItems, localPermissions, onPermissionsChange]);
 
   const toggleModuleExpansion = (moduleKey: string) => {
     const clone = new Set(expandedModules);
-    clone.has(moduleKey) ? clone.delete(moduleKey) : clone.add(moduleKey);
+    if (clone.has(moduleKey)) {
+      clone.delete(moduleKey);
+    } else {
+      clone.add(moduleKey);
+    }
     setExpandedModules(clone);
   };
 
@@ -249,11 +245,11 @@ const ClinicPermissionManagerNew: React.FC<ClinicPermissionManagerProps> = ({
     value: boolean
   ) => {
     const next = [...localPermissions];
-    let module = next.find((item) => item.module === moduleKey);
+    let modulePermission = next.find((item) => item.module === moduleKey);
 
-    if (!module) {
+    if (!modulePermission) {
       const navItem = navigationItems.find((item) => item.moduleKey === moduleKey);
-      module = {
+      modulePermission = {
         module: moduleKey,
         actions: createBlankActions(),
         subModules:
@@ -265,14 +261,14 @@ const ClinicPermissionManagerNew: React.FC<ClinicPermissionManagerProps> = ({
             actions: createBlankActions(),
           })) || [],
       };
-      next.push(module);
+      next.push(modulePermission);
     }
 
-    if (!module.subModules) {
-      module.subModules = [];
+    if (!modulePermission.subModules) {
+      modulePermission.subModules = [];
     }
 
-    let subModule = module.subModules.find((sub) => sub.name === subModuleName);
+    let subModule = modulePermission.subModules.find((sub) => sub.name === subModuleName);
     if (!subModule) {
       const navSub = navigationItems
         .find((item) => item.moduleKey === moduleKey)
@@ -285,7 +281,7 @@ const ClinicPermissionManagerNew: React.FC<ClinicPermissionManagerProps> = ({
         order: navSub?.order || 0,
         actions: createBlankActions(),
       };
-      module.subModules.push(subModule);
+      modulePermission.subModules.push(subModule);
     }
 
     if (action === 'all') {
@@ -452,7 +448,7 @@ const ClinicPermissionManagerNew: React.FC<ClinicPermissionManagerProps> = ({
     );
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow">
         <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-sky-500" />

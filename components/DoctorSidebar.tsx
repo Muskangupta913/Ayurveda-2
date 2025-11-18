@@ -2,6 +2,7 @@ import React, { useState, useEffect, FC } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import clsx from "clsx";
+import axios from "axios";
 
 interface NavItem {
   label: string;
@@ -9,7 +10,25 @@ interface NavItem {
   icon: string;
   description?: string;
   badge?: string | number;
+  order?: number;
+  moduleKey?: string;
   children?: NavItem[];
+}
+
+interface NavigationItemFromAPI {
+  _id: string;
+  label: string;
+  path?: string;
+  icon: string;
+  description?: string;
+  order: number;
+  moduleKey: string;
+  subModules?: Array<{
+    name: string;
+    path?: string;
+    icon: string;
+    order: number;
+  }>;
 }
 
 interface DoctorSidebarProps {
@@ -90,6 +109,73 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({
 }) => {
   const router = useRouter();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [navigationItems, setNavigationItems] = useState<NavItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch navigation items and permissions
+  useEffect(() => {
+    const fetchNavigationAndPermissions = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('doctorToken') : null;
+        if (!token) {
+          setNavigationItems([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const res = await axios.get("/api/doctor/sidebar-permissions", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.data.success) {
+          // Convert API navigation items to NavItem format
+          const convertedItems: NavItem[] = (res.data.navigationItems || []).map((item: NavigationItemFromAPI): NavItem => {
+            const navItem: NavItem = {
+              label: item.label,
+              path: item.path,
+              icon: item.icon,
+              description: item.description,
+              moduleKey: item.moduleKey,
+              order: item.order,
+            };
+
+            // Convert subModules to children
+            if (item.subModules && item.subModules.length > 0) {
+              navItem.children = item.subModules.map((subModule: { name: string; path?: string; icon: string; order: number }): NavItem => ({
+                label: subModule.name,
+                path: subModule.path,
+                icon: subModule.icon,
+                description: subModule.name,
+                order: subModule.order,
+              }));
+            }
+
+            return navItem;
+          });
+
+          // Sort by order
+          convertedItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+          convertedItems.forEach(item => {
+            if (item.children) {
+              item.children.sort((a, b) => (a.order || 0) - (b.order || 0));
+            }
+          });
+
+          setNavigationItems(convertedItems);
+        } else {
+          console.error("Error fetching navigation items:", res.data.message);
+          setNavigationItems([]);
+        }
+      } catch (err: any) {
+        console.error("Error fetching navigation items and permissions:", err);
+        setNavigationItems([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchNavigationAndPermissions();
+  }, []);
 
   // Close mobile sidebar with ESC key
   useEffect(() => {
@@ -190,8 +276,11 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({
               Doctor Management
             </div>
 
-            <div className="space-y-1">
-              {navigationItems.map((item) => {
+            {isLoading ? (
+              <div className="text-xs text-gray-500 px-2">Loading menu…</div>
+            ) : (
+              <div className="space-y-1">
+                {navigationItems.map((item) => {
                 const isDropdownOpen = openDropdown === item.label;
                 const isActive = item.path ? router.pathname === item.path : false;
                 const hasActiveChild = item.children?.some((child) => router.pathname === child.path);
@@ -285,7 +374,8 @@ const DoctorSidebar: FC<DoctorSidebarProps> = ({
                   </Link>
                 );
               })}
-            </div>
+              </div>
+            )}
           </nav>
         </div>
       </aside>

@@ -69,24 +69,61 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
     const clinicPermission = await ClinicPermission.findOne({
       clinicId,
       isActive: true
-    });
+    }).lean();
 
     // If no permissions found, deny access
     if (!clinicPermission) {
+      console.warn(
+        '[permissions-helper] No ClinicPermission found',
+        { clinicId: clinicId?.toString?.() || clinicId, moduleKey, action }
+      );
       return { hasPermission: true, error: null };
     }
 
-    // Find the module permission
+    // Candidate module keys to support legacy prefixes (e.g. "clinic_health_center")
+    const moduleCandidates = Array.from(
+      new Set([
+        moduleKey,
+        moduleKey?.startsWith('clinic_') ? moduleKey.slice('clinic_'.length) : null,
+        moduleKey ? `clinic_${moduleKey}` : null,
+      ].filter(Boolean))
+    );
+
+    // Find the module permission using any of the candidate keys
     const modulePermission = clinicPermission.permissions.find(
-      (p) => p.module === moduleKey
+      (p) => moduleCandidates.includes(p.module)
     );
 
     if (!modulePermission) {
+      console.warn(
+        '[permissions-helper] Module not present in clinic permissions',
+        {
+          clinicId: clinicId?.toString?.() || clinicId,
+          moduleKey,
+          action,
+          availableModules: clinicPermission.permissions.map((p) => p.module)
+        }
+      );
       return { hasPermission: true, error: null };
     }
 
+    console.log('[permissions-helper] Evaluating permission', {
+      clinicId: clinicId?.toString?.() || clinicId,
+      requestedModule: moduleKey,
+      resolvedModule: modulePermission.module,
+      candidates: moduleCandidates,
+      action,
+      moduleActions: modulePermission.actions,
+      subModules: modulePermission.subModules?.map((sub) => ({
+        name: sub.name,
+        actions: sub.actions,
+      })),
+    });
+
     const moduleActionKeys = Object.keys(modulePermission.actions || {});
-    const moduleHasAnyActionEnabled = moduleActionKeys.some((key) => modulePermission.actions?.[key]);
+    const moduleHasAnyActionEnabled = moduleActionKeys.some(
+      (key) => Boolean(modulePermission.actions?.[key])
+    );
     if (!moduleHasAnyActionEnabled) {
       return { hasPermission: true, error: null };
     }
@@ -95,14 +132,14 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
     if (subModuleName) {
       // ✅ PRIORITY 1: Check module-level "all" first - this grants all permissions including submodules
       // When admin clicks "all" at module level, it should enable all submodule actions
-      if (modulePermission.actions && modulePermission.actions.all === true) {
+      if (Boolean(modulePermission.actions?.all)) {
         return { hasPermission: true, error: null };
       }
 
       // ✅ PRIORITY 2: Check module-level specific action - this also grants permission for submodules
       // For example: module-level "update" should grant "Assign Lead" submodule permission
       // Module-level "create" should grant "Create Lead" submodule permission
-      if (modulePermission.actions && modulePermission.actions[action] === true) {
+      if (Boolean(modulePermission.actions?.[action])) {
         return { hasPermission: true, error: null };
       }
 
@@ -117,18 +154,20 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
       }
 
       const subModuleActionKeys = Object.keys(subModule.actions || {});
-      const subModuleHasAny = subModuleActionKeys.some((key) => subModule.actions?.[key]);
+      const subModuleHasAny = subModuleActionKeys.some(
+        (key) => Boolean(subModule.actions?.[key])
+      );
       if (!subModuleHasAny) {
         return { hasPermission: true, error: null };
       }
 
       // ✅ PRIORITY 4: Check submodule-level "all"
-      if (subModule.actions && subModule.actions.all === true) {
+      if (Boolean(subModule.actions?.all)) {
         return { hasPermission: true, error: null };
       }
 
       // ✅ PRIORITY 5: Check submodule-level specific action
-      if (subModule.actions && subModule.actions[action] === true) {
+      if (Boolean(subModule.actions?.[action])) {
         return { hasPermission: true, error: null };
       }
 
@@ -137,12 +176,12 @@ export async function checkClinicPermission(clinicId, moduleKey, action, subModu
 
     // Check module-level permission
     // If "all" action is enabled, grant all permissions
-    if (modulePermission.actions && modulePermission.actions.all === true) {
+    if (Boolean(modulePermission.actions?.all)) {
       return { hasPermission: true, error: null };
     }
 
     // Check specific action
-    if (modulePermission.actions && modulePermission.actions[action] === true) {
+    if (Boolean(modulePermission.actions?.[action])) {
       return { hasPermission: true, error: null };
     }
 
