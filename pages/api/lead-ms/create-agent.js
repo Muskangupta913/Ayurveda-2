@@ -20,15 +20,38 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, message: "Unauthorized: Missing or invalid token" });
   }
 
-  // Check permissions for agents - admins bypass all checks
-  // Explicitly check if user is NOT admin before checking permissions
-  if (me.role !== 'admin' && (me.role === 'agent' || me.role === 'doctorStaff')) {
-    const { hasPermission } = await checkAgentPermission(me._id, "create_agent", "create");
-    if (!hasPermission) {
-      return res.status(403).json({ 
-        success: false,
-        message: "Permission denied: You do not have create permission for create agent module" 
-      });
+  // ✅ Check permissions for creating agents (admin bypasses all checks)
+  if (me.role !== 'admin') {
+    // For clinic role: Check clinic permissions
+    if (me.role === 'clinic') {
+      const clinic = await Clinic.findOne({ owner: me._id });
+      if (clinic) {
+        const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
+          clinic._id,
+          "create_agent",
+          "create"
+        );
+        if (!clinicHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: clinicError || "You do not have permission to create agents"
+          });
+        }
+      }
+    }
+    // For agent/doctorStaff role: Check agent permissions
+    else if (me.role === 'agent' || me.role === 'doctorStaff') {
+      const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+        me._id,
+        "create_agent",
+        "create"
+      );
+      if (!agentHasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: agentError || "You do not have permission to create agents"
+        });
+      }
     }
   }
 

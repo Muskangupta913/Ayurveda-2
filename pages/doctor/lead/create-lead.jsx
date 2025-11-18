@@ -43,11 +43,24 @@ function LeadsPage() {
         });
       const data = res.data;
       if (data.success && data.data) {
+        // Find module permission - try multiple variations of module key
         const modulePermission = data.data.permissions?.find(
-          (p) => p.module === "lead"
+          (p) => {
+            const moduleKey = p.module || "";
+            return moduleKey === "lead" || 
+                   moduleKey === "clinic_lead" || 
+                   moduleKey === "doctor_lead" ||
+                   moduleKey.replace(/^(admin|clinic|doctor)_/, "") === "lead";
+          }
         );
         if (modulePermission) {
           const actions = modulePermission.actions || {};
+          console.log('[doctor-create-lead] Module permission found:', {
+            module: modulePermission.module,
+            actions: actions,
+            subModules: modulePermission.subModules?.map(sm => sm.name)
+          });
+          
           // Check for "Create Lead" submodule
           const createLeadSubModule = modulePermission.subModules?.find(
             (sm) => sm.name === "Create Lead"
@@ -57,19 +70,35 @@ function LeadsPage() {
             (sm) => sm.name === "Assign Lead"
           );
 
+          // Helper function to check if a permission value is true (handles boolean and string)
+          const isTrue = (value) => {
+            if (value === true) return true;
+            if (value === "true") return true;
+            if (String(value).toLowerCase() === "true") return true;
+            return false;
+          };
+
           // Module-level "all" grants all permissions including submodules
-          const moduleAll = actions.all === true;
-          const moduleCreate = actions.create === true;
-          const moduleUpdate = actions.update === true;
-          const moduleDelete = actions.delete === true;
-          const moduleRead = actions.read === true;
+          const moduleAll = isTrue(actions.all);
+          const moduleCreate = isTrue(actions.create);
+          const moduleUpdate = isTrue(actions.update);
+          const moduleDelete = isTrue(actions.delete);
+          const moduleRead = isTrue(actions.read);
+          
+          console.log('[doctor-create-lead] Permission checks:', {
+            moduleAll,
+            moduleRead,
+            moduleCreate,
+            moduleUpdate,
+            moduleDelete
+          });
 
           // Submodule permissions (only checked if module-level doesn't grant)
-          const createLeadAll = createLeadSubModule?.actions?.all === true;
-          const createLeadCreate = createLeadSubModule?.actions?.create === true;
-          const assignLeadAll = assignLeadSubModule?.actions?.all === true;
-          const assignLeadUpdate = assignLeadSubModule?.actions?.update === true;
-          const assignLeadCreate = assignLeadSubModule?.actions?.create === true;
+          const createLeadAll = isTrue(createLeadSubModule?.actions?.all);
+          const createLeadCreate = isTrue(createLeadSubModule?.actions?.create);
+          const assignLeadAll = isTrue(assignLeadSubModule?.actions?.all);
+          const assignLeadUpdate = isTrue(assignLeadSubModule?.actions?.update);
+          const assignLeadCreate = isTrue(assignLeadSubModule?.actions?.create);
 
           setPermissions({
             // Create: Module "all" OR module "create" OR submodule "all" OR submodule "create"
@@ -85,14 +114,33 @@ function LeadsPage() {
             canAssign: moduleAll || moduleUpdate || assignLeadAll || assignLeadUpdate || assignLeadCreate,
           });
         } else {
-          // No permissions found, default to false
-          setPermissions({
-            canCreate: false,
-            canUpdate: false,
-            canDelete: false,
-            canRead: false,
-            canAssign: false,
-          });
+          // No permissions found for lead module
+          console.log('[doctor-create-lead] No lead module permission found. Available modules:', 
+            data.data.permissions?.map(p => p.module) || []
+          );
+          // If no permissions are set up at all, allow access (backward compatibility)
+          // Otherwise, deny access
+          const hasAnyPermissions = data.data.permissions && data.data.permissions.length > 0;
+          if (!hasAnyPermissions) {
+            // No permissions set up - grant all access (backward compatibility)
+            console.log('[doctor-create-lead] No permissions set up, granting all access');
+            setPermissions({
+              canCreate: true,
+              canUpdate: true,
+              canDelete: true,
+              canRead: true,
+              canAssign: true,
+            });
+          } else {
+            // Permissions exist but lead module not found - deny access
+            setPermissions({
+              canCreate: false,
+              canUpdate: false,
+              canDelete: false,
+              canRead: false,
+              canAssign: false,
+            });
+          }
         }
       } else {
         // API failed, default to false

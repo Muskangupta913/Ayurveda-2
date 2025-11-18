@@ -252,12 +252,20 @@ const doctorNavigationItems = [
     order: 1,
   },
   {
+    label: "Assigned Leads",
+    path: "/doctor/assigned-leads",
+    icon: "📋",
+    description: "Leads assigned to you",
+    moduleKey: "assignedLead",
+    order: 2,
+  },
+  {
     label: "Manage Profile",
     path: "/doctor/manageDoctor",
     icon: "👤",
     description: "Manage Profile",
     moduleKey: "manage_profile",
-    order: 2,
+    order: 3,
   },
   {
     label: "All users Review",
@@ -265,14 +273,14 @@ const doctorNavigationItems = [
     icon: "📅",
     description: "See All Users Reviews",
     moduleKey: "all_users_review",
-    order: 3,
+    order: 4,
   },
   {
     label: "Blogs",
     icon: "📄",
     description: "Blog Management",
     moduleKey: "blogs",
-    order: 4,
+    order: 5,
     children: [
       { label: "Write Article", path: "/doctor/BlogForm", icon: "📝", order: 1 },
       { label: "Published Blogs", path: "/doctor/published-blogs", icon: "📄", order: 2 },
@@ -284,7 +292,7 @@ const doctorNavigationItems = [
     icon: "👥",
     description: "Manage Staff",
     moduleKey: "staff_management",
-    order: 5,
+    order: 6,
     children: [
       { label: "Dashboard", path: "/clinic/staff-dashboard", icon: "🏠", order: 1 },
       { label: "Add Service", path: "/clinic/add-service", icon: "➕", order: 2 },
@@ -302,7 +310,7 @@ const doctorNavigationItems = [
     icon: "💼",
     description: "Job Management",
     moduleKey: "jobs",
-    order: 6,
+    order: 7,
     children: [
       { label: "Post Job", path: "/doctor/create-job", icon: "📢", order: 1 },
       { label: "See Jobs", path: "/doctor/my-jobs", icon: "💼", order: 2 },
@@ -315,7 +323,7 @@ const doctorNavigationItems = [
     icon: "📋",
     description: "View all prescription requests",
     moduleKey: "prescription_requests",
-    order: 7,
+    order: 8,
   },
   {
     label: "Create Agent",
@@ -323,14 +331,14 @@ const doctorNavigationItems = [
     icon: "👤",
     description: "Create agent account",
     moduleKey: "create_agent",
-    order: 8,
+    order: 9,
   },
   {
     label: "Lead",
     icon: "🧑‍💼",
     description: "Lead Management",
     moduleKey: "lead",
-    order: 9,
+    order: 10,
     children: [
       {
         label: "Dashboard",
@@ -375,7 +383,7 @@ const doctorNavigationItems = [
     icon: "📊",
     description: "Manage Marketing",
     moduleKey: "marketing",
-    order: 10,
+    order: 11,
     children: [
       {
         label: "SMS Marketing",

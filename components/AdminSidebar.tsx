@@ -131,7 +131,7 @@ const navItems: NavItem[] = [
       },
       {
         label: 'Contracts',
-        path: '/admin/contracters',
+        path: '/admin/Contractor',
         icon: '⚙️',
       },
     ],

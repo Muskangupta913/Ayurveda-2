@@ -65,7 +65,7 @@ export const clinicNavigationItems = [
   },
   {
     label: "Assigned Leads",
-    path: "/agent/assigned-leads",
+    path: "/clinic/assigned-leads",
     icon: "📋",
     description: "Leads assigned to you",
     moduleKey: "assignedLead",

@@ -5,6 +5,7 @@ import Treatment from "../../../models/Treatment";
 import Clinic from "../../../models/Clinic"; 
 import { getUserFromReq, requireRole } from "./auth";
 import { checkClinicPermission } from "./permissions-helper";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   try {
@@ -56,17 +57,34 @@ export default async function handler(req, res) {
 
     // ✅ Check permission for reading offers (only for clinic and agent, admin bypasses)
     if (user.role !== "admin" && clinicId) {
-      const { hasPermission, error } = await checkClinicPermission(
+      // First check if clinic has read permission
+      const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
         clinicId,
         "create_offers",
         "read"
       );
 
-      if (!hasPermission) {
+      if (!clinicHasPermission) {
         return res.status(403).json({
           success: false,
-          message: error || "You do not have permission to view offers"
+          message: clinicError || "You do not have permission to view offers"
         });
+      }
+
+      // If user is an agent, also check agent-specific permissions
+      if (user.role === "agent") {
+        const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+          user._id,
+          "create_offers",
+          "read"
+        );
+
+        if (!agentHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: agentError || "You do not have permission to view offers"
+          });
+        }
       }
     }
 

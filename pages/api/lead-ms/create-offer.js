@@ -4,6 +4,7 @@ import Treatment from "../../../models/Treatment";
 import Clinic from "../../../models/Clinic";  
 import { getUserFromReq, requireRole } from "./auth";
 import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
+import { checkAgentPermission } from "../agent/permissions-helper";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -56,17 +57,34 @@ export default async function handler(req, res) {
 
     // ✅ Check permission for creating offers (only for clinic and agent, admin bypasses)
     if (!isAdmin) {
-      const { hasPermission, error } = await checkClinicPermission(
+      // First check if clinic has create permission
+      const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
         resolvedClinicId,
         "create_offers",
         "create"
       );
 
-      if (!hasPermission) {
+      if (!clinicHasPermission) {
         return res.status(403).json({
           success: false,
-          message: error || "You do not have permission to create offers"
+          message: clinicError || "You do not have permission to create offers"
         });
+      }
+
+      // If user is an agent, also check agent-specific permissions
+      if (user.role === "agent") {
+        const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+          user._id,
+          "create_offers",
+          "create"
+        );
+
+        if (!agentHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: agentError || "You do not have permission to create offers"
+          });
+        }
       }
     }
 

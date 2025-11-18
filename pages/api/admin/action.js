@@ -1,4 +1,4 @@
-import dbConnect from "../../../lib/database"; 
+ 
 import User from "../../../models/Users";
 import DoctorProfile from "../../../models/DoctorProfile";
 import Review from "../../../models/Review"; // ✅ Import Review model
