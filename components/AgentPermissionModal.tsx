@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 interface SubModule {
   name: string;
@@ -162,7 +163,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
       });
       if (data.success) {
         let items = data.data || [];
-        
+
         // If userRole is 'clinic' and we have clinic permissions, filter navigation items
         if (userRole === 'clinic' && clinicPermissions && clinicPermissions.length > 0) {
           // Build permission map for quick lookup
@@ -171,16 +172,16 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             const moduleKey = perm.module;
             const moduleKeyWithoutPrefix = moduleKey.replace(/^(admin|clinic|doctor)_/, '');
             const moduleKeyWithPrefix = `clinic_${moduleKeyWithoutPrefix}`;
-            
+
             const permissionData: { moduleActions: any; subModules: Record<string, any> } = {
               moduleActions: perm.actions,
               subModules: {}
             };
-            
+
             permissionMap[moduleKey] = permissionData;
             permissionMap[moduleKeyWithoutPrefix] = permissionData;
             permissionMap[moduleKeyWithPrefix] = permissionData;
-            
+
             if (perm.subModules && perm.subModules.length > 0) {
               perm.subModules.forEach(subModule => {
                 if (subModule && subModule.name) {
@@ -194,13 +195,13 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
           items = items
             .map((item: NavigationItem) => {
               // Try multiple lookup strategies for moduleKey matching
-              const modulePerm = permissionMap[item.moduleKey] || 
-                                permissionMap[item.moduleKey.replace('clinic_', '')] ||
-                                permissionMap[item.moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
-              
+              const modulePerm = permissionMap[item.moduleKey] ||
+                permissionMap[item.moduleKey.replace('clinic_', '')] ||
+                permissionMap[item.moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+
               // Check if module has read permission
               const hasModuleRead = modulePerm && (
-                modulePerm.moduleActions.read === true || 
+                modulePerm.moduleActions.read === true ||
                 modulePerm.moduleActions.all === true
               );
 
@@ -218,10 +219,10 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
                     }
                     const subModulePerm = modulePerm?.subModules[subModule.name];
                     const hasSubModuleRead = subModulePerm && (
-                      subModulePerm.read === true || 
+                      subModulePerm.read === true ||
                       subModulePerm.all === true
                     );
-                    
+
                     // Only include submodule if it has read permission
                     if (hasSubModuleRead) {
                       return subModule;
@@ -238,10 +239,10 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             })
             .filter((item: NavigationItem) => item !== null);
         }
-        
+
         setNavigationItems(items);
         // Auto-expand modules with sub-modules
-        const modulesWithSubModules = items.filter((item: NavigationItem) => 
+        const modulesWithSubModules = items.filter((item: NavigationItem) =>
           item.subModules && item.subModules.length > 0
         );
         setExpandedModules(new Set(modulesWithSubModules.map((item: NavigationItem) => item.moduleKey)));
@@ -261,11 +262,11 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         update: Boolean(perm.actions?.update),
         delete: Boolean(perm.actions?.delete),
       };
-      
+
       // Recalculate "all" based on the 4 core actions
       const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
       sanitizedActions.all = allActions.every(actionKey => sanitizedActions[actionKey]);
-      
+
       // Sanitize submodules
       const sanitizedSubModules = (perm.subModules || []).map(subMod => {
         const sanitizedSubActions = {
@@ -276,13 +277,13 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
           delete: Boolean(subMod.actions?.delete),
         };
         sanitizedSubActions.all = allActions.every(actionKey => sanitizedSubActions[actionKey]);
-        
+
         return {
           ...subMod,
           actions: sanitizedSubActions
         };
       });
-      
+
       return {
         ...perm,
         actions: sanitizedActions,
@@ -331,13 +332,13 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             delete: false,
           }
         })) || [],
-          actions: {
-            all: false,
-            create: false,
-            read: false,
-            update: false,
-            delete: false
-          }
+        actions: {
+          all: false,
+          create: false,
+          read: false,
+          update: false,
+          delete: false
+        }
       }));
 
       setPermissions(newPermissions);
@@ -354,13 +355,13 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             path: subModule.path || '',
             icon: subModule.icon,
             order: subModule.order,
-          actions: {
-            all: false,
-            create: false,
-            read: false,
-            update: false,
-            delete: false
-          }
+            actions: {
+              all: false,
+              create: false,
+              read: false,
+              update: false,
+              delete: false
+            }
           })) || [],
           actions: {
             all: false,
@@ -380,13 +381,13 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     return permissions.find(p => p.module === moduleKey) || {
       module: moduleKey,
       subModules: [],
-          actions: {
-            all: false,
-            create: false,
-            read: false,
-            update: false,
-            delete: false
-          }
+      actions: {
+        all: false,
+        create: false,
+        read: false,
+        update: false,
+        delete: false
+      }
     };
   };
 
@@ -402,16 +403,16 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
       const modKey = perm.module;
       const modKeyWithoutPrefix = modKey.replace(/^(admin|clinic|doctor)_/, '');
       const modKeyWithPrefix = `clinic_${modKeyWithoutPrefix}`;
-      
+
       const permissionData: { moduleActions: any; subModules: Record<string, any> } = {
         moduleActions: perm.actions,
         subModules: {}
       };
-      
+
       permissionMap[modKey] = permissionData;
       permissionMap[modKeyWithoutPrefix] = permissionData;
       permissionMap[modKeyWithPrefix] = permissionData;
-      
+
       if (perm.subModules && perm.subModules.length > 0) {
         perm.subModules.forEach(subModule => {
           if (subModule && subModule.name) {
@@ -422,9 +423,9 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     });
 
     // Find module permission
-    const modulePerm = permissionMap[moduleKey] || 
-                      permissionMap[moduleKey.replace('clinic_', '')] ||
-                      permissionMap[moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+    const modulePerm = permissionMap[moduleKey] ||
+      permissionMap[moduleKey.replace('clinic_', '')] ||
+      permissionMap[moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
 
     if (!modulePerm) {
       return false; // Module not found in clinic permissions
@@ -446,16 +447,16 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
 
   const autoSavePermissions = async (permissionsToSave: ModulePermission[]) => {
     if (!token) return;
-    
+
     // Clear any pending save
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    
+
     // Debounce: wait 500ms before saving
     saveTimeoutRef.current = setTimeout(async () => {
       if (saving) return; // Skip if already saving
-      
+
       setSaving(true);
       setSaveStatus('saving');
       try {
@@ -511,13 +512,13 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             delete: false,
           }
         })) || [],
-          actions: {
-            all: false,
-            create: false,
-            read: false,
-            update: false,
-            delete: false
-          }
+        actions: {
+          all: false,
+          create: false,
+          read: false,
+          update: false,
+          delete: false
+        }
       };
       newPermissions.push(modulePermission);
     }
@@ -529,7 +530,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
       allActions.forEach(actionKey => {
         modulePermission.actions[actionKey] = value;
       });
-      
+
       // ✅ CRITICAL FIX: When module-level "all" is clicked, also set all submodule actions to true
       // First, ensure all submodules from navigationItems are initialized
       const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
@@ -538,7 +539,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         if (!modulePermission.subModules) {
           modulePermission.subModules = [];
         }
-        
+
         // Add missing submodules from navigationItems
         navItem.subModules.forEach(navSubModule => {
           const existingSubModule = modulePermission.subModules.find(sm => sm.name === navSubModule.name);
@@ -559,7 +560,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             modulePermission.subModules.push(newSubModule);
           }
         });
-        
+
         // Now set all actions for all submodules
         modulePermission.subModules.forEach(subModule => {
           // Set all actions for each submodule
@@ -570,11 +571,12 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
           // Also set the "all" flag for the submodule
           subModule.actions.all = value;
         });
+        modulePermission.actions.all = value;
       }
     } else {
       // When individual action is toggled, update that action
       modulePermission.actions[action as ActionKey] = value;
-      
+
       // Check if all actions are enabled to update "all" state
       const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
       const allEnabled = allActions.every(actionKey => modulePermission.actions[actionKey]);
@@ -613,39 +615,43 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             delete: false,
           }
         })) || [],
-          actions: {
-            all: false,
-            create: false,
-            read: false,
-            update: false,
-            delete: false
-          }
+        actions: {
+          all: false,
+          create: false,
+          read: false,
+          update: false,
+          delete: false
+        }
       };
       newPermissions.push(modulePermission);
     }
 
-    if (!modulePermission.subModules) {
-      modulePermission.subModules = [];
-    }
-
-    let subModule = modulePermission.subModules.find(sm => sm.name === subModuleName);
+    // Find or create the submodule
+    let subModule: SubModule | undefined = modulePermission.subModules.find(sm => sm.name === subModuleName);
     if (!subModule) {
       const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
       const navSubModule = navItem?.subModules?.find(sm => sm.name === subModuleName);
-      subModule = {
+      const newSubModule: SubModule = {
         name: subModuleName,
         path: navSubModule?.path || '',
         icon: navSubModule?.icon || '📄',
         order: navSubModule?.order || 0,
-          actions: {
-            all: false,
-            create: false,
-            read: false,
-            update: false,
-            delete: false
-          }
+        actions: {
+          all: false,
+          create: false,
+          read: false,
+          update: false,
+          delete: false
+        }
       };
-      modulePermission.subModules.push(subModule);
+      modulePermission.subModules.push(newSubModule);
+      subModule = newSubModule;
+    }
+
+    // subModule is guaranteed to be defined at this point
+    if (!subModule) {
+      console.error('Failed to find or create submodule');
+      return;
     }
 
     if (action === 'all') {
@@ -658,7 +664,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     } else {
       // When individual action is toggled, update that action
       subModule.actions[action as ActionKey] = value;
-      
+
       // Check if all actions are enabled to update "all" state
       const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
       const allEnabled = allActions.every(actionKey => subModule.actions[actionKey]);
@@ -694,7 +700,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     // Check if clinic has permission for this action (only for clinic role)
     const hasClinicPermission = !moduleKey || clinicHasAction(moduleKey, actionKey, subModuleName);
     const isDisabled = disabled || (userRole === 'clinic' && !hasClinicPermission);
-    
+
     const style = ACTION_STYLES[actionKey];
     const trackClasses = current
       ? `${style.accent} bg-opacity-70`
@@ -706,16 +712,14 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         role="switch"
         aria-checked={current}
         onClick={() => !isDisabled && onSelect(!current)}
-        className={`group inline-flex items-center gap-2.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
-          current ? style.active : style.inactive
-        } ${isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:brightness-105'}`}
+        className={`group inline-flex items-center gap-2.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${current ? style.active : style.inactive
+          } ${isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:brightness-105'}`}
         title={isDisabled && userRole === 'clinic' && !hasClinicPermission ? `You don't have "${label}" permission for this module` : ''}
       >
         <span>{label}</span>
         <span
-          className={`relative inline-flex h-4 w-8 items-center rounded-full transition ${trackClasses} ${
-            current ? 'justify-end pr-[2px]' : 'justify-start pl-[2px]'
-          }`}
+          className={`relative inline-flex h-4 w-8 items-center rounded-full transition ${trackClasses} ${current ? 'justify-end pr-[2px]' : 'justify-start pl-[2px]'
+            }`}
         >
           <span
             className="h-3.5 w-3.5 rounded-full bg-white shadow transition-transform"
@@ -881,13 +885,13 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
                                     path: subModule.path || '',
                                     icon: subModule.icon,
                                     order: subModule.order,
-          actions: {
-            all: false,
-            create: false,
-            read: false,
-            update: false,
-            delete: false
-          }
+                                    actions: {
+                                      all: false,
+                                      create: false,
+                                      read: false,
+                                      update: false,
+                                      delete: false
+                                    }
                                   };
 
                                   return (
@@ -949,4 +953,3 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
 };
 
 export default AgentPermissionModal;
-
