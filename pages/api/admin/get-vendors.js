@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     const vendors = await Vendor.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: vendors });
   } catch (error) {
+    console.error("Error fetching vendors:", error);
     res.status(400).json({ success: false, message: error.message });
   }
 }

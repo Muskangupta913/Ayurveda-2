@@ -15,8 +15,6 @@ interface DoctorLoginResponse {
 // Auth utility functions
 const AUTH_STORAGE_KEY = 'doctorUser'; // ✅ Changed from 'doctorAuth' to 'doctorUser' to match HOC
 const TOKEN_KEY = 'doctorToken';
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
 
 const setAuthData = (user: { name: string; email: string }, token: string) => {
   if (typeof window !== 'undefined') {
@@ -26,39 +24,6 @@ const setAuthData = (user: { name: string; email: string }, token: string) => {
     } catch (error) {
       console.error('Failed to store auth data:', error);
     }
-  }
-};
-
-const getLoginAttempts = () => {
-  if (typeof window !== 'undefined') {
-    const attempts = localStorage.getItem('loginAttempts');
-    const lockoutUntil = localStorage.getItem('lockoutUntil');
-    
-    if (lockoutUntil && Date.now() < parseInt(lockoutUntil)) {
-      return { count: MAX_LOGIN_ATTEMPTS, locked: true };
-    }
-    
-    return { count: attempts ? parseInt(attempts) : 0, locked: false };
-  }
-  return { count: 0, locked: false };
-};
-
-const incrementLoginAttempts = () => {
-  if (typeof window !== 'undefined') {
-    const current = getLoginAttempts().count;
-    const newCount = current + 1;
-    localStorage.setItem('loginAttempts', newCount.toString());
-    
-    if (newCount >= MAX_LOGIN_ATTEMPTS) {
-      localStorage.setItem('lockoutUntil', (Date.now() + LOCKOUT_TIME).toString());
-    }
-  }
-};
-
-const resetLoginAttempts = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('loginAttempts');
-    localStorage.removeItem('lockoutUntil');
   }
 };
 
@@ -79,13 +44,6 @@ export default function DoctorLoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    
-    // Check login attempts
-    const { count, locked } = getLoginAttempts();
-    if (locked) {
-      setError('Too many failed attempts. Please try again in 15 minutes.');
-      return;
-    }
 
     // Validate input
     if (!form.email || !form.password) {
@@ -103,8 +61,7 @@ export default function DoctorLoginPage() {
     setIsLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      const response = await fetch(`${apiUrl}/api/doctor/login`, {
+      const response = await fetch('/api/doctor/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,16 +73,8 @@ export default function DoctorLoginPage() {
       const data: DoctorLoginResponse = await response.json();
 
       if (!response.ok) {
-        incrementLoginAttempts();
-        const attemptsLeft = MAX_LOGIN_ATTEMPTS - getLoginAttempts().count;
-        throw new Error(
-          data.message || 
-          `Login failed. ${attemptsLeft > 0 ? `${attemptsLeft} attempts remaining.` : ''}`
-        );
+        throw new Error(data.message || 'Login failed. Please check your credentials.');
       }
-
-      // Reset attempts on successful login
-      resetLoginAttempts();
 
       // Store user data and token
       const doctorUser = {

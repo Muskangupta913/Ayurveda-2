@@ -157,8 +157,9 @@ const ManageAgentsPage: NextPageWithLayout = () => {
     const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
     const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
     
-    // Check permissions only for agents - admins bypass all checks
-    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
+    // ✅ Admin always has full rights - bypass all permission checks
+    // Check permissions only for agents (when admin token doesn't exist)
+    if (!adminTokenExists && (isAgentRoute || isAgent) && agentTokenExists && agentPermissions) {
       if (action === 'approve' || action === 'decline') {
         if (agentPermissions.canApprove !== true && agentPermissions.canAll !== true) {
           toast.error("You do not have permission to approve/decline agents");
@@ -209,12 +210,13 @@ const ManageAgentsPage: NextPageWithLayout = () => {
       return;
     }
     
-    // Check permissions for agents
+    // ✅ Admin always has full rights - bypass all permission checks
     const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
     const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
     const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
     
-    if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
+    // Check permissions only for agents (when admin token doesn't exist)
+    if (!adminTokenExists && (isAgentRoute || isAgent) && agentTokenExists && agentPermissions) {
       if (agentPermissions.canUpdate !== true && agentPermissions.canAll !== true) {
         toast.error("You do not have permission to reset passwords");
         return;
@@ -422,13 +424,13 @@ const ManageAgentsPage: NextPageWithLayout = () => {
                 
                 // Helper function to check if action should be shown
                 const shouldShowAction = (action: 'create' | 'update' | 'approve') => {
-                  // Admin always sees all actions - but ONLY if NOT on agent route
-                  if (!isAgentRoute && adminTokenExists && isAdmin) {
+                  // ✅ Admin always has full rights to create agents - bypass all checks
+                  if (adminTokenExists) {
                     return true;
                   }
                   
                   // For agents: Check permissions
-                  if ((isAgentRoute || isAgent) && agentTokenExists) {
+                  if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists) {
                     if (permissionsLoading || !agentPermissions) {
                       return false;
                     }
@@ -575,13 +577,13 @@ const ManageAgentsPage: NextPageWithLayout = () => {
                             
                             // Helper function to check if action should be shown
                             const shouldShowAction = (action: 'create' | 'update' | 'approve') => {
-                              // Admin always sees all actions - but ONLY if NOT on agent route
-                              if (!isAgentRoute && adminTokenExists && isAdmin) {
+                              // ✅ Admin always has full rights - bypass all checks
+                              if (adminTokenExists) {
                                 return true;
                               }
                               
                               // For agents: Check permissions
-                              if ((isAgentRoute || isAgent) && agentTokenExists) {
+                              if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists) {
                                 if (permissionsLoading || !agentPermissions) {
                                   return false;
                                 }

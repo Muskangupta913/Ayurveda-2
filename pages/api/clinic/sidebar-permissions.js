@@ -41,6 +41,20 @@ export default async function handler(req, res) {
       isActive: true 
     }).sort({ order: 1 });
 
+    // Helper function to transform /staff paths to /clinic/staff paths
+    const transformPath = (path) => {
+      if (!path) return path;
+      // Transform /staff/* to /clinic/staff/*
+      if (path.startsWith('/staff/')) {
+        return path.replace('/staff/', '/clinic/staff/');
+      }
+      // Transform /staff to /clinic/staff
+      if (path === '/staff') {
+        return '/clinic/staff';
+      }
+      return path;
+    };
+
     // If no permissions exist, return all navigation items (clinic sees everything until admin restricts)
     if (!clinicPermission || !clinicPermission.permissions || clinicPermission.permissions.length === 0) {
       return res.status(200).json({
@@ -49,12 +63,15 @@ export default async function handler(req, res) {
         navigationItems: navigationItems.map(item => ({
           _id: item._id,
           label: item.label,
-          path: item.path,
+          path: transformPath(item.path),
           icon: item.icon,
           description: item.description,
           order: item.order,
           moduleKey: item.moduleKey,
-          subModules: item.subModules || []
+          subModules: (item.subModules || []).map(subModule => ({
+            ...subModule,
+            path: transformPath(subModule.path)
+          }))
         })),
         clinicId: clinic._id.toString()
       });
@@ -104,21 +121,35 @@ export default async function handler(req, res) {
         }
 
         // Filter submodules based on permissions
+        // Only show submodules that have explicit read or all permission
         let filteredSubModules = [];
         if (item.subModules && item.subModules.length > 0) {
-          filteredSubModules = item.subModules.filter(subModule => {
-            const subModulePerm = modulePerm?.subModules[subModule.name];
-            return subModulePerm && (
-              subModulePerm.read === true || 
-              subModulePerm.all === true
-            );
-          });
+          filteredSubModules = item.subModules
+            .map(subModule => {
+              const subModulePerm = modulePerm?.subModules[subModule.name];
+              const hasSubModuleRead = subModulePerm && (
+                subModulePerm.read === true || 
+                subModulePerm.all === true
+              );
+              
+              // Only include submodule if it has read permission
+              if (hasSubModuleRead) {
+                return {
+                  name: subModule.name,
+                  path: transformPath(subModule.path || ''),
+                  icon: subModule.icon || '',
+                  order: subModule.order || 0
+                };
+              }
+              return null;
+            })
+            .filter(subModule => subModule !== null);
         }
 
         return {
           _id: item._id,
           label: item.label,
-          path: item.path,
+          path: transformPath(item.path),
           icon: item.icon,
           description: item.description,
           order: item.order,

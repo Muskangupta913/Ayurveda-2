@@ -180,6 +180,26 @@ export default function VendorForm() {
   };
 
   const fetchVendors = async () => {
+    if (!token && !isAgent) {
+      // For non-agents, try to get clinic/doctor token
+      const clinicToken = typeof window !== "undefined" ? localStorage.getItem("clinicToken") : null;
+      const doctorToken = typeof window !== "undefined" ? localStorage.getItem("doctorToken") : null;
+      if (!clinicToken && !doctorToken) {
+        showToast("Authentication required", "error");
+        return;
+      }
+    }
+    
+    // Wait for permissions to load
+    if (!permissionsLoaded) return;
+    
+    // Check if user has read permission
+    if (isAgent && permissions.canRead === false) {
+      setVendors([]);
+      setFilteredVendors([]);
+      return;
+    }
+
     try {
       // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
@@ -254,6 +274,18 @@ export default function VendorForm() {
         );
         if (res.data.success) {
           showToast("Vendor updated successfully!", "success");
+          // Reset form and close modal on success
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            trnNumber: "",
+            note: "",
+          });
+          setEditId(null);
+          setIsModalOpen(false);
+          fetchVendors();
         }
       } else {
         const res = await axios.post(
@@ -263,6 +295,18 @@ export default function VendorForm() {
         );
         if (res.data.success) {
           showToast("Vendor created successfully!", "success");
+          // Reset form and close modal on success
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            trnNumber: "",
+            note: "",
+          });
+          setEditId(null);
+          setIsModalOpen(false);
+          fetchVendors();
         }
       }
 
@@ -278,8 +322,13 @@ export default function VendorForm() {
       setIsModalOpen(false);
       fetchVendors();
     } catch (err) {
-      console.error("Error submitting vendor form:", err);
-      showToast(err.response?.data?.message || "Error saving vendor!", "error");
+      // Handle permission errors from API
+      if (err.response?.status === 403) {
+        showToast(err.response.data?.message || "You don't have permission to perform this action", "error");
+      } else {
+        console.error("Error submitting vendor form:", err);
+        showToast(err.response?.data?.message || "Error saving vendor!", "error");
+      }
     }
   };
 
@@ -302,15 +351,20 @@ export default function VendorForm() {
       const token = adminToken || agentToken;
       
       const res = await axios.delete(`/api/admin/delete-vendor?id=${id}`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
+        headers: { Authorization: `Bearer ${token}` },
       });
+      
       if (res.data.success) {
         showToast("Vendor deleted successfully!", "success");
         fetchVendors();
       }
     } catch (err) {
-      console.error(err);
-      showToast("Failed to delete vendor!", "error");
+      console.error("Error deleting vendor:", err);
+      if (err.response?.status === 403) {
+        showToast(err.response.data?.message || "You don't have permission to delete vendors", "error");
+      } else {
+        showToast("Failed to delete vendor!", "error");
+      }
     }
   };
 
@@ -607,11 +661,23 @@ export default function VendorForm() {
               <Search className="w-12 h-12 text-gray-800" />
             </div>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
-              No vendors found
+              {searchQuery ? "No vendors found" : "No vendors yet"}
             </h3>
-            <p className="text-gray-800 text-sm sm:text-base">
+            <p className="text-gray-800 text-sm sm:text-base mb-4">
               {searchQuery ? "Try adjusting your search criteria" : "Get started by adding your first vendor"}
             </p>
+            {!searchQuery && permissions.canCreate && (
+              <button
+                onClick={openModal}
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Your First Vendor</span>
+              </button>
+            )}
+            {!searchQuery && isAgent && !permissions.canCreate && (
+              <p className="text-red-500 text-xs">You do not have permission to create vendors</p>
+            )}
           </div>
         )}
 

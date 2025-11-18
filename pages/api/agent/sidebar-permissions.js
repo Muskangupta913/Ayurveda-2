@@ -93,9 +93,14 @@ export default async function handler(req, res) {
     const filteredNavigationItems = navigationItems
       .map(item => {
         // Try multiple lookup strategies for moduleKey matching
+        // item.moduleKey from DB is like "clinic_marketing", permission might be stored as "marketing" or "clinic_marketing"
+        const moduleKeyWithoutRole = item.moduleKey.replace(/^(admin|clinic|doctor)_/, '');
+        const moduleKeyWithRole = `${navigationRole}_${moduleKeyWithoutRole}`;
+        
         const modulePerm = permissionMap[item.moduleKey] || 
-                          permissionMap[item.moduleKey.replace(`${navigationRole}_`, '')] ||
-                          permissionMap[item.moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+                          permissionMap[moduleKeyWithoutRole] ||
+                          permissionMap[moduleKeyWithRole] ||
+                          permissionMap[item.moduleKey.replace(`${navigationRole}_`, '')];
         
         // Check if module has ANY permission at module level
         const hasModulePermission = modulePerm && (
@@ -113,6 +118,7 @@ export default async function handler(req, res) {
         const moduleAllEnabled = modulePerm && modulePerm.moduleActions.all === true;
 
         // Filter submodules based on permissions
+        // Only show submodules that the agent has explicit permission for
         let filteredSubModules = [];
         if (item.subModules && item.subModules.length > 0) {
           filteredSubModules = item.subModules
@@ -159,8 +165,12 @@ export default async function handler(req, res) {
         // Convert path from admin/clinic/doctor/staff routes to agent routes
         let agentPath = item.path;
         if (agentPath) {
+          // Convert /staff/* to /agent/*
+          if (agentPath.startsWith('/staff/')) {
+            agentPath = agentPath.replace('/staff/', '/agent/');
+          }
           // Convert /admin/* to /agent/*
-          if (agentPath.startsWith('/admin/')) {
+          else if (agentPath.startsWith('/admin/')) {
             agentPath = agentPath.replace('/admin/', '/agent/');
           }
           // Convert /clinic/* to /agent/*

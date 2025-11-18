@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -14,9 +14,6 @@ interface SubModule {
     read: boolean;
     update: boolean;
     delete: boolean;
-    print: boolean;
-    export: boolean;
-    approve: boolean;
   };
 }
 
@@ -29,9 +26,6 @@ interface ModulePermission {
     read: boolean;
     update: boolean;
     delete: boolean;
-    print: boolean;
-    export: boolean;
-    approve: boolean;
   };
 }
 
@@ -60,16 +54,46 @@ interface AgentPermissionModalProps {
   userRole: 'admin' | 'clinic' | 'doctor';
 }
 
-const ACTIONS = [
-  { key: 'all', label: 'All', activeBg: 'bg-purple-500', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' },
-  { key: 'create', label: 'Create', activeBg: 'bg-green-500', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' },
-  { key: 'read', label: 'Read', activeBg: 'bg-blue-500', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' },
-  { key: 'update', label: 'Update', activeBg: 'bg-yellow-500', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' },
-  { key: 'delete', label: 'Delete', activeBg: 'bg-red-500', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' },
-  { key: 'print', label: 'Print', activeBg: 'bg-purple-500', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' },
-  { key: 'export', label: 'Export', activeBg: 'bg-gray-700', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' },
-  { key: 'approve', label: 'Approve', activeBg: 'bg-indigo-500', inactiveBg: 'bg-gray-300', activeText: 'text-white', inactiveText: 'text-gray-600' }
+type ActionKey = 'all' | 'create' | 'read' | 'update' | 'delete';
+
+const ACTION_SEQUENCE: Array<{ key: ActionKey; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'create', label: 'Create' },
+  { key: 'read', label: 'Read' },
+  { key: 'update', label: 'Update' },
+  { key: 'delete', label: 'Delete' },
 ];
+
+const ACTION_STYLES: Record<
+  ActionKey,
+  { active: string; inactive: string; accent: string }
+> = {
+  all: {
+    active: 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-indigo-200',
+    inactive: 'bg-slate-200 text-slate-600',
+    accent: 'bg-indigo-200',
+  },
+  create: {
+    active: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-emerald-200',
+    inactive: 'bg-slate-200 text-slate-600',
+    accent: 'bg-emerald-200',
+  },
+  read: {
+    active: 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-sky-200',
+    inactive: 'bg-slate-200 text-slate-600',
+    accent: 'bg-sky-200',
+  },
+  update: {
+    active: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-amber-200',
+    inactive: 'bg-slate-200 text-slate-600',
+    accent: 'bg-amber-200',
+  },
+  delete: {
+    active: 'bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-rose-200',
+    inactive: 'bg-slate-200 text-slate-600',
+    accent: 'bg-rose-200',
+  },
+};
 
 const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
   isOpen,
@@ -81,16 +105,56 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [navigationItems, setNavigationItems] = useState<NavigationItem[]>([]);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [clinicPermissions, setClinicPermissions] = useState<ModulePermission[] | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isOpen && token) {
-      fetchNavigationItems();
-      fetchAgentPermissions();
+      if (userRole === 'clinic') {
+        fetchClinicPermissions().then(() => {
+          fetchAgentPermissions();
+        });
+      } else {
+        fetchNavigationItems();
+        fetchAgentPermissions();
+      }
     }
   }, [isOpen, token, userRole, agentId]);
+
+  // Fetch navigation items when clinic permissions are loaded or when not clinic role
+  useEffect(() => {
+    if (userRole === 'clinic') {
+      // For clinic, wait for permissions to be loaded
+      if (clinicPermissions !== null) {
+        fetchNavigationItems();
+      }
+    } else {
+      // For admin/doctor, fetch immediately if modal is open
+      if (isOpen && token) {
+        fetchNavigationItems();
+      }
+    }
+  }, [clinicPermissions, userRole, isOpen, token]);
+
+  const fetchClinicPermissions = async () => {
+    try {
+      const { data } = await axios.get('/api/clinic/permissions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data.success && data.data && data.data.permissions) {
+        setClinicPermissions(data.data.permissions);
+      } else {
+        setClinicPermissions(null);
+      }
+    } catch (err) {
+      console.error('Error fetching clinic permissions:', err);
+      setClinicPermissions(null);
+    }
+  };
 
   const fetchNavigationItems = async () => {
     try {
@@ -98,9 +162,87 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) {
-        setNavigationItems(data.data || []);
+        let items = data.data || [];
+
+        // If userRole is 'clinic' and we have clinic permissions, filter navigation items
+        if (userRole === 'clinic' && clinicPermissions && clinicPermissions.length > 0) {
+          // Build permission map for quick lookup
+          const permissionMap: Record<string, { moduleActions: any; subModules: Record<string, any> }> = {};
+          clinicPermissions.forEach(perm => {
+            const moduleKey = perm.module;
+            const moduleKeyWithoutPrefix = moduleKey.replace(/^(admin|clinic|doctor)_/, '');
+            const moduleKeyWithPrefix = `clinic_${moduleKeyWithoutPrefix}`;
+
+            const permissionData: { moduleActions: any; subModules: Record<string, any> } = {
+              moduleActions: perm.actions,
+              subModules: {}
+            };
+
+            permissionMap[moduleKey] = permissionData;
+            permissionMap[moduleKeyWithoutPrefix] = permissionData;
+            permissionMap[moduleKeyWithPrefix] = permissionData;
+
+            if (perm.subModules && perm.subModules.length > 0) {
+              perm.subModules.forEach(subModule => {
+                if (subModule && subModule.name) {
+                  permissionData.subModules[subModule.name] = subModule.actions;
+                }
+              });
+            }
+          });
+
+          // Filter navigation items based on clinic permissions
+          items = items
+            .map((item: NavigationItem) => {
+              // Try multiple lookup strategies for moduleKey matching
+              const modulePerm = permissionMap[item.moduleKey] ||
+                permissionMap[item.moduleKey.replace('clinic_', '')] ||
+                permissionMap[item.moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+
+              // Check if module has read permission
+              const hasModuleRead = modulePerm && (
+                modulePerm.moduleActions.read === true ||
+                modulePerm.moduleActions.all === true
+              );
+
+              if (!hasModuleRead) {
+                return null; // Don't show this module at all
+              }
+
+              // Filter submodules based on permissions
+              let filteredSubModules = [];
+              if (item.subModules && item.subModules.length > 0) {
+                filteredSubModules = item.subModules
+                  .map((subModule: any) => {
+                    if (!subModule || !subModule.name) {
+                      return null;
+                    }
+                    const subModulePerm = modulePerm?.subModules[subModule.name];
+                    const hasSubModuleRead = subModulePerm && (
+                      subModulePerm.read === true ||
+                      subModulePerm.all === true
+                    );
+
+                    // Only include submodule if it has read permission
+                    if (hasSubModuleRead) {
+                      return subModule;
+                    }
+                    return null;
+                  })
+                  .filter((subModule: any) => subModule !== null);
+              }
+
+              return {
+                ...item,
+                subModules: filteredSubModules
+              };
+            })
+            .filter((item: NavigationItem) => item !== null);
+        }
+
+        setNavigationItems(items);
         // Auto-expand modules with sub-modules
-        const modulesWithSubModules = data.data.filter((item: NavigationItem) => 
+        const modulesWithSubModules = items.filter((item: NavigationItem) =>
           item.subModules && item.subModules.length > 0
         );
         setExpandedModules(new Set(modulesWithSubModules.map((item: NavigationItem) => item.moduleKey)));
@@ -110,13 +252,55 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     }
   };
 
+  const sanitizePermissions = (perms: ModulePermission[]): ModulePermission[] => {
+    return perms.map(perm => {
+      // Remove print, export, approve if they exist and recalculate "all"
+      const sanitizedActions = {
+        all: false,
+        create: Boolean(perm.actions?.create),
+        read: Boolean(perm.actions?.read),
+        update: Boolean(perm.actions?.update),
+        delete: Boolean(perm.actions?.delete),
+      };
+
+      // Recalculate "all" based on the 4 core actions
+      const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
+      sanitizedActions.all = allActions.every(actionKey => sanitizedActions[actionKey]);
+
+      // Sanitize submodules
+      const sanitizedSubModules = (perm.subModules || []).map(subMod => {
+        const sanitizedSubActions = {
+          all: false,
+          create: Boolean(subMod.actions?.create),
+          read: Boolean(subMod.actions?.read),
+          update: Boolean(subMod.actions?.update),
+          delete: Boolean(subMod.actions?.delete),
+        };
+        sanitizedSubActions.all = allActions.every(actionKey => sanitizedSubActions[actionKey]);
+
+        return {
+          ...subMod,
+          actions: sanitizedSubActions
+        };
+      });
+
+      return {
+        ...perm,
+        actions: sanitizedActions,
+        subModules: sanitizedSubModules
+      };
+    });
+  };
+
   const fetchAgentPermissions = async () => {
     try {
       const { data } = await axios.get(`/api/agent/permissions?agentId=${agentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success && data.data) {
-        setPermissions(data.data.permissions || []);
+        const rawPermissions = data.data.permissions || [];
+        const sanitized = sanitizePermissions(rawPermissions);
+        setPermissions(sanitized);
       } else {
         // Initialize with empty permissions - will be synced with navigation items
         setPermissions([]);
@@ -146,9 +330,6 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             read: false,
             update: false,
             delete: false,
-            print: false,
-            export: false,
-            approve: false
           }
         })) || [],
         actions: {
@@ -156,10 +337,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
           create: false,
           read: false,
           update: false,
-          delete: false,
-          print: false,
-          export: false,
-          approve: false
+          delete: false
         }
       }));
 
@@ -182,10 +360,7 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
               create: false,
               read: false,
               update: false,
-              delete: false,
-              print: false,
-              export: false,
-              approve: false
+              delete: false
             }
           })) || [],
           actions: {
@@ -194,9 +369,6 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
             read: false,
             update: false,
             delete: false,
-            print: false,
-            export: false,
-            approve: false
           }
         }));
 
@@ -214,180 +386,249 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
         create: false,
         read: false,
         update: false,
-        delete: false,
-        print: false,
-        export: false,
-        approve: false
+        delete: false
       }
     };
   };
 
-  const handleModuleActionChange = (moduleKey: string, action: string, value: boolean) => {
-    const newPermissions = permissions.map(p => {
-      if (p.module !== moduleKey) return p;
-      
-      // Create a new module permission object
-      const updatedActions = { ...p.actions };
-      
-      if (action === 'all') {
-        const allActions = Object.keys(updatedActions).filter(key => key !== 'all');
-        allActions.forEach(actionKey => {
-          (updatedActions as any)[actionKey] = value;
-        });
-        updatedActions.all = value;
-        
-        // Update submodules
-        const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
-        let updatedSubModules = [...(p.subModules || [])];
-        
-        if (navItem && navItem.subModules && navItem.subModules.length > 0) {
-          // Ensure all submodules exist
-          navItem.subModules.forEach(navSubModule => {
-            let subModule = updatedSubModules.find(sm => sm.name === navSubModule.name);
-            if (!subModule) {
-              subModule = {
-                name: navSubModule.name,
-                path: navSubModule.path || '',
-                icon: navSubModule.icon || '📄',
-                order: navSubModule.order || 0,
-                actions: {
-                  all: false,
-                  create: false,
-                  read: false,
-                  update: false,
-                  delete: false,
-                  print: false,
-                  export: false,
-                  approve: false
-                }
-              };
-              updatedSubModules.push(subModule);
-            }
-          });
-          
-          // Update all submodule actions
-          updatedSubModules = updatedSubModules.map(subModule => {
-            const updatedSubActions = { ...subModule.actions };
-            const subModuleActions = Object.keys(updatedSubActions).filter(key => key !== 'all');
-            subModuleActions.forEach(actionKey => {
-              (updatedSubActions as any)[actionKey] = value;
-            });
-            updatedSubActions.all = value;
-            return { ...subModule, actions: updatedSubActions };
-          });
-        }
-        
-        return {
-          ...p,
-          actions: updatedActions,
-          subModules: updatedSubModules
-        };
-      } else {
-        (updatedActions as any)[action] = value;
-        const allActions = Object.keys(updatedActions).filter(key => key !== 'all');
-        const allEnabled = allActions.every(actionKey => (updatedActions as any)[actionKey]);
-        updatedActions.all = allEnabled;
-        
-        return {
-          ...p,
-          actions: updatedActions
-        };
-      }
-    });
-    
-    // If module doesn't exist, add it
-    if (!newPermissions.find(p => p.module === moduleKey)) {
-      const newModulePermission: ModulePermission = {
-        module: moduleKey,
-        subModules: [],
-        actions: {
-          all: false,
-          create: false,
-          read: false,
-          update: false,
-          delete: false,
-          print: false,
-          export: false,
-          approve: false
-        }
-      };
-      (newModulePermission.actions as any)[action] = value;
-      if (action !== 'all') {
-        const allActions = Object.keys(newModulePermission.actions).filter(key => key !== 'all');
-        const allEnabled = allActions.every(actionKey => (newModulePermission.actions as any)[actionKey]);
-        newModulePermission.actions.all = allEnabled;
-      } else {
-        const allActions = Object.keys(newModulePermission.actions).filter(key => key !== 'all');
-        allActions.forEach(actionKey => {
-          (newModulePermission.actions as any)[actionKey] = value;
-        });
-        newModulePermission.actions.all = value;
-      }
-      newPermissions.push(newModulePermission);
+  // Helper function to check if clinic has permission for a specific action
+  const clinicHasAction = (moduleKey: string, action: ActionKey, subModuleName?: string): boolean => {
+    if (userRole !== 'clinic' || !clinicPermissions || clinicPermissions.length === 0) {
+      return true; // Admin/doctor can grant all permissions
     }
 
-    setPermissions(newPermissions);
+    // Build permission map
+    const permissionMap: Record<string, { moduleActions: any; subModules: Record<string, any> }> = {};
+    clinicPermissions.forEach(perm => {
+      const modKey = perm.module;
+      const modKeyWithoutPrefix = modKey.replace(/^(admin|clinic|doctor)_/, '');
+      const modKeyWithPrefix = `clinic_${modKeyWithoutPrefix}`;
+
+      const permissionData: { moduleActions: any; subModules: Record<string, any> } = {
+        moduleActions: perm.actions,
+        subModules: {}
+      };
+
+      permissionMap[modKey] = permissionData;
+      permissionMap[modKeyWithoutPrefix] = permissionData;
+      permissionMap[modKeyWithPrefix] = permissionData;
+
+      if (perm.subModules && perm.subModules.length > 0) {
+        perm.subModules.forEach(subModule => {
+          if (subModule && subModule.name) {
+            permissionData.subModules[subModule.name] = subModule.actions;
+          }
+        });
+      }
+    });
+
+    // Find module permission
+    const modulePerm = permissionMap[moduleKey] ||
+      permissionMap[moduleKey.replace('clinic_', '')] ||
+      permissionMap[moduleKey.replace(/^(admin|clinic|doctor)_/, '')];
+
+    if (!modulePerm) {
+      return false; // Module not found in clinic permissions
+    }
+
+    // If checking submodule action
+    if (subModuleName) {
+      const subModulePerm = modulePerm.subModules[subModuleName];
+      if (!subModulePerm) {
+        return false; // Submodule not found
+      }
+      // Check if clinic has this action for the submodule
+      return subModulePerm.all === true || subModulePerm[action] === true;
+    }
+
+    // Check module-level action
+    return modulePerm.moduleActions.all === true || modulePerm.moduleActions[action] === true;
   };
 
-  const handleSubModuleActionChange = (moduleKey: string, subModuleName: string, action: string, value: boolean) => {
-    const newPermissions = permissions.map(p => {
-      if (p.module !== moduleKey) return p;
-      
-      let updatedSubModules = [...(p.subModules || [])];
-      let subModule = updatedSubModules.find(sm => sm.name === subModuleName);
-      
-      if (!subModule) {
-        const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
-        const navSubModule = navItem?.subModules?.find(sm => sm.name === subModuleName);
-        subModule = {
-          name: subModuleName,
-          path: navSubModule?.path || '',
-          icon: navSubModule?.icon || '📄',
-          order: navSubModule?.order || 0,
+  const autoSavePermissions = async (permissionsToSave: ModulePermission[]) => {
+    if (!token) return;
+
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Debounce: wait 500ms before saving
+    saveTimeoutRef.current = setTimeout(async () => {
+      if (saving) return; // Skip if already saving
+
+      setSaving(true);
+      setSaveStatus('saving');
+      try {
+        const { data } = await axios.post(
+          '/api/agent/permissions',
+          { agentId, permissions: permissionsToSave },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (data.success) {
+          setSaveStatus('saved');
+          setTimeout(() => {
+            setSaveStatus('idle');
+          }, 1500);
+        } else {
+          setSaveStatus('error');
+          setTimeout(() => setSaveStatus('idle'), 3000);
+        }
+      } catch (err: any) {
+        console.error('Error auto-saving permissions:', err);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } finally {
+        setSaving(false);
+      }
+    }, 500);
+  };
+
+  const handleModuleActionChange = (moduleKey: string, action: string, value: boolean) => {
+    // Check if clinic has permission for this action
+    if (value && !clinicHasAction(moduleKey, action as ActionKey)) {
+      alert(`You do not have permission to grant "${action}" action for this module. You can only grant permissions that you have been granted.`);
+      return;
+    }
+
+    const newPermissions = [...permissions];
+    let modulePermission = newPermissions.find(p => p.module === moduleKey);
+
+    if (!modulePermission) {
+      const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
+      modulePermission = {
+        module: moduleKey,
+        subModules: navItem?.subModules?.map(subModule => ({
+          name: subModule.name,
+          path: subModule.path || '',
+          icon: subModule.icon,
+          order: subModule.order,
           actions: {
             all: false,
             create: false,
             read: false,
             update: false,
             delete: false,
-            print: false,
-            export: false,
-            approve: false
           }
-        };
-        updatedSubModules.push(subModule);
-      }
-      
-      // Update the specific submodule
-      updatedSubModules = updatedSubModules.map(sm => {
-        if (sm.name !== subModuleName) return sm;
-        
-        const updatedSubActions = { ...sm.actions };
-        
-        if (action === 'all') {
-          const allActions = Object.keys(updatedSubActions).filter(key => key !== 'all');
-          allActions.forEach(actionKey => {
-            (updatedSubActions as any)[actionKey] = value;
-          });
-          updatedSubActions.all = value;
-        } else {
-          (updatedSubActions as any)[action] = value;
-          const allActions = Object.keys(updatedSubActions).filter(key => key !== 'all');
-          const allEnabled = allActions.every(actionKey => (updatedSubActions as any)[actionKey]);
-          updatedSubActions.all = allEnabled;
+        })) || [],
+        actions: {
+          all: false,
+          create: false,
+          read: false,
+          update: false,
+          delete: false
         }
-        
-        return { ...sm, actions: updatedSubActions };
-      });
-      
-      return {
-        ...p,
-        subModules: updatedSubModules
       };
-    });
-    
-    // If module doesn't exist, create it with the submodule
-    if (!newPermissions.find(p => p.module === moduleKey)) {
+      newPermissions.push(modulePermission);
+    }
+
+    if (action === 'all') {
+      // When "all" is toggled, set all actions including "all" itself to the same value
+      modulePermission.actions.all = value;
+      const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
+      allActions.forEach(actionKey => {
+        modulePermission.actions[actionKey] = value;
+      });
+
+      // ✅ CRITICAL FIX: When module-level "all" is clicked, also set all submodule actions to true
+      // First, ensure all submodules from navigationItems are initialized
+      const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
+      if (navItem && navItem.subModules && navItem.subModules.length > 0) {
+        // Initialize submodules if they don't exist
+        if (!modulePermission.subModules) {
+          modulePermission.subModules = [];
+        }
+
+        // Add missing submodules from navigationItems
+        navItem.subModules.forEach(navSubModule => {
+          const existingSubModule = modulePermission.subModules.find(sm => sm.name === navSubModule.name);
+          if (!existingSubModule) {
+            const newSubModule: SubModule = {
+              name: navSubModule.name,
+              path: navSubModule.path || '',
+              icon: navSubModule.icon || '📄',
+              order: navSubModule.order || 0,
+              actions: {
+                all: false,
+                create: false,
+                read: false,
+                update: false,
+                delete: false
+              }
+            };
+            modulePermission.subModules.push(newSubModule);
+          }
+        });
+
+        // Now set all actions for all submodules
+        modulePermission.subModules.forEach(subModule => {
+          // Set all actions for each submodule
+          const subModuleActions = Object.keys(subModule.actions).filter(key => key !== 'all');
+          subModuleActions.forEach(actionKey => {
+            (subModule.actions as any)[actionKey] = value;
+          });
+          // Also set the "all" flag for the submodule
+          subModule.actions.all = value;
+        });
+        modulePermission.actions.all = value;
+      }
+    } else {
+      // When individual action is toggled, update that action
+      modulePermission.actions[action as ActionKey] = value;
+
+      // Check if all actions are enabled to update "all" state
+      const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
+      const allEnabled = allActions.every(actionKey => modulePermission.actions[actionKey]);
+      modulePermission.actions.all = allEnabled;
+    }
+
+    setPermissions(newPermissions);
+    // Auto-save with debouncing
+    autoSavePermissions(newPermissions);
+  };
+
+  const handleSubModuleActionChange = (moduleKey: string, subModuleName: string, action: string, value: boolean) => {
+    // Check if clinic has permission for this action
+    if (value && !clinicHasAction(moduleKey, action as ActionKey, subModuleName)) {
+      alert(`You do not have permission to grant "${action}" action for this submodule. You can only grant permissions that you have been granted.`);
+      return;
+    }
+
+    const newPermissions = [...permissions];
+    let modulePermission = newPermissions.find(p => p.module === moduleKey);
+
+    if (!modulePermission) {
+      const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
+      modulePermission = {
+        module: moduleKey,
+        subModules: navItem?.subModules?.map(subModule => ({
+          name: subModule.name,
+          path: subModule.path || '',
+          icon: subModule.icon,
+          order: subModule.order,
+          actions: {
+            all: false,
+            create: false,
+            read: false,
+            update: false,
+            delete: false,
+          }
+        })) || [],
+        actions: {
+          all: false,
+          create: false,
+          read: false,
+          update: false,
+          delete: false
+        }
+      };
+      newPermissions.push(modulePermission);
+    }
+
+    // Find or create the submodule
+    let subModule: SubModule | undefined = modulePermission.subModules.find(sm => sm.name === subModuleName);
+    if (!subModule) {
       const navItem = navigationItems.find(item => item.moduleKey === moduleKey);
       const navSubModule = navItem?.subModules?.find(sm => sm.name === subModuleName);
       const newSubModule: SubModule = {
@@ -400,44 +641,39 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
           create: false,
           read: false,
           update: false,
-          delete: false,
-          print: false,
-          export: false,
-          approve: false
+          delete: false
         }
       };
-      
-      if (action === 'all') {
-        const allActions = Object.keys(newSubModule.actions).filter(key => key !== 'all');
-        allActions.forEach(actionKey => {
-          (newSubModule.actions as any)[actionKey] = value;
-        });
-        newSubModule.actions.all = value;
-      } else {
-        (newSubModule.actions as any)[action] = value;
-        const allActions = Object.keys(newSubModule.actions).filter(key => key !== 'all');
-        const allEnabled = allActions.every(actionKey => (newSubModule.actions as any)[actionKey]);
-        newSubModule.actions.all = allEnabled;
-      }
-      
-      const newModulePermission: ModulePermission = {
-        module: moduleKey,
-        subModules: [newSubModule],
-        actions: {
-          all: false,
-          create: false,
-          read: false,
-          update: false,
-          delete: false,
-          print: false,
-          export: false,
-          approve: false
-        }
-      };
-      newPermissions.push(newModulePermission);
+      modulePermission.subModules.push(newSubModule);
+      subModule = newSubModule;
+    }
+
+    // subModule is guaranteed to be defined at this point
+    if (!subModule) {
+      console.error('Failed to find or create submodule');
+      return;
+    }
+
+    if (action === 'all') {
+      // When "all" is toggled for submodule, set all actions including "all" itself to the same value
+      subModule.actions.all = value;
+      const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
+      allActions.forEach(actionKey => {
+        subModule.actions[actionKey] = value;
+      });
+    } else {
+      // When individual action is toggled, update that action
+      subModule.actions[action as ActionKey] = value;
+
+      // Check if all actions are enabled to update "all" state
+      const allActions: ActionKey[] = ['create', 'read', 'update', 'delete'];
+      const allEnabled = allActions.every(actionKey => subModule.actions[actionKey]);
+      subModule.actions.all = allEnabled;
     }
 
     setPermissions(newPermissions);
+    // Auto-save with debouncing
+    autoSavePermissions(newPermissions);
   };
 
   const toggleModuleExpansion = (moduleKey: string) => {
@@ -450,231 +686,265 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
     setExpandedModules(newExpanded);
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    const loadingToast = toast.loading('Saving permissions...');
-    try {
-      const { data } = await axios.post(
-        '/api/agent/permissions',
-        { agentId, permissions },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
 
-      if (data.success) {
-        toast.dismiss(loadingToast);
-        toast.success('Permissions saved successfully!');
-        onClose();
-      } else {
-        toast.dismiss(loadingToast);
-        toast.error(data.message || 'Failed to save permissions');
-      }
-    } catch (err: any) {
-      toast.dismiss(loadingToast);
-      toast.error(err.response?.data?.message || 'Failed to save permissions. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  const renderActionToggle = (
+    contextKey: string,
+    actionKey: ActionKey,
+    label: string,
+    current: boolean,
+    onSelect: (value: boolean) => void,
+    disabled: boolean = false,
+    moduleKey?: string,
+    subModuleName?: string
+  ) => {
+    // Check if clinic has permission for this action (only for clinic role)
+    const hasClinicPermission = !moduleKey || clinicHasAction(moduleKey, actionKey, subModuleName);
+    const isDisabled = disabled || (userRole === 'clinic' && !hasClinicPermission);
+
+    const style = ACTION_STYLES[actionKey];
+    const trackClasses = current
+      ? `${style.accent} bg-opacity-70`
+      : 'bg-slate-200';
+    return (
+      <button
+        key={`${contextKey}-${actionKey}`}
+        type="button"
+        role="switch"
+        aria-checked={current}
+        onClick={() => !isDisabled && onSelect(!current)}
+        className={`group inline-flex items-center gap-2.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${current ? style.active : style.inactive
+          } ${isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:brightness-105'}`}
+        title={isDisabled && userRole === 'clinic' && !hasClinicPermission ? `You don't have "${label}" permission for this module` : ''}
+      >
+        <span>{label}</span>
+        <span
+          className={`relative inline-flex h-4 w-8 items-center rounded-full transition ${trackClasses} ${current ? 'justify-end pr-[2px]' : 'justify-start pl-[2px]'
+            }`}
+        >
+          <span
+            className="h-3.5 w-3.5 rounded-full bg-white shadow transition-transform"
+          />
+        </span>
+      </button>
+    );
   };
+
+  const slugify = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-3 md:p-4 backdrop-blur-sm overflow-y-auto"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
         {/* Header */}
-        <div className="px-3 sm:px-4 md:px-5 py-3 sm:py-3.5 border-b border-gray-200 bg-gray-50 flex items-start sm:items-center justify-between gap-2 flex-shrink-0">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-800">Manage Permissions</h3>
-            <p className="text-[10px] sm:text-[11px] text-gray-600 mt-0.5 truncate">{agentName}</p>
+        <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 text-sm font-semibold text-white shadow-sm">
+              AP
+            </span>
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-600 mb-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                agent permissions
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Manage Permissions</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{agentName}</p>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 p-1.5 rounded-md hover:bg-gray-100 active:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700"
-            aria-label="Close"
-          >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {saveStatus === 'saving' && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-sky-100 px-3 py-1 text-[11px] font-medium text-sky-700">
+                <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
+                </svg>
+                Saving…
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-medium text-emerald-700">
+                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414L8.5 11.586l6.543-6.543a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Saved
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1 text-[11px] font-medium text-rose-600">
+                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-11.75a.75.75 0 011.5 0v4.5a.75.75 0 01-1.5 0v-4.5zM10 13.5a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" />
+                </svg>
+                Error
+              </span>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5">
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
           {loading ? (
-            <div className="flex justify-center items-center h-48 sm:h-64">
-              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-4 border-gray-200 border-t-gray-900"></div>
-              <p className="ml-3 text-sm text-gray-700">Loading permissions...</p>
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-sky-500" />
+              <p className="mt-3 text-sm font-medium text-slate-600">Loading modules…</p>
             </div>
           ) : (
-            <div className="space-y-3 sm:space-y-4">
-              {navigationItems.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-gray-600">No navigation items found</p>
-                </div>
-              ) : (
-                navigationItems.map((item) => {
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-slate-900">Permission Matrix</h2>
+                <p className="text-[11px] text-slate-400">
+                  {navigationItems.length} modules •{' '}
+                  {permissions.reduce(
+                    (acc, module) => acc + (module.subModules?.length || 0),
+                    0
+                  )}{' '}
+                  sub-modules
+                </p>
+              </div>
+
+              <div className="grid gap-3.5">
+                {navigationItems.map((item) => {
                   const modulePermission = getModulePermission(item.moduleKey);
                   const isExpanded = expandedModules.has(item.moduleKey);
                   const hasSubModules = item.subModules && item.subModules.length > 0;
 
                   return (
-                    <div key={item._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                      {/* Module Header */}
-                      <div
-                        className={`flex items-center justify-between p-3 sm:p-4 bg-gray-50 ${hasSubModules ? 'cursor-pointer hover:bg-gray-100 active:bg-gray-200' : ''} transition-colors`}
-                        onClick={() => hasSubModules && toggleModuleExpansion(item.moduleKey)}
+                    <div
+                      key={item._id}
+                      className="rounded-xl border border-slate-200 bg-white/95 p-3 shadow transition hover:border-sky-200"
+                    >
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between gap-3 text-left"
+                        onClick={() => toggleModuleExpansion(item.moduleKey)}
                       >
-                        <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                          <span className="text-xl sm:text-2xl flex-shrink-0">{item.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-xs sm:text-sm font-semibold text-gray-800 truncate">{item.label}</h4>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-xl">{item.icon}</span>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{item.label}</p>
                             {item.description && (
-                              <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5 line-clamp-1">{item.description}</p>
+                              <p className="text-xs text-slate-500">{item.description}</p>
                             )}
                           </div>
                         </div>
-                        {hasSubModules && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                          {hasSubModules ? `${item.subModules?.length} sub-modules` : 'Module only'}
                           <svg
-                            className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
+                            className={`h-3.5 w-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
                           >
-                            <path fillRule="evenodd" d="M6 6L14 10L6 14V6Z" clipRule="evenodd" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                           </svg>
-                        )}
-                      </div>
-
-                      {/* Module Actions */}
-                      <div className="p-3 sm:p-4 border-t border-gray-200">
-                        <div className="flex flex-wrap gap-2 sm:gap-3">
-                          {ACTIONS.map((action) => {
-                            const isChecked = modulePermission.actions[action.key as keyof typeof modulePermission.actions] || false;
-                            return (
-                              <button
-                                key={action.key}
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleModuleActionChange(item.moduleKey, action.key, !isChecked);
-                                }}
-                                className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ${
-                                  isChecked ? action.activeBg + ' ' + action.activeText : action.inactiveBg + ' ' + action.inactiveText
-                                }`}
-                              >
-                                <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap pointer-events-none">{action.label}</span>
-                                <div
-                                  className={`relative inline-flex h-4 w-7 sm:h-5 sm:w-9 items-center rounded-full transition-all duration-200 pointer-events-none ${
-                                    isChecked ? 'bg-white/30' : 'bg-black/10'
-                                  }`}
-                                >
-                                  <span
-                                    className={`h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-white shadow-md transition-all duration-200 ${
-                                      isChecked ? 'translate-x-3 sm:translate-x-4' : 'translate-x-0.5'
-                                    }`}
-                                  />
-                                </div>
-                              </button>
-                            );
-                          })}
                         </div>
-                      </div>
+                      </button>
 
-                      {/* Sub-modules */}
-                      {hasSubModules && isExpanded && (
-                        <div className="border-t border-gray-200 bg-gray-50">
-                          {item.subModules?.map((subModule, subIdx) => {
-                            const subModulePermission = modulePermission.subModules.find(
-                              sm => sm.name === subModule.name
-                            ) || {
-                              name: subModule.name,
-                              path: subModule.path || '',
-                              icon: subModule.icon,
-                              order: subModule.order,
-                              actions: {
-                                all: false,
-                                create: false,
-                                read: false,
-                                update: false,
-                                delete: false,
-                                print: false,
-                                export: false,
-                                approve: false
-                              }
-                            };
+                      {isExpanded && (
+                        <div className="mt-3 space-y-4 border-t border-slate-200 pt-3">
+                          <div className="space-y-1.5">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                              Module actions
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {ACTION_SEQUENCE.map(({ key, label }) =>
+                                renderActionToggle(
+                                  `module-${slugify(item.moduleKey)}`,
+                                  key,
+                                  label,
+                                  modulePermission.actions[key] || false,
+                                  (checked) => handleModuleActionChange(item.moduleKey, key, checked),
+                                  saving,
+                                  item.moduleKey
+                                )
+                              )}
+                            </div>
+                          </div>
 
-                            return (
-                              <div key={subIdx} className="p-3 sm:p-4 border-b border-gray-200 last:border-b-0">
-                                <div className="flex items-center space-x-2 mb-2 sm:mb-3">
-                                  <span className="text-base sm:text-lg flex-shrink-0">{subModule.icon}</span>
-                                  <h5 className="text-[11px] sm:text-xs font-medium text-gray-800 truncate">{subModule.name}</h5>
-                                </div>
-                                <div className="flex flex-wrap gap-2 sm:gap-3">
-                                  {ACTIONS.map((action) => {
-                                    const isChecked = subModulePermission.actions[action.key as keyof typeof subModulePermission.actions] || false;
-                                    return (
-                                      <button
-                                        key={action.key}
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          handleSubModuleActionChange(item.moduleKey, subModule.name, action.key, !isChecked);
-                                        }}
-                                        className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ${
-                                          isChecked ? action.activeBg + ' ' + action.activeText : action.inactiveBg + ' ' + action.inactiveText
-                                        }`}
-                                      >
-                                        <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap pointer-events-none">{action.label}</span>
-                                        <div
-                                          className={`relative inline-flex h-4 w-7 sm:h-5 sm:w-9 items-center rounded-full transition-all duration-200 pointer-events-none ${
-                                            isChecked ? 'bg-white/30' : 'bg-black/10'
-                                          }`}
-                                        >
-                                          <span
-                                            className={`h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-white shadow-md transition-all duration-200 ${
-                                              isChecked ? 'translate-x-3 sm:translate-x-4' : 'translate-x-0.5'
-                                            }`}
-                                          />
+                          {hasSubModules && (
+                            <div className="space-y-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                Sub-module actions
+                              </p>
+                              <div className="space-y-2.5">
+                                {item.subModules?.map((subModule) => {
+                                  const subModulePermission = modulePermission.subModules.find(
+                                    sm => sm.name === subModule.name
+                                  ) || {
+                                    name: subModule.name,
+                                    path: subModule.path || '',
+                                    icon: subModule.icon,
+                                    order: subModule.order,
+                                    actions: {
+                                      all: false,
+                                      create: false,
+                                      read: false,
+                                      update: false,
+                                      delete: false
+                                    }
+                                  };
+
+                                  return (
+                                    <div
+                                      key={subModule.name}
+                                      className="rounded-lg border border-slate-200 bg-slate-50/80 p-3"
+                                    >
+                                      <div className="mb-2.5 flex items-center gap-2">
+                                        <span className="text-base">{subModule.icon}</span>
+                                        <div>
+                                          <p className="text-sm font-medium text-slate-800">{subModule.name}</p>
+                                          {subModule.path && (
+                                            <p className="text-xs text-slate-500">{subModule.path}</p>
+                                          )}
                                         </div>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {ACTION_SEQUENCE.map(({ key, label }) =>
+                                          renderActionToggle(
+                                            `sub-${slugify(item.moduleKey)}-${slugify(subModule.name)}`,
+                                            key,
+                                            label,
+                                            subModulePermission.actions[key] || false,
+                                            (checked) => handleSubModuleActionChange(item.moduleKey, subModule.name, key, checked),
+                                            saving,
+                                            item.moduleKey,
+                                            subModule.name
+                                          )
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-3 sm:px-4 md:px-5 py-3 sm:py-3.5 border-t border-gray-200 bg-gray-50 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-2 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white flex items-center justify-end">
           <button
             onClick={onClose}
-            className="w-full sm:w-auto px-4 sm:px-3.5 py-2.5 sm:py-2 rounded-md border border-gray-300 text-sm sm:text-[11px] font-medium text-gray-800 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            className="px-4 py-2 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
           >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || loading}
-            className="w-full sm:w-auto px-4 sm:px-3.5 py-2.5 sm:py-2 bg-gray-900 hover:bg-gray-800 active:bg-gray-950 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm sm:text-[11px] font-medium rounded-md transition-colors shadow-sm"
-          >
-            {saving ? 'Saving...' : 'Save Permissions'}
+            Close
           </button>
         </div>
       </div>
@@ -683,4 +953,3 @@ const AgentPermissionModal: React.FC<AgentPermissionModalProps> = ({
 };
 
 export default AgentPermissionModal;
-

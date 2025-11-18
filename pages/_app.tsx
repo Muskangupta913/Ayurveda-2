@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { DefaultSeo } from 'next-seo';
 import Layout from '../components/Layout';
+import AgentLayout from '../components/AgentLayout';
 import SEO from '../next-seo.config';
 import '../styles/globals.css';
 import { SearchProvider } from '../context/SearchContext';
@@ -38,7 +39,6 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   
   // Force AgentLayout for all /agent/* routes to ensure sidebar consistency
   if (router.pathname.startsWith('/agent/')) {
-    const AgentLayout = require('../components/AgentLayout').default;
     getLayout = (page: ReactNode) => <AgentLayout>{page}</AgentLayout>;
   }
 

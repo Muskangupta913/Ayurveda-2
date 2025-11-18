@@ -2,13 +2,16 @@
 import dbConnect from "../../../lib/database";
 import Lead from "../../../models/Lead";
 import Clinic from "../../../models/Clinic";
+import Treatment from "../../../models/Treatment";
+import User from "../../../models/Users";
 import { getUserFromReq, requireRole } from "./auth";
+import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   const me = await getUserFromReq(req);
-  if (!requireRole(me, ["clinic", "agent", "admin"])) {
+  if (!requireRole(me, ["clinic", "agent", "admin", "doctor"])) {
     return res.status(403).json({ success: false, message: "Access denied" });
   }
 
@@ -19,6 +22,12 @@ export default async function handler(req, res) {
   } else if (me.role === "agent") {
     if (!me.clinicId) {
       return res.status(403).json({ success: false, message: "Agent not linked to any clinic" });
+    }
+    clinic = await Clinic.findById(me.clinicId);
+  } else if (me.role === "doctor") {
+    // Doctor uses their clinicId if they have one
+    if (!me.clinicId) {
+      return res.status(403).json({ success: false, message: "Doctor not linked to any clinic" });
     }
     clinic = await Clinic.findById(me.clinicId);
   } else if (me.role === "admin") {
@@ -33,21 +42,63 @@ export default async function handler(req, res) {
     return res.status(404).json({ success: false, message: "Clinic not found for this user" });
   }
 
-  // ✅ Check permission for reading leads (only for clinic and agent, admin bypasses)
+  // ✅ Check permission for reading leads (only for clinic, agent, and doctor; admin bypasses)
   if (me.role !== "admin" && clinic._id) {
-    const { checkClinicPermission } = await import("./permissions-helper");
-    const { hasPermission, error } = await checkClinicPermission(
-      clinic._id,
-      "lead",
-      "read"
-    );
+    try {
+      // First check if clinic has read permission
+      const { checkClinicPermission } = await import("./permissions-helper");
+      console.log('[leadFilter] Checking permission for', {
+        role: me.role,
+        clinicId: clinic._id?.toString(),
+        moduleKey: "lead",
+        action: "read"
+      });
+      // Pass the user's role to check role-specific permissions (doctor uses 'doctor' role, clinic uses 'clinic' role)
+      const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
+        clinic._id,
+        "lead",
+        "read",
+        null, // subModuleName
+        me.role === "doctor" ? "doctor" : me.role === "clinic" ? "clinic" : null
+      );
 
-    if (!hasPermission) {
-      return res.status(403).json({
+      console.log('[leadFilter] Permission check result', {
+        hasPermission: clinicHasPermission,
+        error: clinicError,
+        role: me.role
+      });
+
+      if (!clinicHasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: clinicError || "You do not have permission to view leads"
+        });
+      }
+    } catch (permError) {
+      console.error('[leadFilter] Error checking permissions:', permError);
+      return res.status(500).json({
         success: false,
-        message: error || "You do not have permission to view leads"
+        message: "Error checking permissions",
+        error: permError.message
       });
     }
+
+    // If user is an agent, also check agent-specific permissions
+    if (me.role === "agent") {
+      const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+        me._id,
+        "lead",
+        "read"
+      );
+
+      if (!agentHasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: agentError || "You do not have permission to view leads"
+        });
+      }
+    }
+    // Doctor role uses clinic permissions (no separate doctor permission check needed)
   }
 
   if (req.method === "GET") {

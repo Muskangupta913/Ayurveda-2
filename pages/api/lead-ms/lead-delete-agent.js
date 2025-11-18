@@ -2,7 +2,9 @@
 // Example API endpoint that uses agent permissions
 import dbConnect from "../../../lib/database";
 import Lead from "../../../models/Lead";
+import Clinic from "../../../models/Clinic";
 import { getUserFromReq } from "../lead-ms/auth";
+import { checkClinicPermission } from "./permissions-helper";
 import { checkAgentPermission } from "../agent/permissions-helper";
 
 export default async function handler(req, res) {
@@ -30,17 +32,37 @@ export default async function handler(req, res) {
     }
 
     // ✅ CHECK PERMISSION: Verify agent has delete permission for lead module
-    const { hasPermission, error: permissionError } = await checkAgentPermission(
+    // First check if clinic has delete permission
+    if (me.clinicId) {
+      const clinic = await Clinic.findById(me.clinicId);
+      if (clinic) {
+        const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
+          clinic._id,
+          "lead",
+          "delete"
+        );
+
+        if (!clinicHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: clinicError || "You do not have permission to delete leads"
+          });
+        }
+      }
+    }
+
+    // Then check agent-specific permissions
+    const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
       me._id,
       "lead", // moduleKey
       "delete", // action
       null // subModuleName (optional)
     );
 
-    if (!hasPermission) {
+    if (!agentHasPermission) {
       return res.status(403).json({
         success: false,
-        message: permissionError || "You do not have permission to delete leads"
+        message: agentError || "You do not have permission to delete leads"
       });
     }
 

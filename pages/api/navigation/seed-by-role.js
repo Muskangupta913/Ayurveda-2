@@ -131,6 +131,116 @@ const adminNavigationItems = [
   },
 ];
 
+// Agent sidebar items (shared with clinic but with agent paths)
+const agentNavigationItems = [
+  {
+    label: "Dashboard",
+    path: "/agent/agent-dashboard",
+    icon: "🏠",
+    description: "Overview & metrics",
+    moduleKey: "dashboard",
+    order: 1,
+  },
+  {
+    label: "Assigned Leads",
+    path: "/agent/assigned-leads",
+    icon: "📋",
+    description: "Leads assigned to you",
+    moduleKey: "assignedLead",
+    order: 2,
+  },
+  {
+    label: "Lead",
+    icon: "🧑‍💼",
+    description: "Lead Management",
+    moduleKey: "lead",
+    order: 3,
+    children: [
+      {
+        label: "Dashboard",
+        path: "/agent/lead/dashboard",
+        icon: "🏠",
+        order: 1,
+      },
+      {
+        label: "Create Lead",
+        path: "/agent/lead/create-lead",
+        icon: "👤",
+        order: 2,
+      },
+      {
+        label: "Assign Lead",
+        path: "/agent/lead/assign-lead",
+        icon: "👨‍⚕️",
+        order: 3,
+      },
+      {
+        label: "Create Offer",
+        path: "/agent/lead/create-offer",
+        icon: "🤑",
+        order: 4,
+      },
+      {
+        label: "Create Agent",
+        path: "/agent/lead/create-agent",
+        icon: "👤",
+        order: 5,
+      },
+      {
+        label: "Permission",
+        path: "/agent/lead/permission",
+        icon: "🔒",
+        order: 6,
+      },
+    ],
+  },
+  {
+    label: "Marketing",
+    icon: "📊",
+    description: "Manage Marketing",
+    moduleKey: "marketing",
+    order: 4,
+    children: [
+      {
+        label: "SMS Marketing",
+        path: "/agent/marketing/sms-marketing",
+        icon: "📩",
+        order: 1,
+      },
+      {
+        label: "WhatsApp Marketing",
+        path: "/agent/marketing/whatsapp-marketing",
+        icon: "💬",
+        order: 2,
+      },
+      {
+        label: "Gmail Marketing",
+        path: "/agent/marketing/gmail-marketing",
+        icon: "✉️",
+        order: 3,
+      },
+    ],
+  },
+  {
+    label: "Staff Management",
+    icon: "👥",
+    description: "Manage Staff",
+    moduleKey: "staff_management",
+    order: 5,
+    children: [
+      { label: "Dashboard", path: "/agent/staff-dashboard", icon: "🏠", order: 1 },
+      { label: "Add Service", path: "/agent/add-service", icon: "➕", order: 2 },
+      { label: "Patient Registration", path: "/agent/patient-registration", icon: "🧍‍♂️", order: 3 },
+      { label: "Patient Information", path: "/agent/patient-information", icon: "📋", order: 4 },
+      { label: "Add EOD Task", path: "/agent/eodNotes", icon: "✅", order: 5 },
+      { label: "Add Expense", path: "/agent/AddPettyCashForm", icon: "💸", order: 6 },
+      { label: "Add Vendor", path: "/agent/add-vendor", icon: "🧑‍💼", order: 7 },
+      { label: "Membership", path: "/agent/membership", icon: "🧑‍💼", order: 8 },
+      { label: "All Contracts", path: "/agent/contract", icon: "🧑‍💼", order: 9 },
+    ],
+  },
+];
+
 // Doctor sidebar items (from DoctorSidebar.tsx)
 const doctorNavigationItems = [
   {
@@ -142,12 +252,20 @@ const doctorNavigationItems = [
     order: 1,
   },
   {
+    label: "Assigned Leads",
+    path: "/doctor/assigned-leads",
+    icon: "📋",
+    description: "Leads assigned to you",
+    moduleKey: "assignedLead",
+    order: 2,
+  },
+  {
     label: "Manage Profile",
     path: "/doctor/manageDoctor",
     icon: "👤",
     description: "Manage Profile",
     moduleKey: "manage_profile",
-    order: 2,
+    order: 3,
   },
   {
     label: "All users Review",
@@ -155,14 +273,14 @@ const doctorNavigationItems = [
     icon: "📅",
     description: "See All Users Reviews",
     moduleKey: "all_users_review",
-    order: 3,
+    order: 4,
   },
   {
     label: "Blogs",
     icon: "📄",
     description: "Blog Management",
     moduleKey: "blogs",
-    order: 4,
+    order: 5,
     children: [
       { label: "Write Article", path: "/doctor/BlogForm", icon: "📝", order: 1 },
       { label: "Published Blogs", path: "/doctor/published-blogs", icon: "📄", order: 2 },
@@ -174,7 +292,7 @@ const doctorNavigationItems = [
     icon: "👥",
     description: "Manage Staff",
     moduleKey: "staff_management",
-    order: 5,
+    order: 6,
     children: [
       { label: "Dashboard", path: "/clinic/staff-dashboard", icon: "🏠", order: 1 },
       { label: "Add Service", path: "/clinic/add-service", icon: "➕", order: 2 },
@@ -192,7 +310,7 @@ const doctorNavigationItems = [
     icon: "💼",
     description: "Job Management",
     moduleKey: "jobs",
-    order: 6,
+    order: 7,
     children: [
       { label: "Post Job", path: "/doctor/create-job", icon: "📢", order: 1 },
       { label: "See Jobs", path: "/doctor/my-jobs", icon: "💼", order: 2 },
@@ -205,7 +323,7 @@ const doctorNavigationItems = [
     icon: "📋",
     description: "View all prescription requests",
     moduleKey: "prescription_requests",
-    order: 7,
+    order: 8,
   },
   {
     label: "Create Agent",
@@ -213,7 +331,79 @@ const doctorNavigationItems = [
     icon: "👤",
     description: "Create agent account",
     moduleKey: "create_agent",
-    order: 8,
+    order: 9,
+  },
+  {
+    label: "Lead",
+    icon: "🧑‍💼",
+    description: "Lead Management",
+    moduleKey: "lead",
+    order: 10,
+    children: [
+      {
+        label: "Dashboard",
+        path: "/doctor/lead/dashboard",
+        icon: "🏠",
+        order: 1,
+      },
+      {
+        label: "Create Lead",
+        path: "/doctor/lead/create-lead",
+        icon: "👤",
+        order: 2,
+      },
+      {
+        label: "Assign Lead",
+        path: "/doctor/lead/assign-lead",
+        icon: "👨‍⚕️",
+        order: 3,
+      },
+      {
+        label: "Create Offer",
+        path: "/doctor/lead/create-offer",
+        icon: "🤑",
+        order: 4,
+      },
+      {
+        label: "Create Agent",
+        path: "/doctor/lead/create-agent",
+        icon: "👤",
+        order: 5,
+      },
+      {
+        label: "Permission",
+        path: "/doctor/lead/permission",
+        icon: "🔒",
+        order: 6,
+      },
+    ],
+  },
+  {
+    label: "Marketing",
+    icon: "📊",
+    description: "Manage Marketing",
+    moduleKey: "marketing",
+    order: 11,
+    children: [
+      {
+        label: "SMS Marketing",
+        path: "/doctor/marketing/sms-marketing",
+        icon: "📩",
+        order: 1,
+      },
+      {
+        label: "WhatsApp Marketing",
+        path: "/doctor/marketing/whatsapp-marketing",
+        icon: "💬",
+        order: 2,
+      },
+      {
+        label: "Gmail Marketing",
+        path: "/doctor/marketing/gmail-marketing",
+        icon: "✉️",
+        order: 3,
+      },
+    ],
   },
 ];
 

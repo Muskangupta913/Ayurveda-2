@@ -5,6 +5,7 @@ import Treatment from "../../../models/Treatment";
 import Clinic from "../../../models/Clinic";
 import { getUserFromReq, requireRole } from "./auth";
 import { checkClinicPermission } from "./permissions-helper";
+import { checkAgentPermission } from "../agent/permissions-helper";
 import mongoose from "mongoose";
 
 export default async function handler(req, res) {
@@ -54,17 +55,34 @@ export default async function handler(req, res) {
     // ✅ Check permission for reading/updating offers (only for clinic and agent, admin bypasses)
     const action = req.method === "GET" ? "read" : "update";
     if (user.role !== "admin") {
-      const { hasPermission, error } = await checkClinicPermission(
+      // First check if clinic has the required permission
+      const { hasPermission: clinicHasPermission, error: clinicError } = await checkClinicPermission(
         clinic._id,
         "create_offers",
         action
       );
 
-      if (!hasPermission) {
+      if (!clinicHasPermission) {
         return res.status(403).json({
           success: false,
-          message: error || `You do not have permission to ${action} offers`
+          message: clinicError || `You do not have permission to ${action} offers`
         });
+      }
+
+      // If user is an agent, also check agent-specific permissions
+      if (user.role === "agent") {
+        const { hasPermission: agentHasPermission, error: agentError } = await checkAgentPermission(
+          user._id,
+          "create_offers",
+          action
+        );
+
+        if (!agentHasPermission) {
+          return res.status(403).json({
+            success: false,
+            message: agentError || `You do not have permission to ${action} offers`
+          });
+        }
       }
     }
 

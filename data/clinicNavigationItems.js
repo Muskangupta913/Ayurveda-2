@@ -65,19 +65,11 @@ export const clinicNavigationItems = [
   },
   {
     label: "Assigned Leads",
-    path: "/agent/assigned-leads",
+    path: "/clinic/assigned-leads",
     icon: "📋",
     description: "Leads assigned to you",
     moduleKey: "assignedLead",
     order: 7,
-  },
-  {
-    label: "Create offers",
-    path: "/lead/create-offer",
-    icon: "🤑",
-    description: "Manage Offers",
-    moduleKey: "create_offers",
-    order: 8,
   },
   {
     label: "Staff Management",
@@ -150,6 +142,14 @@ export const clinicNavigationItems = [
         order: 9,
       },
     ],
+  },
+  {
+    label: "Create offers",
+    path: "/lead/create-offer",
+    icon: "🤑",
+    description: "Manage Offers",
+    moduleKey: "create_offers",
+    order: 8,
   },
   {
     label: "Marketing",

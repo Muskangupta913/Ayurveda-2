@@ -5,7 +5,7 @@ import Clinic from "../../../../models/Clinic";
 import User from "../../../../models/Users";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import { getUserFromReq } from "../../../api/lead-ms/auth";
+import { getUserFromReq } from "../../lead-ms/auth";
 import { checkAgentPermission } from "../../agent/permissions-helper";
 
 export default async function handler(req, res) {
