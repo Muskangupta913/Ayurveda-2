@@ -230,37 +230,21 @@ const DoctorDashboard: NextPageWithLayout = () => {
 
       const statsMap: ModuleStats = {};
 
-      // Fetch basic dashboard stats
-      try {
-        const res = await fetch('/api/doctor/dashbaordStats', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data: DashboardStatsResponse = await res.json();
-        if (data.success) {
-          setStats({
-            totalReviews: data.totalReviews || 0,
-            totalEnquiries: data.totalEnquiries || 0,
-          });
-          
-          // Map to module keys
-          statsMap['doctor_reviews'] = {
-            value: data.totalReviews || 0,
-            label: 'Total Reviews',
-            icon: <Star className="w-5 h-5" />,
-            color: '#3b82f6',
-            hasData: true,
-          };
-          statsMap['doctor_enquiries'] = {
-            value: data.totalEnquiries || 0,
-            label: 'Total Enquiries',
-            icon: <Mail className="w-5 h-5" />,
-            color: '#3b82f6',
-            hasData: true,
-          };
-        }
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-      }
+      // Map base stats to module keys using existing stats state
+      statsMap['doctor_reviews'] = {
+        value: stats.totalReviews,
+        label: 'Total Reviews',
+        icon: <Star className="w-5 h-5" />,
+        color: '#3b82f6',
+        hasData: stats.totalReviews > 0,
+      };
+      statsMap['doctor_enquiries'] = {
+        value: stats.totalEnquiries,
+        label: 'Total Enquiries',
+        icon: <Mail className="w-5 h-5" />,
+        color: '#3b82f6',
+        hasData: stats.totalEnquiries > 0,
+      };
 
       // Fetch stats for each navigation item based on moduleKey
       const statsPromises = navigationItems.map(async (item) => {
@@ -270,7 +254,6 @@ const DoctorDashboard: NextPageWithLayout = () => {
           let statColor = '#3b82f6';
           let hasData = false;
 
-          // Map module keys to their stats endpoints (doctor-specific)
           switch (item.moduleKey) {
             case 'doctor_reviews':
             case 'reviews':

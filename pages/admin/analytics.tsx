@@ -18,6 +18,8 @@ import {
   InformationCircleIcon,
   ExclamationTriangleIcon,
   XMarkIcon,
+  ChartBarSquareIcon,
+  ChartPieIcon,
 } from '@heroicons/react/24/outline';
 import type { NextPageWithLayout } from '../_app';
 
@@ -27,7 +29,10 @@ type User = {
   email: string;
   phone: string;
   role: string;
+  gender?: string;
 };
+
+type SortableField = 'name' | 'email' | 'phone';
 
 interface Toast {
   id: string;
@@ -89,9 +94,10 @@ function UserProfile() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(20);
-  const [sortField, setSortField] = useState('name');
+  const [sortField, setSortField] = useState<SortableField>('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [loading, setLoading] = useState(true);
+  const [selectedRole, setSelectedRole] = useState<string>('all');
 
   // Toast helper functions
   const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
@@ -204,8 +210,12 @@ function UserProfile() {
     setCurrentPage(1);
   }, [searchTerm, users, showToast]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRole]);
+
   // Sort users
-  const sortUsers = (field: keyof User) => {
+  const sortUsers = (field: SortableField) => {
     const direction = sortField === field && sortDirection === 'asc' ? 'desc' : 'asc';
     setSortField(field);
     setSortDirection(direction);
@@ -221,11 +231,16 @@ function UserProfile() {
     showToast(`Sorted by ${field} (${direction})`, 'info');
   };
 
+  const roleFilteredUsers =
+    selectedRole === 'all'
+      ? filteredUsers
+      : filteredUsers.filter((user) => user.role === selectedRole);
+
   // Pagination
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers: User[] = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const currentUsers: User[] = roleFilteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(roleFilteredUsers.length / usersPerPage);
 
   // Download CSV
   const downloadCSV = () => {
@@ -238,7 +253,12 @@ function UserProfile() {
       return;
     }
 
-    if (filteredUsers.length === 0) {
+    const exportData =
+      selectedRole === 'all'
+        ? filteredUsers
+        : filteredUsers.filter((user) => user.role === selectedRole);
+
+    if (exportData.length === 0) {
       showToast('No data to export', 'warning');
       return;
     }
@@ -247,7 +267,7 @@ function UserProfile() {
       const headers = ['Name', 'Email', 'Phone', 'Role'];
       const csvContent = [
         headers.join(','),
-        ...filteredUsers.map(user => [
+        ...exportData.map(user => [
           `"${user.name}"`,
           `"${user.email}"`,
           `"${user.phone}"`,
@@ -272,6 +292,9 @@ function UserProfile() {
 
   // Check if agent has read permission
   const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+  const canExport =
+    isAdmin ||
+    (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canExport || agentPermissions.canAll));
 
   if (loading || (isAgent && permissionsLoading)) {
     return (
@@ -321,198 +344,344 @@ function UserProfile() {
     return acc;
   }, {} as Record<string, number>);
 
+  const uniqueRoles = Object.keys(roleCounts);
+  const topRoleEntry = uniqueRoles
+    .map((role) => ({ role, count: roleCounts[role] }))
+    .sort((a, b) => b.count - a.count)[0];
+  const averagePerRole =
+    uniqueRoles.length > 0 ? Math.round(users.length / uniqueRoles.length) : 0;
+  const summaryStats = [
+    {
+      label: 'Total Users',
+      value: users.length,
+      meta: `${roleFilteredUsers.length} in view`,
+    },
+    {
+      label: 'Top Role',
+      value: topRoleEntry ? topRoleEntry.role : '—',
+      meta: topRoleEntry ? `${topRoleEntry.count} members` : 'No data',
+    },
+    {
+      label: 'Unique Roles',
+      value: uniqueRoles.length,
+      meta: 'Segments tracked',
+    },
+    {
+      label: 'Avg / Role',
+      value: averagePerRole,
+      meta: 'Members per category',
+    },
+  ];
+  const roleDistribution = uniqueRoles
+    .map((role) => ({
+      role,
+      count: roleCounts[role],
+      percentage: Math.round((roleCounts[role] / users.length) * 100),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const allowedGenders = ['male', 'female', 'other'];
+  const genderCounts = users.reduce((acc, user) => {
+    const normalized = user.gender
+      ? user.gender.toLowerCase().trim()
+      : 'unspecified';
+    const bucket = allowedGenders.includes(normalized)
+      ? normalized
+      : 'unspecified';
+    acc[bucket] = (acc[bucket] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const genderDistribution = Object.entries(genderCounts).map(
+    ([gender, count]) => ({
+      gender,
+      count,
+      percentage: users.length
+        ? Math.round((count / users.length) * 100)
+        : 0,
+    })
+  );
+
 return (
- <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-   <ToastContainer toasts={toasts} removeToast={removeToast} />
-   
-   <div className="max-w-7xl mx-auto space-y-4">
-     {/* Header */}
-     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-         <div className="flex items-center gap-3">
-           <div className="bg-gray-800 p-2 rounded-lg">
-             <UserGroupIcon className="h-5 w-5 text-white" />
-           </div>
-           <div>
-             <h1 className="text-lg font-semibold text-gray-900">User Analytics</h1>
-             <p className="text-xs text-gray-700">Manage and analyze user registrations</p>
-           </div>
-         </div>
-         <div className="bg-gray-100 px-3 py-1.5 rounded-lg">
-           <span className="text-xs font-medium text-gray-700">Total: {users.length}</span>
-         </div>
-       </div>
-     </div>
+  <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-     {/* Stats Cards */}
-     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-       <div className="bg-white rounded-lg border border-gray-200 p-3">
-         <p className="text-xs text-gray-700 mb-1">Total Users</p>
-         <p className="text-xl font-bold text-gray-900">{users.length}</p>
-       </div>
-       {Object.entries(roleCounts).slice(0, 3).map(([role, count]) => (
-         <div key={role} className="bg-white rounded-lg border border-gray-200 p-3">
-           <p className="text-xs text-gray-700 mb-1">{role}</p>
-           <p className="text-xl font-bold text-gray-900">{count}</p>
-         </div>
-       ))}
-     </div>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-xl">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-widest text-slate-300">
+              Admin · User analytics
+            </p>
+            <h1 className="text-3xl font-semibold leading-tight">
+              Intelligence dashboard for every user touchpoint
+            </h1>
+            <p className="max-w-2xl text-sm text-slate-200">
+              Track growth across roles, surface who recently joined, and export the exact slice you need.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="rounded-2xl border border-white/30 bg-white/10 px-6 py-4 text-center">
+              <p className="text-xs uppercase tracking-widest text-slate-200">
+                Active profiles
+              </p>
+              <p className="text-3xl font-semibold">{roleFilteredUsers.length}</p>
+            </div>
+            {canExport && (
+              <button
+                onClick={downloadCSV}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                Export view
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
-     {/* Controls */}
-     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-         {/* Search */}
-         <div className="relative flex-1 max-w-full lg:max-w-md">
-           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-700" />
-           <input
-             type="text"
-             placeholder="Search by name, email, or phone..."
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
-           />
-         </div>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {summaryStats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          >
+            <p className="text-xs font-medium uppercase tracking-widest text-slate-500">
+              {stat.label}
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-slate-900">
+              {stat.value}
+            </p>
+            <p className="text-xs text-slate-500">{stat.meta}</p>
+          </div>
+        ))}
+      </section>
 
-         {/* Actions */}
-         <div className="flex gap-2">
-           {(() => {
-             const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
-             const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
-             const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
-             
-             const canExport = isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canExport || agentPermissions.canAll));
-             
-             if (canExport) {
-               return (
-                 <button
-                   onClick={downloadCSV}
-                   className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors"
-                 >
-                   <ArrowDownTrayIcon className="w-4 h-4" />
-                   <span className="hidden sm:inline">Export CSV</span>
-                 </button>
-               );
-             }
-             return null;
-           })()}
-           <div className="flex items-center gap-2">
-             <FunnelIcon className="w-4 h-4 text-gray-700" />
-             <select
-               value={sortField}
-               onChange={(e) => sortUsers(e.target.value as keyof User)}
-               className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
-             >
-               <option value="name">Sort by Name</option>
-               <option value="email">Sort by Email</option>
-               <option value="phone">Sort by Phone</option>
-             </select>
-           </div>
-         </div>
-       </div>
-     </div>
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+          <div className="flex flex-col gap-4">
+            <div className="relative">
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              />
+            </div>
 
-     {/* User List */}
-     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-       <div className="space-y-1 p-2">
-         {currentUsers.map((user) => (
-           <div key={user._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-2">
-             <div className="flex items-center gap-3 flex-1 min-w-0">
-               <div className="bg-gray-800 p-1.5 rounded-lg flex-shrink-0">
-                 <UserIcon className="h-4 w-4 text-white" />
-               </div>
-               <div className="flex-1 min-w-0">
-                 <h3 className="text-sm font-semibold text-gray-900 truncate">{user.name}</h3>
-                 <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-700 rounded mt-1">
-                   {user.role}
-                 </span>
-               </div>
-             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Filter roles
+              </span>
+              {['all', ...uniqueRoles].map((role) => {
+                const chipCount = role === 'all'
+                  ? filteredUsers.length
+                  : roleCounts[role] || 0;
+                return (
+                  <button
+                    key={role}
+                    onClick={() => setSelectedRole(role)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      selectedRole === role
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    {role === 'all' ? 'All roles' : role}{' '}
+                    <span className="text-[10px] opacity-80">({chipCount})</span>
+                  </button>
+                );
+              })}
+            </div>
 
-             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pl-9 sm:pl-0">
-               <div className="flex items-center text-xs text-gray-700">
-                 <EnvelopeIcon className="w-3 h-3 mr-1.5 text-gray-600 flex-shrink-0" />
-                 <span className="truncate">{user.email}</span>
-               </div>
-               <div className="flex items-center text-xs text-gray-700">
-                 <PhoneIcon className="w-3 h-3 mr-1.5 text-gray-600 flex-shrink-0" />
-                 <span>{user.phone}</span>
-               </div>
-             </div>
-           </div>
-         ))}
-       </div>
-     </div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <FunnelIcon className="h-4 w-4 text-slate-400" />
+                Sorting
+              </div>
+              <select
+              value={sortField}
+              onChange={(e) => sortUsers(e.target.value as SortableField)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 lg:w-48"
+              >
+                <option value="name">Name (A-Z)</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-700">
+              <ChartBarSquareIcon className="h-5 w-5" />
+              <p className="text-sm font-semibold">Role distribution</p>
+            </div>
+            <div className="mt-4 space-y-3">
+              {roleDistribution.length === 0 ? (
+                <p className="text-sm text-slate-500">No roles available.</p>
+              ) : (
+                roleDistribution.map((role) => (
+                  <div key={role.role}>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span className="font-medium text-slate-700">{role.role}</span>
+                      <span>{role.count} · {role.percentage || 0}%</span>
+                    </div>
+                    <div className="mt-1 h-2 rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-slate-900"
+                        style={{ width: `${role.percentage || 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          {/* <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-700">
+              <ChartPieIcon className="h-5 w-5" />
+              <p className="text-sm font-semibold">Gender breakdown</p>
+            </div>
+            <div className="mt-4 space-y-3">
+              {genderDistribution.length === 0 ? (
+                <p className="text-sm text-slate-500">No gender data available.</p>
+              ) : (
+                genderDistribution.map((item) => (
+                  <div key={item.gender}>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span className="font-medium text-slate-700 capitalize">
+                        {item.gender}
+                      </span>
+                      <span>{item.count} · {item.percentage || 0}%</span>
+                    </div>
+                    <div className="mt-1 h-2 rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-slate-800"
+                        style={{ width: `${item.percentage || 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+              <p className="text-[11px] text-slate-400">
+                Invalid or missing values are grouped as “unspecified”.
+              </p>
+            </div>
+          </div> */}
+        </div>
+      </section>
 
-     {/* Pagination */}
-     {totalPages > 1 && (
-       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-           <div className="text-xs text-gray-700 text-center sm:text-left">
-             Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} results
-           </div>
-           
-           <div className="flex items-center justify-center gap-2">
-             <button
-               onClick={() => {
-                 setCurrentPage(prev => Math.max(prev - 1, 1));
-                 showToast('Previous page', 'info');
-               }}
-               disabled={currentPage === 1}
-               className="flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-             >
-               <ChevronLeftIcon className="w-4 h-4" />
-               <span className="hidden sm:inline ml-1">Previous</span>
-             </button>
-             
-             <div className="flex gap-1">
-               {[...Array(Math.min(totalPages, 7))].map((_, index) => {
-                 let pageNum;
-                 if (totalPages <= 7) {
-                   pageNum = index + 1;
-                 } else if (currentPage <= 4) {
-                   pageNum = index + 1;
-                 } else if (currentPage >= totalPages - 3) {
-                   pageNum = totalPages - 6 + index;
-                 } else {
-                   pageNum = currentPage - 3 + index;
-                 }
-                 
-                 return (
-                   <button
-                     key={pageNum}
-                     onClick={() => {
-                       setCurrentPage(pageNum);
-                       showToast(`Page ${pageNum}`, 'info');
-                     }}
-                     className={`px-2 py-1.5 text-xs font-medium rounded-lg ${
-                       currentPage === pageNum
-                         ? 'bg-gray-800 text-white'
-                         : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                     }`}
-                   >
-                     {pageNum}
-                   </button>
-                 );
-               })}
-             </div>
-             
-             <button
-               onClick={() => {
-                 setCurrentPage(prev => Math.min(prev + 1, totalPages));
-                 showToast('Next page', 'info');
-               }}
-               disabled={currentPage === totalPages}
-               className="flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-             >
-               <span className="hidden sm:inline mr-1">Next</span>
-               <ChevronRightIcon className="w-4 h-4" />
-             </button>
-           </div>
-         </div>
-       </div>
-     )}
-   </div>
- </div>
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        {roleFilteredUsers.length === 0 ? (
+          <div className="py-16 text-center text-sm text-slate-500">
+            No users match the current filters.
+          </div>
+        ) : (
+          <div className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+            {currentUsers.map((user) => (
+              <div
+                key={user._id}
+                className="rounded-2xl border border-slate-100 bg-slate-50/40 p-5 shadow-sm transition hover:border-slate-200 hover:bg-white"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-slate-900/90 p-2 text-white">
+                      <UserIcon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{user.name}</p>
+                      <p className="text-xs text-slate-500">ID: {user._id.slice(-6)}</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {user.role}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <div className="flex items-center">
+                    <EnvelopeIcon className="mr-2 h-4 w-4 text-slate-400" />
+                    <span className="truncate">{user.email}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <PhoneIcon className="mr-2 h-4 w-4 text-slate-400" />
+                    <span>{user.phone}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {totalPages > 1 && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500">
+              Showing {roleFilteredUsers.length === 0 ? 0 : indexOfFirstUser + 1} –
+              {Math.min(indexOfLastUser, roleFilteredUsers.length)} of {roleFilteredUsers.length} users
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setCurrentPage((prev) => Math.max(prev - 1, 1));
+                  showToast('Previous page', 'info');
+                }}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+                Prev
+              </button>
+              <div className="flex gap-1">
+                {[...Array(Math.min(totalPages, 7))].map((_, index) => {
+                  let pageNum;
+                  if (totalPages <= 7) {
+                    pageNum = index + 1;
+                  } else if (currentPage <= 4) {
+                    pageNum = index + 1;
+                  } else if (currentPage >= totalPages - 3) {
+                    pageNum = totalPages - 6 + index;
+                  } else {
+                    pageNum = currentPage - 3 + index;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        showToast(`Page ${pageNum}`, 'info');
+                      }}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${
+                        currentPage === pageNum
+                          ? 'bg-slate-900 text-white'
+                          : 'border border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => {
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+                  showToast('Next page', 'info');
+                }}
+                disabled={currentPage === totalPages}
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+                <ChevronRightIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  </div>
 );
 }
 

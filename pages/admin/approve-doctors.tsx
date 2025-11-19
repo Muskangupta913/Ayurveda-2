@@ -447,191 +447,66 @@ function AdminDoctors() {
     }
   };
 
+  const [detailDoctor, setDetailDoctor] = useState<Doctor | null>(null);
+
   const DoctorCard = ({ doctor }: { doctor: Doctor }) => {
     const actions = getTabActions(activeTab);
     const isEditing = settingId === doctor.user._id;
     const hasPassword =
       doctor.user.password && doctor.user.password.trim() !== "";
 
+    const statusStyles: Record<
+      "pending" | "approved" | "declined",
+      string
+    > = {
+      pending: "bg-amber-50 text-amber-700 border-amber-100",
+      approved: "bg-emerald-50 text-emerald-700 border-emerald-100",
+      declined: "bg-rose-50 text-rose-700 border-rose-100",
+    };
+
+    const actionStyles: Record<string, string> = {
+      approve: "border-emerald-200 text-emerald-700 hover:bg-emerald-50",
+      decline: "border-amber-200 text-amber-700 hover:bg-amber-50",
+      delete: "border-rose-200 text-rose-700 hover:bg-rose-50",
+    };
+
+    const statusLabel =
+      activeTab === "pending"
+        ? "Awaiting verification"
+        : activeTab === "approved"
+        ? "Approved"
+        : "Declined";
+
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
-        <div className="p-6">
-          {/* Header */}
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {doctor.user.name}
-            </h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <BriefcaseIcon className="w-4 h-4" />
-                <span>{doctor.degree}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <EnvelopeIcon className="w-4 h-4" />
-                <span>{doctor.user.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <PhoneIcon className="w-4 h-4" />
-                <span>{doctor.user.phone}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <MapPinIcon className="w-4 h-4" />
-                <span
-                  className="text-gray-700 hover:text-gray-900 cursor-pointer underline"
-                  onClick={() => handleAddressClick(doctor.address)}
-                >
-                  {doctor.address}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <BriefcaseIcon className="w-4 h-4" />
-                <span>{doctor.experience} years experience</span>
-              </div>
+      <div className="rounded-2xl border border-slate-200 bg-white/80 shadow-sm transition hover:shadow-md">
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-slate-900 truncate">
+                {doctor.user.name}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 truncate">
+                {doctor.degree}
+              </p>
             </div>
-          </div>
-
-          {/* Details */}
-          <div className="space-y-2 mb-4">
-            <button
-              onClick={() => setTreatmentsModal({ open: true, doctor })}
-              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${
+                statusStyles[activeTab]
+              }`}
             >
-              <BeakerIcon className="w-4 h-4" />
-              <span>View Treatments ({doctor.treatments.length})</span>
-            </button>
-            {doctor.resumeUrl && (
-              <a
-                href={doctor.resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
-                onClick={(e) => {
-                  e.preventDefault();
-                  let safeUrl = doctor.resumeUrl;
-                  if (safeUrl.includes("uploads/clinic/")) {
-                    const filenameMatch = safeUrl.match(
-                      /uploads\/clinic\/[^\/]+$/
-                    );
-                    if (filenameMatch) {
-                      const baseUrl =
-                        process.env.NEXT_PUBLIC_BASE_URL ||
-                        "http://localhost:3001";
-                      safeUrl = `${baseUrl}/${filenameMatch[0]}`;
-                    }
-                  }
-                  window.open(safeUrl, "_blank");
-                }}
-              >
-                <DocumentTextIcon className="w-4 h-4" />
-                <span>View Resume</span>
-              </a>
-            )}
+              {statusLabel}
+            </span>
           </div>
-
-          {/* Password Management for Approved Doctors */}
-          {activeTab === "approved" && (
-            <div className="border-t border-gray-200 pt-4 mb-4">
-              {isEditing ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
-                    <KeyIcon className="w-4 h-4" />
-                    <span>Set Login Credentials</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="New Password"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-gray-800"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      autoFocus
-                    />
-                    <button
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-gray-900"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                    >
-                      {showPassword ? (
-                        <EyeSlashIcon className="w-5 h-5" />
-                      ) : (
-                        <EyeIcon className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                      onClick={() => handleSetCredentials(doctor.user._id)}
-                    >
-                      Save
-                    </button>
-                    <button
-                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                      onClick={() => {
-                        setSettingId(null);
-                        setNewPassword("");
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <KeyIcon className="w-4 h-4" />
-                    {hasPassword ? (
-                      <span className="text-green-600 font-medium">
-                        Credentials Set
-                      </span>
-                    ) : (
-                      <span className="text-gray-600">
-                        No credentials set
-                      </span>
-                    )}
-                  </div>
-                  {(() => {
-                    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
-                    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
-                    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
-                    
-                    if (!isAgentRoute && adminTokenExists && isAdmin) {
-                      return (
-                        <button
-                          className="text-gray-700 hover:text-gray-900 text-sm underline"
-                          onClick={() => setSettingId(doctor.user._id)}
-                        >
-                          {hasPassword ? "Change Password" : "Set Credentials"}
-                        </button>
-                      );
-                    }
-                    
-                    if ((isAgentRoute || isAgent) && agentTokenExists) {
-                      if (permissionsLoading || !agentPermissions) {
-                        return null;
-                      }
-                      
-                      const hasUpdatePermission = agentPermissions.canUpdate === true || agentPermissions.canAll === true;
-                      if (hasUpdatePermission) {
-                        return (
-                          <button
-                            className="text-gray-700 hover:text-gray-900 text-sm underline"
-                            onClick={() => setSettingId(doctor.user._id)}
-                          >
-                            {hasPassword ? "Change Password" : "Set Credentials"}
-                          </button>
-                        );
-                      }
-                    }
-                    
-                    return null;
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>{doctor.experience} yrs exp.</span>
+            <button
+              onClick={() => setDetailDoctor(doctor)}
+              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-900"
+            >
+              View info
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
             {actions.map((action) => (
               <button
                 key={action}
@@ -642,13 +517,7 @@ function AdminDoctors() {
                     doctorId: doctor.user._id,
                   })
                 }
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  action === "approve"
-                    ? "bg-gray-800 hover:bg-gray-700 text-white"
-                    : action === "decline"
-                    ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                    : "bg-red-500 hover:bg-red-600 text-white"
-                }`}
+                className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${actionStyles[action] || "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
               >
                 {action.charAt(0).toUpperCase() + action.slice(1)}
               </button>
@@ -694,50 +563,90 @@ function AdminDoctors() {
       
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="bg-white/90 border border-slate-200 rounded-2xl shadow-sm p-6 backdrop-blur">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-start gap-4">
-              <div className="bg-gray-800 p-3 rounded-lg">
-                <UserGroupIcon className="w-8 h-8 text-white" />
+              <div className="rounded-2xl bg-slate-900/90 p-3 text-white shadow-sm">
+                <UserGroupIcon className="w-7 h-7" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Doctor approvals
+                </p>
+                <h1 className="text-3xl font-semibold text-slate-900 mt-2">
                   Doctor Management
                 </h1>
-                <p className="text-gray-700">
-                  Manage doctor applications and approvals
+                <p className="text-sm text-slate-600 mt-1">
+                  Vet, approve, and onboard practitioners to keep your marketplace trustworthy.
                 </p>
               </div>
             </div>
-            <button
-              onClick={fetchDoctors}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors self-start lg:self-auto"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full md:w-auto">
+              <button
+                onClick={fetchDoctors}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh Data
+              </button>
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                Live sync enabled
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
-            { title: 'Pending', value: counts.pending, icon: ClockIcon, color: 'bg-yellow-500' },
-            { title: 'Approved', value: counts.approved, icon: CheckCircleIcon, color: 'bg-green-500' },
-            { title: 'Declined', value: counts.declined, icon: XCircleIcon, color: 'bg-red-500' },
+            {
+              title: "Pending",
+              value: counts.pending,
+              icon: ClockIcon,
+              accent: "bg-amber-50 text-amber-600",
+              border: "border-amber-100",
+              subtitle: "Awaiting verification",
+            },
+            {
+              title: "Approved",
+              value: counts.approved,
+              icon: CheckCircleIcon,
+              accent: "bg-emerald-50 text-emerald-600",
+              border: "border-emerald-100",
+              subtitle: "Onboarded doctors",
+            },
+            {
+              title: "Declined",
+              value: counts.declined,
+              icon: XCircleIcon,
+              accent: "bg-rose-50 text-rose-600",
+              border: "border-rose-100",
+              subtitle: "Need follow-up",
+            },
           ].map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
+              <div
+                key={index}
+                className={`rounded-2xl border ${stat.border} bg-white/85 p-4 shadow-sm`}
+              >
+                <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">{stat.title}</p>
-                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      {stat.title}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold text-slate-900">
+                      {stat.value}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">{stat.subtitle}</p>
                   </div>
-                  <div className={`${stat.color} p-3 rounded-lg text-white`}>
-                    <Icon className="w-6 h-6" />
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.accent}`}
+                  >
+                    <Icon className="w-5 h-5" />
                   </div>
                 </div>
               </div>
@@ -745,103 +654,97 @@ function AdminDoctors() {
           })}
         </div>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="border-b border-gray-200 mb-6">
-            <nav className="-mb-px flex space-x-6">
-              {[
-                { key: "pending", label: "Pending", count: counts.pending, color: "yellow" },
-                { key: "approved", label: "Approved", count: counts.approved, color: "green" },
-                { key: "declined", label: "Declined", count: counts.declined, color: "red" },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => {
-                    setActiveTab(tab.key as "pending" | "approved" | "declined");
-                    setCurrentPage(1);
-                  }}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.key
-                      ? "border-gray-800 text-gray-900"
-                      : "border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300"
+        {/* Workspace */}
+        <div className="bg-white/90 rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+          <div className="flex flex-wrap gap-3">
+            {[
+              { key: "pending", label: "Pending", count: counts.pending },
+              { key: "approved", label: "Approved", count: counts.approved },
+              { key: "declined", label: "Declined", count: counts.declined },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setActiveTab(tab.key as "pending" | "approved" | "declined");
+                  setCurrentPage(1);
+                }}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  activeTab === tab.key
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    activeTab === tab.key ? "bg-white/20" : "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  {tab.label}
-                  <span
-                    className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
-                      activeTab === tab.key
-                        ? "bg-gray-800 text-white"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
-            </nav>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
           </div>
 
-          {/* Search and View Controls */}
-          <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative w-full sm:max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-sm">
+              <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
               <input
                 type="text"
-                placeholder="Search doctors, degree, treatments..."
+                placeholder="Search doctors, degrees, treatments..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-gray-800 text-sm"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-700 placeholder-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               />
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg border transition-colors ${
-                  viewMode === "grid"
-                    ? "bg-gray-800 text-white border-gray-800"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg border transition-colors ${
-                  viewMode === "list"
-                    ? "bg-gray-800 text-white border-gray-800"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+              <span className="text-xs uppercase tracking-wide text-slate-500">View</span>
+              {[
+                { key: "grid", icon: "grid" },
+                { key: "list", icon: "list" },
+              ].map((view) => (
+                <button
+                  key={view.key}
+                  onClick={() => setViewMode(view.key as "grid" | "list")}
+                  className={`rounded-xl border px-3 py-2 transition ${
+                    viewMode === view.key
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {view.icon === "grid" ? (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h4V4H4v2zm6 0h4V4h-4v2zm6 0h4V4h-4v2zM4 12h4v-2H4v2zm6 0h4v-2h-4v2zm6 0h4v-2h-4v2zM4 18h4v-2H4v2zm6 0h4v-2h-4v2zm6 0h4v-2h-4v2z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Results Count */}
-          <div className="mb-4 text-sm text-gray-700">
+          <div className="text-xs text-slate-500">
             Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredDoctors.length)} of {filteredDoctors.length} doctors
           </div>
 
-          {/* Doctors Grid/List */}
           {paginatedDoctors.length === 0 ? (
-            <div className="text-center py-12">
-              <UserGroupIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No doctors found</h3>
-              <p className="text-gray-700">Try adjusting your search criteria.</p>
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
+              <UserGroupIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-1">No doctors found</h3>
+              <p className="text-sm text-slate-500">Try adjusting filters or search keywords.</p>
             </div>
           ) : (
             <div
               className={
                 viewMode === "grid"
-                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
                   : "space-y-4"
               }
             >
@@ -851,24 +754,23 @@ function AdminDoctors() {
             </div>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-sm text-gray-700">
+            <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-slate-500">
                 Page {currentPage} of {totalPages}
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -1033,6 +935,98 @@ function AdminDoctors() {
               <button
                 onClick={() => setTreatmentsModal({ open: false, doctor: null })}
                 className="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {detailDoctor && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 p-5">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  Doctor profile
+                </p>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  {detailDoctor.user.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setDetailDoctor(null)}
+                className="text-slate-500 hover:text-slate-900"
+              >
+                <XCircleIcon className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4 text-sm text-slate-700">
+              <div className="grid gap-2">
+                <span className="font-medium text-slate-500">Degree</span>
+                <span>{detailDoctor.degree}</span>
+              </div>
+              <div className="grid gap-2">
+                <span className="font-medium text-slate-500">Contact</span>
+                <span>{detailDoctor.user.email}</span>
+                <span>{detailDoctor.user.phone}</span>
+              </div>
+              <div>
+                <span className="font-medium text-slate-500">Address</span>
+                <p className="mt-1">{detailDoctor.address}</p>
+              </div>
+              <div className="flex flex-wrap gap-6">
+                <div>
+                  <span className="font-medium text-slate-500 block">Experience</span>
+                  {detailDoctor.experience} years
+                </div>
+                <div>
+                  <span className="font-medium text-slate-500 block">Resume</span>
+                  {detailDoctor.resumeUrl ? (
+                    <button
+                      onClick={() => {
+                        let safeUrl = detailDoctor.resumeUrl;
+                        if (safeUrl.includes("uploads/clinic/")) {
+                          const filenameMatch = safeUrl.match(/uploads\/clinic\/[^\/]+$/);
+                          if (filenameMatch) {
+                            const baseUrl =
+                              process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
+                            safeUrl = `${baseUrl}/${filenameMatch[0]}`;
+                          }
+                        }
+                        window.open(safeUrl, "_blank");
+                      }}
+                      className="text-slate-700 underline-offset-4 hover:underline"
+                    >
+                      Open resume
+                    </button>
+                  ) : (
+                    "Not uploaded"
+                  )}
+                </div>
+              </div>
+              <div>
+                <span className="font-medium text-slate-500">
+                  Treatments ({detailDoctor.treatments.length})
+                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {detailDoctor.treatments.map((treat) => (
+                    <span
+                      key={treat.mainTreatmentSlug}
+                      className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600"
+                    >
+                      {treat.mainTreatment}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-slate-100 p-5 flex justify-end">
+              <button
+                onClick={() => setDetailDoctor(null)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300"
               >
                 Close
               </button>

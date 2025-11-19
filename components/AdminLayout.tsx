@@ -57,7 +57,7 @@ const AdminLayout = ({
         {/* Page Content */}
         <main
           className={`flex-1 overflow-y-auto ${
-            hideSidebar && hideHeader ? '' : 'p-4 sm:p-6 md:p-8'
+            hideSidebar && hideHeader ? '' : ''
           }`}
           role="main"
         >
