@@ -35,7 +35,7 @@ export function signToken(user) {
     { userId: user._id, role: user.role, email: user.email },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
-  );
+ );
 }
 
 export function requireRole(user, roles = []) {

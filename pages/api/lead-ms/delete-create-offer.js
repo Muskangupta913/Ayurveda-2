@@ -41,12 +41,17 @@ export default async function handler(req, res) {
     const filter = { _id: new mongoose.Types.ObjectId(id) };
     let clinic = null;
 
-    if (user.role === "clinic" || user.role === "agent") {
+    if (user.role === "clinic" || user.role === "agent" || user.role === "doctor") {
       if (user.role === "clinic") {
         clinic = await Clinic.findOne({ owner: user._id }).select("_id");
       } else if (user.role === "agent") {
         if (!user.clinicId) {
           return res.status(403).json({ success: false, message: "No clinic linked to this user" });
+        }
+        clinic = await Clinic.findById(user.clinicId).select("_id");
+      } else if (user.role === "doctor") {
+        if (!user.clinicId) {
+          return res.status(403).json({ success: false, message: "Doctor not linked to a clinic" });
         }
         clinic = await Clinic.findById(user.clinicId).select("_id");
       }

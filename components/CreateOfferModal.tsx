@@ -7,6 +7,7 @@ interface Props {
   token: string;
   mode?: "create" | "update";
   offer?: any;
+  actorRole?: "clinic" | "doctor" | "agent" | "admin";
 }
 
 export default function CreateOfferModal({
@@ -16,8 +17,9 @@ export default function CreateOfferModal({
   token,
   mode = "create",
   offer,
+  actorRole = "clinic",
 }: Props) {
-  const [form, setForm] = useState({
+  const getInitialForm = () => ({
     title: "",
     description: "",
     type: "percentage",
@@ -32,11 +34,12 @@ export default function CreateOfferModal({
     usesCount: 0,
     perUserLimit: 1,
     channels: [] as string[],
-    utm: { source: "clinic", medium: "email", campaign: "" },
+    utm: { source: actorRole, medium: "email", campaign: "" },
     conditions: {} as Record<string, any>,
     status: "draft",
     treatments: [] as string[],
   });
+  const [form, setForm] = useState(getInitialForm);
 
   const [clinicId, setClinicId] = useState<string | null>(null);
   const [treatments, setTreatments] = useState<any[]>([]);
@@ -52,21 +55,77 @@ export default function CreateOfferModal({
     canDelete: false,
     canRead: false,
   });
+  const [resolvedToken, setResolvedToken] = useState<string>("");
+
+  const resolveTokenFromContext = () => {
+    if (token) return token;
+    if (typeof window === "undefined") return "";
+
+    const roleFallbackMap: Record<string, string[]> = {
+      clinic: ["clinicToken"],
+      doctor: ["doctorToken", "clinicToken"],
+      agent: ["agentToken", "clinicToken"],
+      admin: ["adminToken"],
+    };
+
+    const fallbackKeys = [
+      ...(roleFallbackMap[actorRole] || []),
+      "clinicToken",
+      "doctorToken",
+      "agentToken",
+      "adminToken",
+    ];
+
+    const seen = new Set<string>();
+    for (const key of fallbackKeys) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      try {
+        const value =
+          window.localStorage?.getItem(key) ||
+          window.sessionStorage?.getItem(key);
+        if (value) return value;
+      } catch {
+        // ignore access issues
+      }
+    }
+    return "";
+  };
+
+  useEffect(() => {
+    if (!isOpen && !token) {
+      setResolvedToken("");
+      return;
+    }
+    const nextToken = resolveTokenFromContext();
+    setResolvedToken(nextToken);
+  }, [isOpen, token, actorRole]);
 
   useEffect(() => {
     if (!isOpen) return;
 
+    const authToken = resolvedToken;
+    if (!authToken) {
+      setClinicId(null);
+      setTreatments([]);
+      setPermissions({
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canRead: false,
+      });
+      return;
+    }
+
     const fetchClinicData = async () => {
       try {
-        const token = localStorage.getItem("clinicToken");
-        
         // Fetch clinic data and permissions in parallel
         const [clinicRes, permissionsRes] = await Promise.all([
           fetch("/api/lead-ms/get-clinic-treatment", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${authToken}` },
           }),
           fetch("/api/clinic/permissions", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${authToken}` },
           }),
         ]);
 
@@ -129,32 +188,13 @@ export default function CreateOfferModal({
     };
 
     fetchClinicData();
-  }, [isOpen]);
+  }, [isOpen, resolvedToken]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     if (mode === "create") {
-      setForm({
-        title: "",
-        description: "",
-        type: "percentage",
-        value: 0,
-        currency: "INR",
-        code: "",
-        slug: "",
-        startsAt: "",
-        endsAt: "",
-        timezone: "Asia/Kolkata",
-        maxUses: null,
-        usesCount: 0,
-        perUserLimit: 1,
-        channels: [],
-        utm: { source: "clinic", medium: "email", campaign: "" },
-        conditions: {},
-        status: "draft",
-        treatments: [],
-      });
+      setForm(getInitialForm());
       return;
     }
 
@@ -184,14 +224,14 @@ export default function CreateOfferModal({
         usesCount: offer.usesCount || 0,
         perUserLimit: offer.perUserLimit || 1,
         channels: offer.channels || [],
-        utm: offer.utm || { source: "clinic", medium: "email", campaign: "" },
+        utm: offer.utm || { source: actorRole, medium: "email", campaign: "" },
         conditions: offer.conditions || {},
         status: offer.status || "draft",
         treatments: selectedSlugs,
       });
       setClinicId(offer.clinicId || null);
     }
-  }, [isOpen, mode, offer]);
+  }, [isOpen, mode, offer, actorRole]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -262,6 +302,13 @@ export default function CreateOfferModal({
 
     setLoading(true);
     try {
+      const authToken = resolvedToken || resolveTokenFromContext();
+      if (!authToken) {
+        alert("Authentication token missing. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
       const url =
         mode === "create"
           ? "/api/lead-ms/create-offer"
@@ -272,7 +319,7 @@ export default function CreateOfferModal({
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           ...form,
@@ -340,7 +387,7 @@ export default function CreateOfferModal({
                   name="title"
                   value={form.title}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                  className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                   placeholder="e.g., Summer Special Discount"
                   required
                 />
@@ -353,7 +400,7 @@ export default function CreateOfferModal({
                   value={form.description}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all resize-none text-sm"
+                  className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all resize-none text-sm"
                   placeholder="Describe the offer details..."
                 />
               </div>
@@ -367,7 +414,7 @@ export default function CreateOfferModal({
                     name="type"
                     value={form.type}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     required
                   >
                     <option value="percentage">Percentage (%)</option>
@@ -384,7 +431,7 @@ export default function CreateOfferModal({
                     name="value"
                     value={form.value}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="0"
                   />
                 </div>
@@ -403,7 +450,7 @@ export default function CreateOfferModal({
                     name="startsAt"
                     value={form.startsAt}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                   />
                 </div>
                 <div>
@@ -413,7 +460,7 @@ export default function CreateOfferModal({
                     name="endsAt"
                     value={form.endsAt}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                   />
                 </div>
               </div>
@@ -426,7 +473,7 @@ export default function CreateOfferModal({
                     name="maxUses"
                     value={form.maxUses || ""}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="Unlimited"
                   />
                 </div>
@@ -437,7 +484,7 @@ export default function CreateOfferModal({
                     name="perUserLimit"
                     value={form.perUserLimit}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="1"
                   />
                 </div>
@@ -475,7 +522,7 @@ export default function CreateOfferModal({
                     name="utm.source"
                     value={form.utm.source}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="clinic"
                   />
                 </div>
@@ -486,7 +533,7 @@ export default function CreateOfferModal({
                     name="utm.medium"
                     value={form.utm.medium}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="email"
                   />
                 </div>
@@ -497,7 +544,7 @@ export default function CreateOfferModal({
                     name="utm.campaign"
                     value={form.utm.campaign}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                    className="text-gray-700 w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     placeholder="summer-2024"
                   />
                 </div>
@@ -511,7 +558,7 @@ export default function CreateOfferModal({
                 name="status"
                 value={form.status}
                 onChange={handleChange}
-                className="w-full md:w-1/2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
+                className="text-gray-700 w-full md:w-1/2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
               >
                 {["draft", "active", "paused", "expired", "archived"].map((s) => (
                   <option key={s} value={s} className="capitalize">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import AdminLayout from "../../components/AdminLayout";
@@ -8,19 +8,24 @@ import withAdminAuth from "../../components/withAdminAuth";
 import type { NextPageWithLayout } from "../_app";
 import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 import {
-  Search,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Briefcase,
-  Grid,
-  List,
-  Key,
-  Eye,
-  EyeOff,
-  X,
-} from "lucide-react";
+  UserGroupIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon,
+  MapPinIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  BriefcaseIcon,
+  BeakerIcon,
+  DocumentTextIcon,
+  KeyIcon,
+  EyeIcon,
+  EyeSlashIcon,
+} from "@heroicons/react/24/outline";
+import { GoogleMap, Marker } from "@react-google-maps/api";
 
 interface Doctor {
   _id: string;
@@ -47,7 +52,62 @@ interface Doctor {
   };
 }
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+// Toast Component
+const Toast = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircleIcon className="w-5 h-5" />,
+    error: <XCircleIcon className="w-5 h-5" />,
+    info: <InformationCircleIcon className="w-5 h-5" />,
+    warning: <ExclamationTriangleIcon className="w-5 h-5" />,
+  };
+
+  const colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    warning: 'bg-yellow-500',
+  };
+
+  return (
+    <div
+      className={`${colors[toast.type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] max-w-md animate-slide-in`}
+    >
+      {icons[toast.type]}
+      <span className="flex-1 text-sm font-medium">{toast.message}</span>
+      <button
+        onClick={onClose}
+        className="hover:bg-white/20 rounded p-1 transition-colors"
+        aria-label="Close"
+      >
+        <XMarkIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+// Toast Container
+const ToastContainer = ({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) => (
+  <div className="fixed top-4 right-4 z-50 space-y-2">
+    {toasts.map((toast) => (
+      <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+    ))}
+  </div>
+);
+
 function AdminDoctors() {
+  const router = useRouter();
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
@@ -57,11 +117,8 @@ function AdminDoctors() {
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy] = useState<string>("");
-  const [sortOrder] = useState<string>("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  // const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
     lng: number;
@@ -77,7 +134,6 @@ function AdminDoctors() {
     type: "",
     doctorId: null,
   });
-  // Add state for treatments modal
   const [treatmentsModal, setTreatmentsModal] = useState<{
     open: boolean;
     doctor: Doctor | null;
@@ -85,8 +141,16 @@ function AdminDoctors() {
 
   const itemsPerPage = 12;
 
-  const router = useRouter();
-  
+  // Toast helper functions
+  const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
   // Check if user is an admin or agent - use state to ensure reactivity
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAgent, setIsAgent] = useState<boolean>(false);
@@ -97,37 +161,22 @@ function AdminDoctors() {
       const agentToken = !!localStorage.getItem('agentToken');
       const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
       
-      console.log('Approve Doctors - Initial Token Check:', { 
-        adminToken, 
-        agentToken, 
-        isAgentRoute,
-        pathname: router.pathname,
-        locationPath: window.location.pathname
-      });
-      
-      // CRITICAL: If on agent route, prioritize agentToken over adminToken
       if (isAgentRoute && agentToken) {
-        // On agent route with agentToken = treat as agent (even if adminToken exists)
         setIsAdmin(false);
         setIsAgent(true);
       } else if (adminToken) {
-        // Not on agent route, or no agentToken = treat as admin if adminToken exists
         setIsAdmin(true);
         setIsAgent(false);
       } else if (agentToken) {
-        // Has agentToken but not on agent route = treat as agent
         setIsAdmin(false);
         setIsAgent(true);
       } else {
-        // No tokens = neither
         setIsAdmin(false);
         setIsAgent(false);
       }
     }
   }, [router.pathname]);
   
-  // Always call the hook (React rules), but only use it if isAgent is true
-  // Pass null as moduleKey if not an agent to skip the API call
   const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_approval_doctors" : (null as any));
   const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
   const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
@@ -135,7 +184,6 @@ function AdminDoctors() {
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
@@ -152,18 +200,22 @@ function AdminDoctors() {
           headers: { Authorization: `Bearer ${token}` }
         }
       ).catch(err => {
-        // If 403 (permission denied), return empty array
         if (err.response?.status === 403) {
           return { data: { doctorProfiles: [] } };
         }
         throw err;
       });
       setDoctors(res.data.doctorProfiles || []);
+      if (res.data.doctorProfiles && res.data.doctorProfiles.length > 0) {
+        showToast(`Loaded ${res.data.doctorProfiles.length} doctor(s)`, 'success');
+      }
     } catch (error: any) {
       console.error("Failed to fetch doctors", error);
-      // If permission denied, set empty array
       if (error.response?.status === 403) {
         setDoctors([]);
+        showToast('You do not have permission to view doctors', 'error');
+      } else {
+        showToast('Failed to load doctors. Please try again.', 'error');
       }
     } finally {
       setLoading(false);
@@ -171,23 +223,17 @@ function AdminDoctors() {
   };
 
   useEffect(() => {
-    // Fetch doctors immediately for admins
-    // For agents: only fetch if read permission is granted
     if (isAdmin) {
       fetchDoctors();
     } else if (isAgent) {
       if (!permissionsLoading) {
-        // Check if agent has read permission
         if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
           fetchDoctors();
         } else {
-          // Agent doesn't have read permission - stop loading
           setLoading(false);
         }
       }
-      // If permissions are still loading, keep loading state true
     } else {
-      // Neither admin nor agent - stop loading
       setLoading(false);
     }
   }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
@@ -197,31 +243,26 @@ function AdminDoctors() {
     action: "approve" | "decline" | "delete"
   ) => {
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
 
       if (!token) {
-        alert("No token found. Please login again.");
+        showToast("No token found. Please login again.", 'error');
         return;
       }
 
-      // CRITICAL: Check route and tokens to determine if user is admin or agent
       const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
       const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
       const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
       
-      // Check permissions only for agents - admins bypass all checks
-      // But only if on agent route OR isAgent is true
       if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
-        // Strict boolean checks
         if ((action === "approve" || action === "decline") && agentPermissions.canApprove !== true && agentPermissions.canAll !== true) {
-          alert("You do not have permission to approve/decline doctors");
+          showToast("You do not have permission to approve/decline doctors", 'error');
           return;
         }
         if (action === "delete" && agentPermissions.canDelete !== true && agentPermissions.canAll !== true) {
-          alert("You do not have permission to delete doctors");
+          showToast("You do not have permission to delete doctors", 'error');
           return;
         }
       }
@@ -229,39 +270,35 @@ function AdminDoctors() {
       await axios.post("/api/admin/action", { userId, action }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      showToast(`Doctor ${action}d successfully`, 'success');
       fetchDoctors();
     } catch (err: any) {
       console.error("Error:", err);
-      alert(err.response?.data?.message || `Failed to ${action} doctor`);
+      showToast(err.response?.data?.message || `Failed to ${action} doctor`, 'error');
     }
   };
 
   const handleSetCredentials = async (userId: string) => {
     if (!newPassword.trim()) {
-      // alert("Password is required");
       return;
     }
 
-    // CRITICAL: Check route and tokens to determine if user is admin or agent
     const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
     const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
     const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
     
-    // Check permissions only for agents - admins bypass all checks
-    // But only if on agent route OR isAgent is true
     if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canUpdate !== true && agentPermissions.canAll !== true) {
-      alert("You do not have permission to update doctor credentials");
+      showToast("You do not have permission to update doctor credentials", 'error');
       return;
     }
 
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
 
       if (!token) {
-        alert("No token found. Please login again.");
+        showToast("No token found. Please login again.", 'error');
         return;
       }
 
@@ -273,10 +310,11 @@ function AdminDoctors() {
       });
       setSettingId(null);
       setNewPassword("");
+      showToast('Credentials set successfully', 'success');
       fetchDoctors();
     } catch (error: any) {
       console.error(error);
-      alert(error.response?.data?.message || "An error occurred");
+      showToast(error.response?.data?.message || "An error occurred", 'error');
     }
   };
 
@@ -284,7 +322,6 @@ function AdminDoctors() {
     const user = doc.user;
     if (!user) return false;
 
-    // Filter by tab
     let tabMatch = false;
     if (activeTab === "pending")
       tabMatch = user.isApproved === false && user.declined === false;
@@ -294,11 +331,8 @@ function AdminDoctors() {
 
     if (!tabMatch) return false;
 
-    // Filter by search term
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-
-      // Check basic fields
       const basicMatch =
         user.name.toLowerCase().includes(searchLower) ||
         user.email.toLowerCase().includes(searchLower) ||
@@ -308,7 +342,6 @@ function AdminDoctors() {
 
       if (basicMatch) return true;
 
-      // Check treatments
       if (doc.treatments && doc.treatments.length > 0) {
         const treatmentMatch = doc.treatments.some(
           (treatment) =>
@@ -326,40 +359,9 @@ function AdminDoctors() {
     return true;
   });
 
-  const sortedDoctors = [...filteredDoctors].sort((a, b) => {
-    let aValue = "";
-    let bValue = "";
-
-    switch (sortBy) {
-      case "name":
-        aValue = a.user?.name || "";
-        bValue = b.user?.name || "";
-        break;
-      case "email":
-        aValue = a.user?.email || "";
-        bValue = b.user?.email || "";
-        break;
-      case "degree":
-        aValue = a.degree || "";
-        bValue = b.degree || "";
-        break;
-      case "experience":
-        aValue = a.experience.toString() || "";
-        bValue = b.experience.toString() || "";
-        break;
-      default:
-        aValue = a.user?.name || "";
-        bValue = b.user?.name || "";
-    }
-
-    return sortOrder === "asc"
-      ? aValue.localeCompare(bValue)
-      : bValue.localeCompare(aValue);
-  });
-
-  const totalPages = Math.ceil(sortedDoctors.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredDoctors.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedDoctors = sortedDoctors.slice(
+  const paginatedDoctors = filteredDoctors.slice(
     startIndex,
     startIndex + itemsPerPage
   );
@@ -390,58 +392,35 @@ function AdminDoctors() {
     
     const availableActions = allActions[tab as keyof typeof allActions] || [];
     
-    // CRITICAL: Check route and tokens to determine if user is admin or agent
     const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
     const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
     const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
     
-    // Admin users always see all actions - but ONLY if NOT on agent route AND adminToken exists
     if (!isAgentRoute && adminTokenExists && isAdmin) {
       return availableActions;
     }
     
-    // If user is an agent, filter actions based on permissions (only after permissions are loaded)
     if ((isAgentRoute || isAgent) && agentTokenExists) {
-      // If permissions are still loading, return empty array to prevent showing buttons prematurely
       if (permissionsLoading || !agentPermissions) {
         return [];
       }
       
       return availableActions.filter(action => {
-        // Strict boolean checks - only show if explicitly true
         if (action === "approve" || action === "decline") {
-          // Approve and decline require "approve" permission
           return agentPermissions.canApprove === true || agentPermissions.canAll === true;
         }
         if (action === "delete") {
-          // Delete requires "delete" permission
           return agentPermissions.canDelete === true || agentPermissions.canAll === true;
         }
         return true;
       });
     }
     
-    // Default: return empty array for safety (non-admin, non-agent users)
     return [];
   };
 
-  // const toggleExpansion = (doctorId: string) => {
-  //   setExpandedCards((prev) => {
-  //     const newSet = new Set(prev);
-  //     if (newSet.has(doctorId)) {
-  //       newSet.delete(doctorId);
-  //     } else {
-  //       newSet.add(doctorId);
-  //     }
-  //     return newSet;
-  //   });
-  // };
-
   const handleAddressClick = async (address: string) => {
     try {
-      console.log("Fetching location for address:", address);
-
-      // First try with Google Maps Geocoding API
       const response = await axios.get<{
         results: Array<{
           geometry: { location: { lat: number; lng: number } };
@@ -453,60 +432,18 @@ function AdminDoctors() {
         },
       });
 
-      console.log("Geocoding response:", response.data);
-
       const location = response.data.results[0]?.geometry?.location;
       if (location) {
-        console.log("Location found:", location);
         setSelectedLocation({ ...location, address });
         setMapVisible(true);
       } else {
-        console.log("No location found, trying alternative approach");
-        // Fallback: try to show map with just the address
         setSelectedLocation({ lat: 0, lng: 0, address });
         setMapVisible(true);
       }
     } catch (err) {
       console.error("Map fetch failed:", err);
-      // Fallback: show map with address search
       setSelectedLocation({ lat: 0, lng: 0, address });
       setMapVisible(true);
-    }
-  };
-
-  // Helper function to get tab button classes
-  const getTabButtonClasses = (color: string, isActive: boolean) => {
-    if (!isActive) {
-      return "border-transparent text-black hover:text-gray-700 hover:border-gray-300";
-    }
-
-    switch (color) {
-      case "yellow":
-        return "border-yellow-500 text-yellow-600";
-      case "green":
-        return "border-green-500 text-green-600";
-      case "red":
-        return "border-red-500 text-red-600";
-      default:
-        return "border-gray-500 text-gray-600";
-    }
-  };
-
-  // Helper function to get tab badge classes
-  const getTabBadgeClasses = (color: string, isActive: boolean) => {
-    if (!isActive) {
-      return "bg-gray-100 text-black";
-    }
-
-    switch (color) {
-      case "yellow":
-        return "bg-yellow-100 text-yellow-800";
-      case "green":
-        return "bg-green-100 text-green-800";
-      case "red":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -517,312 +454,234 @@ function AdminDoctors() {
       doctor.user.password && doctor.user.password.trim() !== "";
 
     return (
-      <div className="bg-white rounded-lg shadow-md border border-gray-300 hover:shadow-lg transition-all duration-200">
-        <div className="p-3 sm:p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+        <div className="p-6">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm sm:text-base font-semibold text-black truncate">
-                  {doctor.user.name}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-700 truncate">
-                  {doctor.degree}
-                </p>
-                <p className="text-xs text-gray-600 break-all">
-                  {doctor.user.email}
-                </p>
-                <div className="flex items-center text-xs sm:text-sm text-black">
-                  <MapPin size={12} className="mr-2 flex-shrink-0" />
-                  <span
-                    className="text-blue-600 cursor-pointer break-all underline"
-                    onClick={() => {
-                      console.log("Address clicked:", doctor.address);
-                      handleAddressClick(doctor.address);
-                    }}
-                  >
-                    {doctor.address}
-                  </span>
-                </div>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {doctor.user.name}
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <BriefcaseIcon className="w-4 h-4" />
+                <span>{doctor.degree}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <EnvelopeIcon className="w-4 h-4" />
+                <span>{doctor.user.email}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <PhoneIcon className="w-4 h-4" />
+                <span>{doctor.user.phone}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <MapPinIcon className="w-4 h-4" />
+                <span
+                  className="text-gray-700 hover:text-gray-900 cursor-pointer underline"
+                  onClick={() => handleAddressClick(doctor.address)}
+                >
+                  {doctor.address}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <BriefcaseIcon className="w-4 h-4" />
+                <span>{doctor.experience} years experience</span>
               </div>
             </div>
           </div>
 
-          {/* Quick Info for Grid View */}
-          {viewMode === "grid" && (
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center text-xs sm:text-sm text-black">
-                <Phone size={12} className="mr-2 flex-shrink-0" />
-                <span className="truncate">{doctor.user.phone}</span>
-              </div>
-              <div className="flex items-center text-xs sm:text-sm text-black">
-                <Briefcase size={12} className="mr-2 flex-shrink-0" />
-                <span className="truncate">{doctor.experience}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Always Visible Content (Previously Expanded Content) */}
-          <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-            {viewMode === "list" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-center text-xs sm:text-sm text-black">
-                  <Phone size={12} className="mr-2 flex-shrink-0" />
-                  <span className="truncate">{doctor.user.phone}</span>
-                </div>
-                <div className="flex items-center text-xs sm:text-sm text-black">
-                  <Briefcase size={12} className="mr-2 flex-shrink-0" />
-                  <span className="truncate">{doctor.experience}</span>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center text-xs sm:text-sm text-black">
-              <Mail size={12} className="mr-2 flex-shrink-0" />
-              <span>{doctor.user.email}</span>
-            </div>
-
-            {/* Treatments Button */}
+          {/* Details */}
+          <div className="space-y-2 mb-4">
             <button
-              className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs hover:bg-blue-600"
               onClick={() => setTreatmentsModal({ open: true, doctor })}
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
             >
-              Show Treatments
+              <BeakerIcon className="w-4 h-4" />
+              <span>View Treatments ({doctor.treatments.length})</span>
             </button>
-
-            {/* Treatments Display */}
-            {/* {doctor.treatments && doctor.treatments.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center text-xs sm:text-sm text-black">
-                  <Briefcase size={12} className="mr-2 flex-shrink-0" />
-                  <span className="font-medium">Treatments:</span>
-                </div>
-                <div className="ml-4 space-y-1">
-                  {doctor.treatments.map((treatment, index) => (
-                    <div key={index} className="text-xs text-gray-700">
-                      <div className="font-medium">
-                        {treatment.mainTreatment}
-                      </div>
-                      {treatment.subTreatments &&
-                        treatment.subTreatments.length > 0 && (
-                          <div className="ml-2 text-gray-600">
-                            {treatment.subTreatments.map((sub, subIndex) => (
-                              <span key={subIndex} className="text-xs">
-                                • {sub.name}
-                                {subIndex < treatment.subTreatments.length - 1
-                                  ? ", "
-                                  : ""}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )} */}
-
-            {/* Resume URL */}
             {doctor.resumeUrl && (
-              <div className="flex items-center text-xs sm:text-sm text-black">
-                <Briefcase size={12} className="mr-2 flex-shrink-0" />
-                <a
-                  href={doctor.resumeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline truncate"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    console.log("Resume URL from API:", doctor.resumeUrl);
-
-                    // Additional safety check for corrupted URLs
-                    let safeUrl = doctor.resumeUrl;
-                    if (safeUrl.includes("uploads/clinic/")) {
-                      const filenameMatch = safeUrl.match(
-                        /uploads\/clinic\/[^\/]+$/
-                      );
-                      if (filenameMatch) {
-                        const baseUrl =
-                          process.env.NEXT_PUBLIC_BASE_URL ||
-                          "http://localhost:3001";
-                        safeUrl = `${baseUrl}/${filenameMatch[0]}`;
-                        console.log("Cleaned resume URL:", safeUrl);
-                      }
+              <a
+                href={doctor.resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+                onClick={(e) => {
+                  e.preventDefault();
+                  let safeUrl = doctor.resumeUrl;
+                  if (safeUrl.includes("uploads/clinic/")) {
+                    const filenameMatch = safeUrl.match(
+                      /uploads\/clinic\/[^\/]+$/
+                    );
+                    if (filenameMatch) {
+                      const baseUrl =
+                        process.env.NEXT_PUBLIC_BASE_URL ||
+                        "http://localhost:3001";
+                      safeUrl = `${baseUrl}/${filenameMatch[0]}`;
                     }
-
-                    window.open(safeUrl, "_blank");
-                  }}
-                >
-                  View Resume
-                </a>
-              </div>
+                  }
+                  window.open(safeUrl, "_blank");
+                }}
+              >
+                <DocumentTextIcon className="w-4 h-4" />
+                <span>View Resume</span>
+              </a>
             )}
+          </div>
 
-            {/* Password Management for Approved Doctors */}
-            {activeTab === "approved" && (
-              <div className="border-t pt-3">
-                {isEditing ? (
-                  <div key={doctor.user._id} className="space-y-2">
-                    <div className="flex items-center text-xs sm:text-sm text-black mb-2">
-                      <Key size={12} className="mr-2 flex-shrink-0" />
-                      <span>Set Login Credentials</span>
-                    </div>
-
-                    {/* Password input with show/hide toggle */}
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="New Password"
-                        className="w-full text-black border border-gray-300 rounded px-3 py-2 text-sm pr-10"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        autoFocus
-                      />
-                      <div
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-600"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                      >
-                        {showPassword ? (
-                          <EyeOff size={18} />
-                        ) : (
-                          <Eye size={18} />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                        onClick={() => handleSetCredentials(doctor.user._id)}
-                      >
-                        Save
-                      </button>
-                      <button
-                        className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"
-                        onClick={() => {
-                          setSettingId(null);
-                          setNewPassword("");
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
+          {/* Password Management for Approved Doctors */}
+          {activeTab === "approved" && (
+            <div className="border-t border-gray-200 pt-4 mb-4">
+              {isEditing ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                    <KeyIcon className="w-4 h-4" />
+                    <span>Set Login Credentials</span>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-xs sm:text-sm">
-                      <Key size={12} className="mr-2 flex-shrink-0" />
-                      {hasPassword ? (
-                        <span className="text-green-600 font-medium">
-                          ✅ Credentials Set
-                        </span>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="New Password"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-gray-900"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? (
+                        <EyeSlashIcon className="w-5 h-5" />
                       ) : (
-                        <span className="text-gray-600">
-                          No credentials set
-                        </span>
+                        <EyeIcon className="w-5 h-5" />
                       )}
-                    </div>
-                    {/* Only show Set Credentials button if agent has update permission */}
-                    {(() => {
-                      const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
-                      const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
-                      const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      onClick={() => handleSetCredentials(doctor.user._id)}
+                    >
+                      Save
+                    </button>
+                    <button
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      onClick={() => {
+                        setSettingId(null);
+                        setNewPassword("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <KeyIcon className="w-4 h-4" />
+                    {hasPassword ? (
+                      <span className="text-green-600 font-medium">
+                        Credentials Set
+                      </span>
+                    ) : (
+                      <span className="text-gray-600">
+                        No credentials set
+                      </span>
+                    )}
+                  </div>
+                  {(() => {
+                    const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                    const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                    const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                    
+                    if (!isAgentRoute && adminTokenExists && isAdmin) {
+                      return (
+                        <button
+                          className="text-gray-700 hover:text-gray-900 text-sm underline"
+                          onClick={() => setSettingId(doctor.user._id)}
+                        >
+                          {hasPassword ? "Change Password" : "Set Credentials"}
+                        </button>
+                      );
+                    }
+                    
+                    if ((isAgentRoute || isAgent) && agentTokenExists) {
+                      if (permissionsLoading || !agentPermissions) {
+                        return null;
+                      }
                       
-                      // Admin always sees button - but ONLY if NOT on agent route
-                      if (!isAgentRoute && adminTokenExists && isAdmin) {
+                      const hasUpdatePermission = agentPermissions.canUpdate === true || agentPermissions.canAll === true;
+                      if (hasUpdatePermission) {
                         return (
                           <button
-                            className="text-blue-600 hover:text-blue-800 text-sm underline"
+                            className="text-gray-700 hover:text-gray-900 text-sm underline"
                             onClick={() => setSettingId(doctor.user._id)}
                           >
                             {hasPassword ? "Change Password" : "Set Credentials"}
                           </button>
                         );
                       }
-                      
-                      // For agents: Only show if permissions are loaded AND update permission is explicitly true
-                      if ((isAgentRoute || isAgent) && agentTokenExists) {
-                        if (permissionsLoading || !agentPermissions) {
-                          return null;
-                        }
-                        
-                        const hasUpdatePermission = agentPermissions.canUpdate === true || agentPermissions.canAll === true;
-                        if (hasUpdatePermission) {
-                          return (
-                            <button
-                              className="text-blue-600 hover:text-blue-800 text-sm underline"
-                              onClick={() => setSettingId(doctor.user._id)}
-                            >
-                              {hasPassword ? "Change Password" : "Set Credentials"}
-                            </button>
-                          );
-                        }
-                      }
-                      
-                      return null;
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                    }
+                    
+                    return null;
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
-          <div className="mt-4 pt-3 border-t border-gray-200">
-            <div className="flex flex-wrap gap-2">
-              {actions.map((action) => (
-                <button
-                  key={action}
-                  onClick={() =>
-                    setConfirmAction({
-                      show: true,
-                      type: action,
-                      doctorId: doctor.user._id,
-                    })
-                  }
-                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none ${
-                    action === "approve"
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : action === "decline"
-                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                      : "bg-red-500 hover:bg-red-600 text-white"
-                  }`}
-                >
-                  {action.charAt(0).toUpperCase() + action.slice(1)}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+            {actions.map((action) => (
+              <button
+                key={action}
+                onClick={() =>
+                  setConfirmAction({
+                    show: true,
+                    type: action,
+                    doctorId: doctor.user._id,
+                  })
+                }
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  action === "approve"
+                    ? "bg-gray-800 hover:bg-gray-700 text-white"
+                    : action === "decline"
+                    ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                    : "bg-red-500 hover:bg-red-600 text-white"
+                }`}
+              >
+                {action.charAt(0).toUpperCase() + action.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
       </div>
     );
   };
 
-  // Check if agent has read permission
   const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
 
   if (loading || (isAgent && permissionsLoading)) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-black">Loading doctors...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading doctors...</p>
         </div>
       </div>
     );
   }
 
-  // Show permission denied message if agent doesn't have read permission
   if (isAgent && !hasReadPermission) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-red-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircleIcon className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">
-            You do not have permission to view doctor approvals. Please contact your administrator to request access.
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-700">
+            You do not have permission to view doctor approvals.
           </p>
         </div>
       </div>
@@ -830,68 +689,90 @@ function AdminDoctors() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-black">
-            Doctor Management Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-700 mt-1">
-            Manage doctor applications and approvals
-          </p>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="bg-gray-800 p-3 rounded-lg">
+                <UserGroupIcon className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Doctor Management
+                </h1>
+                <p className="text-gray-700">
+                  Manage doctor applications and approvals
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={fetchDoctors}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors self-start lg:self-auto"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { title: 'Pending', value: counts.pending, icon: ClockIcon, color: 'bg-yellow-500' },
+            { title: 'Approved', value: counts.approved, icon: CheckCircleIcon, color: 'bg-green-500' },
+            { title: 'Declined', value: counts.declined, icon: XCircleIcon, color: 'bg-red-500' },
+          ].map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">{stat.title}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  </div>
+                  <div className={`${stat.color} p-3 rounded-lg text-white`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Tabs */}
-        <div className="mb-4 sm:mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-3 sm:space-x-6 overflow-x-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-6">
               {[
-                {
-                  key: "pending",
-                  label: "Pending",
-                  count: counts.pending,
-                  color: "yellow",
-                },
-                {
-                  key: "approved",
-                  label: "Approved",
-                  count: counts.approved,
-                  color: "green",
-                },
-                {
-                  key: "declined",
-                  label: "Declined",
-                  count: counts.declined,
-                  color: "red",
-                },
-              ]
-              .filter(tab => {
-                // Only show tabs if user has read permission
-                return hasReadPermission;
-              })
-              .map((tab) => (
+                { key: "pending", label: "Pending", count: counts.pending, color: "yellow" },
+                { key: "approved", label: "Approved", count: counts.approved, color: "green" },
+                { key: "declined", label: "Declined", count: counts.declined, color: "red" },
+              ].map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => {
-                    setActiveTab(
-                      tab.key as "pending" | "approved" | "declined"
-                    );
+                    setActiveTab(tab.key as "pending" | "approved" | "declined");
                     setCurrentPage(1);
                   }}
-                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${getTabButtonClasses(
-                    tab.color,
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === tab.key
-                  )}`}
+                      ? "border-gray-800 text-gray-900"
+                      : "border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300"
+                  }`}
                 >
                   {tab.label}
                   <span
-                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${getTabBadgeClasses(
-                      tab.color,
+                    className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
                       activeTab === tab.key
-                    )}`}
+                        ? "bg-gray-800 text-white"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
                   >
                     {tab.count}
                   </span>
@@ -899,189 +780,143 @@ function AdminDoctors() {
               ))}
             </nav>
           </div>
-        </div>
 
-        {/* Controls */}
-        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
+          {/* Search and View Controls */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="relative w-full sm:max-w-md">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={14}
-              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
               <input
                 type="text"
-                placeholder="Search doctors, degree..."
+                placeholder="Search doctors, degree, treatments..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="text-black w-full pl-9 pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-gray-800 text-sm"
               />
             </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode("grid")}
-                className="text-black flex items-center px-2.5 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className={`p-2 rounded-lg border transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-gray-800 text-white border-gray-800"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
               >
-                <Grid size={12} className="sm:hidden" />
-                <Grid size={14} className="hidden sm:block" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className="text-black flex items-center px-2.5 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className={`p-2 rounded-lg border transition-colors ${
+                  viewMode === "list"
+                    ? "bg-gray-800 text-white border-gray-800"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
               >
-                <List size={12} className="sm:hidden" />
-                <List size={14} className="hidden sm:block" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               </button>
             </div>
           </div>
+
+          {/* Results Count */}
+          <div className="mb-4 text-sm text-gray-700">
+            Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredDoctors.length)} of {filteredDoctors.length} doctors
+          </div>
+
+          {/* Doctors Grid/List */}
+          {paginatedDoctors.length === 0 ? (
+            <div className="text-center py-12">
+              <UserGroupIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No doctors found</h3>
+              <p className="text-gray-700">Try adjusting your search criteria.</p>
+            </div>
+          ) : (
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  : "space-y-4"
+              }
+            >
+              {paginatedDoctors.map((doctor) => (
+                <DoctorCard key={doctor.user._id} doctor={doctor} />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Results */}
-        <div className="mb-3 sm:mb-4 text-xs sm:text-sm text-black">
-          Showing {startIndex + 1}-
-          {Math.min(startIndex + itemsPerPage, sortedDoctors.length)} of{" "}
-          {sortedDoctors.length} doctors
-        </div>
-
-        {/* Doctors Grid/List */}
-        {paginatedDoctors.length === 0 ? (
-          <div className="text-center py-8 sm:py-12">
-            <User
-              size={28}
-              className="mx-auto text-gray-400 mb-3 sm:mb-4 sm:w-8 sm:h-8"
-            />
-            <h3 className="text-base sm:text-lg font-medium text-black mb-2">
-              No doctors found
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600">
-              Try adjusting your search or filter criteria.
-            </p>
-          </div>
-        ) : (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6"
-                : "space-y-3 sm:space-y-4"
-            }
-          >
-            {paginatedDoctors.map((doctor) => (
-              <DoctorCard key={doctor.user._id} doctor={doctor} />
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-            <div className="text-xs sm:text-sm text-black order-2 sm:order-1">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex items-center gap-2 order-1 sm:order-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-xs sm:text-sm text-black bg-white hover:bg-gray-50 disabled:opacity-50 min-w-[70px] sm:min-w-[80px]"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() =>
-                  setCurrentPage(Math.min(totalPages, currentPage + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-xs sm:text-sm text-black bg-white hover:bg-gray-50 disabled:opacity-50 min-w-[60px] sm:min-w-[70px]"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Confirmation Modal */}
       {confirmAction.show && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/20 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-xs sm:max-w-md w-full transform transition-all duration-300 ease-out mx-3 sm:mx-0">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
             <div className="text-center">
-              {/* Icon based on action type */}
-              <div className="mx-auto mb-3 sm:mb-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center">
+              <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center">
                 {confirmAction.type === "approve" && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircleIcon className="w-8 h-8 text-green-600" />
                   </div>
                 )}
                 {confirmAction.type === "decline" && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
-                      />
-                    </svg>
+                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <ClockIcon className="w-8 h-8 text-yellow-600" />
                   </div>
                 )}
                 {confirmAction.type === "delete" && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-red-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                    <XCircleIcon className="w-8 h-8 text-red-600" />
                   </div>
                 )}
               </div>
-
-              {/* Title */}
-              <h2 className="text-lg sm:text-2xl font-bold text-gray-800 mb-2 capitalize">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 capitalize">
                 Confirm {confirmAction.type}
               </h2>
-
-              {/* Message */}
-              <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 leading-relaxed">
+              <p className="text-gray-700 mb-8">
                 Are you sure you want to {confirmAction.type} this doctor?
                 {confirmAction.type === "delete" && (
-                  <span className="block mt-2 text-red-600 font-medium text-sm">
+                  <span className="block mt-2 text-red-600 font-medium">
                     This action cannot be undone.
                   </span>
                 )}
               </p>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 sm:gap-3">
+              <div className="flex gap-3">
                 <button
                   onClick={() =>
                     setConfirmAction({ show: false, type: "", doctorId: null })
                   }
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -1095,9 +930,9 @@ function AdminDoctors() {
                     }
                     setConfirmAction({ show: false, type: "", doctorId: null });
                   }}
-                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${
+                  className={`flex-1 text-white px-6 py-3 rounded-lg font-medium transition-colors ${
                     confirmAction.type === "approve"
-                      ? "bg-green-500 hover:bg-green-600"
+                      ? "bg-gray-800 hover:bg-gray-700"
                       : confirmAction.type === "decline"
                       ? "bg-yellow-500 hover:bg-yellow-600"
                       : "bg-red-500 hover:bg-red-600"
@@ -1114,159 +949,93 @@ function AdminDoctors() {
           </div>
         </div>
       )}
+
       {/* Map Modal */}
       {mapVisible && selectedLocation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-4xl max-h-[90vh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-0">
-            <div className="flex items-center justify-between p-3 sm:p-4 border-b">
-              <h3 className="text-base sm:text-lg font-semibold text-black">
-                Doctor Location
-              </h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Doctor Location</h3>
               <button
                 onClick={() => setMapVisible(false)}
-                className="text-gray-400 hover:text-black p-1 text-xl sm:text-2xl w-8 h-8 flex items-center justify-center"
-                aria-label="Close map"
+                className="text-gray-700 hover:text-gray-900"
               >
-                ×
+                <XCircleIcon className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-3 sm:p-4">
-              <div className="w-full h-48 sm:h-64 md:h-96">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  style={{ border: 0, borderRadius: "8px" }}
-                  src={
-                    selectedLocation.lat !== 0 && selectedLocation.lng !== 0
-                      ? `https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}&z=16&output=embed`
-                      : `https://www.google.com/maps?q=${encodeURIComponent(
-                          selectedLocation.address || ""
-                        )}&z=16&output=embed`
-                  }
-                  allowFullScreen
-                  aria-hidden="false"
-                  tabIndex={0}
-                  title="Doctor Location Map"
-                />
+            <div className="p-4">
+              <div className="w-full h-96">
+                {selectedLocation.lat !== 0 && selectedLocation.lng !== 0 ? (
+                  <GoogleMap
+                    mapContainerStyle={{ width: "100%", height: "100%" }}
+                    center={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
+                    zoom={15}
+                  >
+                    <Marker position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }} />
+                  </GoogleMap>
+                ) : (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    style={{ border: 0, borderRadius: "8px" }}
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(
+                      selectedLocation.address || ""
+                    )}&z=16&output=embed`}
+                    allowFullScreen
+                  />
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
+
       {/* Treatments Modal */}
       {treatmentsModal.open && treatmentsModal.doctor && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs sm:max-w-lg max-h-[90vh] overflow-hidden mx-2 sm:mx-0 transform transition-all duration-300">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-[#2D9AA5] to-[#3BB5C1] p-4 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
-              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
-              <div className="flex items-center justify-between relative">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold">
-                      Dr. {treatmentsModal.doctor.user.name}
-                    </h3>
-                    <p className="text-white/90 text-xs sm:text-sm">
-                      Available Treatments
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() =>
-                    setTreatmentsModal({ open: false, doctor: null })
-                  }
-                  className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-xl transition-all duration-200 w-8 h-8 flex items-center justify-center"
-                  aria-label="Close treatments modal"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Available Treatments</h2>
+              <button
+                onClick={() => setTreatmentsModal({ open: false, doctor: null })}
+                className="text-gray-700 hover:text-gray-900"
+              >
+                <XCircleIcon className="w-6 h-6" />
+              </button>
             </div>
-
-            {/* Content */}
-            <div className="p-6 overflow-auto max-h-[calc(90vh-120px)]">
-              {treatmentsModal.doctor.treatments &&
-              treatmentsModal.doctor.treatments.length > 0 ? (
+            <div className="overflow-y-auto flex-1">
+              {treatmentsModal.doctor.treatments && treatmentsModal.doctor.treatments.length > 0 ? (
                 <div className="space-y-4">
                   {treatmentsModal.doctor.treatments.map((treatment, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-gray-50 rounded-xl p-4 hover:bg-[#2D9AA5]/5 transition-all duration-200 group"
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-2 h-2 rounded-full bg-[#2D9AA5] group-hover:scale-125 transition-transform"></div>
-                        <div className="font-semibold text-gray-900 group-hover:text-[#2D9AA5] transition-colors">
-                          {treatment.mainTreatment}
-                        </div>
-                      </div>
-                      {treatment.subTreatments &&
-                        treatment.subTreatments.length > 0 && (
-                          <div className="ml-5 space-y-2">
-                            {treatment.subTreatments.map((sub, subIdx) => (
-                              <div
-                                key={subIdx}
-                                className="flex items-center gap-2 text-sm text-gray-700"
-                              >
-                                <div className="w-1 h-1 rounded-full bg-[#2D9AA5]/60"></div>
-                                <span className="group-hover:text-gray-800 transition-colors">
-                                  {sub.name}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                    <div key={idx} className="p-4 bg-gray-50 rounded-lg">
+                      <h3 className="font-semibold text-gray-900 mb-2">{treatment.mainTreatment}</h3>
+                      {treatment.subTreatments && treatment.subTreatments.length > 0 && (
+                        <ul className="list-disc pl-6 space-y-1">
+                          {treatment.subTreatments.map((sub, subIdx) => (
+                            <li key={subIdx} className="text-sm text-gray-700">
+                              {sub.name}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg
-                      className="w-8 h-8 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.007-5.824-2.709M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500 text-sm">
-                    No treatments available for this doctor.
-                  </p>
+                  <BeakerIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-700">No treatments available for this doctor.</p>
                 </div>
               )}
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setTreatmentsModal({ open: false, doctor: null })}
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

@@ -15,8 +15,8 @@ export default async function handler(req, res) {
         .json({ success: false, message: "User not authenticated" });
     }
 
-    // Only clinic or agent can access
-    if (!requireRole(user, ["clinic", "agent"])) {
+    // Only clinic, agent, or doctor can access
+    if (!requireRole(user, ["clinic", "agent", "doctor"])) {
       return res
         .status(403)
         .json({ success: false, message: "Access denied" });
@@ -38,6 +38,13 @@ export default async function handler(req, res) {
         return res
           .status(400)
           .json({ success: false, message: "Agent is not assigned to any clinic" });
+      }
+      clinic = await Clinic.findById(user.clinicId).lean();
+    } else if (user.role === "doctor") {
+      if (!user.clinicId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Doctor is not linked to any clinic" });
       }
       clinic = await Clinic.findById(user.clinicId).lean();
     }

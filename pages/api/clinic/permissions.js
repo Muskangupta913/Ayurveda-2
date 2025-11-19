@@ -2,6 +2,7 @@
 import dbConnect from "../../../lib/database";
 import ClinicPermission from "../../../models/ClinicPermission";
 import Clinic from "../../../models/Clinic";
+import User from "../../../models/Users";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
@@ -15,17 +16,32 @@ export default async function handler(req, res) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== 'clinic') {
-      return res.status(403).json({ success: false, message: 'Clinic access required' });
+    if (!['clinic', 'doctor', 'agent'].includes(decoded.role)) {
+      return res.status(403).json({ success: false, message: 'Clinic, doctor, or agent access required' });
     }
 
-    // ✅ Find the clinic document from the user's owner field
-    const clinic = await Clinic.findOne({ owner: decoded.userId }).select("_id");
-    if (!clinic) {
-      return res.status(404).json({ success: false, message: 'Clinic not found for this user' });
+    let clinicId = null;
+    if (decoded.role === 'clinic') {
+      // ✅ Find the clinic document from the user's owner field
+      const clinic = await Clinic.findOne({ owner: decoded.userId }).select("_id");
+      if (!clinic) {
+        return res.status(404).json({ success: false, message: 'Clinic not found for this user' });
+      }
+      clinicId = clinic._id;
+    } else if (decoded.role === 'doctor') {
+      const doctor = await User.findById(decoded.userId).select("clinicId");
+      if (!doctor?.clinicId) {
+        return res.status(403).json({ success: false, message: 'Doctor is not linked to any clinic' });
+      }
+      clinicId = doctor.clinicId;
+    } else if (decoded.role === 'agent') {
+      const agent = await User.findById(decoded.userId).select("clinicId");
+      if (!agent?.clinicId) {
+        return res.status(403).json({ success: false, message: 'Agent is not linked to any clinic' });
+      }
+      clinicId = agent.clinicId;
     }
 
-    const clinicId = clinic._id;
     console.log('Decoded token:', { userId: decoded.userId, role: decoded.role, clinicId });
 
     if (req.method === 'GET') {

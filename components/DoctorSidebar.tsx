@@ -40,7 +40,64 @@ interface DoctorSidebarProps {
   handleItemClick: () => void;
 }
 
-// Navigation items will be fetched from API
+const navigationItems: NavItem[] = [
+  {
+    label: "Dashboard",
+    path: "/doctor/doctor-dashboard",
+    icon: "🏠",
+    description: "Overview & metrics",
+  },
+  {
+    label: "Manage Profile",
+    path: "/doctor/manageDoctor",
+    icon: "👤",
+    description: "Manage Profile",
+  },
+  {
+    label: "All users Review",
+    path: "/doctor/getReview",
+    icon: "📅",
+    description: "See All Users Reviews",
+  },
+  {
+    label: "Blogs",
+    icon: "📄",
+    description: "Blog Management",
+    children: [
+      { label: "Write Article", path: "/doctor/BlogForm", icon: "📝" },
+      { label: "Published Blogs", path: "/doctor/published-blogs", icon: "📄" },
+      { label: "Blog Analytics", path: "/doctor/getAuthorCommentsAndLikes", icon: "📊" },
+    ],
+  },
+  {
+    label: "Jobs",
+    icon: "💼",
+    description: "Job Management",
+    children: [
+      { label: "Post Job", path: "/doctor/create-job", icon: "📢" },
+      { label: "See Jobs", path: "/doctor/my-jobs", icon: "💼" },
+      { label: "Job Applicants", path: "/doctor/job-applicants", icon: "👥" },
+    ],
+  },
+  {
+    label: "Prescription Requests",
+    path: "/doctor/prescription-requests",
+    icon: "📋",
+    description: "View all prescription requests",
+  },
+  {
+    label: "Create Offers",
+    path: "/doctor/create-offer",
+    icon: "🤑",
+    description: "Manage promotional offers",
+  },
+  {
+    label: "Create Agent",
+    path: "/doctor/create-agent",
+    icon: "👤",
+    description: "Create agent account",
+  },
+];
 
 const DoctorSidebar: FC<DoctorSidebarProps> = ({
   isDesktopHidden,

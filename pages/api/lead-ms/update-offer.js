@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: "User not authenticated" });
 
     // ✅ Allow both clinic and agent
-    if (!requireRole(user, ["clinic", "agent", "admin"]))
+    if (!requireRole(user, ["clinic", "agent", "admin", "doctor"]))
       return res.status(403).json({ success: false, message: "Access denied" });
 
     const { id } = req.query;
@@ -41,6 +41,16 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, message: "Agent not linked to a clinic" });
       clinic = await Clinic.findById(user.clinicId).select("_id");
       // Ensure the offer belongs to this clinic
+      if (offer.clinicId.toString() !== clinic._id.toString()) {
+        return res.status(403).json({ success: false, message: "Not allowed to access this offer" });
+      }
+    } else if (user.role === "doctor") {
+      if (!user.clinicId)
+        return res.status(403).json({ success: false, message: "Doctor not linked to a clinic" });
+      clinic = await Clinic.findById(user.clinicId).select("_id");
+      if (!clinic) {
+        return res.status(403).json({ success: false, message: "Clinic not found" });
+      }
       if (offer.clinicId.toString() !== clinic._id.toString()) {
         return res.status(403).json({ success: false, message: "Not allowed to access this offer" });
       }

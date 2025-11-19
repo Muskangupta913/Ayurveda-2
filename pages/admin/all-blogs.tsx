@@ -2,13 +2,24 @@ import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
 import { useRouter } from "next/router";
-import { Trash2, Eye, X, Search } from "lucide-react";
 import withAdminAuth from "../../components/withAdminAuth";
 import AdminLayout from "../../components/AdminLayout";
 import type { NextPageWithLayout } from "../_app";
 import { useAgentPermissions } from "../../hooks/useAgentPermissions";
+import {
+  DocumentTextIcon,
+  TrashIcon,
+  EyeIcon,
+  XMarkIcon,
+  MagnifyingGlassIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  PhotoIcon,
+} from "@heroicons/react/24/outline";
 
-// ✅ Blog interface
+// Blog interface
 interface Blog {
   _id: string;
   title: string;
@@ -50,7 +61,61 @@ interface Blog {
   youtubeUrl?: string;
 }
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+// Toast Component
+const Toast = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircleIcon className="w-4 h-4" />,
+    error: <XCircleIcon className="w-4 h-4" />,
+    info: <InformationCircleIcon className="w-4 h-4" />,
+    warning: <ExclamationTriangleIcon className="w-4 h-4" />,
+  };
+
+  const colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    warning: 'bg-yellow-500',
+  };
+
+  return (
+    <div
+      className={`${colors[toast.type]} text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs animate-slide-in`}
+    >
+      {icons[toast.type]}
+      <span className="flex-1 font-medium">{toast.message}</span>
+      <button
+        onClick={onClose}
+        className="hover:bg-white/20 rounded p-0.5 transition-colors"
+      >
+        <XMarkIcon className="w-3 h-3" />
+      </button>
+    </div>
+  );
+};
+
+// Toast Container
+const ToastContainer = ({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) => (
+  <div className="fixed top-4 right-4 z-50 space-y-2">
+    {toasts.map((toast) => (
+      <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+    ))}
+  </div>
+);
+
 const AdminBlogs = () => {
+  const router = useRouter();
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [filteredBlogs, setFilteredBlogs] = useState<Blog[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -58,12 +123,20 @@ const AdminBlogs = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReadMoreModal, setShowReadMoreModal] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
-  const [loading, setLoading] = useState(true); // <-- Add loading state
+  const [loading, setLoading] = useState(true);
   const blogsPerPage = 20;
 
-  const router = useRouter();
-  
-  // Check if user is an admin or agent - use state to ensure reactivity
+  // Toast helper functions
+  const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  // Check if user is an admin or agent
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAgent, setIsAgent] = useState<boolean>(false);
   
@@ -73,52 +146,25 @@ const AdminBlogs = () => {
       const agentToken = !!localStorage.getItem('agentToken');
       const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
       
-      console.log('All Blogs - Initial Token Check:', { 
-        adminToken, 
-        agentToken, 
-        isAgentRoute,
-        pathname: router.pathname,
-        locationPath: window.location.pathname
-      });
-      
-      // CRITICAL: If on agent route, prioritize agentToken over adminToken
       if (isAgentRoute && agentToken) {
-        // On agent route with agentToken = treat as agent (even if adminToken exists)
         setIsAdmin(false);
         setIsAgent(true);
       } else if (adminToken) {
-        // Not on agent route, or no agentToken = treat as admin if adminToken exists
         setIsAdmin(true);
         setIsAgent(false);
       } else if (agentToken) {
-        // Has agentToken but not on agent route = treat as agent
         setIsAdmin(false);
         setIsAgent(true);
       } else {
-        // No tokens = neither
         setIsAdmin(false);
         setIsAgent(false);
       }
     }
   }, [router.pathname]);
   
-  // Always call the hook (React rules), but only use it if isAgent is true
-  // Pass null as moduleKey if not an agent to skip the API call
   const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_all_blogs" : (null as any));
   const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
   const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
-
-  // Debug logging - always log to see what's happening
-  useEffect(() => {
-    console.log('All Blogs - State Update:', {
-      isAdmin,
-      isAgent,
-      permissionsLoading,
-      hasAgentPermissions: !!agentPermissions,
-      canDelete: agentPermissions?.canDelete,
-      canAll: agentPermissions?.canAll
-    });
-  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
 
   const processBlogs = (blogs: Blog[]) => {
     return blogs.map(blog => ({
@@ -129,7 +175,6 @@ const AdminBlogs = () => {
   };
 
   const fetchBlogs = useCallback(async () => {
-    // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
     const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
     const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
     const token = adminToken || agentToken;
@@ -137,6 +182,7 @@ const AdminBlogs = () => {
     if (!token) {
       console.error("No token found");
       setLoading(false);
+      showToast('No authentication token found', 'error');
       return;
     }
 
@@ -148,24 +194,27 @@ const AdminBlogs = () => {
       const processedBlogs = processBlogs(res.data.blogs);
       setBlogs(processedBlogs);
       setFilteredBlogs(processedBlogs);
-    } catch (err) {
+      if (processedBlogs.length > 0) {
+        showToast(`Loaded ${processedBlogs.length} blog(s)`, 'success');
+      }
+    } catch (err: any) {
       console.error("Error fetching blogs:", err);
+      showToast('Failed to load blogs', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
-    // Fetch blogs immediately for admins, or for agents after permissions load
     if (isAdmin || !isAgent || !permissionsLoading) {
       fetchBlogs();
     }
   }, [isAdmin, isAgent, permissionsLoading, fetchBlogs]);
 
-  // ✅ Search functionality
+  // Search functionality
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
 
     if (term.trim() === "") {
       setFilteredBlogs(blogs);
@@ -175,25 +224,26 @@ const AdminBlogs = () => {
         (blog.postedBy?.name && blog.postedBy.name.toLowerCase().includes(term.toLowerCase()))
       );
       setFilteredBlogs(filtered);
+      if (filtered.length === 0) {
+        showToast('No blogs found matching your search', 'info');
+      }
     }
   };
 
   const deleteBlog = async (id: string) => {
-    // Check permissions only for agents - admins bypass all checks
     if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canDelete && !agentPermissions.canAll) {
-      alert("You do not have permission to delete blogs");
+      showToast("You do not have permission to delete blogs", 'error');
       setShowDeleteModal(false);
       setSelectedBlog(null);
       return;
     }
 
-    // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
     const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
     const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
     const token = adminToken || agentToken;
 
     if (!token) {
-      alert("No token found. Please login again.");
+      showToast("No token found. Please login again.", 'error');
       setShowDeleteModal(false);
       setSelectedBlog(null);
       return;
@@ -205,16 +255,14 @@ const AdminBlogs = () => {
       });
       const updatedBlogs = blogs.filter((b) => b._id !== id);
       setBlogs(updatedBlogs);
-
-      // Update filtered blogs as well
       const updatedFilteredBlogs = filteredBlogs.filter((b) => b._id !== id);
       setFilteredBlogs(updatedFilteredBlogs);
-
+      showToast('Blog deleted successfully', 'success');
       setShowDeleteModal(false);
       setSelectedBlog(null);
     } catch (err: any) {
       console.error("Error deleting blog:", err);
-      alert(err.response?.data?.message || "Failed to delete blog");
+      showToast(err.response?.data?.message || "Failed to delete blog", 'error');
     }
   };
 
@@ -234,7 +282,7 @@ const AdminBlogs = () => {
     setSelectedBlog(null);
   };
 
-  // Pagination logic - now using filteredBlogs instead of blogs
+  // Pagination logic
   const indexOfLastBlog = currentPage * blogsPerPage;
   const indexOfFirstBlog = indexOfLastBlog - blogsPerPage;
   const currentBlogs = filteredBlogs.slice(indexOfFirstBlog, indexOfLastBlog);
@@ -244,457 +292,405 @@ const AdminBlogs = () => {
 
   // Helper function to extract text from HTML
   const extractTextFromHTML = (html: string, maxLength: number = 150) => {
+    if (typeof window === 'undefined') return '';
     const div = document.createElement('div');
     div.innerHTML = html;
     const text = div.textContent || div.innerText || '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  // Helper to extract first image src from HTML content
-  const getFirstImageFromContent = (html?: string): string | null => {
-    if (!html) return null;
+  // Helper to extract ALL images from HTML content
+  const getAllImagesFromContent = (html?: string): string[] => {
+    if (!html || typeof window === 'undefined') return [];
     const div = document.createElement('div');
     div.innerHTML = html;
-    const img = div.querySelector('img');
-    return img ? img.src : null;
+    const imgs = div.querySelectorAll('img');
+    const imageUrls: string[] = [];
+    imgs.forEach(img => {
+      if (img.src) {
+        imageUrls.push(img.src);
+      }
+    });
+    return imageUrls;
   };
 
   // Show access denied message if agent doesn't have read permission
   if (isAgent && !permissionsLoading && agentPermissions && !agentPermissions.canRead && !agentPermissions.canAll) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
-          <svg className="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
-          <p className="text-slate-600">You do not have permission to view blogs. Please contact your administrator.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 max-w-sm w-full text-center">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <XCircleIcon className="w-6 h-6 text-red-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-sm text-gray-700">
+            You do not have permission to view blogs.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6">
-      {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[40vh] relative">
-          {/* Background glow effect */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-32 h-32 bg-[#2D9AA5] opacity-10 rounded-full blur-3xl animate-pulse"></div>
-          </div>
-
-          {/* Main loader container */}
-          <div className="relative z-10 flex flex-col items-center gap-6">
-
-            {/* Enhanced spinner with multiple rings */}
-            <div className="relative">
-              {/* Outer ring */}
-              <div className="w-16 h-16 border-2 border-gray-200 rounded-full animate-spin">
-                <div className="w-full h-full border-4 border-[#2D9AA5] border-t-transparent rounded-full animate-spin" style={{ animationDuration: '1s', animationDirection: 'reverse' }}></div>
-              </div>
-
-              {/* Inner ring */}
-              <div className="absolute top-2 left-2 w-12 h-12 border-2 border-[#2D9AA5] border-t-transparent border-r-transparent rounded-full animate-spin" style={{ animationDuration: '0.8s' }}></div>
-
-              {/* Center dot */}
-              <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-[#2D9AA5] rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
-            </div>
-
-            {/* Brand name with enhanced styling */}
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-4xl font-bold bg-gradient-to-r from-[#2D9AA5] via-[#3BB4C1] to-[#2D9AA5] bg-clip-text text-transparent animate-pulse">
-                ZEVA
-              </span>
-              <span className="text-4xl font-light text-gray-600">
-                Blogs
-              </span>
-            </div>
-
-            {/* Loading text with animated dots */}
-            <div className="flex items-center gap-1 text-[#2D9AA5] font-medium">
-              <span>Loading</span>
-              <div className="flex gap-1">
-                <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+              <div className="bg-gray-800 p-2 rounded-lg">
+                <DocumentTextIcon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Published Blogs</h1>
+                <p className="text-xs text-gray-700">Manage and view all blog posts</p>
               </div>
             </div>
-
-            {/* Progress bar */}
-            <div className="w-48 h-1 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-[#2D9AA5] to-[#3BB4C1] rounded-full animate-pulse"></div>
-            </div>
+            <button
+              onClick={fetchBlogs}
+              disabled={loading}
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
           </div>
         </div>
-      ) : (
-        <>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-black text-center sm:text-left">
-            Published Blogs
-          </h1>
 
-          {/* ✅ Search Bar */}
-          <div className="mb-6 max-w-md mx-auto sm:mx-0">
-            <div className="relative">
-              <Search
-                size={20}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Search by title or author name..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="text-black w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent outline-none transition"
-              />
+        {/* Search Bar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-700" />
+            <input
+              type="text"
+              placeholder="Search by title or author..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
+            />
+          </div>
+        </div>
+
+        {/* Blog Count */}
+        <div className="text-xs text-gray-700">
+          Showing {indexOfFirstBlog + 1}-{Math.min(indexOfLastBlog, filteredBlogs.length)} of {filteredBlogs.length} blogs
+        </div>
+
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800 mx-auto"></div>
+              <p className="mt-3 text-sm text-gray-700">Loading blogs...</p>
             </div>
           </div>
-
-          {/* ✅ Blog Count */}
-          <p className="text-sm text-gray-600 mb-4">
-            Showing {indexOfFirstBlog + 1}-{Math.min(indexOfLastBlog, filteredBlogs.length)} of {filteredBlogs.length} blogs
-            {searchTerm && filteredBlogs.length !== blogs.length && (
-              <span className="ml-2 text-[#2D9AA5]">
-                (filtered from {blogs.length} total blogs)
-              </span>
+        ) : (
+          <>
+            {/* No Results */}
+            {filteredBlogs.length === 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                <DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm text-gray-700 mb-2">No blogs found</p>
+                {searchTerm && (
+                  <button
+                    onClick={() => handleSearch("")}
+                    className="text-xs text-gray-700 hover:text-gray-900 underline"
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
             )}
-          </p>
 
-          {/* ✅ No Results Message */}
-          {filteredBlogs.length === 0 && searchTerm && (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-lg mb-2">No blogs found</p>
-              <p className="text-gray-400 text-sm">
-                Try adjusting your search terms or{" "}
-                <button
-                  onClick={() => handleSearch("")}
-                  className="text-[#2D9AA5] hover:underline"
-                >
-                  clear search
-                </button>
-              </p>
-            </div>
-          )}
-
-          {/* ✅ Responsive Grid */}
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {currentBlogs.map((blog) => {
-              const firstContentImage = getFirstImageFromContent(blog.content);
-              return (
-                <div
-                  key={blog._id}
-                  className="flex flex-col bg-white border rounded-2xl shadow-md hover:shadow-lg transition duration-300 overflow-hidden"
-                >
-                  {/* Blog Image, YouTube, or Placeholder (only one) */}
-                  {blog.image || firstContentImage ? (
-                    <div className="w-full h-48 overflow-hidden flex items-center justify-center bg-gray-100 ">
-                      <div className="relative w-full h-48">
-                        <Image
-                          src={blog.image ?? firstContentImage ?? "/placeholder-blog.jpg"}
-                          alt={blog.title}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
+            {/* Blog Grid */}
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {currentBlogs.map((blog) => {
+                const contentImages = getAllImagesFromContent(blog.content);
+                const allImages = blog.image ? [blog.image, ...contentImages] : contentImages;
+                
+                return (
+                  <div
+                    key={blog._id}
+                    className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                  >
+                    {/* Blog Images Gallery */}
+                    {allImages.length > 0 ? (
+                      <div className="w-full min-h-48 bg-gray-100 relative flex items-center justify-center">
+                        {allImages.length === 1 ? (
+                          <div className="relative w-full h-48 flex items-center justify-center">
+                            <Image
+                              src={allImages[0]}
+                              alt={blog.title}
+                              width={400}
+                              height={200}
+                              className="object-contain max-w-full max-h-48 w-auto h-auto"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 w-full h-48 gap-1 p-1">
+                            {allImages.slice(0, 4).map((img, idx) => (
+                              <div key={idx} className="relative bg-white flex items-center justify-center overflow-hidden">
+                                <Image
+                                  src={img}
+                                  alt={`${blog.title} - Image ${idx + 1}`}
+                                  width={200}
+                                  height={200}
+                                  className="object-contain max-w-full max-h-full w-auto h-auto"
+                                  sizes="(max-width: 768px) 50vw, 33vw"
+                                />
+                                {idx === 3 && allImages.length > 4 && (
+                                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                    <span className="text-white text-xs font-medium">
+                                      +{allImages.length - 4} more
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ) : blog.youtubeUrl ? (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                      <div className="text-center text-gray-500">
-                        <div className="w-16 h-16 mx-auto mb-2 bg-red-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-bold text-xl">▶</span>
+                    ) : blog.youtubeUrl ? (
+                      <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <span className="text-white font-bold text-lg">▶</span>
+                          </div>
+                          <p className="text-xs text-gray-700">YouTube Video</p>
                         </div>
-                        <p className="text-sm">YouTube Video</p>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="w-full h-48 rounded-t-2xl shadow-lg transition-transform duration-300 hover:scale-105 bg-gradient-to-br from-teal-400 via-teal-500 to-teal-600 flex items-center justify-center relative overflow-hidden">
-                      {/* Background Pattern */}
-                      <div className="absolute inset-0 opacity-10">
-                        <div className="absolute inset-0" style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                        }}></div>
+                    ) : (
+                      <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
+                        <PhotoIcon className="w-12 h-12 text-gray-400" />
                       </div>
-                      {/* Content */}
-                      <div className="text-center z-10">
-                        <div className="mb-3">
-                          <svg className="w-12 h-12 text-white mx-auto opacity-80" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <h3 className="text-white font-bold text-lg tracking-wider drop-shadow-md">ZEVA</h3>
-                        <p className="text-white/90 text-sm font-medium tracking-wide drop-shadow-sm">Blogs</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ✅ Blog Details */}
-                  <div className="flex-1 flex flex-col p-4">
-                    <h2 className="text-lg sm:text-xl font-semibold text-black mb-2 line-clamp-2">
-                      {blog.title}
-                    </h2>
-
-                    {/* ✅ Content Preview */}
-                    {blog.content && (
-                      <p className="text-gray-700 text-sm mb-3 line-clamp-3">
-                        {extractTextFromHTML(blog.content)}
-                      </p>
                     )}
 
-                    {/* ✅ Meta Info */}
-                    <p className="text-xs sm:text-sm text-gray-500 mt-auto">
-                      Posted by: {blog.postedBy?.name || "Unknown"} ({blog.role})
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(blog.createdAt).toLocaleString()}
-                    </p>
+                    {/* Blog Details */}
+                    <div className="p-4">
+                      <h2 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
+                        {blog.title}
+                      </h2>
 
-                    {/* ✅ Stats */}
-                    <p className="mt-2 text-sm text-gray-600">
-                      Likes: {blog.likesCount ?? 0} | Comments: {blog.commentsCount ?? 0}
-                    </p>
+                      {blog.content && (
+                        <p className="text-xs text-gray-700 mb-3 line-clamp-2">
+                          {extractTextFromHTML(blog.content, 100)}
+                        </p>
+                      )}
 
-                    {/* ✅ Action Buttons */}
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        onClick={() => handleReadMoreClick(blog)}
-                        className="flex-1 p-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#247a84] transition text-sm"
-                      >
-                        <Eye size={16} className="inline-block mr-1" />
-                        Read More
-                      </button>
-                      {/* Delete button: Only show for admins OR agents with explicit delete permission */}
-                      {(() => {
-                        // CRITICAL: Check route and tokens to determine if user is admin or agent
-                        const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
-                        const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
-                        const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
-                        
-                        // Admin always sees delete button - but ONLY if NOT on agent route AND adminToken exists
-                        if (!isAgentRoute && adminTokenExists && isAdmin) {
-                          return (
-                            <button
-                              key={`delete-admin-${blog._id}`}
-                              onClick={() => handleDeleteClick(blog)}
-                              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          );
-                        }
-                        
-                        // For agents: Only show if permissions are loaded AND delete permission is explicitly true
-                        // ALWAYS log this check to see what's happening
-                        console.log('All Blogs - Delete Button Render Check:', {
-                          blogId: blog._id,
-                          isAdmin,
-                          isAgent,
-                          isAgentRoute,
-                          adminTokenExists,
-                          agentTokenExists,
-                          permissionsLoading,
-                          hasAgentPermissions: !!agentPermissions,
-                          canDelete: agentPermissions?.canDelete,
-                          canAll: agentPermissions?.canAll
-                        });
-                        
-                        // Show button for agents if on agent route OR if isAgent is true
-                        if ((isAgentRoute || isAgent) && agentTokenExists) {
-                          // Don't show if permissions are still loading
-                          if (permissionsLoading) {
-                            console.log('All Blogs - Permissions still loading, hiding button');
-                            return null;
-                          }
+                      <div className="text-xs text-gray-600 mb-3 space-y-1">
+                        <p>By: {blog.postedBy?.name || "Unknown"}</p>
+                        <p>{new Date(blog.createdAt).toLocaleDateString()}</p>
+                        <p>Likes: {blog.likesCount ?? 0} | Comments: {blog.commentsCount ?? 0}</p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-3 border-t border-gray-200">
+                        <button
+                          onClick={() => handleReadMoreClick(blog)}
+                          className="flex-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <EyeIcon className="w-3 h-3" />
+                          View
+                        </button>
+                        {(() => {
+                          const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                          const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                          const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
                           
-                          // Don't show if permissions object doesn't exist
-                          if (!agentPermissions) {
-                            console.log('All Blogs - No permissions object:', { isAgent, agentPermissions });
-                            return null;
-                          }
+                          const canDelete = isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canDelete || agentPermissions.canAll));
                           
-                          // Only show if canDelete is explicitly true OR canAll is explicitly true
-                          // Triple-check: ensure we're checking actual boolean true, not truthy values
-                          const canDeleteValue = agentPermissions.canDelete;
-                          const canAllValue = agentPermissions.canAll;
-                          const hasDeletePermission = (canDeleteValue === true) || (canAllValue === true);
-                          
-                          console.log('All Blogs - Delete Button Permission Check:', {
-                            blogId: blog._id,
-                            canDelete: canDeleteValue,
-                            canDeleteType: typeof canDeleteValue,
-                            canDeleteStrict: canDeleteValue === true,
-                            canAll: canAllValue,
-                            canAllType: typeof canAllValue,
-                            canAllStrict: canAllValue === true,
-                            hasDeletePermission,
-                            willShow: hasDeletePermission
-                          });
-                          
-                          if (hasDeletePermission) {
+                          if (canDelete) {
                             return (
                               <button
-                                key={`delete-agent-${blog._id}-${canDeleteValue}-${canAllValue}`}
                                 onClick={() => handleDeleteClick(blog)}
-                                className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors"
                               >
-                                <Trash2 size={16} />
+                                <TrashIcon className="w-3 h-3" />
                               </button>
                             );
-                          } else {
-                            console.log('All Blogs - Delete permission denied, hiding button');
                           }
-                        }
-                        
-                        // Default: Don't show button
-                        return null;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ✅ Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-8 flex flex-wrap justify-center gap-2">
-              <button
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-                className={`px-3 py-2 rounded-lg text-sm ${currentPage === 1
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-[#2D9AA5] text-white hover:bg-[#247a84]'
-                  }`}
-              >
-                Previous
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                <button
-                  key={number}
-                  onClick={() => paginate(number)}
-                  className={`px-3 py-2 rounded-lg text-sm ${currentPage === number
-                    ? 'bg-[#2D9AA5] text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                >
-                  {number}
-                </button>
-              ))}
-
-              <button
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className={`px-3 py-2 rounded-lg text-sm ${currentPage === totalPages
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-[#2D9AA5] text-white hover:bg-[#247a84]'
-                  }`}
-              >
-                Next
-              </button>
-            </div>
-          )}
-
-          {/* ✅ Delete Confirmation Modal */}
-          {showDeleteModal && selectedBlog && (
-            <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-                <h3 className="text-lg font-semibold text-black mb-2">
-                  Confirm Delete
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Are you sure you want to delete &quot;{selectedBlog.title}&quot;? This action cannot be undone.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={closeModals}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => deleteBlog(selectedBlog._id)}
-                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ✅ Read More Modal with Fixed Image/Video Size */}
-          {showReadMoreModal && selectedBlog && (
-            <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b">
-                  <h3 className="text-lg sm:text-xl font-semibold text-black pr-4">
-                    {selectedBlog.title}
-                  </h3>
-                  <button
-                    onClick={closeModals}
-                    className="text-black p-2 hover:bg-gray-100 rounded-lg transition"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                {/* Modal Content */}
-                <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                  {/* Blog Image or YouTube Video - Strictly Fixed size and centered */}
-                  {(selectedBlog.image || selectedBlog.youtubeUrl) && (
-                    <div className="w-full h-80 overflow-hidden rounded-lg mb-4 bg-gray-100 flex items-center justify-center">
-                      {selectedBlog.image && (
-                        <div className="relative w-full h-full">
-                        <Image
-                          src={selectedBlog.image}
-                          alt={selectedBlog.title}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
+                          return null;
+                        })()}
                       </div>
-                      )}
-                      {selectedBlog.youtubeUrl && !selectedBlog.image && (
-                        <iframe
-                          className="w-full h-full rounded-lg"
-                          src={selectedBlog.youtubeUrl.replace('watch?v=', 'embed/')}
-                          title="YouTube Video"
-                          allowFullScreen
-                        ></iframe>
-                      )}
                     </div>
-                  )}
+                  </div>
+                );
+              })}
+            </div>
 
-                  {/* Blog Content */}
-                  {selectedBlog.content && (
-                    <div
-                      className="text-gray-700 prose prose-sm sm:prose max-w-none mb-4
-                        [&_img]:mx-auto [&_img]:block [&_img]:w-120 [&_img]:h-70 [&_img]:object-cover
-                        [&_video]:mx-auto [&_video]:block [&_video]:w-120 [&_video]:h-70 [&_video]:object-cover
-                        [&_iframe]:mx-auto [&_iframe]:block [&_iframe]:w-120 [&_iframe]:h-70 [&_iframe]:object-cover"
-                      dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
-                    />
-                  )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    currentPage === 1
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-800 text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Previous
+                </button>
 
-                  {/* Meta Info */}
-                  <div className="border-t pt-4 mt-4">
-                    <p className="text-sm text-gray-500">
-                      Posted by: {selectedBlog.postedBy?.name || "Unknown"} ({selectedBlog.role})
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      {new Date(selectedBlog.createdAt).toLocaleString()}
-                    </p>
-                    <p className="mt-2 text-sm text-gray-600">
-                      Likes: {selectedBlog.likesCount ?? 0} | Comments: {selectedBlog.commentsCount ?? 0}
-                    </p>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                  <button
+                    key={number}
+                    onClick={() => paginate(number)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      currentPage === number
+                        ? 'bg-gray-800 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {number}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    currentPage === totalPages
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-800 text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedBlog && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl p-5 max-w-sm w-full">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <XCircleIcon className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">
+                  Delete Blog?
+                </h3>
+                <p className="text-xs text-gray-700 mb-3">
+                  This action cannot be undone.
+                </p>
+                <div className="bg-gray-50 rounded px-3 py-2">
+                  <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                    &quot;{selectedBlog.title}&quot;
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={closeModals}
+                  className="flex-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteBlog(selectedBlog._id)}
+                  className="flex-1 px-3 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Read More Modal with All Images */}
+        {showReadMoreModal && selectedBlog && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 pr-4 line-clamp-2">
+                  {selectedBlog.title}
+                </h3>
+                <button
+                  onClick={closeModals}
+                  className="text-gray-700 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+                {/* All Blog Images Gallery */}
+                {(() => {
+                  const contentImages = getAllImagesFromContent(selectedBlog.content);
+                  const allImages = selectedBlog.image ? [selectedBlog.image, ...contentImages] : contentImages;
+                  
+                  if (allImages.length > 0) {
+                    return (
+                      <div className="mb-4">
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">Images ({allImages.length})</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {allImages.map((img, idx) => (
+                            <div key={idx} className="relative min-h-32 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center p-2">
+                              <Image
+                                src={img}
+                                alt={`${selectedBlog.title} - Image ${idx + 1}`}
+                                width={300}
+                                height={200}
+                                className="object-contain max-w-full max-h-48 w-auto h-auto rounded-lg"
+                                sizes="(max-width: 768px) 50vw, 33vw"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  if (selectedBlog.youtubeUrl) {
+                    return (
+                      <div className="mb-4">
+                        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
+                          <iframe
+                            className="w-full h-full"
+                            src={selectedBlog.youtubeUrl.replace('watch?v=', 'embed/')}
+                            title="YouTube Video"
+                            allowFullScreen
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
+
+                {/* Blog Content */}
+                {selectedBlog.content && (
+                  <div
+                    className="text-sm text-gray-700 prose prose-sm max-w-none mb-4
+                      [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2
+                      [&_video]:max-w-full [&_video]:h-auto [&_video]:rounded-lg [&_video]:my-2
+                      [&_iframe]:max-w-full [&_iframe]:h-auto [&_iframe]:rounded-lg [&_iframe]:my-2"
+                    dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
+                  />
+                )}
+
+                {/* Meta Info */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <p>Posted by: {selectedBlog.postedBy?.name || "Unknown"} ({selectedBlog.role})</p>
+                    <p>{new Date(selectedBlog.createdAt).toLocaleString()}</p>
+                    <p>Likes: {selectedBlog.likesCount ?? 0} | Comments: {selectedBlog.commentsCount ?? 0}</p>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

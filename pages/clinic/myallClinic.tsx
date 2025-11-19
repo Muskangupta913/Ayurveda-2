@@ -15,9 +15,16 @@ import {
   Leaf,
   Building2,
   Camera,
+  Star,
+  Mail,
+  TrendingUp,
+  BarChart3,
+  Users,
+  Activity,
 } from "lucide-react";
 import Image from "next/image";
 import { Toaster, toast } from "react-hot-toast";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 
 interface Clinic {
   _id: string;
@@ -51,11 +58,20 @@ interface Treatment {
   }>;
 }
 
+interface ClinicStats {
+  totalReviews: number;
+  totalEnquiries: number;
+  averageRating: number;
+  totalTreatments: number;
+  totalServices: number;
+  totalSubTreatments: number;
+}
+
 const LoadingSpinner = () => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-    <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
-      <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-black mx-auto mb-4"></div>
-      <p className="text-black text-center">Loading Health Centers...</p>
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="bg-white rounded-lg p-8 shadow-sm border border-gray-300 max-w-md w-full">
+      <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-300 border-t-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-700 text-center font-medium">Loading Clinic Profile...</p>
     </div>
   </div>
 );
@@ -75,43 +91,38 @@ const Header = ({
   hasClinic,
   isEditing,
   canUpdate,
+  clinicName,
 }: {
   onEditClick: () => void;
   hasClinic: boolean;
   isEditing: boolean;
   canUpdate: boolean;
+  clinicName?: string;
 }) => (
-  <header className="bg-white border-b border-gray-100">
-    <div className="max-w-6xl mx-auto px-6 py-6">
-      <div className="flex items-center justify-between">
-        {/* Left side - Brand */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              Health Center Management
-            </h1>
-            <p className="text-sm text-gray-500">
-              Manage your Health Center with ease
-            </p>
-          </div>
+  <div className="bg-white rounded-lg p-6 sm:p-8 border border-gray-300 shadow-sm">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex-1">
+        <div className="flex items-center gap-3 mb-3">
+          <Building2 className="w-6 h-6 text-gray-700" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            {clinicName || 'Clinic Profile'}
+          </h1>
         </div>
-
-        {/* Right side - Edit Button */}
-        {hasClinic && !isEditing && canUpdate && (
-          <button
-            onClick={onEditClick}
-            className="flex items-center gap-2 px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#247a83] transition-colors font-medium"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span>Edit</span>
-          </button>
-        )}
+        <p className="text-sm text-gray-600">
+          Manage your clinic information and settings
+        </p>
       </div>
+      {hasClinic && !isEditing && canUpdate && (
+        <button
+          onClick={onEditClick}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm hover:shadow-md"
+        >
+          <Edit3 className="w-4 h-4" />
+          <span>Edit Profile</span>
+        </button>
+      )}
     </div>
-  </header>
+  </div>
 );
 
 interface FormInputProps {
@@ -133,7 +144,7 @@ const FormInput = ({
   rows,
 }: FormInputProps) => (
   <div className="space-y-2">
-    <label className="flex items-center gap-2 text-sm font-medium text-black">
+    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
       {icon}
       {label}
     </label>
@@ -141,7 +152,7 @@ const FormInput = ({
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-none placeholder-black text-black"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none placeholder-gray-400 text-gray-700 bg-white transition-all"
         rows={rows || 3}
         placeholder={placeholder}
       />
@@ -150,7 +161,7 @@ const FormInput = ({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder-black text-black"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-700 bg-white transition-all"
         placeholder={placeholder}
       />
     )}
@@ -177,8 +188,8 @@ const TagManager = ({
   onRemove,
   className,
 }: TagManagerProps) => (
-  <div className={`space-y-2 ${className || ""}`}>
-    <label className="flex items-center gap-2 text-sm font-medium text-black">
+  <div className={`space-y-3 ${className || ""}`}>
+    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
       {icon}
       {label}
     </label>
@@ -187,13 +198,13 @@ const TagManager = ({
         type="text"
         value={newItem}
         onChange={(e) => setNewItem(e.target.value)}
-        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder-black text-black"
+        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-gray-700 bg-white transition-all"
         placeholder={`Add ${label.toLowerCase()}`}
         onKeyPress={(e) => e.key === "Enter" && onAdd()}
       />
       <button
         onClick={onAdd}
-        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
       >
         <Plus className="w-4 h-4" />
       </button>
@@ -202,14 +213,14 @@ const TagManager = ({
       {items?.map((item: string, index: number) => (
         <span
           key={index}
-          className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 text-black rounded-full text-sm"
+          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-gray-700 rounded-full text-sm border border-blue-200"
         >
           {item}
           <button
             onClick={() => onRemove(index)}
-            className="text-gray-400 hover:text-black transition-colors"
+            className="text-gray-500 hover:text-red-600 transition-colors"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </span>
       ))}
@@ -273,7 +284,7 @@ const TreatmentManager = ({
   const [showCustomSubTreatmentInput, setShowCustomSubTreatmentInput] =
     useState<number | null>(null);
 
-  const handleAddSubTreatment = async (mainTreatmentIndex: number) => {
+      const handleAddSubTreatment = async (mainTreatmentIndex: number) => {
     if (customSubTreatment.trim()) {
       const currentTreatment = items[mainTreatmentIndex];
       const newSubTreatment = {
@@ -301,8 +312,10 @@ const TreatmentManager = ({
           headers: { Authorization: `Bearer ${token}` },
         });
         setAvailableTreatments(treatmentsResponse.data.treatments || []);
+        toast.success("Sub-treatment added to database");
       } catch (error) {
         console.error("Error adding custom sub-treatment to database:", error);
+        toast.error("Failed to save sub-treatment to database, but added locally");
         // Continue with local addition even if database call fails
       }
 
@@ -315,10 +328,13 @@ const TreatmentManager = ({
       };
 
       onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+      toast.success(`Sub-treatment "${customSubTreatment.trim()}" added`);
       setCustomSubTreatment("");
       setCustomSubTreatmentPrice("");
       setShowSubTreatmentInput(null);
       setShowCustomSubTreatmentInput(null);
+    } else {
+      toast.error("Please enter a sub-treatment name");
     }
   };
 
@@ -327,6 +343,7 @@ const TreatmentManager = ({
     subTreatmentIndex: number
   ) => {
     const currentTreatment = items[mainTreatmentIndex];
+    const subTreatmentName = currentTreatment.subTreatments[subTreatmentIndex]?.name;
     const updatedSubTreatments = currentTreatment.subTreatments.filter(
       (_, index) => index !== subTreatmentIndex
     );
@@ -337,6 +354,7 @@ const TreatmentManager = ({
     };
 
     onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+    toast.success(`Sub-treatment "${subTreatmentName}" removed`)
   };
 
   const handleAddFromAvailableSubTreatments = (
@@ -344,6 +362,13 @@ const TreatmentManager = ({
     subTreatmentName: string
   ) => {
     const currentTreatment = items[mainTreatmentIndex];
+    
+    // Check if sub-treatment already exists
+    if (currentTreatment.subTreatments?.some(st => st.name === subTreatmentName)) {
+      toast.error("Sub-treatment already exists");
+      return;
+    }
+    
     const newSubTreatment = {
       name: subTreatmentName,
       slug: subTreatmentName.toLowerCase().replace(/\s+/g, "-"),
@@ -358,6 +383,7 @@ const TreatmentManager = ({
     };
 
     onUpdateTreatment(mainTreatmentIndex, updatedTreatment);
+    toast.success(`Sub-treatment "${subTreatmentName}" added`);
   };
 
   return (
@@ -630,77 +656,161 @@ interface ClinicCardProps {
   onEdit: (clinic: Clinic) => void;
   getImagePath: (photoPath: string) => string;
   canUpdate: boolean;
+  stats?: ClinicStats;
+  statsLoading?: boolean;
 }
-const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate }: ClinicCardProps) => (
-  <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden max-w-5xl mx-auto">
-    {/* Image & Edit Section */}
-    <div className="relative">
-      {clinic.photos?.[0] ? (
-        <Image
-          src={getImagePath(clinic.photos[0])}
-          className="w-full h-auto max-h-48 sm:max-h-56 object-contain bg-gray-50"
-          alt={clinic.name}
-          width={480}
-          height={220}
-          unoptimized={true}
-          onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            (img as any).onerror = null;
-            img.src = PLACEHOLDER_DATA_URI;
-          }}
-        />
-      ) : (
-        <div className="w-full h-auto min-h-40 sm:min-h-48 flex items-center justify-center bg-gray-50">
-          <span className="text-gray-400 text-xs">
-            Upload Health Center Photo
-          </span>
-        </div>
-      )}
+const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate, stats, statsLoading }: ClinicCardProps) => {
+  // Calculate stats from clinic data if not provided
+  const totalTreatments = stats?.totalTreatments || clinic.treatments?.length || 0;
+  const totalServices = stats?.totalServices || clinic.servicesName?.length || 0;
+  const totalSubTreatments = stats?.totalSubTreatments || clinic.treatments?.reduce(
+    (sum, t) => sum + (t.subTreatments?.length || 0),
+    0
+  ) || 0;
 
-      {canUpdate && (
-        <button
-          onClick={() => onEdit(clinic)}
-          className="absolute top-3 right-3 bg-[#2D9AA5] text-white p-2 rounded-lg hover:bg-[#238891]"
-        >
-          <Edit3 className="w-4 h-4" />
-        </button>
-      )}
+  return (
+  <div className="bg-white rounded-lg shadow-sm border border-gray-300 overflow-hidden">
+    {/* Profile Header Section with Image in Corner */}
+    <div className="p-4 sm:p-6 border-b border-gray-200">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+        {/* Clinic Image - Top Left Corner */}
+        <div className="relative flex-shrink-0">
+          <div className="relative w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-lg overflow-hidden border-4 border-gray-200 shadow-md bg-gray-50">
+            {clinic.photos?.[0] ? (
+              <Image
+                src={getImagePath(clinic.photos[0])}
+                className="w-full h-full object-contain"
+                alt={clinic.name}
+                width={160}
+                height={160}
+                unoptimized={true}
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement;
+                  (img as any).onerror = null;
+                  img.src = PLACEHOLDER_DATA_URI;
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <Camera className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+              </div>
+            )}
+          </div>
+          {canUpdate && (
+            <button
+              onClick={() => onEdit(clinic)}
+              className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all border-2 border-white"
+              title="Edit Profile"
+            >
+              <Edit3 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Clinic Info - Next to Image */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 break-words">
+                {clinic.name}
+              </h2>
+              <div className="flex items-start gap-2 text-gray-700 text-sm sm:text-base">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-gray-500" />
+                <span className="break-words">{clinic.address}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     {/* Content */}
-    <div className="p-3 sm:p-4">
-      {/* Header */}
-      <div className="mb-3">
-        <h2 className="text-base sm:text-lg font-semibold text-[#2D9AA5] mb-1">
-          {clinic.name}
-        </h2>
-        <div className="flex items-center gap-1.5 text-gray-600 text-xs">
-          <MapPin className="w-3.5 h-3.5" />
-          <span>{clinic.address}</span>
+    <div className="p-4 sm:p-6">
+      {/* Statistics Section */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-5 h-5 text-gray-700" />
+          <h3 className="text-lg font-bold text-gray-900">Statistics Overview</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <StatCard
+            icon={<Star className="w-5 h-5" />}
+            label="Reviews"
+            value={stats?.totalReviews || 0}
+            color="text-yellow-600"
+            bgColor="bg-yellow-50"
+            borderColor="border-yellow-200"
+            loading={statsLoading}
+          />
+          <StatCard
+            icon={<Mail className="w-5 h-5" />}
+            label="Enquiries"
+            value={stats?.totalEnquiries || 0}
+            color="text-blue-600"
+            bgColor="bg-blue-50"
+            borderColor="border-blue-200"
+            loading={statsLoading}
+          />
+          <StatCard
+            icon={<Star className="w-5 h-5" />}
+            label="Rating"
+            value={stats?.averageRating && stats.averageRating > 0 ? stats.averageRating.toFixed(1) : "N/A"}
+            color="text-green-600"
+            bgColor="bg-green-50"
+            borderColor="border-green-200"
+            loading={statsLoading}
+          />
+          <StatCard
+            icon={<Heart className="w-5 h-5" />}
+            label="Treatments"
+            value={totalTreatments}
+            color="text-rose-600"
+            bgColor="bg-rose-50"
+            borderColor="border-rose-200"
+            loading={false}
+          />
+          <StatCard
+            icon={<Leaf className="w-5 h-5" />}
+            label="Services"
+            value={totalServices}
+            color="text-emerald-600"
+            bgColor="bg-emerald-50"
+            borderColor="border-emerald-200"
+            loading={false}
+          />
+          <StatCard
+            icon={<Activity className="w-5 h-5" />}
+            label="Sub-Treatments"
+            value={totalSubTreatments}
+            color="text-purple-600"
+            bgColor="bg-purple-50"
+            borderColor="border-purple-200"
+            loading={false}
+          />
         </div>
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-        <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-md">
-          <div className="w-7 h-7 bg-[#2D9AA5] rounded-md flex items-center justify-center text-white text-[10px] font-bold">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">
             د.إ
           </div>
           <div>
-            <div className="text-[11px] text-gray-500">Consultation Fee</div>
-            <div className="text-xs font-medium text-gray-800">
+            <div className="text-xs font-semibold text-gray-600 mb-1">Consultation Fee</div>
+            <div className="text-sm font-bold text-gray-900">
               {clinic.pricing || "Contact for pricing"}
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-md">
-          <div className="w-7 h-7 bg-[#2D9AA5] rounded-md flex items-center justify-center">
-            <Clock className="w-3.5 h-3.5 text-white" />
+        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Clock className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="text-[11px] text-gray-500">Timings</div>
-            <div className="text-xs font-medium text-gray-800">
+            <div className="text-xs font-semibold text-gray-600 mb-1">Timings</div>
+            <div className="text-sm font-bold text-gray-900">
               {clinic.timings || "Contact for timings"}
             </div>
           </div>
@@ -709,16 +819,16 @@ const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate }: ClinicCardProps
 
       {/* Services */}
       {clinic.servicesName?.length > 0 && (
-        <div className="mb-3">
-          <h3 className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <Leaf className="w-3.5 h-3.5 text-green-500" />
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <Leaf className="w-4 h-4 text-green-600" />
             Services
           </h3>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {clinic.servicesName.map((service, idx) => (
               <span
                 key={idx}
-                className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded text-[10px]"
+                className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200"
               >
                 {service}
               </span>
@@ -729,24 +839,24 @@ const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate }: ClinicCardProps
 
       {/* Treatments */}
       {clinic.treatments?.length > 0 && (
-        <div className="mb-3">
-          <h3 className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <Heart className="w-3.5 h-3.5 text-rose-500" />
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <Heart className="w-4 h-4 text-rose-600" />
             Treatments
           </h3>
-          <div className="space-y-1.5">
+          <div className="space-y-3">
             {clinic.treatments.map((treatment, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-md p-2.5">
-                <span className="px-1.5 py-0.5 bg-[#2D9AA5] text-white rounded text-[10px] font-medium">
+              <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <span className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold inline-block mb-2">
                   {treatment.mainTreatment}
                 </span>
                 {treatment.subTreatments &&
                   treatment.subTreatments.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       {treatment.subTreatments.map((subTreatment, subIdx) => (
                         <span
                           key={subIdx}
-                          className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px]"
+                          className="px-3 py-1.5 bg-white text-gray-700 rounded-lg text-xs font-medium border border-gray-200"
                         >
                           {subTreatment.name}
                           {typeof subTreatment.price === "number" &&
@@ -754,7 +864,7 @@ const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate }: ClinicCardProps
                               <>
                                 {" "}
                                 -{" "}
-                                <span className="text-[#2D9AA5] font-semibold">
+                                <span className="text-blue-600 font-bold">
                                   د.إ{subTreatment.price}
                                 </span>
                               </>
@@ -770,10 +880,10 @@ const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate }: ClinicCardProps
       )}
 
       {/* Footer */}
-      <div className="pt-2.5 border-t border-gray-200">
-        <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-          <Calendar className="w-3.5 h-3.5" />
-          <span>
+      <div className="pt-4 border-t border-gray-200">
+        <div className="flex items-center gap-2 text-xs text-gray-600">
+          <Calendar className="w-4 h-4" />
+          <span className="font-medium">
             Established{" "}
             {new Date(clinic.createdAt).toLocaleDateString("en-US", {
               year: "numeric",
@@ -783,6 +893,35 @@ const ClinicCard = ({ clinic, onEdit, getImagePath, canUpdate }: ClinicCardProps
         </div>
       </div>
     </div>
+  </div>
+  );
+};
+
+// Statistics Card Component
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  loading?: boolean;
+}
+
+const StatCard = ({ icon, label, value, color, bgColor, borderColor, loading }: StatCardProps) => (
+  <div className={`bg-white rounded-lg p-3 sm:p-4 border ${borderColor} ${bgColor} shadow-sm hover:shadow-md transition-all`}>
+    <div className={`flex items-center gap-2 mb-2 ${color}`}>
+      {icon}
+      <span className="text-xs font-semibold text-gray-700">{label}</span>
+    </div>
+    {loading ? (
+      <div className="flex items-center gap-2">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+        <span className="text-xs text-gray-500">Loading...</span>
+      </div>
+    ) : (
+      <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
+    )}
   </div>
 );
 
@@ -812,6 +951,17 @@ function ClinicManagementDashboard() {
     canDelete: false,
   });
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+
+  // Statistics state
+  const [clinicStats, setClinicStats] = useState<ClinicStats>({
+    totalReviews: 0,
+    totalEnquiries: 0,
+    averageRating: 0,
+    totalTreatments: 0,
+    totalServices: 0,
+    totalSubTreatments: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const getImagePath = (photoPath: string): string => {
     if (!photoPath) return PLACEHOLDER_DATA_URI;
@@ -947,7 +1097,9 @@ function ClinicManagementDashboard() {
         // Only catch non-403 errors here (validateStatus handles 403 above)
         // For other errors (network, server errors, etc.), log and show message
         console.error("Error fetching clinics:", err);
-        toast.error("Failed to fetch clinic information. Please try again.");
+        if (err.response?.status !== 403) {
+          toast.error("Failed to fetch clinic information. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -968,6 +1120,74 @@ function ClinicManagementDashboard() {
     fetchClinics();
     fetchTreatments();
   }, [permissionsLoaded, permissions.canRead]);
+
+  // Fetch clinic statistics
+  useEffect(() => {
+    const fetchClinicStats = async () => {
+      if (!permissionsLoaded || !permissions.canRead) {
+        setStatsLoading(false);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("clinicToken");
+        if (!token) {
+          setStatsLoading(false);
+          return;
+        }
+
+        // Fetch dashboard stats
+        const statsRes = await axios.get("/api/clinics/dashboardStats", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (statsRes.data.success) {
+          const stats = statsRes.data.stats;
+          
+          // Calculate stats from clinic data
+          const currentClinic = clinics[0];
+          const totalTreatments = currentClinic?.treatments?.length || 0;
+          const totalServices = currentClinic?.servicesName?.length || 0;
+          const totalSubTreatments = currentClinic?.treatments?.reduce(
+            (sum: number, t: any) => sum + (t.subTreatments?.length || 0),
+            0
+          ) || 0;
+
+          // Fetch reviews for average rating
+          let averageRating = 0;
+          try {
+            const reviewsRes = await axios.get(`/api/clinics/reviews/${currentClinic?._id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (reviewsRes.data.success && reviewsRes.data.data) {
+              averageRating = reviewsRes.data.data.averageRating || 0;
+            }
+          } catch (error) {
+            console.error("Error fetching reviews:", error);
+          }
+
+          setClinicStats({
+            totalReviews: stats.totalReviews || 0,
+            totalEnquiries: stats.totalEnquiries || 0,
+            averageRating: averageRating,
+            totalTreatments: totalTreatments,
+            totalServices: totalServices,
+            totalSubTreatments: totalSubTreatments,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching clinic stats:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    if (clinics.length > 0) {
+      fetchClinicStats();
+    } else {
+      setStatsLoading(false);
+    }
+  }, [clinics, permissionsLoaded, permissions.canRead]);
 
   const handleEdit = (clinic: unknown) => {
     // Check permission before allowing edit
@@ -1013,19 +1233,28 @@ function ClinicManagementDashboard() {
 
   const addService = () => {
     if (newService.trim() && editForm.servicesName) {
+      if (editForm.servicesName.includes(newService.trim())) {
+        toast.error("Service already exists");
+        return;
+      }
       setEditForm((prev) => ({
         ...prev,
         servicesName: [...(prev.servicesName || []), newService.trim()],
       }));
       setNewService("");
+      toast.success("Service added successfully");
+    } else {
+      toast.error("Please enter a service name");
     }
   };
 
   const removeService = (index: number) => {
+    const serviceName = editForm.servicesName?.[index];
     setEditForm((prev) => ({
       ...prev,
       servicesName: prev.servicesName?.filter((_, i) => i !== index) || [],
     }));
+    toast.success(`Service "${serviceName}" removed`);
   };
 
   const addTreatment = async () => {
@@ -1080,8 +1309,13 @@ function ClinicManagementDashboard() {
           treatments: newTreatments,
         };
       });
+      toast.success(`Treatment "${trimmed}" added successfully`);
     } else {
-      console.log("Treatment not added - empty or duplicate:", trimmed);
+      if (!trimmed) {
+        toast.error("Please enter a treatment name");
+      } else {
+        toast.error("Treatment already exists");
+      }
     }
     setNewTreatment("");
     setShowCustomTreatmentInput(false);
@@ -1109,14 +1343,19 @@ function ClinicManagementDashboard() {
           treatments: newTreatments,
         };
       });
+      toast.success(`Treatment "${treatmentName}" added successfully`);
+    } else {
+      toast.error("Treatment already exists");
     }
   };
 
   const removeTreatment = (index: number) => {
+    const treatmentName = editForm.treatments?.[index]?.mainTreatment;
     setEditForm((prev) => ({
       ...prev,
       treatments: prev.treatments?.filter((_, i) => i !== index) || [],
     }));
+    toast.success(`Treatment "${treatmentName}" removed`);
   };
 
   const handleUpdateTreatment = (
@@ -1194,13 +1433,15 @@ function ClinicManagementDashboard() {
             clinic._id === editingClinicId ? response.data.clinic : clinic
           )
         );
-        toast.success("Clinic updated successfully!");
+        toast.success("Clinic profile updated successfully!");
         handleCancel();
+      } else {
+        toast.error(response.data.message || "Failed to update clinic profile");
       }
-    } catch {
-      // console.error("Error updating clinic:", error);
-      toast.error("Error updating clinic. Please try again.");
-      // alert("Error updating clinic. Please try again.");
+    } catch (error: any) {
+      console.error("Error updating clinic:", error);
+      const errorMessage = error.response?.data?.message || "Error updating clinic. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setUpdating(false);
     }
@@ -1227,15 +1468,18 @@ function ClinicManagementDashboard() {
           },
         }));
         setGeocodingStatus("Address located on map!");
+        toast.success("Address geocoded successfully");
         setTimeout(() => setGeocodingStatus(""), 2000);
       } else {
         setGeocodingStatus(
           "Could not locate address. Please check the address."
         );
+        toast.error("Could not locate address. Please check the address.");
         setTimeout(() => setGeocodingStatus(""), 4000);
       }
     } catch {
       setGeocodingStatus("Geocoding failed. Please check the address.");
+      toast.error("Geocoding failed. Please check the address.");
       setTimeout(() => setGeocodingStatus(""), 4000);
     }
   };
@@ -1256,36 +1500,63 @@ function ClinicManagementDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
-      <Header
-        onEditClick={handleEditFromHeader}
-        hasClinic={clinics.length > 0}
-        isEditing={isEditing}
-        canUpdate={permissions.canUpdate}
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#374151',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
       />
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+        <Header
+          onEditClick={handleEditFromHeader}
+          hasClinic={clinics.length > 0}
+          isEditing={isEditing}
+          canUpdate={permissions.canUpdate}
+          clinicName={clinics[0]?.name}
+        />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
         {isEditing ? (
           <div className="max-w-5xl mx-auto">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-6 sm:p-8">
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Edit3 className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                      Edit Health Center
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                      Edit Clinic Profile
                     </h2>
                     <p className="text-gray-600 text-sm">
-                      Update Health Center information
+                      Update your clinic information
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleCancel}
-                  className="self-end sm:self-auto p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all"
+                  className="self-end sm:self-auto p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1409,14 +1680,17 @@ function ClinicManagementDashboard() {
                             ) {
                               setPhotoError("Please upload a PNG or JPG file");
                               setSelectedFile(null);
+                              toast.error("Please upload a PNG or JPG file");
                             } else if (file.size > 1024 * 1024) {
                               setPhotoError(
                                 "File is too large and you have to upload file less than 1MB"
                               );
                               setSelectedFile(null);
+                              toast.error("File size must be less than 1MB");
                             } else {
                               setSelectedFile(file);
                               setPhotoError("");
+                              toast.success("Photo selected successfully");
                             }
                           }
                         }}
@@ -1451,11 +1725,11 @@ function ClinicManagementDashboard() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-6 border-t border-gray-300">
                 <button
                   onClick={handleUpdate}
                   disabled={updating}
-                  className="order-2 sm:order-1 px-6 py-3 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#238891] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium transition-colors"
+                  className="order-2 sm:order-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold transition-colors shadow-sm hover:shadow-md"
                 >
                   {updating ? (
                     <>
@@ -1463,12 +1737,12 @@ function ClinicManagementDashboard() {
                       <span>Updating...</span>
                     </>
                   ) : (
-                    "Update Health Center"
+                    "Update Profile"
                   )}
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="order-1 sm:order-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                  className="order-1 sm:order-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold transition-colors"
                 >
                   Cancel
                 </button>
@@ -1476,35 +1750,35 @@ function ClinicManagementDashboard() {
             </div>
           </div>
         ) : (
-          <div className="flex justify-center">
+          <div className="w-full">
             {/* Show permission denied message if no read permission */}
             {!permissions.canRead ? (
-              <div className="text-center py-12 sm:py-16 w-full">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 max-w-md mx-auto">
+              <div className="bg-white rounded-lg p-8 sm:p-12 border border-gray-300 shadow-sm">
+                <div className="text-center max-w-md mx-auto">
                   <div className="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
                     <Building2 className="w-8 h-8 text-red-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
                     Access Denied
                   </h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-700 mb-4">
                     You do not have permission to view clinic information.
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-600">
                     Please contact your administrator to request access to the Health Center Management module.
                   </p>
                 </div>
               </div>
             ) : clinics.length === 0 ? (
-              <div className="text-center py-12 sm:py-16">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 max-w-md mx-auto">
-                  <div className="w-16 h-16 bg-[#2D9AA5]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <Building2 className="w-8 h-8 text-[#2D9AA5]" />
+              <div className="bg-white rounded-lg p-8 sm:p-12 border border-gray-300 shadow-sm">
+                <div className="text-center max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Building2 className="w-8 h-8 text-blue-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
                     No Clinics Found
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-700">
                     Start by adding your first clinic
                   </p>
                 </div>
@@ -1518,8 +1792,108 @@ function ClinicManagementDashboard() {
                     onEdit={handleEdit}
                     getImagePath={getImagePath}
                     canUpdate={permissions.canUpdate}
+                    stats={clinicStats}
+                    statsLoading={statsLoading}
                   />
                 ))}
+                
+                {/* Statistics Charts Section */}
+                {clinics.length > 0 && (
+                  <div className="bg-white rounded-lg p-6 border border-gray-300 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <TrendingUp className="w-6 h-6 text-gray-700" />
+                      <div>
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics & Insights</h2>
+                        <p className="text-sm text-gray-600">Visual representation of your clinic performance</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Bar Chart - Reviews vs Enquiries */}
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Reviews & Enquiries</h3>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart data={[
+                            { name: 'Reviews', value: clinicStats.totalReviews },
+                            { name: 'Enquiries', value: clinicStats.totalEnquiries },
+                          ]}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
+                            <YAxis stroke="#6b7280" fontSize={12} />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#fff', 
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '6px',
+                                fontSize: '12px'
+                              }}
+                            />
+                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                              <Cell fill="#3b82f6" />
+                              <Cell fill="#10b981" />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Pie Chart - Services Distribution */}
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Services Distribution</h3>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: 'Treatments', value: clinicStats.totalTreatments },
+                                { name: 'Services', value: clinicStats.totalServices },
+                                { name: 'Sub-Treatments', value: clinicStats.totalSubTreatments },
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percent }: { name: string; percent?: number }) => `${name}: ${percent !== undefined ? (percent * 100).toFixed(0) : 0}%`}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              <Cell fill="#3b82f6" />
+                              <Cell fill="#10b981" />
+                              <Cell fill="#8b5cf6" />
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                      <SummaryCard
+                        title="Total Engagement"
+                        value={clinicStats.totalReviews + clinicStats.totalEnquiries}
+                        icon={<Users className="w-5 h-5" />}
+                        color="blue"
+                      />
+                      <SummaryCard
+                        title="Average Rating"
+                        value={clinicStats.averageRating > 0 ? `${clinicStats.averageRating.toFixed(1)} ⭐` : "No ratings"}
+                        icon={<Star className="w-5 h-5" />}
+                        color="yellow"
+                      />
+                      <SummaryCard
+                        title="Total Offerings"
+                        value={clinicStats.totalTreatments + clinicStats.totalServices}
+                        icon={<Heart className="w-5 h-5" />}
+                        color="rose"
+                      />
+                      <SummaryCard
+                        title="Activity Score"
+                        value={clinicStats.totalSubTreatments > 0 ? "Active" : "Setup"}
+                        icon={<Activity className="w-5 h-5" />}
+                        color="green"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1542,5 +1916,34 @@ const ProtectedDashboard: NextPageWithLayout = withClinicAuth(
 
 // ✅ Reassign layout (TS-safe now)
 ProtectedDashboard.getLayout = ClinicManagementDashboard.getLayout;
+
+// Summary Card Component
+interface SummaryCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: "blue" | "yellow" | "rose" | "green";
+}
+
+const SummaryCard = ({ title, value, icon, color }: SummaryCardProps) => {
+  const colorClasses = {
+    blue: "bg-blue-50 border-blue-200 text-blue-600",
+    yellow: "bg-yellow-50 border-yellow-200 text-yellow-600",
+    rose: "bg-rose-50 border-rose-200 text-rose-600",
+    green: "bg-green-50 border-green-200 text-green-600",
+  };
+
+  const [bgColor, borderColor, textColor] = colorClasses[color].split(' ');
+
+  return (
+    <div className={`bg-white rounded-lg p-4 border ${borderColor} shadow-sm`}>
+      <div className={`flex items-center gap-2 mb-2 ${textColor}`}>
+        {icon}
+        <span className="text-xs font-semibold text-gray-700">{title}</span>
+      </div>
+      <p className="text-lg font-bold text-gray-900">{value}</p>
+    </div>
+  );
+};
 
 export default ProtectedDashboard;
