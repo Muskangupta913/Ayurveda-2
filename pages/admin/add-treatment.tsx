@@ -1,10 +1,21 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth';
-import { useAgentPermissions } from '../../hooks/useAgentPermissions'; 
+import { useAgentPermissions } from '../../hooks/useAgentPermissions';
+import {
+  BeakerIcon,
+  PlusIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline';
+import type { NextPageWithLayout } from '../_app';
 
 type SubTreatment = {
   name: string;
@@ -18,26 +29,82 @@ type Treatment = {
   subcategories: SubTreatment[];
 };
 
-type NextPageWithLayout = React.FC & {
-  getLayout?: (page: React.ReactNode) => React.ReactNode;
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+// Toast Component
+const Toast = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircleIcon className="w-4 h-4" />,
+    error: <XCircleIcon className="w-4 h-4" />,
+    info: <InformationCircleIcon className="w-4 h-4" />,
+    warning: <ExclamationTriangleIcon className="w-4 h-4" />,
+  };
+
+  const colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    warning: 'bg-yellow-500',
+  };
+
+  return (
+    <div
+      className={`${colors[toast.type]} text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs animate-slide-in`}
+    >
+      {icons[toast.type]}
+      <span className="flex-1 font-medium">{toast.message}</span>
+      <button
+        onClick={onClose}
+        className="hover:bg-white/20 rounded p-0.5 transition-colors"
+      >
+        <XMarkIcon className="w-3 h-3" />
+      </button>
+    </div>
+  );
 };
 
+// Toast Container
+const ToastContainer = ({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) => (
+  <div className="fixed top-4 right-4 z-50 space-y-2">
+    {toasts.map((toast) => (
+      <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+    ))}
+  </div>
+);
+
 const AddTreatment: NextPageWithLayout = () => {
+  const router = useRouter();
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [newMainTreatment, setNewMainTreatment] = useState<string>('');
   const [newSubTreatment, setNewSubTreatment] = useState<string>('');
   const [selectedMainTreatment, setSelectedMainTreatment] = useState<string>('');
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<Array<{id: number, message: string, type: 'success' | 'error'}>>([]);
+  const [fetching, setFetching] = useState<boolean>(false);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [treatmentToDelete, setTreatmentToDelete] = useState<{id: string, name: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
-  const router = useRouter();
-  
-  // Check if user is an admin or agent - use state to ensure reactivity
+  // Toast helper functions
+  const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  // Check if user is an admin or agent
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAgent, setIsAgent] = useState<boolean>(false);
   
@@ -47,96 +114,56 @@ const AddTreatment: NextPageWithLayout = () => {
       const agentToken = !!localStorage.getItem('agentToken');
       const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
       
-      console.log('Add Treatment - Initial Token Check:', { 
-        adminToken, 
-        agentToken, 
-        isAgentRoute,
-        pathname: router.pathname,
-        locationPath: window.location.pathname
-      });
-      
-      // CRITICAL: If on agent route, prioritize agentToken over adminToken
       if (isAgentRoute && agentToken) {
-        // On agent route with agentToken = treat as agent (even if adminToken exists)
         setIsAdmin(false);
         setIsAgent(true);
       } else if (adminToken) {
-        // Not on agent route, or no agentToken = treat as admin if adminToken exists
         setIsAdmin(true);
         setIsAgent(false);
       } else if (agentToken) {
-        // Has agentToken but not on agent route = treat as agent
         setIsAdmin(false);
         setIsAgent(true);
       } else {
-        // No tokens = neither
         setIsAdmin(false);
         setIsAgent(false);
       }
     }
   }, [router.pathname]);
   
-  // Always call the hook (React rules), but only use it if isAgent is true
-  // Pass null as moduleKey if not an agent to skip the API call
   const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_add_treatment" : (null as any));
   const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
   const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
 
-  // Debug logging - always log to see what's happening
-  useEffect(() => {
-    console.log('Add Treatment - State Update:', {
-      isAdmin,
-      isAgent,
-      permissionsLoading,
-      hasAgentPermissions: !!agentPermissions,
-      canDelete: agentPermissions?.canDelete,
-      canAll: agentPermissions?.canAll
-    });
-  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    }, 3000);
-  };
-
-  const removeToast = (id: number) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
-
   const fetchTreatments = async () => {
+    setFetching(true);
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
 
       if (!token) {
-        console.error("No token found");
+        showToast('No authentication token found', 'error');
         return;
       }
 
       const res = await axios.get<{ treatments: Treatment[] }>('/api/doctor/getTreatment', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setTreatments(res.data.treatments);
-    } catch (err) {
+      setTreatments(res.data.treatments || []);
+    } catch (err: any) {
       console.error('Failed to fetch treatments', err);
+      showToast('Failed to load treatments', 'error');
+    } finally {
+      setFetching(false);
     }
   };
 
   useEffect(() => {
-    // Fetch treatments immediately for admins, or for agents after permissions load
     if (isAdmin || !isAgent || !permissionsLoading) {
       fetchTreatments();
     }
   }, [isAdmin, isAgent, permissionsLoading]);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
     if (showDeleteModal) {
       document.body.style.overflow = 'hidden';
@@ -144,7 +171,6 @@ const AddTreatment: NextPageWithLayout = () => {
       document.body.style.overflow = 'unset';
     }
     
-    // Cleanup on unmount
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -152,28 +178,24 @@ const AddTreatment: NextPageWithLayout = () => {
 
   const handleAddMainTreatment = async () => {
     if (!newMainTreatment.trim()) {
-      showToast('Main treatment name cannot be empty', 'error');
+      showToast('Treatment name required', 'error');
       return;
     }
 
-    // Check permissions only for agents - admins bypass all checks
     if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canCreate && !agentPermissions.canAll) {
-      showToast('You do not have permission to create treatments', 'error');
+      showToast('Permission denied', 'error');
       return;
     }
 
     setLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
 
       if (!token) {
-        showToast('No token found. Please login again.', 'error');
+        showToast('Authentication required', 'error');
         setLoading(false);
         return;
       }
@@ -186,20 +208,12 @@ const AddTreatment: NextPageWithLayout = () => {
       });
 
       if (res.status === 201) {
-        showToast('Main treatment added successfully', 'success');
+        showToast('Treatment added', 'success');
         setNewMainTreatment('');
         fetchTreatments();
       }
-    } catch (err: unknown) {
-      let message = 'Error adding main treatment';
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message
-      ) {
-        message = (err as { response: { data: { message: string } } }).response.data.message;
-      }
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Failed to add treatment';
       showToast(message, 'error');
     } finally {
       setLoading(false);
@@ -208,33 +222,29 @@ const AddTreatment: NextPageWithLayout = () => {
 
   const handleAddSubTreatment = async () => {
     if (!selectedMainTreatment) {
-      showToast('Please select a main treatment first', 'error');
+      showToast('Select main treatment first', 'warning');
       return;
     }
 
     if (!newSubTreatment.trim()) {
-      showToast('Sub-treatment name cannot be empty', 'error');
+      showToast('Sub-treatment name required', 'error');
       return;
     }
 
-    // Check permissions only for agents - admins bypass all checks
     if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canCreate && !agentPermissions.canAll) {
-      showToast('You do not have permission to create sub-treatments', 'error');
+      showToast('Permission denied', 'error');
       return;
     }
 
     setLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
 
       if (!token) {
-        showToast('No token found. Please login again.', 'error');
+        showToast('Authentication required', 'error');
         setLoading(false);
         return;
       }
@@ -248,21 +258,13 @@ const AddTreatment: NextPageWithLayout = () => {
       });
 
       if (res.status === 201) {
-        showToast('Sub-treatment added successfully', 'success');
+        showToast('Sub-treatment added', 'success');
         setNewSubTreatment('');
         setSelectedMainTreatment('');
         fetchTreatments();
       }
-    } catch (err: unknown) {
-      let message = 'Error adding sub-treatment';
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message
-      ) {
-        message = (err as { response: { data: { message: string } } }).response.data.message;
-      }
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Failed to add sub-treatment';
       showToast(message, 'error');
     } finally {
       setLoading(false);
@@ -277,9 +279,8 @@ const AddTreatment: NextPageWithLayout = () => {
   const handleDeleteConfirm = async () => {
     if (!treatmentToDelete) return;
 
-    // Check permissions only for agents - admins bypass all checks
     if (!isAdmin && isAgent && agentPermissions && !agentPermissions.canDelete && !agentPermissions.canAll) {
-      showToast('You do not have permission to delete treatments', 'error');
+      showToast('Permission denied', 'error');
       setShowDeleteModal(false);
       setTreatmentToDelete(null);
       return;
@@ -288,13 +289,12 @@ const AddTreatment: NextPageWithLayout = () => {
     setIsDeleting(true);
     
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
 
       if (!token) {
-        showToast('No token found. Please login again.', 'error');
+        showToast('Authentication required', 'error');
         setIsDeleting(false);
         return;
       }
@@ -302,12 +302,12 @@ const AddTreatment: NextPageWithLayout = () => {
       await axios.delete(`/api/admin/deleteTreatment?id=${treatmentToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      showToast('Treatment deleted successfully', 'success');
+      showToast('Treatment deleted', 'success');
       fetchTreatments();
       setShowDeleteModal(false);
       setTreatmentToDelete(null);
     } catch (err: any) {
-      showToast(err.response?.data?.message || 'Error deleting treatment', 'error');
+      showToast(err.response?.data?.message || 'Delete failed', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -328,429 +328,271 @@ const AddTreatment: NextPageWithLayout = () => {
     }
   };
 
-  // Show access denied message only for agents without read permission - admins always have access
+  const totalSubTreatments = treatments.reduce((total, treatment) => total + (treatment.subcategories?.length || 0), 0);
+
+  // Show access denied message only for agents without read permission
   if (!isAdmin && isAgent && !permissionsLoading && agentPermissions && !agentPermissions.canRead && !agentPermissions.canAll) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
-          <svg className="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
-          <p className="text-slate-600">You do not have permission to view treatments. Please contact your administrator.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 max-w-sm w-full text-center">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <XCircleIcon className="w-6 h-6 text-red-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-sm text-gray-700">
+            You do not have permission to view treatments.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetching && treatments.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800 mx-auto"></div>
+          <p className="mt-3 text-sm text-gray-700">Loading...</p>
         </div>
       </div>
     );
   }
 
  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-[#2D9AA5] rounded-xl mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 7.172V5L8 4z" />
-            </svg>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
+      <div className="max-w-6xl mx-auto space-y-4">
+        {/* Compact Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-gray-800 p-2 rounded-lg">
+                <BeakerIcon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Treatment Management</h1>
+                <p className="text-xs text-gray-700">Add and manage treatments</p>
+              </div>
+            </div>
+            <button
+              onClick={fetchTreatments}
+              disabled={fetching}
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {fetching ? 'Loading...' : 'Refresh'}
+            </button>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
-            Treatment Management
-          </h1>
-          <p className="text-gray-600 text-sm md:text-base">
-            Manage treatments efficiently
-          </p>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* Add Treatment Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center mb-6">
-                <div className="w-10 h-10 bg-[#2D9AA5] rounded-lg flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </div>
-                <h2 className="text-lg font-semibold text-gray-800">Add Treatment</h2>
-              </div>
+        {/* Compact Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <p className="text-xs text-gray-700 mb-1">Main</p>
+            <p className="text-xl font-bold text-gray-900">{treatments.length}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <p className="text-xs text-gray-700 mb-1">Sub</p>
+            <p className="text-xl font-bold text-gray-900">{totalSubTreatments}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <p className="text-xs text-gray-700 mb-1">Total</p>
+            <p className="text-xl font-bold text-gray-900">{treatments.length + totalSubTreatments}</p>
+          </div>
+        </div>
 
-              <div className="space-y-4">
-                {/* Main Treatment */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Main Treatment
-                  </label>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          
+          {/* Add Treatment Form */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Add Treatment</h2>
+
+            <div className="space-y-4">
+              {/* Main Treatment */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Main Treatment
+                </label>
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={newMainTreatment}
                     onChange={(e) => setNewMainTreatment(e.target.value)}
                     onKeyPress={(e) => handleKeyPress(e, 'main')}
-                    placeholder="Enter treatment name"
-                    className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent outline-none text-sm"
+                    placeholder="Enter name"
+                    className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
                   />
-                </div>
-
-                {/* Always show Add Main Treatment button for admins, conditionally for agents */}
-                {(isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canCreate || agentPermissions.canAll))) && (
-                  <button
-                    onClick={handleAddMainTreatment}
-                    disabled={loading || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)}
-                    className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all ${
-                      loading || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)
-                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                        : 'bg-[#2D9AA5] hover:bg-[#247A83] text-white'
-                    }`}
-                  >
-                    {loading ? 'Adding...' : 'Add Main Treatment'}
-                  </button>
-                )}
-
-                {/* Divider */}
-                <div className="border-t border-gray-200 pt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Add Sub-Treatment</h3>
-                  
-                  {/* Select Main Treatment */}
-                  <div className="mb-3">
-                    <select
-                      value={selectedMainTreatment}
-                      onChange={(e) => setSelectedMainTreatment(e.target.value)}
-                      className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent outline-none text-sm"
-                    >
-                      <option value="">Select main treatment</option>
-                      {treatments.map((treatment) => (
-                        <option key={treatment._id} value={treatment._id}>
-                          {treatment.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Sub-Treatment Input */}
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      value={newSubTreatment}
-                      onChange={(e) => setNewSubTreatment(e.target.value)}
-                      onKeyPress={(e) => handleKeyPress(e, 'sub')}
-                      placeholder="Enter sub-treatment name"
-                      className="text-black w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent outline-none text-sm"
-                    />
-                  </div>
-
-                  {/* Always show Add Sub-Treatment button for admins, conditionally for agents */}
                   {(isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canCreate || agentPermissions.canAll))) && (
                     <button
-                      onClick={handleAddSubTreatment}
-                      disabled={loading || !selectedMainTreatment || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)}
-                      className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all ${
-                        loading || !selectedMainTreatment || (!isAdmin && isAgent && !agentPermissions?.canCreate && !agentPermissions?.canAll)
-                          ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      }`}
+                      onClick={handleAddMainTreatment}
+                      disabled={loading}
+                      className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
                     >
-                      {loading ? 'Adding...' : 'Add Sub-Treatment'}
+                      {loading ? '...' : 'Add'}
                     </button>
                   )}
                 </div>
+              </div>
 
-                {/* Messages */}
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-700 text-sm">{error}</p>
-                  </div>
-                )}
+              {/* Divider */}
+              <div className="border-t border-gray-200 pt-4">
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Sub-Treatment
+                </label>
+                
+                <select
+                  value={selectedMainTreatment}
+                  onChange={(e) => setSelectedMainTreatment(e.target.value)}
+                  className="w-full mb-2 px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
+                >
+                  <option value="">Select main treatment</option>
+                  {treatments.map((treatment) => (
+                    <option key={treatment._id} value={treatment._id}>
+                      {treatment.name}
+                    </option>
+                  ))}
+                </select>
 
-                {success && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-700 text-sm">{success}</p>
-                  </div>
-                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSubTreatment}
+                    onChange={(e) => setNewSubTreatment(e.target.value)}
+                    onKeyPress={(e) => handleKeyPress(e, 'sub')}
+                    placeholder="Enter sub-treatment name"
+                    disabled={!selectedMainTreatment}
+                    className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800 disabled:opacity-50"
+                  />
+                  {(isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canCreate || agentPermissions.canAll))) && (
+                    <button
+                      onClick={handleAddSubTreatment}
+                      disabled={loading || !selectedMainTreatment}
+                      className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {loading ? '...' : 'Add'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Treatment List Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-3">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <h2 className="text-lg font-semibold text-gray-800">Treatments</h2>
-                </div>
-                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
-                  {treatments.length}
-                </span>
-              </div>
+          {/* Treatment List */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-900">All Treatments</h2>
+              <span className="text-xs text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                {treatments.length}
+              </span>
+            </div>
 
-              <div className="max-h-96 overflow-y-auto">
-                {treatments.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-sm">No treatments added yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {treatments.map((treatment, index) => (
-                      <div
-                        key={treatment._id}
-                        className="bg-gray-50 rounded-lg p-4 border border-gray-100 hover:border-gray-200 transition-all"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center min-w-0 flex-1">
-                            <span className="w-6 h-6 bg-[#2D9AA5] text-white text-xs rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                              {index + 1}
-                            </span>
-                            <h4 className="font-medium text-gray-800 text-sm truncate">
+            <div className="max-h-[500px] overflow-y-auto space-y-2">
+              {treatments.length === 0 ? (
+                <div className="text-center py-8">
+                  <BeakerIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs text-gray-700">No treatments yet</p>
+                </div>
+              ) : (
+                treatments.map((treatment, index) => {
+                  const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
+                  const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
+                  const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
+                  
+                  const canDelete = isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canDelete || agentPermissions.canAll));
+                  
+                  return (
+                    <div
+                      key={treatment._id}
+                      className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="text-xs text-gray-700 font-medium pt-0.5">
+                            {index + 1}.
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-gray-900 mb-1">
                               {treatment.name}
                             </h4>
-                          </div>
-                          {/* Delete button: Only show for admins OR agents with explicit delete permission */}
-                          {(() => {
-                            // CRITICAL: Check route and tokens to determine if user is admin or agent
-                            const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
-                            const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
-                            const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
-                            
-                            // Admin always sees delete button - but ONLY if NOT on agent route AND adminToken exists
-                            if (!isAgentRoute && adminTokenExists && isAdmin) {
-                              return (
-                                <button
-                                  key={`delete-admin-${treatment._id}`}
-                                  onClick={() => handleDeleteClick(treatment._id, treatment.name)}
-                                  className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              );
-                            }
-                            
-                            // For agents: Only show if permissions are loaded AND delete permission is explicitly true
-                            // ALWAYS log this check to see what's happening
-                            console.log('Add Treatment - Delete Button Render Check:', {
-                              treatmentId: treatment._id,
-                              isAdmin,
-                              isAgent,
-                              isAgentRoute,
-                              adminTokenExists,
-                              agentTokenExists,
-                              permissionsLoading,
-                              hasAgentPermissions: !!agentPermissions,
-                              canDelete: agentPermissions?.canDelete,
-                              canAll: agentPermissions?.canAll
-                            });
-                            
-                            // Show button for agents if on agent route OR if isAgent is true
-                            if ((isAgentRoute || isAgent) && agentTokenExists) {
-                              // Don't show if permissions are still loading
-                              if (permissionsLoading) {
-                                console.log('Add Treatment - Permissions still loading, hiding button');
-                                return null;
-                              }
-                              
-                              // Don't show if permissions object doesn't exist
-                              if (!agentPermissions) {
-                                console.log('Add Treatment - No permissions object:', { isAgent, agentPermissions });
-                                return null;
-                              }
-                              
-                              // Only show if canDelete is explicitly true OR canAll is explicitly true
-                              // Triple-check: ensure we're checking actual boolean true, not truthy values
-                              const canDeleteValue = agentPermissions.canDelete;
-                              const canAllValue = agentPermissions.canAll;
-                              const hasDeletePermission = (canDeleteValue === true) || (canAllValue === true);
-                              
-                              console.log('Add Treatment - Delete Button Permission Check:', {
-                                treatmentId: treatment._id,
-                                canDelete: canDeleteValue,
-                                canDeleteType: typeof canDeleteValue,
-                                canDeleteStrict: canDeleteValue === true,
-                                canAll: canAllValue,
-                                canAllType: typeof canAllValue,
-                                canAllStrict: canAllValue === true,
-                                hasDeletePermission,
-                                willShow: hasDeletePermission
-                              });
-                              
-                              if (hasDeletePermission) {
-                                return (
-                                  <button
-                                    key={`delete-agent-${treatment._id}-${canDeleteValue}-${canAllValue}`}
-                                    onClick={() => handleDeleteClick(treatment._id, treatment.name)}
-                                    className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
+                            {treatment.subcategories && treatment.subcategories.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {treatment.subcategories.map((sub, subIndex) => (
+                                  <span
+                                    key={subIndex}
+                                    className="text-xs text-gray-700 bg-white border border-gray-300 px-2 py-0.5 rounded"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                );
-                              } else {
-                                console.log('Add Treatment - Delete permission denied, hiding button');
-                              }
-                            }
-                            
-                            // Default: Don't show button
-                            return null;
-                          })()}
-                        </div>
-                        
-                        {treatment.subcategories && treatment.subcategories.length > 0 && (
-                          <div className="mt-3 ml-9">
-                            <div className="flex flex-wrap gap-1">
-                              {treatment.subcategories.map((sub, subIndex) => (
-                                <span
-                                  key={subIndex}
-                                  className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs"
-                                >
-                                  {sub.name}
-                                </span>
-                              ))}
-                            </div>
+                                    {sub.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
+                        </div>
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDeleteClick(treatment._id, treatment.name)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors flex-shrink-0"
+                            title="Delete"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-[#2D9AA5] rounded-lg flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">{treatments.length}</h3>
-              <p className="text-gray-600 text-sm">Main Treatments</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                {treatments.reduce((total, treatment) => total + (treatment.subcategories?.length || 0), 0)}
-              </h3>
-              <p className="text-gray-600 text-sm">Sub-Treatments</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">Fast</h3>
-              <p className="text-gray-600 text-sm">Management</p>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Delete Modal */}
+      {/* Compact Delete Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-md"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm"
             onClick={handleDeleteCancel}
           />
           
-          <div className="relative bg-white rounded-xl shadow-xl max-w-sm w-full">
-            <div className="p-6">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+          <div className="relative bg-white rounded-lg shadow-xl max-w-sm w-full p-5">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <XCircleIcon className="w-6 h-6 text-red-600" />
               </div>
-              
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Delete Treatment
-                </h3>
-                <p className="text-gray-600 text-sm mb-3">
-                  Are you sure you want to delete this treatment?
+              <h3 className="text-base font-semibold text-gray-900 mb-1">
+                Delete Treatment?
+              </h3>
+              <p className="text-xs text-gray-700 mb-3">
+                This action cannot be undone.
+              </p>
+              <div className="bg-gray-50 rounded px-3 py-2">
+                <p className="text-sm font-medium text-gray-900">
+                  &quot;{treatmentToDelete?.name}&quot;
                 </p>
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <p className="font-medium text-gray-800 text-sm">
-                    &quot;{treatmentToDelete?.name}&quot;
-                  </p>
-                </div>
               </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={handleDeleteCancel}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium text-sm transition-all disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium text-sm transition-all disabled:opacity-50"
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteCancel}
+                disabled={isDeleting}
+                className="flex-1 px-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="flex-1 px-3 py-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Toast Notifications */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`flex items-center p-4 rounded-lg shadow-lg border min-w-[280px] transition-all ${
-              toast.type === 'success'
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-50 border-red-200 text-red-800'
-            }`}
-          >
-            <div className="flex-shrink-0">
-              {toast.type === 'success' ? (
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-            </div>
-            <div className="ml-3 flex-1">
-              <p className="text-sm font-medium">{toast.message}</p>
-            </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="ml-4 text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        ))}
-      </div>
     </div>
 );
 };

@@ -190,6 +190,7 @@ function OffersPage() {
         token={token || ""}
         offer={editingOfferData}
         mode={editingOfferId ? "update" : "create"}
+        actorRole="agent"
       />
     </div>
   );

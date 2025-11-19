@@ -1,14 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { Search, Download, Users, Filter, ChevronLeft, ChevronRight, Mail, Phone, User, X } from 'lucide-react';
-
 import AdminLayout from '../../components/AdminLayout';
 import withAdminAuth from '../../components/withAdminAuth';
-import { useAgentPermissions } from '../../hooks/useAgentPermissions'; 
-
-type NextPageWithLayout = React.FC & {
-  getLayout?: (page: React.ReactNode) => React.ReactNode;
-};
+import { useAgentPermissions } from '../../hooks/useAgentPermissions';
+import {
+  UserGroupIcon,
+  MagnifyingGlassIcon,
+  ArrowDownTrayIcon,
+  FunnelIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EnvelopeIcon,
+  PhoneIcon,
+  UserIcon,
+  XCircleIcon,
+  CheckCircleIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
+import type { NextPageWithLayout } from '../_app';
 
 type User = {
   _id: string;
@@ -18,19 +29,81 @@ type User = {
   role: string;
 };
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+// Toast Component
+const Toast = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircleIcon className="w-4 h-4" />,
+    error: <XCircleIcon className="w-4 h-4" />,
+    info: <InformationCircleIcon className="w-4 h-4" />,
+    warning: <ExclamationTriangleIcon className="w-4 h-4" />,
+  };
+
+  const colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    warning: 'bg-yellow-500',
+  };
+
+  return (
+    <div
+      className={`${colors[toast.type]} text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs animate-slide-in`}
+    >
+      {icons[toast.type]}
+      <span className="flex-1 font-medium">{toast.message}</span>
+      <button
+        onClick={onClose}
+        className="hover:bg-white/20 rounded p-0.5 transition-colors"
+      >
+        <XMarkIcon className="w-3 h-3" />
+      </button>
+    </div>
+  );
+};
+
+// Toast Container
+const ToastContainer = ({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) => (
+  <div className="fixed top-4 right-4 z-50 space-y-2">
+    {toasts.map((toast) => (
+      <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+    ))}
+  </div>
+);
+
 function UserProfile() {
+  const router = useRouter();
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage] = useState(20); //pagination number 
+  const [usersPerPage] = useState(20);
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [loading, setLoading] = useState(true);
 
-  const router = useRouter();
-  
-  // Check if user is an admin or agent - use state to ensure reactivity
+  // Toast helper functions
+  const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  // Check if user is an admin or agent
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAgent, setIsAgent] = useState<boolean>(false);
   
@@ -40,37 +113,22 @@ function UserProfile() {
       const agentToken = !!localStorage.getItem('agentToken');
       const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
       
-      console.log('Analytics - Initial Token Check:', { 
-        adminToken, 
-        agentToken, 
-        isAgentRoute,
-        pathname: router.pathname,
-        locationPath: window.location.pathname
-      });
-      
-      // CRITICAL: If on agent route, prioritize agentToken over adminToken
       if (isAgentRoute && agentToken) {
-        // On agent route with agentToken = treat as agent (even if adminToken exists)
         setIsAdmin(false);
         setIsAgent(true);
       } else if (adminToken) {
-        // Not on agent route, or no agentToken = treat as admin if adminToken exists
         setIsAdmin(true);
         setIsAgent(false);
       } else if (agentToken) {
-        // Has agentToken but not on agent route = treat as agent
         setIsAdmin(false);
         setIsAgent(true);
       } else {
-        // No tokens = neither
         setIsAdmin(false);
         setIsAgent(false);
       }
     }
   }, [router.pathname]);
   
-  // Always call the hook (React rules), but only use it if isAgent is true
-  // Pass null as moduleKey if not an agent to skip the API call
   const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_user_analytics" : (null as any));
   const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
   const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
@@ -79,7 +137,6 @@ function UserProfile() {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
         const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
         const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
         const token = adminToken || agentToken;
@@ -92,6 +149,7 @@ function UserProfile() {
           if (res.status === 403) {
             setUsers([]);
             setFilteredUsers([]);
+            showToast('You do not have permission to view analytics', 'error');
             setLoading(false);
             return;
           }
@@ -99,35 +157,34 @@ function UserProfile() {
         }
 
         const data = await res.json();
-        setUsers(data.users || []);
-        setFilteredUsers(data.users || []);
+        const usersData = data.users || [];
+        setUsers(usersData);
+        setFilteredUsers(usersData);
+        if (usersData.length > 0) {
+          showToast(`Loaded ${usersData.length} user(s)`, 'success');
+        }
       } catch (error: any) {
         console.error('Failed to fetch users:', error);
+        showToast('Failed to load user analytics', 'error');
       } finally {
         setLoading(false);
       }
     };
 
-    // Fetch users immediately for admins
-    // For agents: only fetch if read permission is granted
     if (isAdmin) {
       fetchUsers();
     } else if (isAgent) {
       if (!permissionsLoading) {
-        // Check if agent has read permission
         if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
           fetchUsers();
         } else {
-          // Agent doesn't have read permission - stop loading
           setLoading(false);
         }
       }
-      // If permissions are still loading, keep loading state true
     } else {
-      // Neither admin nor agent - stop loading
       setLoading(false);
     }
-  }, [isAdmin, isAgent, permissionsLoading, agentPermissions]);
+  }, [isAdmin, isAgent, permissionsLoading, agentPermissions, showToast]);
 
   // Filter users based on search term
   useEffect(() => {
@@ -140,9 +197,12 @@ function UserProfile() {
         user.phone.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
+      if (filtered.length === 0) {
+        showToast('No users found matching your search', 'info');
+      }
     }
     setCurrentPage(1);
-  }, [searchTerm, users]);
+  }, [searchTerm, users, showToast]);
 
   // Sort users
   const sortUsers = (field: keyof User) => {
@@ -158,6 +218,7 @@ function UserProfile() {
       }
     });
     setFilteredUsers(sorted);
+    showToast(`Sorted by ${field} (${direction})`, 'info');
   };
 
   // Pagination
@@ -168,37 +229,45 @@ function UserProfile() {
 
   // Download CSV
   const downloadCSV = () => {
-    // CRITICAL: Check route and tokens to determine if user is admin or agent
     const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
     const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
     const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
     
-    // Check permissions only for agents - admins bypass all checks
-    // But only if on agent route OR isAgent is true
     if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions && agentPermissions.canExport !== true && agentPermissions.canAll !== true) {
-      alert("You do not have permission to export user data");
+      showToast("You do not have permission to export user data", 'error');
       return;
     }
-    const headers = ['Name', 'Email', 'Phone', 'Role'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredUsers.map(user => [
-        `"${user.name}"`,
-        `"${user.email}"`,
-        `"${user.phone}"`,
-        `"${user.role}"`
-      ].join(','))
-    ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `users_analytics_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (filteredUsers.length === 0) {
+      showToast('No data to export', 'warning');
+      return;
+    }
+
+    try {
+      const headers = ['Name', 'Email', 'Phone', 'Role'];
+      const csvContent = [
+        headers.join(','),
+        ...filteredUsers.map(user => [
+          `"${user.name}"`,
+          `"${user.email}"`,
+          `"${user.phone}"`,
+          `"${user.role}"`
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users_analytics_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('CSV file downloaded successfully', 'success');
+    } catch (error) {
+      showToast('Failed to download CSV file', 'error');
+    }
   };
 
   // Check if agent has read permission
@@ -206,30 +275,25 @@ function UserProfile() {
 
   if (loading || (isAgent && permissionsLoading)) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-lg shadow-sm p-8">
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="ml-4 text-lg text-gray-600">Loading user analytics...</span>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800 mx-auto"></div>
+          <p className="mt-3 text-sm text-gray-700">Loading analytics...</p>
         </div>
       </div>
     );
   }
 
-  // Show permission denied message if agent doesn't have read permission
   if (isAgent && !hasReadPermission) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-md mx-auto">
-          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-red-600" />
+        <div className="bg-white rounded-lg shadow-sm p-6 max-w-sm w-full text-center">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <XCircleIcon className="w-6 h-6 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">
-            You do not have permission to view user analytics. Please contact your administrator to request access.
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-sm text-gray-700">
+            You do not have permission to view user analytics.
           </p>
         </div>
       </div>
@@ -238,105 +302,105 @@ function UserProfile() {
 
   if (!users || users.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-lg shadow-sm p-8">
-            <div className="text-center">
-              <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Users Found</h3>
-              <p className="text-gray-600">No user data available at the moment.</p>
-            </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Users Found</h3>
+            <p className="text-sm text-gray-700">No user data available at the moment.</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Get role counts for stats
+  const roleCounts = users.reduce((acc, user) => {
+    acc[user.role] = (acc[user.role] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
 return (
- <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
-   <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+ <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+   <ToastContainer toasts={toasts} removeToast={removeToast} />
+   
+   <div className="max-w-7xl mx-auto space-y-4">
      {/* Header */}
-     <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-         <div className="flex items-center">
-           <div className="bg-[#2D9AA5] p-2 sm:p-3 rounded-lg mr-3 sm:mr-4">
-             <Users className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+         <div className="flex items-center gap-3">
+           <div className="bg-gray-800 p-2 rounded-lg">
+             <UserGroupIcon className="h-5 w-5 text-white" />
            </div>
            <div>
-             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">User Analytics Dashboard</h1>
-             <p className="text-sm sm:text-base text-gray-600">Manage and analyze user registrations</p>
+             <h1 className="text-lg font-semibold text-gray-900">User Analytics</h1>
+             <p className="text-xs text-gray-700">Manage and analyze user registrations</p>
            </div>
          </div>
-         <div className="bg-[#2D9AA5]/10 px-3 sm:px-4 py-2 rounded-lg self-start sm:self-auto">
-           <span className="text-sm font-medium text-[#2D9AA5]">Total Users: {users.length}</span>
+         <div className="bg-gray-100 px-3 py-1.5 rounded-lg">
+           <span className="text-xs font-medium text-gray-700">Total: {users.length}</span>
          </div>
        </div>
      </div>
 
+     {/* Stats Cards */}
+     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+       <div className="bg-white rounded-lg border border-gray-200 p-3">
+         <p className="text-xs text-gray-700 mb-1">Total Users</p>
+         <p className="text-xl font-bold text-gray-900">{users.length}</p>
+       </div>
+       {Object.entries(roleCounts).slice(0, 3).map(([role, count]) => (
+         <div key={role} className="bg-white rounded-lg border border-gray-200 p-3">
+           <p className="text-xs text-gray-700 mb-1">{role}</p>
+           <p className="text-xl font-bold text-gray-900">{count}</p>
+         </div>
+       ))}
+     </div>
+
      {/* Controls */}
-     <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
          {/* Search */}
          <div className="relative flex-1 max-w-full lg:max-w-md">
-           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-700" />
            <input
              type="text"
              placeholder="Search by name, email, or phone..."
              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
-             className="text-gray-700 w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent text-sm sm:text-base"
+             className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
            />
          </div>
 
          {/* Actions */}
-         <div className="flex flex-col xs:flex-row gap-3">
-           {/* Download CSV button: Only show for admins OR agents with explicit export permission */}
+         <div className="flex gap-2">
            {(() => {
              const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
              const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
              const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
              
-             // Admin always sees button - but ONLY if NOT on agent route AND adminToken exists
-             if (!isAgentRoute && adminTokenExists && isAdmin) {
+             const canExport = isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canExport || agentPermissions.canAll));
+             
+             if (canExport) {
                return (
                  <button
                    onClick={downloadCSV}
-                   className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#267982] transition-colors text-sm sm:text-base"
+                   className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors"
                  >
-                   <Download className="h-4 w-4 mr-2" />
-                   Download CSV
+                   <ArrowDownTrayIcon className="w-4 h-4" />
+                   <span className="hidden sm:inline">Export CSV</span>
                  </button>
                );
              }
-             
-             // For agents: Only show if permissions are loaded AND export permission is explicitly true
-             if ((isAgentRoute || isAgent) && agentTokenExists) {
-               if (permissionsLoading || !agentPermissions) {
-                 return null;
-               }
-               
-               const hasExportPermission = agentPermissions.canExport === true || agentPermissions.canAll === true;
-               if (hasExportPermission) {
-                 return (
-                   <button
-                     onClick={downloadCSV}
-                     className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#2D9AA5] text-white rounded-lg hover:bg-[#267982] transition-colors text-sm sm:text-base"
-                   >
-                     <Download className="h-4 w-4 mr-2" />
-                     Download CSV
-                   </button>
-                 );
-               }
-             }
-             
              return null;
            })()}
            <div className="flex items-center gap-2">
-             <Filter className="h-4 w-4 text-gray-500 flex-shrink-0" />
+             <FunnelIcon className="w-4 h-4 text-gray-700" />
              <select
                value={sortField}
                onChange={(e) => sortUsers(e.target.value as keyof User)}
-               className="text-gray-700 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent text-sm sm:text-base flex-1 xs:flex-none"
+               className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
              >
                <option value="name">Sort by Name</option>
                <option value="email">Sort by Email</option>
@@ -347,35 +411,31 @@ return (
        </div>
      </div>
 
-     {/* User Cards - Inline Layout */}
-     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-       <div className="space-y-2 p-2 sm:p-4">
+     {/* User List */}
+     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+       <div className="space-y-1 p-2">
          {currentUsers.map((user) => (
-           <div key={user._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3 sm:gap-0">
-             <div className="flex flex-col sm:flex-row sm:items-center flex-1 min-w-0 gap-3 sm:gap-0">
-               {/* User Avatar & Name */}
-               <div className="flex items-center min-w-0">
-                 <div className="bg-gradient-to-r from-[#2D9AA5] to-[#359BA8] p-2 rounded-full flex-shrink-0">
-                   <User className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                 </div>
-                 <div className="ml-3 min-w-0 flex-1">
-                   <h3 className="text-sm font-semibold text-gray-900 truncate">{user.name}</h3>
-                   <span className="inline-block px-2 py-1 text-xs font-medium bg-[#2D9AA5]/10 text-[#2D9AA5] rounded-full mt-1">
-                     {user.role}
-                   </span>
-                 </div>
+           <div key={user._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-2">
+             <div className="flex items-center gap-3 flex-1 min-w-0">
+               <div className="bg-gray-800 p-1.5 rounded-lg flex-shrink-0">
+                 <UserIcon className="h-4 w-4 text-white" />
                </div>
+               <div className="flex-1 min-w-0">
+                 <h3 className="text-sm font-semibold text-gray-900 truncate">{user.name}</h3>
+                 <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-700 rounded mt-1">
+                   {user.role}
+                 </span>
+               </div>
+             </div>
 
-               {/* User Details - Responsive Layout */}
-               <div className="flex flex-col xs:flex-row xs:items-center xs:space-x-4 sm:space-x-6 sm:ml-4 flex-1 min-w-0 gap-2 xs:gap-0 pl-9 sm:pl-0">
-                 <div className="flex items-center text-gray-600">
-                   <Mail className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                   <span className="text-sm truncate">{user.email}</span>
-                 </div>
-                 <div className="flex items-center text-gray-600">
-                   <Phone className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                   <span className="text-sm whitespace-nowrap">{user.phone}</span>
-                 </div>
+             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pl-9 sm:pl-0">
+               <div className="flex items-center text-xs text-gray-700">
+                 <EnvelopeIcon className="w-3 h-3 mr-1.5 text-gray-600 flex-shrink-0" />
+                 <span className="truncate">{user.email}</span>
+               </div>
+               <div className="flex items-center text-xs text-gray-700">
+                 <PhoneIcon className="w-3 h-3 mr-1.5 text-gray-600 flex-shrink-0" />
+                 <span>{user.phone}</span>
                </div>
              </div>
            </div>
@@ -385,23 +445,26 @@ return (
 
      {/* Pagination */}
      {totalPages > 1 && (
-       <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-           <div className="text-sm text-gray-700 text-center sm:text-left">
+       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+           <div className="text-xs text-gray-700 text-center sm:text-left">
              Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} results
            </div>
            
-           <div className="flex items-center justify-center sm:justify-end space-x-1 sm:space-x-2">
+           <div className="flex items-center justify-center gap-2">
              <button
-               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+               onClick={() => {
+                 setCurrentPage(prev => Math.max(prev - 1, 1));
+                 showToast('Previous page', 'info');
+               }}
                disabled={currentPage === 1}
-               className="flex items-center px-2 sm:px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+               className="flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
              >
-               <ChevronLeft className="h-4 w-4 mr-1" />
-               <span className="hidden xs:inline">Previous</span>
+               <ChevronLeftIcon className="w-4 h-4" />
+               <span className="hidden sm:inline ml-1">Previous</span>
              </button>
              
-             <div className="flex space-x-1 max-w-xs overflow-x-auto">
+             <div className="flex gap-1">
                {[...Array(Math.min(totalPages, 7))].map((_, index) => {
                  let pageNum;
                  if (totalPages <= 7) {
@@ -417,10 +480,13 @@ return (
                  return (
                    <button
                      key={pageNum}
-                     onClick={() => setCurrentPage(pageNum)}
-                     className={`px-2 sm:px-3 py-2 text-sm font-medium rounded-lg flex-shrink-0 ${
+                     onClick={() => {
+                       setCurrentPage(pageNum);
+                       showToast(`Page ${pageNum}`, 'info');
+                     }}
+                     className={`px-2 py-1.5 text-xs font-medium rounded-lg ${
                        currentPage === pageNum
-                         ? 'bg-[#2D9AA5] text-white'
+                         ? 'bg-gray-800 text-white'
                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
                      }`}
                    >
@@ -431,12 +497,15 @@ return (
              </div>
              
              <button
-               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+               onClick={() => {
+                 setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                 showToast('Next page', 'info');
+               }}
                disabled={currentPage === totalPages}
-               className="flex items-center px-2 sm:px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+               className="flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
              >
-               <span className="hidden xs:inline">Next</span>
-               <ChevronRight className="h-4 w-4 ml-1" />
+               <span className="hidden sm:inline mr-1">Next</span>
+               <ChevronRightIcon className="w-4 h-4" />
              </button>
            </div>
          </div>
@@ -455,3 +524,4 @@ const ProtectedDashboard: NextPageWithLayout = withAdminAuth(UserProfile);
 ProtectedDashboard.getLayout = UserProfile.getLayout;
 
 export default ProtectedDashboard;
+

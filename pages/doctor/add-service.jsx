@@ -475,7 +475,7 @@ function StaffAddServicePage() {
   );
 }
 
-StaffAddServicePage.getLayout = function PageLayout(page) {
+StaffAddServicePage.getLayout= function PageLayout(page) {
   return <DoctorLayout>{page}</DoctorLayout>;
 };
 

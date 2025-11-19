@@ -24,8 +24,8 @@ export default async function handler(req, res) {
         .json({ success: false, message: "User not authenticated" });
     }
 
-    // Allow both clinics and agents
-    if (!requireRole(user, ["clinic", "agent", "admin"])) {
+    // Allow clinics, agents, doctors, and admins
+    if (!requireRole(user, ["clinic", "agent", "admin", "doctor"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -45,6 +45,13 @@ export default async function handler(req, res) {
         return res
           .status(403)
           .json({ success: false, message: "Agent not linked to any clinic" });
+      }
+      clinicId = user.clinicId;
+    } else if (user.role === "doctor") {
+      if (!user.clinicId) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Doctor not linked to any clinic" });
       }
       clinicId = user.clinicId;
     } else if (user.role === "admin") {

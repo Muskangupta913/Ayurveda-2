@@ -26,7 +26,7 @@ const routeMap: { [key: string]: () => Promise<any> } = {
   'getAllEodNotes': () => import('../admin/getAllEodNotes'),
   'patient-report': () => import('../admin/patient-report'),
   'track-expenses': () => import('../admin/track-expenses'),
-  'contracters': () => import('../admin/Contractor'),
+  'contracters': () => import('../admin/contractor'),
   'dashboard-admin': () => import('../admin/dashboard-admin'),
   'seed-navigation': () => import('../admin/seed-navigation'),
   'all-clinic': () => import('../admin/all-clinic'),
@@ -104,7 +104,6 @@ const AgentDynamicPage = () => {
         // Since we're already protected by withAgentAuth on this page,
         // we need to temporarily provide an adminToken to bypass the check
         // OR we need to extract the underlying component
-        
         // The exported component is wrapped with withAdminAuth
         // withAdminAuth will check for adminToken and redirect if not found
         // Since we can't easily unwrap it, we'll render it as-is

@@ -9,16 +9,16 @@ import type { NextPageWithLayout } from "../_app";
 import { GoogleMap, Marker } from "@react-google-maps/api";
 import { useAgentPermissions } from "../../hooks/useAgentPermissions";
 import {
-  Search,
-  MapPin,
-  Clock,
-  X,
-  Grid,
-  List,
-  User,
-  Mail,
-  Phone,
-} from "lucide-react";
+  HomeIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  UserGroupIcon,
+  MapPinIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  BeakerIcon,
+} from "@heroicons/react/24/outline";
 
 interface Clinic {
   _id: string;
@@ -38,7 +38,7 @@ interface Clinic {
   owner: {
     name: string;
     email: string;
-    phone?: string; // <-- Add phone here
+    phone?: string;
   };
 }
 
@@ -57,7 +57,6 @@ interface GeocodeResponse {
   };
 }
 
-
 function AdminClinicApproval() {
   const [clinics, setClinics] = useState<{
     pending: Clinic[];
@@ -72,11 +71,8 @@ function AdminClinicApproval() {
     "pending" | "approved" | "declined"
   >("pending");
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy] = useState<string>("");
-  const [sortOrder] = useState<string>("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  // const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -94,13 +90,10 @@ function AdminClinicApproval() {
   });
   const [plusCode, setPlusCode] = useState<string | null>(null);
   const [addressSummary, setAddressSummary] = useState<string | null>(null);
-  const [showTreatmentsPopup, setShowTreatmentsPopup] = useState(false);
-  // Clinic state
-  const [selectedClinic] = useState<Clinic | null>(null);
+  const [selectedClinicForTreatments, setSelectedClinicForTreatments] = useState<Clinic | null>(null);
 
   const router = useRouter();
   
-  // Check if user is an admin or agent - use state to ensure reactivity
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAgent, setIsAgent] = useState<boolean>(false);
   
@@ -110,37 +103,22 @@ function AdminClinicApproval() {
       const agentToken = !!localStorage.getItem('agentToken');
       const isAgentRoute = router.pathname?.startsWith('/agent/') || window.location.pathname?.startsWith('/agent/');
       
-      console.log('AdminClinicApproval - Initial Token Check:', { 
-        adminToken, 
-        agentToken, 
-        isAgentRoute,
-        pathname: router.pathname,
-        locationPath: window.location.pathname
-      });
-      
-      // CRITICAL: If on agent route, prioritize agentToken over adminToken
       if (isAgentRoute && agentToken) {
-        // On agent route with agentToken = treat as agent (even if adminToken exists)
         setIsAdmin(false);
         setIsAgent(true);
       } else if (adminToken) {
-        // Not on agent route, or no agentToken = treat as admin if adminToken exists
         setIsAdmin(true);
         setIsAgent(false);
       } else if (agentToken) {
-        // Has agentToken but not on agent route = treat as agent
         setIsAdmin(false);
         setIsAgent(true);
       } else {
-        // No tokens = neither
         setIsAdmin(false);
         setIsAgent(false);
       }
     }
   }, [router.pathname]);
   
-  // Always call the hook (React rules), but only use it if isAgent is true
-  // Pass null as moduleKey if not an agent to skip the API call
   const agentPermissionsData: any = useAgentPermissions(isAgent ? "admin_approval_clinic" : (null as any));
   const agentPermissions = isAgent ? agentPermissionsData?.permissions : null;
   const permissionsLoading = isAgent ? agentPermissionsData?.loading : false;
@@ -148,12 +126,9 @@ function AdminClinicApproval() {
   const itemsPerPage = 12;
 
   useEffect(() => {
-    // Fetch clinics immediately for admins
-    // For agents: only fetch if read permission is granted
     if (isAdmin) {
       fetchClinics();
     } else if (isAgent && !permissionsLoading) {
-      // Check if agent has read permission
       if (agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true)) {
         fetchClinics();
       }
@@ -163,7 +138,6 @@ function AdminClinicApproval() {
   const fetchClinics = async () => {
     setLoading(true);
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
@@ -178,7 +152,6 @@ function AdminClinicApproval() {
         axios.get<{ clinics: Clinic[] }>("/api/admin/pending-clinics", {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(err => {
-          // If 403 (permission denied), return empty array
           if (err.response?.status === 403) {
             return { data: { clinics: [] } };
           }
@@ -209,7 +182,6 @@ function AdminClinicApproval() {
       });
     } catch (error: any) {
       console.error("Failed to fetch clinics:", error);
-      // If permission denied, set empty arrays
       if (error.response?.status === 403) {
         setClinics({
           pending: [],
@@ -222,18 +194,12 @@ function AdminClinicApproval() {
     }
   };
 
-
-
   const handleAction = async (type: string, clinicId: string) => {
-    // CRITICAL: Check route and tokens to determine if user is admin or agent
     const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
     const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
     const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
     
-    // Check permissions only for agents - admins bypass all checks
-    // But only if on agent route OR isAgent is true
     if ((isAgentRoute || isAgent) && agentTokenExists && !adminTokenExists && agentPermissions) {
-      // Strict boolean checks
       if ((type === "approve" || type === "decline") && agentPermissions.canApprove !== true && agentPermissions.canAll !== true) {
         alert("You do not have permission to approve/decline clinics");
         return;
@@ -245,7 +211,6 @@ function AdminClinicApproval() {
     }
 
     try {
-      // Get token - check for adminToken first, then agentToken (for agents accessing via /agent route)
       const adminToken = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
       const agentToken = typeof window !== 'undefined' ? localStorage.getItem('agentToken') : null;
       const token = adminToken || agentToken;
@@ -282,24 +247,24 @@ function AdminClinicApproval() {
     }
   };
 
-const handleAddressClick = async (address: string) => {
-  try {
-    const response = await axios.get<GeocodeResponse>(
-      "https://maps.googleapis.com/maps/api/geocode/json",
-      {
-        params: { address, key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY },
-      }
-    );
+  const handleAddressClick = async (address: string) => {
+    try {
+      const response = await axios.get<GeocodeResponse>(
+        "https://maps.googleapis.com/maps/api/geocode/json",
+        {
+          params: { address, key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY },
+        }
+      );
 
-    const location = response.data.results[0]?.geometry?.location;
-    if (location) {
-      setSelectedLocation(location);
-      setMapVisible(true);
+      const location = response.data.results[0]?.geometry?.location;
+      if (location) {
+        setSelectedLocation(location);
+        setMapVisible(true);
+      }
+    } catch (err) {
+      console.error("Map fetch failed:", err);
     }
-  } catch (err) {
-    console.error("Map fetch failed:", err);
-  }
-};
+  };
 
   const currentClinics = clinics[activeTab];
   const filteredClinics = currentClinics.filter(
@@ -309,32 +274,9 @@ const handleAddressClick = async (address: string) => {
       clinic.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const sortedClinics = [...filteredClinics].sort((a, b) => {
-    if (!sortBy) return 0; // No sorting if sortBy is empty
-
-    let aValue: string;
-    let bValue: string;
-
-    if (sortBy === "owner") {
-      aValue = a.owner?.name || "";
-      bValue = b.owner?.name || "";
-    } else {
-      aValue = (a[sortBy as keyof Clinic] as string) || "";
-      bValue = (b[sortBy as keyof Clinic] as string) || "";
-    }
-
-    // Ensure values are strings before calling localeCompare
-    const aStr = String(aValue);
-    const bStr = String(bValue);
-
-    return sortOrder === "asc"
-      ? aStr.localeCompare(bStr)
-      : bStr.localeCompare(aStr);
-  });
-
-  const totalPages = Math.ceil(sortedClinics.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredClinics.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedClinics = sortedClinics.slice(
+  const paginatedClinics = filteredClinics.slice(
     startIndex,
     startIndex + itemsPerPage
   );
@@ -348,208 +290,100 @@ const handleAddressClick = async (address: string) => {
     
     const availableActions = allActions[tab as keyof typeof allActions] || [];
     
-    // If user is an agent, filter actions based on permissions
     if (isAgent && !permissionsLoading && agentPermissions) {
       return availableActions.filter(action => {
         if (action === "approve" || action === "decline") {
-          // Approve and decline require "approve" permission
           return agentPermissions.canApprove || agentPermissions.canAll;
         }
         if (action === "delete") {
-          // Delete requires "delete" permission
           return agentPermissions.canDelete || agentPermissions.canAll;
         }
         return true;
       });
     }
     
-    // Admin users see all actions
     return availableActions;
   };
 
-  // const toggleExpansion = (clinicId: string) => {
-  //   setExpandedCards((prev) => {
-  //     const newSet = new Set(prev);
-  //     if (newSet.has(clinicId)) {
-  //       newSet.delete(clinicId);
-  //     } else {
-  //       newSet.add(clinicId);
-  //     }
-  //     return newSet;
-  //   });
-  // };
-
   const ClinicCard = ({ clinic }: { clinic: Clinic }) => {
-    // const isExpanded = expandedCards.has(clinic._id);
     const actions = getTabActions(activeTab);
-    // Image popup state (commented out as it's not currently used)
-    // const [_, setImagePopup] = useState<{
-    //   show: boolean;
-    //   image: string | null;
-    // }>({ show: false, image: null });
-    const [showTreatmentsPopup, setShowTreatmentsPopup] = useState(false);
 
     return (
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-200 relative">
-        <div className="p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+        <div className="p-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 truncate">
-                {clinic.name}
-              </h3>
-              <p className="text-sm text-gray-600">
-                <User size={16} className="inline-block mr-1" />{" "}
-                {clinic.owner?.name}
-              </p>
-              <p className="text-sm text-gray-500">
-                <Mail size={16} className="inline-block mr-1" />{" "}
-                {clinic.owner?.email}
-              </p>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {clinic.name}
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <UserGroupIcon className="w-4 h-4" />
+                <span>{clinic.owner?.name}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <EnvelopeIcon className="w-4 h-4" />
+                <span>{clinic.owner?.email}</span>
+              </div>
               {clinic.owner?.phone && (
-                <p className="text-sm text-gray-500">
-                  <Phone size={16} className="inline-block mr-1" />{" "}
-                  {clinic.owner.phone}
-                </p>
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <PhoneIcon className="w-4 h-4" />
+                  <span>{clinic.owner.phone}</span>
+                </div>
               )}
-              <p className="text-sm text-gray-500">
-                <MapPin size={16} className="inline-block mr-1" />{" "}
-                {clinic.address}
-              </p>
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <MapPinIcon className="w-4 h-4" />
+                <span className="truncate">{clinic.address}</span>
+              </div>
             </div>
           </div>
 
-          {/* Quick Info */}
-          <div className="mt-2 space-y-2">
-            <div className="flex items-center text-sm text-blue-800">
-              <MapPin size={16} className="mr-2" />
-              <span
-                className="underline cursor-pointer"
-                onClick={() => handleAddressClick(clinic.address)}
-              >
-                {clinic.address}
-              </span>
+          {/* Details */}
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <span className="font-medium">Pricing:</span>
+              <span>AED {clinic.pricing}</span>
             </div>
-            <div className="flex items-center text-sm text-gray-800">
-              <span> AED {clinic.pricing}</span>
-            </div>
-            <div className="flex items-center text-sm text-gray-800">
-              <Clock size={16} className="mr-2" />
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <ClockIcon className="w-4 h-4" />
               <span>{clinic.timings}</span>
             </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              <button
-                className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs hover:bg-blue-600"
-                onClick={() => {
-                  setShowTreatmentsPopup(true);
-                }}
-              >
-                Show Treatments
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setSelectedClinicForTreatments(clinic);
+              }}
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 mt-2"
+            >
+              <BeakerIcon className="w-4 h-4" />
+              <span>View Treatments ({clinic.treatments.length})</span>
+            </button>
           </div>
 
-          {/* Image and Actions */}
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-2 mt-2 sm:mt-0">
-              {actions.map((action) => (
-                <button
-                  key={action}
-                  onClick={() =>
-                    setConfirmAction({
-                      show: true,
-                      type: action,
-                      clinicId: clinic._id,
-                    })
-                  }
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${action === "approve"
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : action === "decline"
-                        ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
-                >
-                  {action.charAt(0).toUpperCase() + action.slice(1)}
-                </button>
-              ))}
-            </div>
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+            {actions.map((action) => (
+              <button
+                key={action}
+                onClick={() =>
+                  setConfirmAction({
+                    show: true,
+                    type: action,
+                    clinicId: clinic._id,
+                  })
+                }
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  action === "approve"
+                    ? "bg-gray-800 hover:bg-gray-700 text-white"
+                    : action === "decline"
+                    ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                    : "bg-red-500 hover:bg-red-600 text-white"
+                }`}
+              >
+                {action.charAt(0).toUpperCase() + action.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
-
-        {/* Treatments Pop-up */}
-        {showTreatmentsPopup && (
-          <div className="fixed inset-0 backdrop-blur-md bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto transform transition-all duration-300 ease-out">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-[#2D9AA5] to-[#3BB5C1] rounded-t-2xl p-6 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
-                <div className="relative">
-                  <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    Available Treatments
-                  </h2>
-                  <p className="text-white/90 text-sm">
-                    Our comprehensive medical services
-                  </p>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-6 max-h-96 overflow-y-auto">
-                <div className="space-y-3">
-                  {clinic.treatments.map((treatment, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 hover:bg-[#2D9AA5]/5 transition-all duration-200 group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-2 h-2 rounded-full bg-[#2D9AA5] group-hover:scale-125 transition-transform"></div>
-                        <span className="text-gray-800 font-medium text-sm group-hover:text-[#2D9AA5] transition-colors">
-                          {treatment.mainTreatment}
-                        </span>
-                      </div>
-                      <ul className="list-disc pl-6">
-                        {treatment.subTreatments.map(
-                          (subTreatment, subIndex) => (
-                            <li
-                              key={subIndex}
-                              className="text-gray-600 text-xs"
-                            >
-                              {subTreatment.name}
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-6 pt-0">
-                <button
-                  className="w-full bg-[#2D9AA5] text-white py-3 px-6 rounded-xl font-semibold hover:bg-[#2D9AA5]/90 active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-xl"
-                  onClick={() => setShowTreatmentsPopup(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -566,54 +400,51 @@ const handleAddressClick = async (address: string) => {
     return `${toDMS(lat, "N", "S")} ${toDMS(lng, "E", "W")}`;
   }
 
-useEffect(() => {
-  if (selectedLocation) {
-    axios
-      .get<GeocodeResponse>("https://maps.googleapis.com/maps/api/geocode/json", {
-        params: {
-          latlng: `${selectedLocation.lat},${selectedLocation.lng}`,
-          key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
-        },
-      })
-      .then((res) => {
-        const plus = res.data.plus_code?.global_code || null;
-        setPlusCode(plus);
-        const summary = res.data.results?.[0]?.formatted_address || null;
-        setAddressSummary(summary);
-      })
-      .catch(() => {
-        setPlusCode(null);
-        setAddressSummary(null);
-      });
-  }
-}, [selectedLocation]);
+  useEffect(() => {
+    if (selectedLocation) {
+      axios
+        .get<GeocodeResponse>("https://maps.googleapis.com/maps/api/geocode/json", {
+          params: {
+            latlng: `${selectedLocation.lat},${selectedLocation.lng}`,
+            key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+          },
+        })
+        .then((res) => {
+          const plus = res.data.plus_code?.global_code || null;
+          setPlusCode(plus);
+          const summary = res.data.results?.[0]?.formatted_address || null;
+          setAddressSummary(summary);
+        })
+        .catch(() => {
+          setPlusCode(null);
+          setAddressSummary(null);
+        });
+    }
+  }, [selectedLocation]);
 
-
-  // Check if agent has read permission
   const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
 
   if (loading || (isAgent && permissionsLoading)) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-black">Loading clinics...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading clinics...</p>
         </div>
       </div>
     );
   }
 
-  // Show permission denied message if agent doesn't have read permission
   if (isAgent && !hasReadPermission) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-red-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircleIcon className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">
-            You do not have permission to view clinic approvals. Please contact your administrator to request access.
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-700">
+            You do not have permission to view clinic approvals.
           </p>
         </div>
       </div>
@@ -621,68 +452,83 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-black">
-            Clinic Management Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-700 mt-1">
-            Manage clinic applications and approvals
-          </p>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                Clinic Management
+              </h1>
+              <p className="text-gray-700">
+                Manage clinic applications and approvals
+              </p>
+            </div>
+            <button
+              onClick={fetchClinics}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors self-start lg:self-auto"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { title: 'Pending', value: clinics.pending.length, icon: ClockIcon, color: 'bg-yellow-500' },
+            { title: 'Approved', value: clinics.approved.length, icon: CheckCircleIcon, color: 'bg-green-500' },
+            { title: 'Declined', value: clinics.declined.length, icon: XCircleIcon, color: 'bg-red-500' },
+          ].map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">{stat.title}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  </div>
+                  <div className={`${stat.color} p-3 rounded-lg text-white`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Tabs */}
-        <div className="mb-4 sm:mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-3 sm:space-x-6 overflow-x-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-6">
               {[
-                {
-                  key: "pending",
-                  label: "Pending",
-                  count: clinics.pending.length,
-                  color: "yellow",
-                },
-                {
-                  key: "approved",
-                  label: "Approved",
-                  count: clinics.approved.length,
-                  color: "green",
-                },
-                {
-                  key: "declined",
-                  label: "Declined",
-                  count: clinics.declined.length,
-                  color: "red",
-                },
-              ]
-              .filter(tab => {
-                // Only show tabs if user has read permission
-                return hasReadPermission;
-              })
-              .map((tab) => (
+                { key: "pending", label: "Pending", count: clinics.pending.length, color: "yellow" },
+                { key: "approved", label: "Approved", count: clinics.approved.length, color: "green" },
+                { key: "declined", label: "Declined", count: clinics.declined.length, color: "red" },
+              ].map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => {
-                    setActiveTab(
-                      tab.key as "pending" | "approved" | "declined"
-                    );
+                    setActiveTab(tab.key as "pending" | "approved" | "declined");
                     setCurrentPage(1);
                   }}
-                  className={`py-2 px-1 sm:px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === tab.key
-                      ? `border-[#2D9AA5] text-[#2D9AA5]`
-                      : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
-                    }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === tab.key
+                      ? "border-gray-800 text-gray-900"
+                      : "border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300"
+                  }`}
                 >
                   {tab.label}
                   <span
-                    className={`ml-1 sm:ml-2 py-0.5 px-1.5 sm:px-2 rounded-full text-xs ${activeTab === tab.key
-                        ? `bg-[#2D9AA5]/10 text-[#2D9AA5]`
-                        : "bg-gray-100 text-black"
-                      }`}
+                    className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
+                      activeTab === tab.key
+                        ? "bg-gray-800 text-white"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
                   >
                     {tab.count}
                   </span>
@@ -690,195 +536,143 @@ useEffect(() => {
               ))}
             </nav>
           </div>
-        </div>
 
-        {/* Controls */}
-        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
+          {/* Search and View Controls */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="relative w-full sm:max-w-md">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={14}
-              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
               <input
                 type="text"
-                placeholder="Search clinics, owners..."
+                placeholder="Search clinics, owners, addresses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="text-black w-full pl-9 pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D9AA5] focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-gray-800 text-sm"
               />
             </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode("grid")}
-                className="text-black flex items-center px-2.5 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className={`p-2 rounded-lg border transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-gray-800 text-white border-gray-800"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
               >
-                <Grid size={12} className="sm:hidden" />
-                <Grid size={14} className="hidden sm:block" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className="text-black flex items-center px-2.5 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className={`p-2 rounded-lg border transition-colors ${
+                  viewMode === "list"
+                    ? "bg-gray-800 text-white border-gray-800"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
               >
-                <List size={12} className="sm:hidden" />
-                <List size={14} className="hidden sm:block" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               </button>
             </div>
           </div>
 
-          {/* Filters Panel */}
-          {/* Removed Filters Panel */}
+          {/* Results Count */}
+          <div className="mb-4 text-sm text-gray-700">
+            Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredClinics.length)} of {filteredClinics.length} clinics
+          </div>
 
-          {/* Bulk Actions */}
-          {/* Removed Bulk Actions section as multi-selection is removed */}
+          {/* Clinics Grid/List */}
+          {paginatedClinics.length === 0 ? (
+            <div className="text-center py-12">
+              <HomeIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No clinics found</h3>
+              <p className="text-gray-700">Try adjusting your search criteria.</p>
+            </div>
+          ) : (
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  : "space-y-4"
+              }
+            >
+              {paginatedClinics.map((clinic) => (
+                <ClinicCard key={clinic._id} clinic={clinic} />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Results */}
-        <div className="mb-3 sm:mb-4 text-xs sm:text-sm text-black">
-          Showing {startIndex + 1}-
-          {Math.min(startIndex + itemsPerPage, sortedClinics.length)} of{" "}
-          {sortedClinics.length} clinics
-        </div>
-
-        {/* Clinics Grid/List */}
-        {paginatedClinics.length === 0 ? (
-          <div className="text-center py-8 sm:py-12">
-            <Search
-              size={28}
-              className="mx-auto text-gray-400 mb-3 sm:mb-4 sm:w-8 sm:h-8"
-            />
-            <h3 className="text-base sm:text-lg font-medium text-black mb-2">
-              No clinics found
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600">
-              Try adjusting your search or filter criteria.
-            </p>
-          </div>
-        ) : (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6"
-                : "space-y-3 sm:space-y-4"
-            }
-          >
-            {paginatedClinics.map((clinic) => (
-              <ClinicCard key={clinic._id} clinic={clinic} />
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-            <div className="text-xs sm:text-sm text-black order-2 sm:order-1">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex items-center gap-2 order-1 sm:order-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-xs sm:text-sm text-black bg-white hover:bg-gray-50 disabled:opacity-50 min-w-[70px] sm:min-w-[80px]"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() =>
-                  setCurrentPage(Math.min(totalPages, currentPage + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-xs sm:text-sm text-black bg-white hover:bg-gray-50 disabled:opacity-50 min-w-[60px] sm:min-w-[70px]"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Confirmation Modal */}
       {confirmAction.show && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/20 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-xs sm:max-w-md w-full transform transition-all duration-300 ease-out mx-3 sm:mx-0">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
             <div className="text-center">
-              {/* Icon based on action type */}
-              <div className="mx-auto mb-3 sm:mb-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center">
+              <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center">
                 {confirmAction.type === "approve" && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#2D9AA5]/10 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-[#2D9AA5]"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircleIcon className="w-8 h-8 text-green-600" />
                   </div>
                 )}
                 {confirmAction.type === "decline" && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
-                      />
-                    </svg>
+                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <ClockIcon className="w-8 h-8 text-yellow-600" />
                   </div>
                 )}
                 {confirmAction.type === "delete" && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-red-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                    <XCircleIcon className="w-8 h-8 text-red-600" />
                   </div>
                 )}
               </div>
-
-              {/* Title */}
-              <h2 className="text-lg sm:text-2xl font-bold text-gray-800 mb-2 capitalize">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 capitalize">
                 Confirm {confirmAction.type}
               </h2>
-
-              {/* Message */}
-              <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 leading-relaxed">
+              <p className="text-gray-700 mb-8">
                 Are you sure you want to {confirmAction.type} this clinic?
                 {confirmAction.type === "delete" && (
-                  <span className="block mt-2 text-red-600 font-medium text-sm">
+                  <span className="block mt-2 text-red-600 font-medium">
                     This action cannot be undone.
                   </span>
                 )}
               </p>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 sm:gap-3">
+              <div className="flex gap-3">
                 <button
                   onClick={() =>
                     setConfirmAction({ show: false, type: "", clinicId: null })
                   }
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -892,18 +686,19 @@ useEffect(() => {
                     }
                     setConfirmAction({ show: false, type: "", clinicId: null });
                   }}
-                  className={`flex-1 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all duration-200 hover:shadow-md ${confirmAction.type === "approve"
-                      ? "bg-[#2D9AA5] hover:bg-[#2D9AA5]/90"
+                  className={`flex-1 text-white px-6 py-3 rounded-lg font-medium transition-colors ${
+                    confirmAction.type === "approve"
+                      ? "bg-gray-800 hover:bg-gray-700"
                       : confirmAction.type === "decline"
-                        ? "bg-yellow-500 hover:bg-yellow-600"
-                        : "bg-red-500 hover:bg-red-600"
-                    }`}
+                      ? "bg-yellow-500 hover:bg-yellow-600"
+                      : "bg-red-500 hover:bg-red-600"
+                  }`}
                 >
                   {confirmAction.type === "approve"
                     ? "Approve"
                     : confirmAction.type === "decline"
-                      ? "Decline"
-                      : "Delete"}
+                    ? "Decline"
+                    : "Delete"}
                 </button>
               </div>
             </div>
@@ -913,39 +708,35 @@ useEffect(() => {
 
       {/* Map Modal */}
       {mapVisible && selectedLocation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-4xl max-h-[90vh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-0">
-            <div className="flex items-center justify-between p-3 sm:p-4 border-b">
-              <h3 className="text-base sm:text-lg font-semibold text-black">
-                Clinic Location
-              </h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Clinic Location</h3>
               <button
                 onClick={() => setMapVisible(false)}
-                className="text-gray-400 hover:text-black p-1"
-                aria-label="Close map"
+                className="text-gray-700 hover:text-gray-900 p-1"
               >
-                <X size={20} className="sm:w-6 sm:h-6" />
+                <XCircleIcon className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-3 sm:p-4">
-              {/* Info Box */}
-              <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-gray-100 rounded shadow flex flex-col gap-2">
-                <div className="flex flex-col">
-                  <span className="font-mono text-xs sm:text-sm text-black break-all">
+            <div className="p-4">
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex flex-col gap-2">
+                  <span className="font-mono text-sm text-gray-700">
                     {convertToDMS(selectedLocation.lat, selectedLocation.lng)}
                   </span>
                   {plusCode && (
-                    <span className="text-xs text-gray-700 break-all">
+                    <span className="text-sm text-gray-700">
                       {plusCode} {addressSummary}
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center">
+                <div className="flex gap-3 mt-3">
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${selectedLocation.lat},${selectedLocation.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#2D9AA5] hover:underline text-xs sm:text-sm font-medium"
+                    className="text-sm text-gray-700 hover:text-gray-900 font-medium underline"
                   >
                     Directions
                   </a>
@@ -953,13 +744,13 @@ useEffect(() => {
                     href={`https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#2D9AA5] hover:underline text-xs sm:text-sm font-medium"
+                    className="text-sm text-gray-700 hover:text-gray-900 font-medium underline"
                   >
                     View larger map
                   </a>
                 </div>
               </div>
-              <div className="w-full h-48 sm:h-64 md:h-96">
+              <div className="w-full h-96">
                 <GoogleMap
                   mapContainerStyle={{ width: "100%", height: "100%" }}
                   center={selectedLocation}
@@ -972,23 +763,44 @@ useEffect(() => {
           </div>
         </div>
       )}
-      {showTreatmentsPopup && selectedClinic && (
-        <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
-            <h2 className="text-xl font-bold mb-4">Treatments</h2>
-            <ul className="list-disc pl-5">
-              {selectedClinic.treatments.map((treatment, index) => (
-                <li key={index} className="mb-2">
-                  {treatment.mainTreatment}
-                </li>
-              ))}
-            </ul>
-            <button
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              onClick={() => setShowTreatmentsPopup(false)}
-            >
-              Close
-            </button>
+
+      {/* Treatments Modal */}
+      {selectedClinicForTreatments && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Available Treatments</h2>
+              <button
+                onClick={() => setSelectedClinicForTreatments(null)}
+                className="text-gray-700 hover:text-gray-900"
+              >
+                <XCircleIcon className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <div className="space-y-4">
+                {selectedClinicForTreatments.treatments.map((treatment, index) => (
+                  <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 mb-2">{treatment.mainTreatment}</h3>
+                    <ul className="list-disc pl-6 space-y-1">
+                      {treatment.subTreatments.map((subTreatment, subIndex) => (
+                        <li key={subIndex} className="text-sm text-gray-700">
+                          {subTreatment.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setSelectedClinicForTreatments(null)}
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

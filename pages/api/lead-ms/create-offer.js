@@ -16,7 +16,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
-   if (!requireRole(user, ["clinic", "admin", "agent"])) {
+   if (!requireRole(user, ["clinic", "admin", "agent", "doctor"])) {
   return res.status(403).json({ success: false, message: "Access denied" });
 }
 

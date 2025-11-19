@@ -2,7 +2,7 @@ import dbConnect from "../../../lib/database";
 import User from "../../../models/Users";
 import Clinic from "../../../models/Clinic";
 import { getUserFromReq, requireRole } from "../lead-ms/auth";
-import { getClinicIdFromUser, checkClinicPermission } from "./permissions-helper";
+import {checkClinicPermission } from "./permissions-helper";
 import { checkAgentPermission } from "../agent/permissions-helper";
 import bcrypt from "bcryptjs";
 
