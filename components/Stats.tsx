@@ -49,6 +49,11 @@ interface StatsConfig {
   tokenKey: string;
   primaryColor: string;
   title?: string;
+  permissions?: {
+    canAccessJobs?: boolean;
+    canAccessBlogs?: boolean;
+    canAccessApplications?: boolean;
+  };
 }
 
 interface JobStatsProps {
@@ -150,21 +155,52 @@ const JobStats: React.FC<JobStatsProps> = ({
       
       if (!token) {
         setError('Authentication token not found');
+        setLoading(false);
         return;
       }
 
-      const res = await axios.get<{ jobs: Job[] }>('/api/job-postings/my-jobs', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setJobs(res.data.jobs || []);
+      // Check if job access is explicitly denied via permissions
+      if (config.permissions?.canAccessJobs === false) {
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get<{ jobs: Job[] }>('/api/job-postings/my-jobs', {
+          headers: { Authorization: `Bearer ${token}` },
+          validateStatus: (status) => status === 200 || status === 403,
+        });
+
+        // Handle 403 - Permission denied
+        if (res.status === 403) {
+          setJobs([]);
+          setError('');
+          setLoading(false);
+          return;
+        }
+
+        setJobs(res.data.jobs || []);
+      } catch (axiosError: any) {
+        // Handle 403 errors gracefully
+        if (axiosError.response?.status === 403) {
+          setJobs([]);
+          setError('');
+          return;
+        }
+        throw axiosError;
+      }
     } catch (error) {
-      console.error('Error fetching jobs:', error);
-      setError('Failed to fetch job statistics');
+      // Only log non-403 errors
+      if (axios.isAxiosError(error) && error.response?.status !== 403) {
+        console.error('Error fetching jobs:', error);
+        setError('Failed to fetch job statistics');
+      }
       setJobs([]);
     } finally {
       setLoading(false);
     }
-  }, [config.tokenKey]);
+  }, [config.tokenKey, config.permissions]);
 
   const fetchBlogs = useCallback(async (): Promise<void> => {
     try {
@@ -175,36 +211,66 @@ const JobStats: React.FC<JobStatsProps> = ({
 
       if (!token || !userId) {
         setBlogs([]);
+        setBlogLoading(false);
         return;
       }
 
-      const res = await axios.get<PublishedBlogsResponse>('/api/blog/published', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // Check if blog access is explicitly denied via permissions
+      if (config.permissions?.canAccessBlogs === false) {
+        setBlogs([]);
+        setBlogLoading(false);
+        return;
+      }
 
-      const raw = res.data.blogs || [];
-      const normalized = raw.map((b: BlogFromAPI) => ({
-        _id: b._id,
-        title: b.title,
-        likesCount: Array.isArray(b.likes) ? b.likes.length : 0,
-        commentsCount: Array.isArray(b.comments) ? b.comments.length : 0,
-        createdAt: b.createdAt,
-        postedBy: b.postedBy,
-      })) as BlogPost[];
+      try {
+        const res = await axios.get<PublishedBlogsResponse>('/api/blog/published', {
+          headers: { Authorization: `Bearer ${token}` },
+          validateStatus: (status) => status === 200 || status === 403,
+        });
 
-      const mine = normalized.filter((b: BlogPost) => {
-        const postedBy = b.postedBy as { _id?: string };
-        return postedBy && postedBy._id === userId;
-      });
-      setBlogs(mine);
+        // Handle 403 - Permission denied
+        if (res.status === 403) {
+          setBlogs([]);
+          setBlogError('');
+          setBlogLoading(false);
+          return;
+        }
+
+        const raw = res.data.blogs || [];
+        const normalized = raw.map((b: BlogFromAPI) => ({
+          _id: b._id,
+          title: b.title,
+          likesCount: Array.isArray(b.likes) ? b.likes.length : 0,
+          commentsCount: Array.isArray(b.comments) ? b.comments.length : 0,
+          createdAt: b.createdAt,
+          postedBy: b.postedBy,
+        })) as BlogPost[];
+
+        const mine = normalized.filter((b: BlogPost) => {
+          const postedBy = b.postedBy as { _id?: string };
+          return postedBy && postedBy._id === userId;
+        });
+        setBlogs(mine);
+      } catch (axiosError: any) {
+        // Handle 403 errors gracefully
+        if (axiosError.response?.status === 403) {
+          setBlogs([]);
+          setBlogError('');
+          return;
+        }
+        throw axiosError;
+      }
     } catch (error) {
-      console.error('Error fetching blogs:', error);
-      setBlogError('Failed to fetch blog statistics');
+      // Only log non-403 errors
+      if (axios.isAxiosError(error) && error.response?.status !== 403) {
+        console.error('Error fetching blogs:', error);
+        setBlogError('Failed to fetch blog statistics');
+      }
       setBlogs([]);
     } finally {
       setBlogLoading(false);
     }
-  }, [config.tokenKey]);
+  }, [config.tokenKey, config.permissions]);
 
   const fetchApplications = useCallback(async (): Promise<void> => {
     try {
@@ -213,21 +279,53 @@ const JobStats: React.FC<JobStatsProps> = ({
       const token = localStorage.getItem(config.tokenKey);
       if (!token) {
         setApplications([]);
+        setApplicationsLoading(false);
         return;
       }
-      const res = await axios.get<JobApplicationsResponse>('/api/job-postings/job-applications', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const list = (res.data?.applications || []) as ApplicationItem[];
-      setApplications(Array.isArray(list) ? list : []);
+
+      // Check if application access is explicitly denied via permissions
+      if (config.permissions?.canAccessApplications === false) {
+        setApplications([]);
+        setApplicationsLoading(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get<JobApplicationsResponse>('/api/job-postings/job-applications', {
+          headers: { Authorization: `Bearer ${token}` },
+          validateStatus: (status) => status === 200 || status === 403,
+        });
+
+        // Handle 403 - Permission denied
+        if (res.status === 403) {
+          setApplications([]);
+          setApplicationsError('');
+          setApplicationsLoading(false);
+          return;
+        }
+
+        const list = (res.data?.applications || []) as ApplicationItem[];
+        setApplications(Array.isArray(list) ? list : []);
+      } catch (axiosError: any) {
+        // Handle 403 errors gracefully
+        if (axiosError.response?.status === 403) {
+          setApplications([]);
+          setApplicationsError('');
+          return;
+        }
+        throw axiosError;
+      }
     } catch (error) {
-      console.error('Error fetching applications:', error);
-      setApplicationsError('Failed to fetch job applications');
+      // Only log non-403 errors
+      if (axios.isAxiosError(error) && error.response?.status !== 403) {
+        console.error('Error fetching applications:', error);
+        setApplicationsError('Failed to fetch job applications');
+      }
       setApplications([]);
     } finally {
       setApplicationsLoading(false);
     }
-  }, [config.tokenKey]);
+  }, [config.tokenKey, config.permissions]);
 
   useEffect(() => {
     fetchJobs();
