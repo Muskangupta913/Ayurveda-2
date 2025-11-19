@@ -153,6 +153,12 @@ const Sidebar = () => {
         description: "View & Manage Patients" 
       },
       { 
+        label: "Add Treatment", 
+        path: "/staff/add-treatment", 
+        icon: "➕", 
+        description: "Manage doctor treatments" 
+      },
+      { 
         label: "EOD Notes", 
         path: "/staff/eodNotes", 
         icon: "📝", 
@@ -165,6 +171,7 @@ const Sidebar = () => {
         description: `View Cancelled Claims (${cancelledClaims.length})`,
         badge: cancelledClaims.length > 0 ? cancelledClaims.length : null
       },
+      
       
     ];
   }
