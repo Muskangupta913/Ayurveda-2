@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import CreateAgentModal from '../../components/CreateAgentModal';
 import AgentPermissionModal from '../../components/AgentPermissionModal';
+import DoctorTreatmentModal from '../../components/DoctorTreatmentModal';
 import ClinicLayout from '../../components/ClinicLayout';
 import withClinicAuth from '../../components/withClinicAuth';
 import { clinicNavigationItems } from '../../data/clinicNavigationItems';
@@ -14,6 +15,7 @@ const ManageAgentsPage = () => {
   const [menuAgentId, setMenuAgentId] = useState(null);
   const [passwordAgent, setPasswordAgent] = useState(null);
   const [permissionAgent, setPermissionAgent] = useState(null);
+  const [treatmentAgent, setTreatmentAgent] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -331,6 +333,17 @@ const ManageAgentsPage = () => {
                                 >
                                   Rights
                                 </button>
+                                {agent.role === 'doctorStaff' && (
+                                  <button
+                                    className="w-full text-left px-3 py-2 text-[11px] hover:bg-gray-50 transition-colors border-t border-gray-200"
+                                    onClick={() => {
+                                      setTreatmentAgent(agent);
+                                      setMenuAgentId(null);
+                                    }}
+                                  >
+                                    Add Treatment
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -364,6 +377,17 @@ const ManageAgentsPage = () => {
           agentName={permissionAgent.name}
           token={token || null}
           userRole={clinicToken ? 'clinic' : doctorToken ? 'doctor' : 'admin'}
+        />
+      )}
+
+      {/* Doctor Treatment Modal */}
+      {treatmentAgent && (
+        <DoctorTreatmentModal
+          isOpen={!!treatmentAgent}
+          onClose={() => setTreatmentAgent(null)}
+          doctorStaffId={treatmentAgent._id}
+          doctorStaffName={treatmentAgent.name}
+          token={token || null}
         />
       )}
 
