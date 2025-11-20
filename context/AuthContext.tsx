@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone?: string, gender?: string, dateOfBirth?: string, age?: number) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -89,13 +89,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string, phone?: string) => {
+  const register = async (name: string, email: string, password: string, phone?: string, gender?: string, dateOfBirth?: string, age?: number) => {
     try {
       await axios.post('/api/auth/register', {
         name,
         email,
         password,
         phone,
+        gender,
+        dateOfBirth,
+        age,
       });
 
       // Auto login after successful registration

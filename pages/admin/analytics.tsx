@@ -18,8 +18,23 @@ import {
   InformationCircleIcon,
   ExclamationTriangleIcon,
   XMarkIcon,
+  ChartBarSquareIcon,
+  ChartPieIcon,
 } from '@heroicons/react/24/outline';
 import type { NextPageWithLayout } from '../_app';
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 type User = {
   _id: string;
@@ -27,7 +42,13 @@ type User = {
   email: string;
   phone: string;
   role: string;
+  gender?: string;
+  dateOfBirth?: string;
+  age?: number;
+  createdAt?: string;
 };
+
+type SortableField = 'name' | 'email' | 'phone';
 
 interface Toast {
   id: string;
@@ -89,9 +110,10 @@ function UserProfile() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(20);
-  const [sortField, setSortField] = useState('name');
+  const [sortField, setSortField] = useState<SortableField>('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [loading, setLoading] = useState(true);
+  const [selectedRole, setSelectedRole] = useState<string>('all');
 
   // Toast helper functions
   const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
@@ -204,8 +226,12 @@ function UserProfile() {
     setCurrentPage(1);
   }, [searchTerm, users, showToast]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRole]);
+
   // Sort users
-  const sortUsers = (field: keyof User) => {
+  const sortUsers = (field: SortableField) => {
     const direction = sortField === field && sortDirection === 'asc' ? 'desc' : 'asc';
     setSortField(field);
     setSortDirection(direction);
@@ -221,11 +247,16 @@ function UserProfile() {
     showToast(`Sorted by ${field} (${direction})`, 'info');
   };
 
+  const roleFilteredUsers =
+    selectedRole === 'all'
+      ? filteredUsers
+      : filteredUsers.filter((user) => user.role === selectedRole);
+
   // Pagination
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers: User[] = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const currentUsers: User[] = roleFilteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(roleFilteredUsers.length / usersPerPage);
 
   // Download CSV
   const downloadCSV = () => {
@@ -238,20 +269,28 @@ function UserProfile() {
       return;
     }
 
-    if (filteredUsers.length === 0) {
+    const exportData =
+      selectedRole === 'all'
+        ? filteredUsers
+        : filteredUsers.filter((user) => user.role === selectedRole);
+
+    if (exportData.length === 0) {
       showToast('No data to export', 'warning');
       return;
     }
 
     try {
-      const headers = ['Name', 'Email', 'Phone', 'Role'];
+      const headers = ['Name', 'Email', 'Phone', 'Role', 'Gender', 'Age', 'Date of Birth'];
       const csvContent = [
         headers.join(','),
-        ...filteredUsers.map(user => [
+        ...exportData.map(user => [
           `"${user.name}"`,
           `"${user.email}"`,
           `"${user.phone}"`,
-          `"${user.role}"`
+          `"${user.role}"`,
+          `"${user.gender || 'N/A'}"`,
+          `"${user.age || 'N/A'}"`,
+          `"${user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'N/A'}"`
         ].join(','))
       ].join('\n');
 
@@ -272,6 +311,9 @@ function UserProfile() {
 
   // Check if agent has read permission
   const hasReadPermission = isAdmin || (isAgent && agentPermissions && (agentPermissions.canRead === true || agentPermissions.canAll === true));
+  const canExport =
+    isAdmin ||
+    (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canExport || agentPermissions.canAll));
 
   if (loading || (isAgent && permissionsLoading)) {
     return (
@@ -321,198 +363,600 @@ function UserProfile() {
     return acc;
   }, {} as Record<string, number>);
 
+  const uniqueRoles = Object.keys(roleCounts);
+  const topRoleEntry = uniqueRoles
+    .map((role) => ({ role, count: roleCounts[role] }))
+    .sort((a, b) => b.count - a.count)[0];
+  const averagePerRole =
+    uniqueRoles.length > 0 ? Math.round(users.length / uniqueRoles.length) : 0;
+  const summaryStats = [
+    {
+      label: 'Total Users',
+      value: users.length,
+      meta: `${roleFilteredUsers.length} in view`,
+    },
+    {
+      label: 'Top Role',
+      value: topRoleEntry ? topRoleEntry.role : '—',
+      meta: topRoleEntry ? `${topRoleEntry.count} members` : 'No data',
+    },
+    {
+      label: 'Unique Roles',
+      value: uniqueRoles.length,
+      meta: 'Segments tracked',
+    },
+    {
+      label: 'Avg / Role',
+      value: averagePerRole,
+      meta: 'Members per category',
+    },
+  ];
+  const roleDistribution = uniqueRoles
+    .map((role) => ({
+      role,
+      count: roleCounts[role],
+      percentage: Math.round((roleCounts[role] / users.length) * 100),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const allowedGenders = ['male', 'female', 'other'];
+  const genderCounts = users.reduce((acc, user) => {
+    const normalized = user.gender
+      ? user.gender.toLowerCase().trim()
+      : 'unspecified';
+    const bucket = allowedGenders.includes(normalized)
+      ? normalized
+      : 'unspecified';
+    acc[bucket] = (acc[bucket] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const genderDistribution = Object.entries(genderCounts).map(
+    ([gender, count]) => ({
+      gender,
+      count,
+      percentage: users.length
+        ? Math.round((count / users.length) * 100)
+        : 0,
+    })
+  );
+
+  // Age distribution
+  const ageGroups = {
+    '0-17': 0,
+    '18-25': 0,
+    '26-35': 0,
+    '36-45': 0,
+    '46-55': 0,
+    '56-65': 0,
+    '66+': 0,
+    'unspecified': 0
+  };
+
+  users.forEach((user) => {
+    const age = user.age;
+    if (!age || age < 0) {
+      ageGroups['unspecified']++;
+    } else if (age <= 17) {
+      ageGroups['0-17']++;
+    } else if (age <= 25) {
+      ageGroups['18-25']++;
+    } else if (age <= 35) {
+      ageGroups['26-35']++;
+    } else if (age <= 45) {
+      ageGroups['36-45']++;
+    } else if (age <= 55) {
+      ageGroups['46-55']++;
+    } else if (age <= 65) {
+      ageGroups['56-65']++;
+    } else {
+      ageGroups['66+']++;
+    }
+  });
+
+  const ageDistribution = Object.entries(ageGroups)
+    .filter(([_, count]) => count > 0)
+    .map(([ageGroup, count]) => ({
+      ageGroup,
+      count,
+      percentage: users.length
+        ? Math.round((count / users.length) * 100)
+        : 0,
+    }))
+    .sort((a, b) => {
+      // Sort by age group order
+      const order = ['0-17', '18-25', '26-35', '36-45', '46-55', '56-65', '66+', 'unspecified'];
+      return order.indexOf(a.ageGroup) - order.indexOf(b.ageGroup);
+    });
+
+  // Quick stats for current view (fills empty space beside filters)
+  const usersInView = roleFilteredUsers.length;
+  const usersWithAgeInView = roleFilteredUsers.filter(
+    (user) => typeof user.age === 'number' && !Number.isNaN(user.age)
+  );
+  const averageAgeInView = usersWithAgeInView.length
+    ? (usersWithAgeInView.reduce((sum, user) => sum + (user.age || 0), 0) / usersWithAgeInView.length).toFixed(1)
+    : null;
+  const ageCoveragePercent = usersInView
+    ? Math.round((usersWithAgeInView.length / usersInView) * 100)
+    : 0;
+  const latestUser =
+    roleFilteredUsers.length > 0
+      ? [...roleFilteredUsers].sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate;
+        })[0]
+      : null;
+
 return (
- <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-   <ToastContainer toasts={toasts} removeToast={removeToast} />
-   
-   <div className="max-w-7xl mx-auto space-y-4">
-     {/* Header */}
-     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-         <div className="flex items-center gap-3">
-           <div className="bg-gray-800 p-2 rounded-lg">
-             <UserGroupIcon className="h-5 w-5 text-white" />
-           </div>
-           <div>
-             <h1 className="text-lg font-semibold text-gray-900">User Analytics</h1>
-             <p className="text-xs text-gray-700">Manage and analyze user registrations</p>
-           </div>
-         </div>
-         <div className="bg-gray-100 px-3 py-1.5 rounded-lg">
-           <span className="text-xs font-medium text-gray-700">Total: {users.length}</span>
-         </div>
-       </div>
-     </div>
+  <div className="min-h-screen bg-slate-50 px-3 py-4 sm:px-4 lg:px-6">
+    <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-     {/* Stats Cards */}
-     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-       <div className="bg-white rounded-lg border border-gray-200 p-3">
-         <p className="text-xs text-gray-700 mb-1">Total Users</p>
-         <p className="text-xl font-bold text-gray-900">{users.length}</p>
-       </div>
-       {Object.entries(roleCounts).slice(0, 3).map(([role, count]) => (
-         <div key={role} className="bg-white rounded-lg border border-gray-200 p-3">
-           <p className="text-xs text-gray-700 mb-1">{role}</p>
-           <p className="text-xl font-bold text-gray-900">{count}</p>
-         </div>
-       ))}
-     </div>
+    <div className="mx-auto max-w-7xl space-y-3">
+      <section className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-5 text-white shadow-xl">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wide text-slate-300">
+              Admin · User analytics
+            </p>
+            <h1 className="text-xl sm:text-2xl font-semibold leading-tight">
+              Intelligence dashboard
+            </h1>
+            <p className="max-w-2xl text-xs text-slate-200">
+              Track growth across roles, gender, and age demographics.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-center">
+              <p className="text-[10px] uppercase tracking-wide text-slate-200">
+                Active profiles
+              </p>
+              <p className="text-2xl font-semibold">{roleFilteredUsers.length}</p>
+            </div>
+            {canExport && (
+              <button
+                onClick={downloadCSV}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/20"
+              >
+                <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                Export
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
-     {/* Controls */}
-     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-         {/* Search */}
-         <div className="relative flex-1 max-w-full lg:max-w-md">
-           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-700" />
-           <input
-             type="text"
-             placeholder="Search by name, email, or phone..."
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
-           />
-         </div>
+      <section className="grid gap-2.5 grid-cols-2 md:grid-cols-4">
+        {summaryStats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+          >
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+              {stat.label}
+            </p>
+            <p className="mt-1.5 text-2xl font-semibold text-slate-900">
+              {stat.value}
+            </p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{stat.meta}</p>
+          </div>
+        ))}
+      </section>
 
-         {/* Actions */}
-         <div className="flex gap-2">
-           {(() => {
-             const adminTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('adminToken') : false;
-             const agentTokenExists = typeof window !== 'undefined' ? !!localStorage.getItem('agentToken') : false;
-             const isAgentRoute = router.pathname?.startsWith('/agent/') || (typeof window !== 'undefined' && window.location.pathname?.startsWith('/agent/'));
-             
-             const canExport = isAdmin || (isAgent && !permissionsLoading && agentPermissions && (agentPermissions.canExport || agentPermissions.canAll));
-             
-             if (canExport) {
-               return (
-                 <button
-                   onClick={downloadCSV}
-                   className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors"
-                 >
-                   <ArrowDownTrayIcon className="w-4 h-4" />
-                   <span className="hidden sm:inline">Export CSV</span>
-                 </button>
-               );
-             }
-             return null;
-           })()}
-           <div className="flex items-center gap-2">
-             <FunnelIcon className="w-4 h-4 text-gray-700" />
-             <select
-               value={sortField}
-               onChange={(e) => sortUsers(e.target.value as keyof User)}
-               className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-800"
-             >
-               <option value="name">Sort by Name</option>
-               <option value="email">Sort by Email</option>
-               <option value="phone">Sort by Phone</option>
-             </select>
-           </div>
-         </div>
-       </div>
-     </div>
+      <section className="grid gap-2.5 lg:grid-cols-5">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:col-span-3">
+          <div className="flex flex-col gap-2.5">
+            <div className="relative">
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-900/10"
+              />
+            </div>
 
-     {/* User List */}
-     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-       <div className="space-y-1 p-2">
-         {currentUsers.map((user) => (
-           <div key={user._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-2">
-             <div className="flex items-center gap-3 flex-1 min-w-0">
-               <div className="bg-gray-800 p-1.5 rounded-lg flex-shrink-0">
-                 <UserIcon className="h-4 w-4 text-white" />
-               </div>
-               <div className="flex-1 min-w-0">
-                 <h3 className="text-sm font-semibold text-gray-900 truncate">{user.name}</h3>
-                 <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-700 rounded mt-1">
-                   {user.role}
-                 </span>
-               </div>
-             </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Filter:
+              </span>
+              {['all', ...uniqueRoles].map((role) => {
+                const chipCount = role === 'all'
+                  ? filteredUsers.length
+                  : roleCounts[role] || 0;
+                return (
+                  <button
+                    key={role}
+                    onClick={() => setSelectedRole(role)}
+                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition ${
+                      selectedRole === role
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    {role === 'all' ? 'All' : role}{' '}
+                    <span className="text-[9px] opacity-80">({chipCount})</span>
+                  </button>
+                );
+              })}
+            </div>
 
-             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pl-9 sm:pl-0">
-               <div className="flex items-center text-xs text-gray-700">
-                 <EnvelopeIcon className="w-3 h-3 mr-1.5 text-gray-600 flex-shrink-0" />
-                 <span className="truncate">{user.email}</span>
-               </div>
-               <div className="flex items-center text-xs text-gray-700">
-                 <PhoneIcon className="w-3 h-3 mr-1.5 text-gray-600 flex-shrink-0" />
-                 <span>{user.phone}</span>
-               </div>
-             </div>
-           </div>
-         ))}
-       </div>
-     </div>
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                <FunnelIcon className="h-3.5 w-3.5 text-slate-400" />
+                Sort by:
+              </div>
+              <select
+              value={sortField}
+              onChange={(e) => sortUsers(e.target.value as SortableField)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900/10 lg:w-40"
+              >
+                <option value="name">Name (A-Z)</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+              </select>
+            </div>
 
-     {/* Pagination */}
-     {totalPages > 1 && (
-       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-           <div className="text-xs text-gray-700 text-center sm:text-left">
-             Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} results
-           </div>
-           
-           <div className="flex items-center justify-center gap-2">
-             <button
-               onClick={() => {
-                 setCurrentPage(prev => Math.max(prev - 1, 1));
-                 showToast('Previous page', 'info');
-               }}
-               disabled={currentPage === 1}
-               className="flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-             >
-               <ChevronLeftIcon className="w-4 h-4" />
-               <span className="hidden sm:inline ml-1">Previous</span>
-             </button>
-             
-             <div className="flex gap-1">
-               {[...Array(Math.min(totalPages, 7))].map((_, index) => {
-                 let pageNum;
-                 if (totalPages <= 7) {
-                   pageNum = index + 1;
-                 } else if (currentPage <= 4) {
-                   pageNum = index + 1;
-                 } else if (currentPage >= totalPages - 3) {
-                   pageNum = totalPages - 6 + index;
-                 } else {
-                   pageNum = currentPage - 3 + index;
-                 }
-                 
-                 return (
-                   <button
-                     key={pageNum}
-                     onClick={() => {
-                       setCurrentPage(pageNum);
-                       showToast(`Page ${pageNum}`, 'info');
-                     }}
-                     className={`px-2 py-1.5 text-xs font-medium rounded-lg ${
-                       currentPage === pageNum
-                         ? 'bg-gray-800 text-white'
-                         : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                     }`}
-                   >
-                     {pageNum}
-                   </button>
-                 );
-               })}
-             </div>
-             
-             <button
-               onClick={() => {
-                 setCurrentPage(prev => Math.min(prev + 1, totalPages));
-                 showToast('Next page', 'info');
-               }}
-               disabled={currentPage === totalPages}
-               className="flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-             >
-               <span className="hidden sm:inline mr-1">Next</span>
-               <ChevronRightIcon className="w-4 h-4" />
-             </button>
-           </div>
-         </div>
-       </div>
-     )}
-   </div>
- </div>
+            {usersInView > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100">
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5">
+                  <p className="text-[9px] uppercase tracking-wide text-slate-500">In view</p>
+                  <p className="text-base font-semibold text-slate-900">{usersInView}</p>
+                </div>
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5">
+                  <p className="text-[9px] uppercase tracking-wide text-slate-500">Avg age</p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {averageAgeInView ? `${averageAgeInView}` : 'N/A'}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5">
+                  <p className="text-[9px] uppercase tracking-wide text-slate-500">Age coverage</p>
+                  <p className="text-base font-semibold text-slate-900">{ageCoveragePercent}%</p>
+                </div>
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5">
+                  <p className="text-[9px] uppercase tracking-wide text-slate-500">Latest user</p>
+                  <p className="text-[11px] font-semibold text-slate-900 truncate">
+                    {latestUser?.name || '—'}
+                  </p>
+                  {latestUser?.createdAt && (
+                    <p className="text-[9px] text-slate-500">
+                      {new Date(latestUser.createdAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="lg:col-span-2 grid grid-cols-1 gap-2.5">
+          {/* Role Distribution - Compact */}
+          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <ChartBarSquareIcon className="h-4 w-4 text-slate-600" />
+              <p className="text-xs font-semibold text-slate-700">Role Distribution</p>
+            </div>
+            <div className="space-y-1.5">
+              {roleDistribution.length === 0 ? (
+                <p className="text-xs text-slate-500">No roles available.</p>
+              ) : (
+                roleDistribution.map((role) => (
+                  <div key={role.role}>
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 mb-0.5">
+                      <span className="font-medium text-slate-700 text-xs">{role.role}</span>
+                      <span>{role.count} ({role.percentage || 0}%)</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-slate-900"
+                        style={{ width: `${role.percentage || 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Gender & Age - Side by Side on larger screens */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 lg:col-span-2">
+            {/* Gender Breakdown - Enhanced with Pie Chart */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <ChartPieIcon className="h-4 w-4 text-slate-600" />
+                  <p className="text-xs font-semibold text-slate-700">Gender Breakdown</p>
+                </div>
+                <div className="text-[9px] text-slate-500">
+                  {users.length} total
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {/* Pie Chart */}
+                <div className="h-28">
+                  {genderDistribution.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={genderDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={20}
+                          outerRadius={35}
+                          paddingAngle={2}
+                          dataKey="count"
+                        >
+                          {genderDistribution.map((entry, index) => {
+                            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#6b7280'];
+                            return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                          })}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#fff', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            fontSize: '10px',
+                            padding: '4px 6px'
+                          }}
+                          formatter={(value: number, name: string, props: any) => [
+                            `${value} (${props.payload.percentage}%)`,
+                            'Count'
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-[10px] text-slate-400">
+                      No data
+                    </div>
+                  )}
+                </div>
+                {/* Stats List */}
+                <div className="space-y-1">
+                {genderDistribution.length === 0 ? (
+                    <p className="text-[10px] text-slate-500">No gender data.</p>
+                  ) : (
+                    genderDistribution.map((item, idx) => {
+                      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#6b7280'];
+                      return (
+                        <div key={item.gender} className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <div 
+                              className="w-1.5 h-1.5 rounded-full" 
+                              style={{ backgroundColor: colors[idx % colors.length] }}
+                            />
+                            <span className="text-[9px] font-medium text-slate-700 capitalize">
+                          {item.gender}
+                        </span>
+                      </div>
+                          <div className="text-[9px] text-slate-600">
+                            <span className="font-semibold">{item.count}</span>
+                            <span className="text-slate-400 ml-0.5">({item.percentage}%)</span>
+                      </div>
+                    </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+              {genderDistribution.length > 0 && (
+                <p className="text-[8px] text-slate-400 mt-1.5 pt-1 border-t border-slate-100">
+                  Missing = "unspecified"
+                </p>
+              )}
+            </div>
+
+            {/* Age Distribution - Horizontal Bar Chart with Inline Stats */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <ChartBarSquareIcon className="h-4 w-4 text-slate-600" />
+                  <p className="text-xs font-semibold text-slate-700">Age Distribution</p>
+                </div>
+                <div className="text-[9px] text-slate-500">
+                  {users.filter(u => u.age).length} users
+                </div>
+              </div>
+              {ageDistribution.length === 0 ? (
+                <p className="text-[10px] text-slate-500 text-center py-2">No age data.</p>
+              ) : (
+                <div className="space-y-2">
+                  {/* Horizontal Bar Chart - Clean and Readable */}
+                  <div className="h-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={ageDistribution.filter(item => item.ageGroup !== 'unspecified')}
+                        layout="vertical"
+                        margin={{ top: 0, right: 10, left: 50, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={true} vertical={false} />
+                        <XAxis 
+                          type="number"
+                          stroke="#6b7280" 
+                          fontSize={9}
+                          tick={{ fill: '#6b7280' }}
+                          domain={[0, 'dataMax']}
+                        />
+                        <YAxis 
+                          type="category"
+                          dataKey="ageGroup"
+                          stroke="#6b7280" 
+                          fontSize={9}
+                          tick={{ fill: '#6b7280' }}
+                          width={45}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#fff', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            fontSize: '10px',
+                            padding: '4px 6px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          }}
+                          formatter={(value: number, name: string, props: any) => [
+                            `${value} users (${props.payload.percentage}%)`,
+                            'Count'
+                          ]}
+                          labelFormatter={(label) => `${label} years`}
+                        />
+                        <Bar 
+                          dataKey="count" 
+                          radius={[0, 4, 4, 0]}
+                        >
+                          {ageDistribution.filter(item => item.ageGroup !== 'unspecified').map((entry, index) => {
+                            const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
+                            return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Inline Age Stats - No Gap */}
+                  <div className="grid grid-cols-4 gap-0.5 pt-1.5 border-t border-slate-100">
+                    {ageDistribution.map((item) => (
+                      <div key={item.ageGroup} className="text-center py-0.5">
+                        <div className="text-[8px] font-semibold text-slate-700">
+                          {item.ageGroup === 'unspecified' ? 'N/A' : item.ageGroup}
+                        </div>
+                        <div className="text-[8px] text-slate-600 font-medium">
+                          {item.count}
+                        </div>
+                        <div className="text-[7px] text-slate-400">
+                          {item.percentage}%
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        {roleFilteredUsers.length === 0 ? (
+          <div className="py-12 text-center text-xs text-slate-500">
+            No users match the current filters.
+          </div>
+        ) : (
+          <div className="grid gap-2.5 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {currentUsers.map((user) => (
+              <div
+                key={user._id}
+                className="rounded-xl border border-slate-100 bg-slate-50/40 p-3 shadow-sm transition hover:border-slate-200 hover:bg-white"
+              >
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-slate-900/90 p-1.5 text-white">
+                      <UserIcon className="h-3 w-3" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-slate-900">{user.name}</p>
+                      <p className="text-[10px] text-slate-500">ID: {user._id.slice(-6)}</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                    {user.role}
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-xs text-slate-600">
+                  <div className="flex items-center">
+                    <EnvelopeIcon className="mr-1.5 h-3 w-3 text-slate-400" />
+                    <span className="truncate text-[11px]">{user.email}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <PhoneIcon className="mr-1.5 h-3 w-3 text-slate-400" />
+                    <span className="text-[11px]">{user.phone}</span>
+                  </div>
+                  {user.gender && (
+                    <div className="flex items-center">
+                      <UserIcon className="mr-1.5 h-3 w-3 text-slate-400" />
+                      <span className="capitalize text-[11px]">{user.gender}</span>
+                    </div>
+                  )}
+                  {user.age && (
+                    <div className="flex items-center">
+                      <span className="mr-1.5 text-[10px] text-slate-400">Age:</span>
+                      <span className="text-[11px]">{user.age} years</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {totalPages > 1 && (
+        <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[10px] text-slate-500">
+              Showing {roleFilteredUsers.length === 0 ? 0 : indexOfFirstUser + 1} –
+              {Math.min(indexOfLastUser, roleFilteredUsers.length)} of {roleFilteredUsers.length} users
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  setCurrentPage((prev) => Math.max(prev - 1, 1));
+                  showToast('Previous page', 'info');
+                }}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeftIcon className="h-3 w-3" />
+                Prev
+              </button>
+              <div className="flex gap-0.5">
+                {[...Array(Math.min(totalPages, 7))].map((_, index) => {
+                  let pageNum;
+                  if (totalPages <= 7) {
+                    pageNum = index + 1;
+                  } else if (currentPage <= 4) {
+                    pageNum = index + 1;
+                  } else if (currentPage >= totalPages - 3) {
+                    pageNum = totalPages - 6 + index;
+                  } else {
+                    pageNum = currentPage - 3 + index;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        showToast(`Page ${pageNum}`, 'info');
+                      }}
+                      className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold ${
+                        currentPage === pageNum
+                          ? 'bg-slate-900 text-white'
+                          : 'border border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => {
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+                  showToast('Next page', 'info');
+                }}
+                disabled={currentPage === totalPages}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+                <ChevronRightIcon className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  </div>
 );
 }
 

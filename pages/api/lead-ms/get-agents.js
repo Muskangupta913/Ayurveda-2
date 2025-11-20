@@ -15,8 +15,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
   }
 
-  // Allow admin, clinic, doctor, and agent roles
-  if (!requireRole(me, ['admin', 'clinic', 'doctor', 'agent'])) {
+  // Allow admin, clinic, doctor, agent, and doctorStaff roles
+  if (!requireRole(me, ['admin', 'clinic', 'doctor', 'agent', 'doctorStaff'])) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
 
@@ -161,6 +161,31 @@ export default async function handler(req, res) {
         } else {
           // If agent has no clinicId, return empty
           return res.status(200).json({ success: true, agents: [] });
+        }
+      } else if (me.role === 'doctorStaff') {
+        // Doctor staff should mirror doctor visibility but scoped to their clinic/creations
+        if (roleFilter === 'doctorStaff') {
+          if (me.clinicId) {
+            query = {
+              role: 'doctorStaff',
+              $or: [
+                { clinicId: me.clinicId },
+                { createdBy: me._id }
+              ]
+            };
+          } else {
+            query = { role: 'doctorStaff', createdBy: me._id };
+          }
+        } else {
+          // Default/agent view: restrict to their clinic or creations
+          if (me.clinicId) {
+            query = {
+              role: 'agent',
+              clinicId: me.clinicId
+            };
+          } else {
+            query = { role: 'agent', createdBy: me._id };
+          }
         }
       }
 

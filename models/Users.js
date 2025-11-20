@@ -17,6 +17,9 @@ const UserSchema = new mongoose.Schema({
     enum: ['user', 'clinic', 'admin', 'doctor', 'lead', 'agent','staff','doctorStaff'],
     default: 'user',
   },
+  gender: { type: String, enum: ['male', 'female', 'other'], default: null },
+  dateOfBirth: { type: Date, default: null },
+  age: { type: Number, default: null },
   clinicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' }, // ✅ tie agent to clinic
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ✅ track who created this agent
   isApproved: { type: Boolean, default: false },
