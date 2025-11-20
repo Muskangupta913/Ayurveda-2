@@ -329,6 +329,21 @@ const AddTreatment: NextPageWithLayout = () => {
   };
 
   const totalSubTreatments = treatments.reduce((total, treatment) => total + (treatment.subcategories?.length || 0), 0);
+  const treatmentsWithSub = treatments.filter((treatment) => (treatment.subcategories?.length || 0) > 0).length;
+  const subCoveragePercent = treatments.length
+    ? Math.round((treatmentsWithSub / treatments.length) * 100)
+    : 0;
+  const avgSubsPerMain = treatments.length
+    ? parseFloat((totalSubTreatments / treatments.length).toFixed(1))
+    : 0;
+  const topTreatments = [...treatments]
+    .map((treatment) => ({
+      ...treatment,
+      subCount: treatment.subcategories?.length || 0,
+    }))
+    .sort((a, b) => b.subCount - a.subCount)
+    .slice(0, 5);
+  const maxSubCount = Math.max(...topTreatments.map((t) => t.subCount), 1);
 
   // Show access denied message only for agents without read permission
   if (!isAdmin && isAgent && !permissionsLoading && agentPermissions && !agentPermissions.canRead && !agentPermissions.canAll) {
@@ -398,6 +413,178 @@ const AddTreatment: NextPageWithLayout = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-3">
             <p className="text-xs text-gray-700 mb-1">Total</p>
             <p className="text-xl font-bold text-gray-900">{treatments.length + totalSubTreatments}</p>
+          </div>
+        </div>
+
+        {/* Graphical Overview */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Treatment Distribution</p>
+              <p className="text-xs text-gray-600">Share of sub-treatments by top mains</p>
+            </div>
+            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+              {totalSubTreatments} sub treatments
+            </span>
+          </div>
+          {topTreatments.length === 0 || totalSubTreatments === 0 ? (
+            <div className="py-6 text-center text-xs text-gray-500">No data yet</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative flex items-center justify-center">
+                <svg viewBox="0 0 220 220" className="w-48 h-48">
+                  <defs>
+                    <radialGradient id="innerCircle" cx="50%" cy="50%" r="50%">
+                      <stop offset="70%" stopColor="#111827" />
+                      <stop offset="100%" stopColor="#0f172a" />
+                    </radialGradient>
+                    <linearGradient id="donutColor1" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#fb7185" />
+                      <stop offset="100%" stopColor="#ec4899" />
+                    </linearGradient>
+                    <linearGradient id="donutColor2" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#f97316" />
+                      <stop offset="100%" stopColor="#facc15" />
+                    </linearGradient>
+                    <linearGradient id="donutColor3" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#fde047" />
+                      <stop offset="100%" stopColor="#fbbf24" />
+                    </linearGradient>
+                    <linearGradient id="donutColor4" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                    <linearGradient id="donutColor5" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#60a5fa" />
+                      <stop offset="100%" stopColor="#3b82f6" />
+                    </linearGradient>
+                  </defs>
+                  {topTreatments.reduce(
+                    (segments: { paths: React.ReactElement[]; currentAngle: number }, treatment, index) => {
+                      const fraction = (treatment.subCount || 0) / totalSubTreatments;
+                      const startAngle = segments.currentAngle;
+                      const endAngle = startAngle + fraction * Math.PI * 2;
+                      const largeArcFlag = fraction > 0.5 ? 1 : 0;
+                      const radiusOuter = 90;
+                      const radiusInner = 45;
+                      const startOuterX = 110 + radiusOuter * Math.cos(startAngle);
+                      const startOuterY = 110 + radiusOuter * Math.sin(startAngle);
+                      const endOuterX = 110 + radiusOuter * Math.cos(endAngle);
+                      const endOuterY = 110 + radiusOuter * Math.sin(endAngle);
+                      const startInnerX = 110 + radiusInner * Math.cos(endAngle);
+                      const startInnerY = 110 + radiusInner * Math.sin(endAngle);
+                      const endInnerX = 110 + radiusInner * Math.cos(startAngle);
+                      const endInnerY = 110 + radiusInner * Math.sin(startAngle);
+
+                      segments.paths.push(
+                        <path
+                          key={treatment._id}
+                          d={`M ${startOuterX} ${startOuterY} A ${radiusOuter} ${radiusOuter} 0 ${largeArcFlag} 1 ${endOuterX} ${endOuterY} L ${startInnerX} ${startInnerY} A ${radiusInner} ${radiusInner} 0 ${largeArcFlag} 0 ${endInnerX} ${endInnerY} Z`}
+                          fill={`url(#donutColor${(index % 5) + 1})`}
+                          className="shadow-sm"
+                        />
+                      );
+
+                      segments.currentAngle = endAngle;
+                      return segments;
+                    },
+                    { paths: [] as React.ReactElement[], currentAngle: -Math.PI / 2 }
+                  ).paths}
+                  <circle cx="110" cy="110" r="40" fill="url(#innerCircle)" />
+                </svg>
+                <div className="absolute text-center">
+                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-lg font-semibold text-gray-900">{totalSubTreatments}</p>
+                </div>
+              </div>
+              <div className="space-y-2 text-xs">
+                {topTreatments.map((treatment, index) => {
+                  const percent = ((treatment.subCount / totalSubTreatments) * 100).toFixed(1);
+                  const legendColors = [
+                    "text-pink-500",
+                    "text-orange-500",
+                    "text-yellow-500",
+                    "text-green-500",
+                    "text-blue-500",
+                  ];
+                  return (
+                    <div
+                      key={treatment._id}
+                      className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${legendColors[index % legendColors.length]}`}>
+                          {percent}%
+                        </span>
+                        <span className="font-medium text-gray-900 truncate">{treatment.name}</span>
+                      </div>
+                      <span className="text-gray-500 font-semibold">{treatment.subCount} sub</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="mt-4 flex items-center justify-between text-xs text-gray-600">
+            <span>Main with sub treatments: {treatmentsWithSub}</span>
+            <span>
+              Avg sub/main:{" "}
+              {treatments.length ? (totalSubTreatments / treatments.length).toFixed(1) : "0.0"}
+            </span>
+          </div>
+        </div>
+
+        {/* Coverage & Activity Visualization */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
+            <div
+              className="w-24 h-24 rounded-full flex items-center justify-center relative"
+              style={{
+                background: `conic-gradient(#111 ${subCoveragePercent}%, #e5e7eb ${subCoveragePercent}% 100%)`,
+              }}
+            >
+              <div className="absolute w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                <span className="text-lg font-semibold text-gray-900">
+                  {subCoveragePercent}%
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Coverage</p>
+              <p className="text-xs text-gray-600 mb-2">
+                Main treatments with at least one sub-treatment
+              </p>
+              <p className="text-sm text-gray-700">
+                {treatmentsWithSub} of {treatments.length || 0} mains
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
+            <div
+              className="w-24 h-24 rounded-full flex items-center justify-center relative"
+              style={{
+                background: `conic-gradient(#4b5563 ${Math.min(
+                  (avgSubsPerMain / 5) * 100,
+                  100
+                )}%, #e5e7eb ${Math.min((avgSubsPerMain / 5) * 100, 100)}% 100%)`,
+              }}
+            >
+              <div className="absolute w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                <span className="text-lg font-semibold text-gray-900">
+                  {avgSubsPerMain}
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Avg. Sub Count</p>
+              <p className="text-xs text-gray-600 mb-2">
+                Average sub-treatments per main (target 5+)
+              </p>
+              <p className="text-sm text-gray-700">
+                {totalSubTreatments} subs / {treatments.length || 0} mains
+              </p>
+            </div>
           </div>
         </div>
 
