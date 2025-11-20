@@ -1836,31 +1836,44 @@ function ClinicManagementDashboard() {
                         </ResponsiveContainer>
                       </div>
 
-                      {/* Pie Chart - Services Distribution */}
+                      {/* Column Chart - Services Distribution */}
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <h3 className="text-sm font-semibold text-gray-700 mb-4">Services Distribution</h3>
                         <ResponsiveContainer width="100%" height={250}>
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: 'Treatments', value: clinicStats.totalTreatments },
-                                { name: 'Services', value: clinicStats.totalServices },
-                                { name: 'Sub-Treatments', value: clinicStats.totalSubTreatments },
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              label={({ name, percent }: { name: string; percent?: number }) => `${name}: ${percent !== undefined ? (percent * 100).toFixed(0) : 0}%`}
-                              outerRadius={80}
-                              fill="#8884d8"
-                              dataKey="value"
-                            >
+                          <BarChart
+                            data={[
+                              { name: 'Treatments', value: clinicStats.totalTreatments },
+                              { name: 'Services', value: clinicStats.totalServices },
+                              { name: 'Sub-Treatments', value: clinicStats.totalSubTreatments },
+                            ]}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              dataKey="name" 
+                              stroke="#6b7280" 
+                              fontSize={12}
+                              tick={{ fill: '#6b7280' }}
+                            />
+                            <YAxis 
+                              stroke="#6b7280" 
+                              fontSize={12}
+                              tick={{ fill: '#6b7280' }}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#fff', 
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '6px',
+                                fontSize: '12px'
+                              }}
+                            />
+                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                               <Cell fill="#3b82f6" />
                               <Cell fill="#10b981" />
                               <Cell fill="#8b5cf6" />
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
+                            </Bar>
+                          </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
