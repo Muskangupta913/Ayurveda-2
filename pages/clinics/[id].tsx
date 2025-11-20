@@ -184,13 +184,15 @@ export default function ClinicDetail() {
             <div className="flex flex-col lg:flex-row gap-6 items-start">
               {/* Clinic Image - Left Corner */}
               {clinic.photos?.[0] && (
-                <div className="w-full lg:w-80 flex-shrink-0">
-                  <div className="w-full h-60 sm:h-64 lg:h-72 rounded-2xl overflow-hidden shadow-lg border-4 border-white">
+                <div className="w-full max-w-sm lg:max-w-xs flex-shrink-0">
+                  <div className="relative w-full h-48 sm:h-56 lg:h-60 rounded-2xl overflow-hidden shadow-lg border-4 border-white bg-white">
                     <Image
                       src={clinic.photos[0]}
                       alt={clinic.name}
-                      layout="fill"
-                      objectFit="contain"
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 1024px) 80vw, 320px"
+                      priority
                     />
                   </div>
                 </div>
