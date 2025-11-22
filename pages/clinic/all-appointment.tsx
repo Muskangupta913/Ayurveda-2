@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import withClinicAuth from "../../components/withClinicAuth";
 import ClinicLayout from "../../components/ClinicLayout";
@@ -103,33 +103,21 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [pendingEditModal, setPendingEditModal] = useState(false);
-  const [pendingHistoryModal, setPendingHistoryModal] = useState(false);
-
-  // Open edit modal when appointment is set
-  useEffect(() => {
-    if (pendingEditModal && selectedAppointment) {
-      setEditModalOpen(true);
-      setPendingEditModal(false);
-    }
-  }, [selectedAppointment, pendingEditModal]);
-
-  // Open history modal when appointment is set
-  useEffect(() => {
-    if (pendingHistoryModal && selectedAppointment) {
-      setHistoryModalOpen(true);
-      setPendingHistoryModal(false);
-    }
-  }, [selectedAppointment, pendingHistoryModal]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [selectedPatientName, setSelectedPatientName] = useState<string>("");
+  const appointmentRef = useRef<Appointment | null>(null);
 
   // Debug: Log modal state changes
   useEffect(() => {
-    console.log("Edit modal state:", editModalOpen, "Appointment:", selectedAppointment);
+    console.log("Modal state changed - editModalOpen:", editModalOpen, "selectedAppointment:", selectedAppointment?._id);
   }, [editModalOpen, selectedAppointment]);
 
+  // Sync ref with state
   useEffect(() => {
-    console.log("History modal state:", historyModalOpen, "Patient:", selectedAppointment?.patientId);
-  }, [historyModalOpen, selectedAppointment]);
+    if (selectedAppointment) {
+      appointmentRef.current = selectedAppointment;
+    }
+  }, [selectedAppointment]);
 
   // Add custom scrollbar styles and ensure horizontal scrolling works
   useEffect(() => {
@@ -359,9 +347,16 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search by patient name, mobile number..."
+                placeholder="Search by patient name, mobile, visit ID, or patient ID..."
                 value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                onChange={(e) => {
+                  handleFilterChange("search", e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    fetchAppointments();
+                  }
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -750,51 +745,86 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
                             </button>
                             
                             {/* Dropdown Menu */}
-                            {openActionMenu === apt._id && !editModalOpen && !historyModalOpen && (
+                            {openActionMenu === apt._id && (
                               <>
                                 {/* Backdrop to close menu when clicking outside */}
                                 <div
                                   className="fixed inset-0 z-10"
-                                  onClick={() => setOpenActionMenu(null)}
+                                  onMouseDown={(e) => {
+                                    // Only close if clicking directly on backdrop
+                                    if (e.target === e.currentTarget) {
+                                      console.log("Backdrop mousedown - closing menu");
+                                      setOpenActionMenu(null);
+                                    }
+                                  }}
                                 ></div>
                                 
                                 {/* Dropdown Content */}
                                 <div 
-                                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-30"
+                                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                                  onMouseDown={(e) => {
+                                    console.log("Dropdown container mousedown");
+                                    e.stopPropagation();
+                                  }}
                                 >
                                   <div className="py-1">
                                     <button
                                       type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log("=== EDIT BUTTON MOUSEDOWN ===");
+                                        console.log("Appointment data:", apt);
+                                        console.log("Appointment ID:", apt._id);
+                                        
+                                        // Store in ref immediately (synchronous)
+                                        appointmentRef.current = apt;
+                                        console.log("Ref set:", appointmentRef.current?._id);
+                                        
+                                        // Close dropdown first
+                                        setOpenActionMenu(null);
+                                        
+                                        // Set state immediately
+                                        setSelectedAppointment(apt);
+                                        console.log("State set, selectedAppointment:", apt._id);
+                                        
+                                        // Open modal immediately
+                                        setEditModalOpen(true);
+                                        console.log("Modal opened, editModalOpen set to true");
+                                      }}
                                       onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        console.log("Edit clicked for appointment:", apt._id, apt);
-                                        const appointmentData: Appointment = {
-                                          ...apt,
-                                          startDate: apt.startDate || new Date().toISOString(),
-                                        };
-                                        setOpenActionMenu(null);
-                                        // Set appointment first, then trigger modal open
-                                        setSelectedAppointment(appointmentData);
-                                        setPendingEditModal(true);
+                                        console.log("=== EDIT BUTTON CLICKED ===");
                                       }}
-                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition"
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition cursor-pointer"
                                     >
                                       <Edit className="w-4 h-4" />
                                       Edit
                                     </button>
                                     <button
                                       type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log("=== HISTORY BUTTON MOUSEDOWN ===");
+                                        console.log("Patient ID:", apt.patientId);
+                                        console.log("Patient Name:", apt.patientName);
+                                        
+                                        // Close dropdown first
+                                        setOpenActionMenu(null);
+                                        
+                                        // Set patient info and open history modal
+                                        setSelectedPatientId(apt.patientId);
+                                        setSelectedPatientName(apt.patientName);
+                                        setHistoryModalOpen(true);
+                                        console.log("History modal opened");
+                                      }}
                                       onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        console.log("History clicked for patient:", apt.patientId, apt);
-                                        setOpenActionMenu(null);
-                                        // Set appointment first, then trigger modal open
-                                        setSelectedAppointment(apt);
-                                        setPendingHistoryModal(true);
                                       }}
-                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition"
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition cursor-pointer"
                                     >
                                       <History className="w-4 h-4" />
                                       Appointment History
@@ -840,45 +870,42 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
+      </ClinicLayout>
 
-    </ClinicLayout>
-
-    {/* Edit Appointment Modal - Outside ClinicLayout for proper z-index */}
-    {selectedAppointment && (
+      {/* Edit Appointment Modal */}
       <EditAppointmentModal
-        isOpen={editModalOpen}
+        isOpen={editModalOpen && (selectedAppointment !== null || appointmentRef.current !== null)}
         onClose={() => {
           console.log("Closing edit modal");
           setEditModalOpen(false);
           setSelectedAppointment(null);
+          appointmentRef.current = null;
         }}
         onSuccess={() => {
           console.log("Edit success, refreshing appointments");
           fetchAppointments();
           setEditModalOpen(false);
           setSelectedAppointment(null);
+          appointmentRef.current = null;
         }}
-        appointment={selectedAppointment}
+        appointment={selectedAppointment || appointmentRef.current}
         rooms={rooms}
         doctors={doctors}
         getAuthHeaders={getAuthHeaders}
       />
-    )}
 
-    {/* Appointment History Modal - Outside ClinicLayout for proper z-index */}
-    {selectedAppointment && (
+      {/* Appointment History Modal */}
       <AppointmentHistoryModal
         isOpen={historyModalOpen}
         onClose={() => {
-          console.log("Closing history modal");
           setHistoryModalOpen(false);
-          setSelectedAppointment(null);
+          setSelectedPatientId("");
+          setSelectedPatientName("");
         }}
-        patientId={selectedAppointment.patientId}
-        patientName={selectedAppointment.patientName}
+        patientId={selectedPatientId}
+        patientName={selectedPatientName}
         getAuthHeaders={getAuthHeaders}
       />
-    )}
     </>
   );
 };

@@ -1,10 +1,16 @@
-import dbConnect from "../../../../../lib/database";
-import Appointment from "../../../../../models/Appointment";
-import Clinic from "../../../../../models/Clinic";
-import { getUserFromReq } from "../../../lead-ms/auth";
+import dbConnect from "../../../../lib/database";
+import Appointment from "../../../../models/Appointment";
+import Clinic from "../../../../models/Clinic";
+import User from "../../../../models/Users";
+import Room from "../../../../models/Room";
+import { getUserFromReq } from "../../lead-ms/auth";
 
 export default async function handler(req, res) {
   await dbConnect();
+
+  if (req.method !== "PUT") {
+    return res.status(405).json({ success: false, message: "Method not allowed" });
+  }
 
   try {
     // Verify clinic authentication
@@ -25,112 +31,166 @@ export default async function handler(req, res) {
     const clinicId = clinic._id;
     const appointmentId = req.query.id;
 
-    if (req.method === "PUT") {
-      const {
-        doctorId,
-        roomId,
-        status,
-        followType,
-        startDate,
-        fromTime,
-        toTime,
-        referral,
-        emergency,
-        notes,
-      } = req.body;
+    // Validate appointment ID
+    if (!appointmentId || !appointmentId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: "Invalid appointment ID" });
+    }
 
-      // Find the appointment
-      const appointment = await Appointment.findById(appointmentId);
-      if (!appointment) {
-        return res.status(404).json({ success: false, message: "Appointment not found" });
-      }
+    // Find the appointment and verify it belongs to this clinic
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: "Appointment not found" });
+    }
 
-      // Verify appointment belongs to this clinic
-      if (appointment.clinicId.toString() !== clinicId.toString()) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
+    if (appointment.clinicId.toString() !== clinicId.toString()) {
+      return res.status(403).json({ success: false, message: "Access denied. Appointment does not belong to your clinic." });
+    }
 
-      // Verify doctor belongs to clinic if doctorId is being updated
-      if (doctorId) {
-        const User = (await import("../../../../../models/Users")).default;
-        const doctor = await User.findOne({
-          _id: doctorId,
-          role: "doctorStaff",
-          clinicId: clinicId,
-        });
+    // Get update data from request body
+    const {
+      patientId,
+      doctorId,
+      roomId,
+      status,
+      followType,
+      startDate,
+      fromTime,
+      toTime,
+      referral,
+      emergency,
+      notes,
+    } = req.body;
 
-        if (!doctor) {
-          return res.status(400).json({
-            success: false,
-            message: "Doctor not found or does not belong to this clinic",
-          });
-        }
-      }
+    // Validate required fields
+    const errors = {};
+    const missingFields = [];
+    const missingFieldLabels = [];
 
-      // Verify room belongs to clinic if roomId is being updated
-      if (roomId) {
-        const Room = (await import("../../../../../models/Room")).default;
-        const room = await Room.findOne({
-          _id: roomId,
-          clinicId: clinicId,
-        });
+    if (!patientId) {
+      errors.patientId = "Patient is required";
+      missingFields.push("patientId");
+      missingFieldLabels.push("Patient");
+    }
+    if (!doctorId) {
+      errors.doctorId = "Doctor is required";
+      missingFields.push("doctorId");
+      missingFieldLabels.push("Doctor");
+    }
+    if (!roomId) {
+      errors.roomId = "Room is required";
+      missingFields.push("roomId");
+      missingFieldLabels.push("Room");
+    }
+    if (!status) {
+      errors.status = "Status is required";
+      missingFields.push("status");
+      missingFieldLabels.push("Status");
+    }
+    if (!followType) {
+      errors.followType = "Follow type is required";
+      missingFields.push("followType");
+      missingFieldLabels.push("Follow Type");
+    }
+    if (!startDate) {
+      errors.startDate = "Start date is required";
+      missingFields.push("startDate");
+      missingFieldLabels.push("Start Date");
+    }
+    if (!fromTime) {
+      errors.fromTime = "From time is required";
+      missingFields.push("fromTime");
+      missingFieldLabels.push("From Time");
+    }
+    if (!toTime) {
+      errors.toTime = "To time is required";
+      missingFields.push("toTime");
+      missingFieldLabels.push("To Time");
+    }
 
-        if (!room) {
-          return res.status(400).json({
-            success: false,
-            message: "Room not found or does not belong to this clinic",
-          });
-        }
-      }
-
-      // Update appointment fields
-      if (doctorId) appointment.doctorId = doctorId;
-      if (roomId) appointment.roomId = roomId;
-      if (status) appointment.status = status;
-      if (followType) appointment.followType = followType;
-      if (startDate) appointment.startDate = new Date(startDate);
-      if (fromTime) appointment.fromTime = fromTime;
-      if (toTime) appointment.toTime = toTime;
-      if (referral) appointment.referral = referral;
-      if (emergency) appointment.emergency = emergency;
-      if (notes !== undefined) appointment.notes = notes;
-
-      // Update timestamps based on status
-      if (status === "Arrived" && !appointment.arrivedAt) {
-        appointment.arrivedAt = new Date();
-      }
-      if (status === "Completed" && !appointment.completedAt) {
-        appointment.completedAt = new Date();
-      }
-      if (status === "Cancelled" && !appointment.cancelledAt) {
-        appointment.cancelledAt = new Date();
-        appointment.cancelledBy = clinicUser._id;
-      }
-
-      await appointment.save();
-
-      // Populate and return updated appointment
-      const updatedAppointment = await Appointment.findById(appointmentId)
-        .populate("patientId", "firstName lastName mobileNumber email emrNumber invoiceNumber gender")
-        .populate("doctorId", "name email")
-        .populate("roomId", "name")
-        .lean();
-
-      return res.status(200).json({
-        success: true,
-        message: "Appointment updated successfully",
-        appointment: updatedAppointment,
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors,
+        missingFields,
+        missingFieldLabels,
       });
     }
 
-    res.setHeader("Allow", ["PUT"]);
-    return res.status(405).json({ success: false, message: "Method not allowed" });
+    // Validate doctor belongs to clinic
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== "doctorStaff" || doctor.clinicId?.toString() !== clinicId.toString()) {
+      return res.status(400).json({ success: false, message: "Invalid doctor. Doctor must belong to your clinic." });
+    }
+
+    // Validate room belongs to clinic
+    const room = await Room.findById(roomId);
+    if (!room || room.clinicId?.toString() !== clinicId.toString()) {
+      return res.status(400).json({ success: false, message: "Invalid room. Room must belong to your clinic." });
+    }
+
+    // Validate status enum
+    const validStatuses = ["booked", "enquiry", "Discharge", "Arrived", "Consultation", "Cancelled", "Approved", "Rescheduled", "Waiting", "Rejected", "Completed"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status" });
+    }
+
+    // Validate followType enum
+    const validFollowTypes = ["first time", "follow up", "repeat"];
+    if (!validFollowTypes.includes(followType)) {
+      return res.status(400).json({ success: false, message: "Invalid follow type" });
+    }
+
+    // Validate referral enum
+    if (referral && !["direct", "referral"].includes(referral)) {
+      return res.status(400).json({ success: false, message: "Invalid referral value" });
+    }
+
+    // Validate emergency enum
+    if (emergency && !["yes", "no"].includes(emergency)) {
+      return res.status(400).json({ success: false, message: "Invalid emergency value" });
+    }
+
+    // Update appointment
+    const updateData = {
+      patientId,
+      doctorId,
+      roomId,
+      status,
+      followType,
+      startDate: new Date(startDate),
+      fromTime,
+      toTime,
+      referral: referral || "direct",
+      emergency: emergency || "no",
+      notes: notes || "",
+    };
+
+    // If status is "Arrived", set arrivedAt timestamp
+    if (status === "Arrived" && appointment.status !== "Arrived") {
+      updateData.arrivedAt = new Date();
+    }
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+      .populate("patientId", "firstName lastName mobileNumber email emrNumber")
+      .populate("doctorId", "name email")
+      .populate("roomId", "name")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Appointment updated successfully",
+      appointment: updatedAppointment,
+    });
   } catch (error) {
-    console.error("Error in update-appointment API:", error);
+    console.error("Error updating appointment:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: error.message || "Internal server error",
     });
   }
 }

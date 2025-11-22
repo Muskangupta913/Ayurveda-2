@@ -89,26 +89,63 @@ export default async function handler(req, res) {
         query.emergency = emergency;
       }
 
-      // Search by patient name or EMR number
+      // Search by patient name, mobile number, EMR number, visitId (last 4 digits), or patientId (last 4 digits)
       let patientQuery = {};
+      let matchingAppointmentIds = [];
+      let matchingPatientIds = [];
+      
       if (search) {
+        // Check if search is a 4-character hex string (for visitId or patientId search)
+        const isHexSearch = search.length <= 4 && /^[0-9a-fA-F]+$/.test(search);
+        
+        if (isHexSearch) {
+          // Search by visitId (last 4 digits of appointment _id)
+          const allAppointments = await Appointment.find({ clinicId }).select("_id").lean();
+          matchingAppointmentIds = allAppointments
+            .filter((apt) => apt._id.toString().slice(-4).toLowerCase() === search.toLowerCase())
+            .map((apt) => apt._id);
+          
+          // Search by patientId (last 4 digits)
+          const allPatients = await PatientRegistration.find({}).select("_id").lean();
+          matchingPatientIds = allPatients
+            .filter((p) => p._id.toString().slice(-4).toLowerCase() === search.toLowerCase())
+            .map((p) => p._id);
+        }
+        
+        // Always search in patient fields (name, mobile)
         patientQuery.$or = [
           { firstName: { $regex: search, $options: "i" } },
           { lastName: { $regex: search, $options: "i" } },
           { mobileNumber: { $regex: search, $options: "i" } },
         ];
+        
+        // If we found patient IDs from hex search, add them to patient query
+        if (matchingPatientIds.length > 0) {
+          patientQuery.$or.push({ _id: { $in: matchingPatientIds } });
+        }
       }
+      
       if (emrNumber) {
         patientQuery.emrNumber = { $regex: emrNumber, $options: "i" };
       }
 
-      // If patient search filters exist, find matching patient IDs first
-      let patientIds = null;
+      // Build the final query
+      const queryConditions = [];
+      
+      // If we have appointment ID matches (visitId search), add them
+      if (matchingAppointmentIds.length > 0) {
+        queryConditions.push({ _id: { $in: matchingAppointmentIds } });
+      }
+      
+      // If we have patient search conditions, find matching patient IDs
       if (Object.keys(patientQuery).length > 0) {
         const patients = await PatientRegistration.find(patientQuery).select("_id").lean();
-        patientIds = patients.map((p) => p._id);
-        if (patientIds.length === 0) {
-          // No patients match, return empty result
+        const patientIds = patients.map((p) => p._id);
+        
+        if (patientIds.length > 0) {
+          queryConditions.push({ patientId: { $in: patientIds } });
+        } else if (matchingAppointmentIds.length === 0) {
+          // No patients match and no visitId matches, return empty result
           return res.status(200).json({
             success: true,
             appointments: [],
@@ -117,7 +154,13 @@ export default async function handler(req, res) {
             totalPages: 0,
           });
         }
-        query.patientId = { $in: patientIds };
+      }
+      
+      // Combine conditions with $or if we have multiple, otherwise use the single condition
+      if (queryConditions.length > 1) {
+        query.$or = queryConditions;
+      } else if (queryConditions.length === 1) {
+        Object.assign(query, queryConditions[0]);
       }
 
       // Calculate pagination
@@ -125,7 +168,7 @@ export default async function handler(req, res) {
       const limitNum = parseInt(limit);
       const skip = (pageNum - 1) * limitNum;
 
-      // Get total count for pagination
+      // Get total count for pagination (use the final query)
       const total = await Appointment.countDocuments(query);
 
       // Fetch appointments with pagination

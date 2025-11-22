@@ -1,10 +1,14 @@
-import dbConnect from "../../../../../lib/database";
-import Appointment from "../../../../../models/Appointment";
-import Clinic from "../../../../../models/Clinic";
-import { getUserFromReq } from "../../../lead-ms/auth";
+import dbConnect from "../../../../lib/database";
+import Appointment from "../../../../models/Appointment";
+import Clinic from "../../../../models/Clinic";
+import { getUserFromReq } from "../../lead-ms/auth";
 
 export default async function handler(req, res) {
   await dbConnect();
+
+  if (req.method !== "GET") {
+    return res.status(405).json({ success: false, message: "Method not allowed" });
+  }
 
   try {
     // Verify clinic authentication
@@ -25,58 +29,61 @@ export default async function handler(req, res) {
     const clinicId = clinic._id;
     const patientId = req.query.patientId;
 
-    if (req.method === "GET") {
-      // Fetch all appointments for this patient in this clinic
-      const appointments = await Appointment.find({
-        clinicId,
-        patientId,
-      })
-        .populate("doctorId", "name email")
-        .populate("roomId", "name")
-        .sort({ startDate: -1, createdAt: -1 })
-        .lean();
-
-      // Format appointments for frontend
-      const formatted = appointments.map((apt) => {
-        const doctor = apt.doctorId || {};
-        const room = apt.roomId || {};
-
-        return {
-          _id: apt._id.toString(),
-          visitId: apt._id.toString().slice(-4),
-          doctorName: doctor.name || "Unknown",
-          doctorEmail: doctor.email || "",
-          roomName: room.name || "-",
-          status: apt.status,
-          followType: apt.followType,
-          startDate: apt.startDate ? apt.startDate.toISOString() : null,
-          fromTime: apt.fromTime,
-          toTime: apt.toTime,
-          referral: apt.referral || "direct",
-          emergency: apt.emergency || "no",
-          notes: apt.notes || "",
-          appointmentNumber: apt.appointmentNumber || null,
-          createdAt: apt.createdAt ? apt.createdAt.toISOString() : null,
-          arrivedAt: apt.arrivedAt ? apt.arrivedAt.toISOString() : null,
-          completedAt: apt.completedAt ? apt.completedAt.toISOString() : null,
-        };
-      });
-
-      return res.status(200).json({
-        success: true,
-        appointments: formatted,
-        total: formatted.length,
-      });
+    // Validate patient ID
+    if (!patientId || !patientId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: "Invalid patient ID" });
     }
 
-    res.setHeader("Allow", ["GET"]);
-    return res.status(405).json({ success: false, message: "Method not allowed" });
+    // Fetch all appointments for this patient in this clinic
+    const appointments = await Appointment.find({
+      clinicId,
+      patientId,
+    })
+      .populate("doctorId", "name email")
+      .populate("roomId", "name")
+      .populate("patientId", "firstName lastName mobileNumber email emrNumber")
+      .sort({ startDate: -1, fromTime: -1 }) // Most recent first
+      .lean();
+
+    // Format appointments for response
+    const formattedAppointments = appointments.map((apt) => ({
+      _id: apt._id.toString(),
+      visitId: apt.visitId || `VISIT-${apt._id.toString().slice(-6).toUpperCase()}`,
+      patientId: apt.patientId?._id?.toString(),
+      patientName: apt.patientId
+        ? `${apt.patientId.firstName || ""} ${apt.patientId.lastName || ""}`.trim()
+        : "Unknown",
+      patientEmail: apt.patientId?.email || "",
+      patientMobile: apt.patientId?.mobileNumber || "",
+      emrNumber: apt.patientId?.emrNumber || "",
+      doctorId: apt.doctorId?._id?.toString(),
+      doctorName: apt.doctorId?.name || "Unknown",
+      doctorEmail: apt.doctorId?.email || "",
+      roomId: apt.roomId?._id?.toString(),
+      roomName: apt.roomId?.name || "Unknown",
+      status: apt.status,
+      followType: apt.followType,
+      startDate: apt.startDate ? new Date(apt.startDate).toISOString() : null,
+      fromTime: apt.fromTime,
+      toTime: apt.toTime,
+      referral: apt.referral || "direct",
+      emergency: apt.emergency || "no",
+      notes: apt.notes || "",
+      arrivedAt: apt.arrivedAt ? new Date(apt.arrivedAt).toISOString() : null,
+      createdAt: apt.createdAt ? new Date(apt.createdAt).toISOString() : null,
+      updatedAt: apt.updatedAt ? new Date(apt.updatedAt).toISOString() : null,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      appointments: formattedAppointments,
+      total: formattedAppointments.length,
+    });
   } catch (error) {
-    console.error("Error in patient-appointment-history API:", error);
+    console.error("Error fetching appointment history:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: error.message || "Internal server error",
     });
   }
 }
