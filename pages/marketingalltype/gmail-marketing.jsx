@@ -1,8 +1,7 @@
 // pages/marketingalltype/gmail-marketing.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import axios from "axios";
-import DOMPurify from "dompurify";
 import ClinicLayout from "../../components/ClinicLayout";
 import withClinicAuth from "../../components/withClinicAuth";
 import "react-quill/dist/quill.snow.css";
@@ -12,7 +11,24 @@ const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 // Helper to strip HTML tags
 const stripHtml = (html) => html.replace(/<[^>]*>?/gm, "").trim();
 
+// Helper to sanitize HTML (client-side only)
+const sanitizeHtml = (html, options = {}) => {
+  if (typeof window === "undefined") {
+    // Server-side: just return the HTML as-is (will be sanitized on client)
+    return html;
+  }
+  
+  // Client-side: use DOMPurify
+  const DOMPurify = require("dompurify");
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img'],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'style', 'class'],
+    ...options
+  });
+};
+
 const GmailSender = () => {
+  const [serviceType, setServiceType] = useState("gmail"); // "gmail" or "brevo"
   const [mode, setMode] = useState("single");
   const [singleEmail, setSingleEmail] = useState("");
   const [bulkEmails, setBulkEmails] = useState("");
@@ -23,6 +39,14 @@ const GmailSender = () => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [results, setResults] = useState([]);
+  
+  // Brevo-specific state
+  const [campaignName, setCampaignName] = useState("");
+  const [senderName, setSenderName] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
+  const [listIds, setListIds] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [brevoMode, setBrevoMode] = useState("transactional"); // "transactional" or "campaign"
 
   const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -64,39 +88,174 @@ const GmailSender = () => {
     setResults([]);
 
     try {
-      const cleanBody = stripHtml(DOMPurify.sanitize(body));
-
-      const recipients =
-        mode === "single"
-          ? [singleEmail]
-          : bulkEmails
-              .split(",")
-              .map((email) => email.trim())
-              .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
-
-      if (recipients.length === 0) {
-        setStatus("❌ No valid recipient emails provided");
+      // Get auth token
+      const token = localStorage.getItem("clinicToken") || localStorage.getItem("adminToken") || localStorage.getItem("userToken");
+      
+      if (!token) {
+        setStatus("❌ Authentication required. Please login again.");
         setLoading(false);
         return;
       }
 
-      const payload = {
-        subject: subject || "Special Offer",
-        body: cleanBody,
-        mediaUrl: imageUrl || undefined,
-        to: recipients,
-      };
+      if (serviceType === "brevo") {
+        // Brevo email campaign
+        if (!subject || !body) {
+          setStatus("❌ Subject and email body are required");
+          setLoading(false);
+          return;
+        }
 
-      const res = await axios.post("/api/marketing/gmail-send", payload);
+        // Build HTML content with image if available
+        // ReactQuill already outputs HTML, so we sanitize it but keep the HTML structure
+        let htmlContent = sanitizeHtml(body);
+        
+        // If body is empty, use a default
+        if (!htmlContent || htmlContent.trim() === '') {
+          htmlContent = '<p>No content provided</p>';
+        }
+        
+        // Add image if available
+        if (imageUrl) {
+          htmlContent = `<img src="${imageUrl}" alt="Campaign Image" style="max-width: 100%; height: auto; margin-bottom: 20px;" /><br/>${htmlContent}`;
+        }
 
-      if (res.data.success) {
-        setStatus(`✅ Emails sent successfully!`);
-        setResults(res.data.data);
+        const payload = {
+          campaignType: brevoMode,
+        };
+
+        if (brevoMode === "transactional") {
+          // Transactional email - send immediately
+          const recipients =
+            mode === "single"
+              ? [singleEmail]
+              : bulkEmails
+                  .split(",")
+                  .map((email) => email.trim())
+                  .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+          if (recipients.length === 0) {
+            setStatus("❌ No valid recipient emails provided");
+            setLoading(false);
+            return;
+          }
+
+          if (!senderName || !senderEmail) {
+            setStatus("❌ Sender name and email are required");
+            setLoading(false);
+            return;
+          }
+
+          payload.to = mode === "single" ? singleEmail : recipients;
+          payload.subject = subject;
+          payload.htmlContent = htmlContent;
+          payload.textContent = stripHtml(sanitizeHtml(body));
+          payload.sender = {
+            name: senderName,
+            email: senderEmail,
+          };
+        } else {
+          // Scheduled campaign
+          if (!campaignName) {
+            setStatus("❌ Campaign name is required");
+            setLoading(false);
+            return;
+          }
+
+          if (!senderName || !senderEmail) {
+            setStatus("❌ Sender name and email are required");
+            setLoading(false);
+            return;
+          }
+
+          payload.name = campaignName;
+          payload.subject = subject;
+          payload.htmlContent = htmlContent;
+          payload.sender = {
+            name: senderName,
+            email: senderEmail,
+          };
+          payload.type = "classic";
+
+          // Parse list IDs if provided
+          if (listIds) {
+            const parsedListIds = listIds
+              .split(",")
+              .map((id) => parseInt(id.trim()))
+              .filter((id) => !isNaN(id));
+            if (parsedListIds.length > 0) {
+              payload.listIds = parsedListIds;
+            }
+          }
+
+          // Schedule if provided
+          if (scheduledAt) {
+            payload.scheduledAt = scheduledAt;
+          }
+        }
+
+        const res = await axios.post("/api/marketing/email-campaign", payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.data.success) {
+          setStatus(`✅ ${brevoMode === "transactional" ? "Email sent" : "Campaign created"} successfully!`);
+          if (res.data.data) {
+            setResults([{ to: "Campaign", status: "success", data: res.data.data }]);
+          }
+        } else {
+          setStatus("❌ Failed: " + (res.data.message || "Unknown error"));
+        }
       } else {
-        setStatus("❌ Failed: " + (res.data.error || "Unknown error"));
+        // Original Gmail sending logic
+        const cleanBody = stripHtml(sanitizeHtml(body));
+
+        const recipients =
+          mode === "single"
+            ? [singleEmail]
+            : bulkEmails
+                .split(",")
+                .map((email) => email.trim())
+                .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+        if (recipients.length === 0) {
+          setStatus("❌ No valid recipient emails provided");
+          setLoading(false);
+          return;
+        }
+
+        // Get auth token
+        const token = localStorage.getItem("clinicToken") || localStorage.getItem("adminToken") || localStorage.getItem("userToken");
+        
+        if (!token) {
+          setStatus("❌ Authentication required. Please login again.");
+          setLoading(false);
+          return;
+        }
+
+        const payload = {
+          subject: subject || "Special Offer",
+          body: cleanBody,
+          mediaUrl: imageUrl || undefined,
+          to: recipients,
+        };
+
+        const res = await axios.post("/api/marketing/gmail-send", payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.data.success) {
+          setStatus(`✅ Emails sent successfully!`);
+          setResults(res.data.data);
+        } else {
+          setStatus("❌ Failed: " + (res.data.error || "Unknown error"));
+        }
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      const msg = err.response?.data?.message || err.message || "Unknown error";
       setStatus("❌ Error: " + msg);
     } finally {
       setLoading(false);
@@ -127,31 +286,89 @@ const GmailSender = () => {
 
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Mode Toggle */}
+          {/* Service Type Toggle */}
           <div className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200 p-7">
-            <label className="block text-sm font-semibold text-gray-800 mb-3.5">Campaign Type</label>
-            <div className="inline-flex rounded-xl bg-white shadow-sm border border-gray-300 p-1">
+            <label className="block text-sm font-semibold text-gray-800 mb-3.5">Email Service</label>
+            <div className="inline-flex rounded-xl bg-white shadow-sm border border-gray-300 p-1 mb-4">
               <button
                 className={`px-7 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                  mode === "single"
+                  serviceType === "gmail"
                     ? "bg-gradient-to-r from-red-600 to-pink-700 text-white shadow-md"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
-                onClick={() => setMode("single")}
+                onClick={() => setServiceType("gmail")}
               >
-                Single Recipient
+                Gmail
               </button>
               <button
                 className={`px-7 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                  mode === "bulk"
+                  serviceType === "brevo"
                     ? "bg-gradient-to-r from-red-600 to-pink-700 text-white shadow-md"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
-                onClick={() => setMode("bulk")}
+                onClick={() => setServiceType("brevo")}
               >
-                Bulk Campaign
+                Brevo Campaign
               </button>
             </div>
+            
+            {/* Mode Toggle */}
+            {serviceType === "brevo" && (
+              <div className="mt-4">
+                <label className="block text-sm font-semibold text-gray-800 mb-3.5">Brevo Mode</label>
+                <div className="inline-flex rounded-xl bg-white shadow-sm border border-gray-300 p-1">
+                  <button
+                    className={`px-7 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      brevoMode === "transactional"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setBrevoMode("transactional")}
+                  >
+                    Transactional (Immediate)
+                  </button>
+                  <button
+                    className={`px-7 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      brevoMode === "campaign"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setBrevoMode("campaign")}
+                  >
+                    Scheduled Campaign
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Recipient Mode Toggle (for Gmail or Brevo Transactional) */}
+            {(serviceType === "gmail" || (serviceType === "brevo" && brevoMode === "transactional")) && (
+              <div className="mt-4">
+                <label className="block text-sm font-semibold text-gray-800 mb-3.5">Recipient Type</label>
+                <div className="inline-flex rounded-xl bg-white shadow-sm border border-gray-300 p-1">
+                  <button
+                    className={`px-7 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      mode === "single"
+                        ? "bg-gradient-to-r from-red-600 to-pink-700 text-white shadow-md"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setMode("single")}
+                  >
+                    Single Recipient
+                  </button>
+                  <button
+                    className={`px-7 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      mode === "bulk"
+                        ? "bg-gradient-to-r from-red-600 to-pink-700 text-white shadow-md"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setMode("bulk")}
+                  >
+                    Bulk Campaign
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Form */}
@@ -159,29 +376,116 @@ const GmailSender = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column */}
               <div className="space-y-6">
-                {mode === "single" ? (
+                {/* Brevo Campaign Name (only for scheduled campaigns) */}
+                {serviceType === "brevo" && brevoMode === "campaign" && (
                   <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2.5">Recipient Email</label>
+                    <label className="block text-sm font-semibold text-gray-800 mb-2.5">
+                      Campaign Name <span className="text-red-500">*</span>
+                    </label>
                     <input
-                      type="email"
-                      placeholder="example@gmail.com"
-                      value={singleEmail}
-                      onChange={(e) => setSingleEmail(e.target.value)}
+                      type="text"
+                      placeholder="e.g., Monthly Newsletter - December 2024"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
                       className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium"
                     />
                   </div>
-                ) : (
+                )}
+
+                {/* Recipient Emails (for Gmail or Brevo Transactional) */}
+                {(serviceType === "gmail" || (serviceType === "brevo" && brevoMode === "transactional")) && (
+                  mode === "single" ? (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2.5">Recipient Email</label>
+                      <input
+                        type="email"
+                        placeholder="example@gmail.com"
+                        value={singleEmail}
+                        onChange={(e) => setSingleEmail(e.target.value)}
+                        className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2.5">
+                        Recipient Emails <span className="text-gray-600 font-normal ml-2">(comma separated)</span>
+                      </label>
+                      <textarea
+                        placeholder="example1@gmail.com, example2@gmail.com"
+                        value={bulkEmails}
+                        onChange={(e) => setBulkEmails(e.target.value)}
+                        className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none text-gray-900 placeholder:text-gray-500 font-medium"
+                        rows={4}
+                      />
+                    </div>
+                  )
+                )}
+
+                {/* Brevo List IDs (only for scheduled campaigns) */}
+                {serviceType === "brevo" && brevoMode === "campaign" && (
                   <div>
                     <label className="block text-sm font-semibold text-gray-800 mb-2.5">
-                      Recipient Emails <span className="text-gray-600 font-normal ml-2">(comma separated)</span>
+                      Contact List IDs <span className="text-gray-600 font-normal ml-2">(comma separated, optional)</span>
                     </label>
-                    <textarea
-                      placeholder="example1@gmail.com, example2@gmail.com"
-                      value={bulkEmails}
-                      onChange={(e) => setBulkEmails(e.target.value)}
-                      className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none text-gray-900 placeholder:text-gray-500 font-medium"
-                      rows={4}
+                    <input
+                      type="text"
+                      placeholder="e.g., 2, 7"
+                      value={listIds}
+                      onChange={(e) => setListIds(e.target.value)}
+                      className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Enter the list IDs from your Brevo account</p>
+                  </div>
+                )}
+
+                {/* Sender Info (for Brevo) */}
+                {serviceType === "brevo" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2.5">
+                        Sender Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Ayurveda Clinic"
+                        value={senderName}
+                        onChange={(e) => setSenderName(e.target.value)}
+                        className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2.5">
+                        Sender Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="e.g., noreply@ayurvedaclinic.com"
+                        value={senderEmail}
+                        onChange={(e) => setSenderEmail(e.target.value)}
+                        className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Must be a verified sender in your Brevo account</p>
+                    </div>
+                  </>
+                )}
+
+                {/* Scheduled Date (for Brevo Campaign) */}
+                {serviceType === "brevo" && brevoMode === "campaign" && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-800 mb-2.5">
+                      Schedule Date & Time <span className="text-gray-600 font-normal ml-2">(optional)</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={(e) => {
+                        const date = new Date(e.target.value);
+                        const formatted = date.toISOString().slice(0, 19).replace('T', ' ');
+                        setScheduledAt(formatted);
+                      }}
+                      className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty to send immediately</p>
                   </div>
                 )}
 
@@ -202,12 +506,24 @@ const GmailSender = () => {
                     <ReactQuill
                       value={body}
                       onChange={setBody}
-                      modules={{ toolbar: [["bold", "italic"], ["link"]] }}
+                      modules={{
+                        toolbar: [
+                          [{ header: [1, 2, 3, false] }],
+                          ["bold", "italic", "underline", "strike"],
+                          [{ list: "ordered" }, { list: "bullet" }],
+                          ["link", "image"],
+                          [{ color: [] }, { background: [] }],
+                          ["clean"],
+                        ],
+                      }}
                       theme="snow"
                       placeholder="Write your promotional email here..."
                       className="h-40"
                     />
                   </div>
+                  {serviceType === "brevo" && (
+                    <p className="text-xs text-gray-500 mt-1">HTML formatting is supported for Brevo campaigns</p>
+                  )}
                 </div>
               </div>
 
@@ -307,14 +623,14 @@ const GmailSender = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Sending Emails...
+                    {serviceType === "brevo" && brevoMode === "campaign" ? "Creating Campaign..." : "Sending Emails..."}
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    Send Email Campaign
+                    {serviceType === "brevo" && brevoMode === "campaign" ? "Create Email Campaign" : "Send Email Campaign"}
                   </span>
                 )}
               </button>

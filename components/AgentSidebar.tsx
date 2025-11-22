@@ -20,7 +20,7 @@ interface NavItem extends NavItemChild {
   children?: NavItemChild[];
   moduleKey?: string;
 }
-
+ 
 interface NavigationItemFromAPI {
   _id: string;
   label: string;

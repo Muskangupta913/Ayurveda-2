@@ -80,6 +80,15 @@ const GmailSender = () => {
         return;
       }
 
+      // Get auth token
+      const token = localStorage.getItem("agentToken") || localStorage.getItem("adminToken");
+      
+      if (!token) {
+        setStatus("❌ Authentication required. Please login again.");
+        setLoading(false);
+        return;
+      }
+
       const payload = {
         subject: subject || "Special Offer",
         body: cleanBody,
@@ -87,7 +96,11 @@ const GmailSender = () => {
         to: recipients,
       };
 
-      const res = await axios.post("/api/marketing/gmail-send", payload);
+      const res = await axios.post("/api/marketing/gmail-send", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (res.data.success) {
         setStatus(`✅ Emails sent successfully!`);
