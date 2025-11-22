@@ -35,7 +35,7 @@ const ClinicLayout = ({ children, hideSidebar = false, hideHeader = false }: Cli
       )}
 
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-h-screen max-h-screen">
+      <div className="flex flex-col flex-1 min-h-screen max-h-screen" style={{ overflowX: 'visible', minWidth: 0 }}>
         {/* Header */}
         {!hideHeader && (
           <div className="sticky top-0 z-20">
@@ -49,7 +49,16 @@ const ClinicLayout = ({ children, hideSidebar = false, hideHeader = false }: Cli
         )}
 
         {/* Page Content */}
-        <main className={`flex-1 overflow-y-auto ${hideSidebar && hideHeader ? '' : 'p-4 sm:p-6 md:p-8'}`} role="main">
+        <main 
+          className={`flex-1 ${hideSidebar && hideHeader ? '' : 'p-4 sm:p-6 md:p-8'}`} 
+          role="main" 
+          style={{ 
+            overflowY: 'auto', 
+            overflowX: 'visible',
+            minWidth: 0,
+            width: '100%'
+          }}
+        >
           {children}
         </main>
       </div>
