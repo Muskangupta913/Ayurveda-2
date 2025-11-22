@@ -67,30 +67,64 @@ export default async function handler(req, res) {
     method,
   } = req;
 
-  // Authenticate user for all methods
-  const me = await getUserFromReq(req);
-  if (!me || !requireRole(me, ["clinic", "admin"])) {
-    return res.status(403).json({ success: false, message: "Access denied" });
+  let me = null;
+  try {
+    me = await getUserFromReq(req);
+  } catch (err) {
+    me = null;
+  }
+
+  if (method !== "GET") {
+    if (!me || !requireRole(me, ["clinic", "admin"])) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
   }
 
   // GET - Fetch clinic by ID
   if (method === "GET") {
     try {
       // ✅ Resolve clinicId for permission check
-      let clinicId;
-      if (me.role === "clinic") {
+      if (me) {
+        let clinicId;
+        if (me.role === "clinic") {
+          const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
+          if (!clinic) {
+            return res.status(404).json({ success: false, message: "Clinic not found for this user" });
+          }
+          clinicId = clinic._id;
+        } else if (me.role === "admin") {
+          clinicId = id;
+        }
+
+        if (me.role !== "admin" && clinicId) {
+          const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
+          const { hasPermission, error } = await checkClinicPermission(
+            clinicId,
+            "health_center",
+            "read"
+          );
+
+          if (!hasPermission) {
+            return res.status(403).json({
+              success: false,
+              message: error || "You do not have permission to view clinic information"
+            });
+          }
+        }
+      }
+      if (me && me.role === "clinic") {
         const clinic = await Clinic.findOne({ owner: me._id }).select("_id");
         if (!clinic) {
           return res.status(404).json({ success: false, message: "Clinic not found for this user" });
         }
         clinicId = clinic._id;
-      } else if (me.role === "admin") {
+      } else if (me && me.role === "admin") {
         // Admin can view any clinic, use the ID from URL
         clinicId = id;
       }
 
       // ✅ Check permission for reading clinic (only for clinic, admin bypasses)
-      if (me.role !== "admin" && clinicId) {
+      if (me && me.role !== "admin" && clinicId) {
         const { checkClinicPermission } = await import("../lead-ms/permissions-helper");
         const { hasPermission, error } = await checkClinicPermission(
           clinicId,

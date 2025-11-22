@@ -3,6 +3,7 @@ import dbConnect from "../../../lib/database";
 import SmsMarketing from "../../../models/SmsMarketing";
 import { getUserFromReq, requireRole } from "../lead-ms/auth";
 import Clinic from "../../../models/Clinic";
+import { debitWallet, getOrCreateWallet } from "../../../lib/smsWallet";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -26,17 +27,50 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Missing parameters" });
     }
 
+    const cleanBody = body.trim();
+    if (!cleanBody) {
+      return res.status(400).json({ success: false, message: "Message body cannot be empty" });
+    }
+
     const recipients = Array.isArray(to) ? to : [to];
     const results = [];
 
-    // Fetch clinic info
-    const clinic = await Clinic.findOne({ owner: user._id });
-    const clinicId = clinic ? clinic._id : null;
-    const senderName = clinic ? clinic.name : user.name;
+    const ownerType = user.role === "doctor" ? "doctor" : "clinic";
+    await getOrCreateWallet(user._id, ownerType);
 
-    if (!clinicId) {
-      return res.status(400).json({ success: false, message: "Clinic not found for this user" });
+    const creditsPerRecipient = Math.max(1, Math.ceil(cleanBody.length / 160));
+    const creditsNeeded = recipients.length * creditsPerRecipient;
+    try {
+      await debitWallet({
+        ownerId: user._id,
+        ownerType,
+        amount: creditsNeeded,
+        reason: "sms_send",
+        meta: { preview: body.slice(0, 120) },
+      });
+    } catch (err) {
+      if (err.message === "INSUFFICIENT_BALANCE") {
+        return res
+          .status(402)
+          .json({ success: false, message: "Insufficient SMS balance. Please request additional credits." });
+      }
+      throw err;
     }
+
+    let clinic = null;
+    let clinicId = null;
+    if (ownerType === "clinic") {
+      clinic = await Clinic.findOne({ owner: user._id });
+      clinicId = clinic ? clinic._id : null;
+      if (!clinicId) {
+        return res.status(400).json({ success: false, message: "Clinic profile not found for this account" });
+      }
+    } else if (ownerType === "doctor" && user.clinicId) {
+      clinic = await Clinic.findById(user.clinicId);
+    }
+
+    const senderName = clinic?.name || user.name;
+    const trackingOwnerId = ownerType === "clinic" && clinicId ? clinicId : user._id;
 
     // Live MSG91 credentials from env
     const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
@@ -47,8 +81,8 @@ export default async function handler(req, res) {
 
     for (const mobile of recipients) {
       try {
-        const trackingUrl = `${BASE_URL}/api/marketing/info?phone=${mobile}&type=${user.role}&id=${clinicId}`;
-        const messageWithTracking = `From: ${senderName}\n${body}\n👉 ${trackingUrl}`;
+        const trackingUrl = `${BASE_URL}/api/marketing/info?phone=${mobile}&type=${user.role}&id=${trackingOwnerId}`;
+        const messageWithTracking = `From: ${senderName}\n${cleanBody}\n👉 ${trackingUrl}`;
 
         // MSG91 live API URL
         const url = `https://api.msg91.com/api/sendhttp.php?authkey=${MSG91_AUTH_KEY}&mobiles=${mobile}&message=${encodeURIComponent(
@@ -66,10 +100,12 @@ export default async function handler(req, res) {
     await SmsMarketing.create({
       userId: user._id,
       role: user.role,
-      message: body,
+      message: cleanBody,
       mediaUrl,
       recipients,
       results,
+      creditsUsed: creditsNeeded,
+      segmentsPerRecipient: creditsPerRecipient,
     });
 
     return res.status(200).json({ success: true, data: results });

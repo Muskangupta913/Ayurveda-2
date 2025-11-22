@@ -27,8 +27,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
     name: '',
     email: '',
     password: '',
-    phone: ''
+    phone: '',
+    gender: '',
+    dateOfBirth: '',
+    age: ''
   });
+  const [ageInputMethod, setAgeInputMethod] = useState<'dob' | 'age'>('dob');
 
   useEffect(() => {
     setIsVisible(true);
@@ -47,11 +51,29 @@ const AuthModal: React.FC<AuthModalProps> = ({
     };
   }, [isOpen]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    // Calculate age from DOB if DOB is provided
+    if (name === 'dateOfBirth' && value) {
+      const birthDate = new Date(value);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      setFormData({
+        ...formData,
+        [name]: value,
+        age: age > 0 ? age.toString() : ''
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
     setError('');
   };
 
@@ -64,9 +86,35 @@ const AuthModal: React.FC<AuthModalProps> = ({
       if (mode === 'login') {
         await login(formData.email, formData.password);
       } else {
-        await register(formData.name, formData.email, formData.password, formData.phone);
+        // Calculate age from DOB if DOB is provided, otherwise use direct age input
+        let finalAge = null;
+        let finalDateOfBirth = null;
+        
+        if (ageInputMethod === 'dob' && formData.dateOfBirth) {
+          finalDateOfBirth = formData.dateOfBirth;
+          const birthDate = new Date(formData.dateOfBirth);
+          const today = new Date();
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+          finalAge = age > 0 ? age : null;
+        } else if (ageInputMethod === 'age' && formData.age) {
+          finalAge = parseInt(formData.age);
+        }
+        
+        await register(
+          formData.name, 
+          formData.email, 
+          formData.password, 
+          formData.phone,
+          formData.gender || undefined,
+          finalDateOfBirth || undefined,
+          finalAge || undefined
+        );
       }
-      setFormData({ name: '', email: '', password: '', phone: '' });
+      setFormData({ name: '', email: '', password: '', phone: '', gender: '', dateOfBirth: '', age: '' });
       onSuccess();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -82,12 +130,14 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const switchMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
     setError('');
-    setFormData({ name: '', email: '', password: '', phone: '' });
+    setFormData({ name: '', email: '', password: '', phone: '', gender: '', dateOfBirth: '', age: '' });
+    setAgeInputMethod('dob');
   };
 
   const handleClose = () => {
     setError('');
-    setFormData({ name: '', email: '', password: '', phone: '' });
+    setFormData({ name: '', email: '', password: '', phone: '', gender: '', dateOfBirth: '', age: '' });
+    setAgeInputMethod('dob');
     onClose();
   };
 
@@ -107,38 +157,39 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 transition-opacity duration-300 overflow-hidden ${
+      className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4 transition-opacity duration-300 overflow-hidden ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={handleBackdropClick}
       style={{ touchAction: 'none' }}
     >
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full max-w-xl transform transition-all duration-300 ${
+        className={`bg-white rounded-2xl shadow-xl w-full max-w-md sm:max-w-lg md:max-w-2xl transform transition-all duration-300 max-h-[90vh] overflow-hidden flex flex-col ${
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Close Button - Always visible */}
         <button
           type="button"
           onClick={handleCloseButtonClick}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 transition-colors z-20 bg-white rounded-full p-1.5 shadow-sm hover:bg-gray-50"
+          aria-label="Close"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
-        {/* Header - Reduced padding for register mode */}
-        <div className={`px-8 ${mode === 'register' ? 'pt-6 pb-2' : 'pt-8 pb-4'} text-center`}>
+        {/* Header - Responsive padding */}
+        <div className={`px-4 sm:px-6 md:px-8 ${mode === 'register' ? 'pt-6 sm:pt-7 pb-2' : 'pt-8 pb-4'} text-center flex-shrink-0`}>
           <div className="flex justify-center mb-2 animate-fade-in">
-            <div className="bg-gray-100 rounded-full p-3 transition-transform duration-300 hover:scale-110">
-              <span className="text-2xl">⚕️</span>
+            <div className="bg-gray-100 rounded-full p-2 sm:p-3 transition-transform duration-300 hover:scale-110">
+              <span className="text-xl sm:text-2xl">⚕️</span>
             </div>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-1 animate-slide-down">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1 animate-slide-down">
             {mode === 'login' ? 'Welcome Back' : 'Create Account'}
           </h2>
-          <p className="text-gray-500 text-sm animate-slide-down" style={{ animationDelay: '0.1s' }}>
+          <p className="text-gray-500 text-xs sm:text-sm animate-slide-down" style={{ animationDelay: '0.1s' }}>
             {mode === 'login' ? 'Sign in to continue' : 'Join us today'}
           </p>
         </div>
@@ -190,9 +241,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
           }
         `}</style>
 
-        {/* Form - Reduced spacing for register mode */}
-        <div className={`px-8 ${mode === 'register' ? 'pt-1 pb-3' : 'pt-2 pb-4'}`}>
-          <form onSubmit={handleSubmit} className={mode === 'register' ? 'space-y-2' : 'space-y-2.5'}>
+        {/* Form - Scrollable content area */}
+        <div className={`px-4 sm:px-6 md:px-8 ${mode === 'register' ? 'pt-1 pb-3' : 'pt-2 pb-4'} overflow-y-auto flex-1`}>
+          <form onSubmit={handleSubmit} className={mode === 'register' ? 'space-y-2.5 sm:space-y-3' : 'space-y-2.5'}>
             {mode === 'register' && (
               <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -231,21 +282,91 @@ const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             {mode === 'register' && (
-              <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <div className="relative group">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-all duration-300 group-focus-within:text-gray-600" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
+              <>
+                <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-all duration-300 group-focus-within:text-gray-600" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                </div>
+                
+                <div className="animate-slide-up" style={{ animationDelay: '0.35s' }}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
                     onChange={handleInputChange}
                     required
-                    className="text-black w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
-                    placeholder="+1 (555) 000-0000"
-                  />
+                    className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
-              </div>
+
+                <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Age Input Method</label>
+                  <div className="flex gap-2 sm:gap-3 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setAgeInputMethod('dob')}
+                      className={`flex-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm font-medium transition-all ${
+                        ageInputMethod === 'dob'
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      Date of Birth
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAgeInputMethod('age')}
+                      className={`flex-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm font-medium transition-all ${
+                        ageInputMethod === 'age'
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      Direct Age
+                    </button>
+                  </div>
+                  
+                  {ageInputMethod === 'dob' ? (
+                    <input
+                      type="date"
+                      name="dateOfBirth"
+                      value={formData.dateOfBirth}
+                      onChange={handleInputChange}
+                      required
+                      max={new Date().toISOString().split('T')[0]}
+                      className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      name="age"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      required
+                      min="1"
+                      max="120"
+                      className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all outline-none hover:border-gray-400"
+                      placeholder="Enter your age"
+                    />
+                  )}
+                </div>
+              </>
             )}
 
             <div
@@ -298,10 +419,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
           </form>
 
           <div
-            className={`${mode === 'register' ? 'mt-3' : 'mt-5'} text-center animate-slide-up`}
+            className={`${mode === 'register' ? 'mt-3 sm:mt-4' : 'mt-5'} text-center animate-slide-up flex-shrink-0`}
             style={{ animationDelay: mode === 'register' ? '0.6s' : '0.4s' }}
           >
-            <p className="text-sm text-gray-600">
+            <p className="text-xs sm:text-sm text-gray-600">
               {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
               <button
                 type="button"
@@ -315,16 +436,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Trust Badge - Reduced spacing for register mode */}
           <div
-            className={`${mode === 'register' ? 'mt-3 pt-3' : 'mt-5 pt-5'} border-t border-gray-200 flex items-center justify-center gap-4 text-xs text-gray-500 animate-slide-up`}
+            className={`${mode === 'register' ? 'mt-3 pt-3' : 'mt-5 pt-5'} border-t border-gray-200 flex items-center justify-center gap-3 sm:gap-4 text-xs text-gray-500 animate-slide-up flex-shrink-0 pb-3 sm:pb-4`}
             style={{ animationDelay: mode === 'register' ? '0.7s' : '0.5s' }}
           >
             <div className="flex items-center gap-1">
               <span>🔒</span>
-              <span>Secure</span>
+              <span className="text-[10px] sm:text-xs">Secure</span>
             </div>
             <div className="flex items-center gap-1">
               <span>⚕️</span>
-              <span>HIPAA Compliant</span>
+              <span className="text-[10px] sm:text-xs">HIPAA Compliant</span>
             </div>
           </div>
         </div>

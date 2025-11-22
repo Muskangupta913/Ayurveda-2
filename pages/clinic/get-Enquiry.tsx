@@ -9,6 +9,10 @@ import {
   Mail,
   MessageSquare,
   X,
+  Inbox,
+  CalendarDays,
+  Bell,
+  Filter,
 } from "lucide-react";
 import ClinicLayout from "../../components/ClinicLayout";
 import type { NextPageWithLayout } from "../_app";
@@ -32,6 +36,10 @@ function ClinicEnquiries() {
   const [filteredEnquiries, setFilteredEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [timeFilter, setTimeFilter] = useState<"all" | "today" | "7d" | "30d">(
+    "all"
+  );
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   useEffect(() => {
     const fetchEnquiries = async () => {
@@ -57,8 +65,38 @@ function ClinicEnquiries() {
     fetchEnquiries();
   }, []);
 
+  const isToday = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const isWithinLastDays = (dateString: string, days: number) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff =
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+    return diff <= days;
+  };
+
   useEffect(() => {
-    let filtered = enquiries;
+    let filtered = [...enquiries];
+
+    if (timeFilter === "today") {
+      filtered = filtered.filter((enquiry) => isToday(enquiry.createdAt));
+    } else if (timeFilter === "7d") {
+      filtered = filtered.filter((enquiry) =>
+        isWithinLastDays(enquiry.createdAt, 7)
+      );
+    } else if (timeFilter === "30d") {
+      filtered = filtered.filter((enquiry) =>
+        isWithinLastDays(enquiry.createdAt, 30)
+      );
+    }
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -70,8 +108,37 @@ function ClinicEnquiries() {
       );
     }
 
+    filtered.sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return sortOrder === "newest" ? bTime - aTime : aTime - bTime;
+    });
+
     setFilteredEnquiries(filtered);
-  }, [searchTerm, enquiries]);
+  }, [enquiries, searchTerm, timeFilter, sortOrder]);
+
+  const totalEnquiries = enquiries.length;
+  const todaysEnquiries = enquiries.filter((enquiry) =>
+    isToday(enquiry.createdAt)
+  ).length;
+  const unreadEnquiries = enquiries.length;
+  const lastEnquiryDate =
+    enquiries.length > 0
+      ? new Date(
+          Math.max(
+            ...enquiries.map((enquiry) =>
+              new Date(enquiry.createdAt).getTime()
+            )
+          )
+        ).toLocaleDateString("en-US", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "No enquiries yet";
 
   if (loading) {
     return (
@@ -113,12 +180,66 @@ function ClinicEnquiries() {
               <div className="text-sm text-gray-600">Total</div>
             </div>
           </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+            <div className="border border-gray-200 rounded-lg p-4 flex items-center gap-3 bg-gray-50">
+              <div className="w-10 h-10 bg-[#2D9AA5]/10 flex items-center justify-center rounded-full">
+                <Inbox className="w-5 h-5 text-[#2D9AA5]" />
+              </div>
+              <div>
+                <p className="text-xs uppercase text-gray-500 tracking-wide">
+                  Total Enquiries
+                </p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {totalEnquiries}
+                </p>
+              </div>
+            </div>
+            <div className="border border-gray-200 rounded-lg p-4 flex items-center gap-3 bg-gray-50">
+              <div className="w-10 h-10 bg-blue-100 flex items-center justify-center rounded-full">
+                <CalendarDays className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs uppercase text-gray-500 tracking-wide">
+                  Today’s Enquiries
+                </p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {todaysEnquiries}
+                </p>
+              </div>
+            </div>
+            <div className="border border-gray-200 rounded-lg p-4 flex items-center gap-3 bg-gray-50">
+              <div className="w-10 h-10 bg-yellow-100 flex items-center justify-center rounded-full">
+                <Bell className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-xs uppercase text-gray-500 tracking-wide">
+                  Unread / Pending
+                </p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {unreadEnquiries}
+                </p>
+              </div>
+            </div>
+            <div className="border border-gray-200 rounded-lg p-4 flex items-center gap-3 bg-gray-50">
+              <div className="w-10 h-10 bg-purple-100 flex items-center justify-center rounded-full">
+                <Calendar className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs uppercase text-gray-500 tracking-wide">
+                  Last Enquiry
+                </p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {lastEnquiryDate}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        {/* Search Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8 mx-1 sm:mx-0">
+        {/* Search Bar & Controls */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8 mx-1 sm:mx-0 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
             <div className="bg-gray-100 p-2 sm:p-3 rounded-lg flex-shrink-0 self-start sm:self-center">
               <Search className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
@@ -139,6 +260,38 @@ function ClinicEnquiries() {
                   <X className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
                 </button>
               )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Filter by:</span>
+              <select
+                value={timeFilter}
+                onChange={(e) =>
+                  setTimeFilter(e.target.value as "all" | "today" | "7d" | "30d")
+                }
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] bg-white"
+              >
+                <option value="all">All time</option>
+                <option value="today">Today</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="font-medium">Sort:</span>
+              <select
+                value={sortOrder}
+                onChange={(e) =>
+                  setSortOrder(e.target.value as "newest" | "oldest")
+                }
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#2D9AA5] focus:border-[#2D9AA5] bg-white"
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
             </div>
           </div>
 

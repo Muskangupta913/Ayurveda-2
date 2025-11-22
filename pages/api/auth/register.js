@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   await dbConnect();
 
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, gender, dateOfBirth, age } = req.body;
 
     // Field-by-field validation
     if (!name || name.trim().length < 2) {
@@ -38,6 +38,42 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Phone number must be a 10-digit number' });
     }
 
+    // Validate gender if provided
+    if (gender && !['male', 'female', 'other'].includes(gender)) {
+      return res.status(400).json({ message: 'Invalid gender value' });
+    }
+
+    // Validate age if provided
+    if (age && (age < 1 || age > 120)) {
+      return res.status(400).json({ message: 'Age must be between 1 and 120' });
+    }
+
+    // Validate dateOfBirth if provided
+    let finalDateOfBirth = null;
+    let finalAge = null;
+    
+    if (dateOfBirth) {
+      const dob = new Date(dateOfBirth);
+      if (isNaN(dob.getTime())) {
+        return res.status(400).json({ message: 'Invalid date of birth' });
+      }
+      if (dob > new Date()) {
+        return res.status(400).json({ message: 'Date of birth cannot be in the future' });
+      }
+      finalDateOfBirth = dob;
+      
+      // Calculate age from DOB
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        calculatedAge--;
+      }
+      finalAge = calculatedAge > 0 ? calculatedAge : null;
+    } else if (age) {
+      finalAge = parseInt(age);
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -45,13 +81,20 @@ export default async function handler(req, res) {
     }
 
     // Create new user
-    const user = new User({
+    const userData = {
       name: name.trim(),
       email: email.toLowerCase(),
       password,
       phone: phone || '',
       role: 'user'
-    });
+    };
+
+    // Add optional fields
+    if (gender) userData.gender = gender;
+    if (finalDateOfBirth) userData.dateOfBirth = finalDateOfBirth;
+    if (finalAge) userData.age = finalAge;
+
+    const user = new User(userData);
 
     await user.save();
 

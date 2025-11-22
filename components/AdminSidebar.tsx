@@ -21,6 +21,8 @@ import {
   CurrencyDollarIcon,
   DocumentCheckIcon,
   BeakerIcon,
+  EnvelopeIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -40,6 +42,8 @@ import {
   CurrencyDollarIcon as CurrencyDollarIconSolid,
   DocumentCheckIcon as DocumentCheckIconSolid,
   BeakerIcon as BeakerIconSolid,
+  EnvelopeIcon as EnvelopeIconSolid,
+  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
 } from '@heroicons/react/24/solid';
 
 interface NavItem {
@@ -172,6 +176,26 @@ const navItems: NavItem[] = [
     icon: UserPlusIcon,
     iconSolid: UserPlusIconSolid,
     description: "Create agent account",
+  },
+  {
+    label: "SMS Management",
+    icon: EnvelopeIcon,
+    iconSolid: EnvelopeIconSolid,
+    description: "Manage SMS wallets and top-ups",
+    children: [
+      {
+        label: "Manage Wallets",
+        path: "/admin/manage-sms-wallets",
+        icon: CurrencyDollarIcon,
+        iconSolid: CurrencyDollarIconSolid,
+      },
+      {
+        label: "Top-up Requests",
+        path: "/admin/manage-sms-topups",
+        icon: ChatBubbleLeftRightIcon,
+        iconSolid: ChatBubbleLeftRightIconSolid,
+      },
+    ],
   },
 ];
 

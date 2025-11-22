@@ -15,6 +15,27 @@ const adminNavigationItems = [
     order: 1,
   },
   {
+    label: 'SMS Management',
+    icon: '💬',
+    description: 'Manage SMS wallets and top-ups',
+    moduleKey: 'sms_management',
+    order: 11,
+    children: [
+      {
+        label: 'Manage Wallets',
+        path: '/admin/manage-sms-wallets',
+        icon: '💼',
+        order: 1,
+      },
+      {
+        label: 'Top-up Requests',
+        path: '/admin/manage-sms-topups',
+        icon: '💳',
+        order: 2,
+      },
+    ],
+  },
+  {
     label: 'Approval Clinic',
     path: '/admin/AdminClinicApproval ',
     icon: '✅',
