@@ -16,7 +16,10 @@ import {
   ChevronDown,
   X,
   Edit,
+  History,
 } from "lucide-react";
+import EditAppointmentModal from "../../components/EditAppointmentModal";
+import AppointmentHistoryModal from "../../components/AppointmentHistoryModal";
 
 interface Appointment {
   _id: string;
@@ -97,6 +100,36 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [pendingEditModal, setPendingEditModal] = useState(false);
+  const [pendingHistoryModal, setPendingHistoryModal] = useState(false);
+
+  // Open edit modal when appointment is set
+  useEffect(() => {
+    if (pendingEditModal && selectedAppointment) {
+      setEditModalOpen(true);
+      setPendingEditModal(false);
+    }
+  }, [selectedAppointment, pendingEditModal]);
+
+  // Open history modal when appointment is set
+  useEffect(() => {
+    if (pendingHistoryModal && selectedAppointment) {
+      setHistoryModalOpen(true);
+      setPendingHistoryModal(false);
+    }
+  }, [selectedAppointment, pendingHistoryModal]);
+
+  // Debug: Log modal state changes
+  useEffect(() => {
+    console.log("Edit modal state:", editModalOpen, "Appointment:", selectedAppointment);
+  }, [editModalOpen, selectedAppointment]);
+
+  useEffect(() => {
+    console.log("History modal state:", historyModalOpen, "Patient:", selectedAppointment?.patientId);
+  }, [historyModalOpen, selectedAppointment]);
 
   // Add custom scrollbar styles and ensure horizontal scrolling works
   useEffect(() => {
@@ -301,6 +334,7 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
   };
 
   return (
+    <>
     <ClinicLayout>
       <div className="bg-gray-50 min-h-screen" style={{ width: '100%', padding: '0', margin: '0' }}>
         <div className="p-3 sm:p-4 md:p-6" style={{ width: '100%', minWidth: '100%' }}>
@@ -716,7 +750,7 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
                             </button>
                             
                             {/* Dropdown Menu */}
-                            {openActionMenu === apt._id && (
+                            {openActionMenu === apt._id && !editModalOpen && !historyModalOpen && (
                               <>
                                 {/* Backdrop to close menu when clicking outside */}
                                 <div
@@ -725,19 +759,45 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
                                 ></div>
                                 
                                 {/* Dropdown Content */}
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                                <div 
+                                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-30"
+                                >
                                   <div className="py-1">
                                     <button
-                                      onClick={() => {
-                                        // Handle edit action
-                                        console.log("Edit appointment:", apt._id);
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log("Edit clicked for appointment:", apt._id, apt);
+                                        const appointmentData: Appointment = {
+                                          ...apt,
+                                          startDate: apt.startDate || new Date().toISOString(),
+                                        };
                                         setOpenActionMenu(null);
-                                        // TODO: Open edit modal or navigate to edit page
+                                        // Set appointment first, then trigger modal open
+                                        setSelectedAppointment(appointmentData);
+                                        setPendingEditModal(true);
                                       }}
                                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition"
                                     >
                                       <Edit className="w-4 h-4" />
                                       Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log("History clicked for patient:", apt.patientId, apt);
+                                        setOpenActionMenu(null);
+                                        // Set appointment first, then trigger modal open
+                                        setSelectedAppointment(apt);
+                                        setPendingHistoryModal(true);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition"
+                                    >
+                                      <History className="w-4 h-4" />
+                                      Appointment History
                                     </button>
                                   </div>
                                 </div>
@@ -780,7 +840,46 @@ const AllAppointmentsPage: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
+
     </ClinicLayout>
+
+    {/* Edit Appointment Modal - Outside ClinicLayout for proper z-index */}
+    {selectedAppointment && (
+      <EditAppointmentModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          console.log("Closing edit modal");
+          setEditModalOpen(false);
+          setSelectedAppointment(null);
+        }}
+        onSuccess={() => {
+          console.log("Edit success, refreshing appointments");
+          fetchAppointments();
+          setEditModalOpen(false);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment}
+        rooms={rooms}
+        doctors={doctors}
+        getAuthHeaders={getAuthHeaders}
+      />
+    )}
+
+    {/* Appointment History Modal - Outside ClinicLayout for proper z-index */}
+    {selectedAppointment && (
+      <AppointmentHistoryModal
+        isOpen={historyModalOpen}
+        onClose={() => {
+          console.log("Closing history modal");
+          setHistoryModalOpen(false);
+          setSelectedAppointment(null);
+        }}
+        patientId={selectedAppointment.patientId}
+        patientName={selectedAppointment.patientName}
+        getAuthHeaders={getAuthHeaders}
+      />
+    )}
+    </>
   );
 };
 
