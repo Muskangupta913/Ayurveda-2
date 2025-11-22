@@ -37,7 +37,7 @@ const SmsRoiPanel = ({ open, onClose }) => {
         </div>
 
         <div className="p-3 space-y-3">
-          {/* Key Metrics Grid */}
+        
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
               <div className="flex items-center gap-1.5 mb-1">
