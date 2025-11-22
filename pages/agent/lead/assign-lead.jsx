@@ -99,7 +99,7 @@ const LeadsPage = () => {
           <p className="text-xs text-gray-500">Filter, review, and assign leads to your team</p>
         </div>
 
-      {/* Filters */}
+      
       <div className="bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-gray-200 p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-3">
         <input
           placeholder="Name"
