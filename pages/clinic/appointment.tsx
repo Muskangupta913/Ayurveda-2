@@ -71,6 +71,7 @@ interface Appointment {
   referral: string;
   emergency: string;
   notes: string;
+  bookedFrom?: "doctor" | "room"; // Track which column the appointment was booked from
 }
 
 // Parse clinic timings string and generate time slots
@@ -179,6 +180,7 @@ function AppointmentPage() {
     slotTime: string;
     slotDisplayTime: string;
     selectedDate: string;
+    bookedFrom: "doctor" | "room";
   }>({
     isOpen: false,
     doctorId: "",
@@ -188,6 +190,7 @@ function AppointmentPage() {
     slotTime: "",
     slotDisplayTime: "",
     selectedDate: new Date().toISOString().split("T")[0],
+    bookedFrom: "doctor",
   });
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
 
@@ -273,9 +276,16 @@ function AppointmentPage() {
   };
 
   // Get appointments for a specific doctor and row
+  // Only show appointments that were booked from the doctor column
   const getAppointmentsForRow = (doctorId: string, slotTime: string): Appointment[] => {
     return appointments.filter((apt) => {
       if (apt.doctorId !== doctorId) return false;
+      // Only show in doctor column if booked from doctor column (or undefined for backward compatibility)
+      // If bookedFrom is "room", don't show in doctor column
+      if (apt.bookedFrom === "room") {
+        console.log(`Filtering out appointment ${apt._id} from doctor column - bookedFrom is "room"`);
+        return false;
+      }
       const aptDate = new Date(apt.startDate).toISOString().split("T")[0];
       if (aptDate !== selectedDate) return false;
       
@@ -289,9 +299,17 @@ function AppointmentPage() {
   };
 
   // Get appointments for a specific room and row
+  // Only show appointments that were booked from the room column
   const getRoomAppointmentsForRow = (roomId: string, slotTime: string): Appointment[] => {
     return appointments.filter((apt) => {
       if (apt.roomId !== roomId) return false;
+      // Only show in room column if booked from room column
+      // Check explicitly for "room" - handle undefined, null, or string "undefined"
+      const bookedFrom = apt.bookedFrom;
+      if (bookedFrom !== "room") {
+        console.log(`Filtering out appointment ${apt._id} from room column - bookedFrom is "${bookedFrom}" (type: ${typeof bookedFrom}, not "room")`);
+        return false;
+      }
       const aptDate = new Date(apt.startDate).toISOString().split("T")[0];
       if (aptDate !== selectedDate) return false;
 
@@ -322,7 +340,14 @@ function AppointmentPage() {
       })
       .then((res) => {
         if (res.data.success) {
-          setAppointments(res.data.appointments || []);
+          const appointmentsData = res.data.appointments || [];
+          // Debug: Log bookedFrom values after reload
+          console.log("=== RELOADED APPOINTMENTS AFTER BOOKING ===");
+          appointmentsData.forEach((apt: Appointment) => {
+            console.log(`Appointment ${apt._id}: bookedFrom="${apt.bookedFrom}", doctorId="${apt.doctorId}", roomId="${apt.roomId}"`);
+          });
+          console.log("============================================");
+          setAppointments(appointmentsData);
         }
       })
       .catch((err) => {
@@ -478,7 +503,6 @@ function AppointmentPage() {
                     {/* Doctor columns */}
                     {doctorStaff.map((doctor) => {
                       const rowAppointments = getAppointmentsForRow(doctor._id, slot.time);
-                      const hasAppointment = rowAppointments.length > 0;
 
                       return (
                         <div
@@ -491,6 +515,12 @@ function AppointmentPage() {
                             {[0, SLOT_INTERVAL_MINUTES].map((offset) => {
                               const subSlotTime = addMinutesToTime(slot.time, offset);
                               const subStartMinutes = rowStartMinutes + offset;
+                              const subEndMinutes = subStartMinutes + SLOT_INTERVAL_MINUTES;
+                              const isSubSlotOccupied = rowAppointments.some((apt) => {
+                                const aptStart = timeStringToMinutes(apt.fromTime);
+                                const aptEnd = timeStringToMinutes(apt.toTime);
+                                return aptStart < subEndMinutes && aptEnd > subStartMinutes;
+                              });
                               const slotWithinClosing =
                                 lastBookableMinutes === null ||
                                 subStartMinutes <= lastBookableMinutes;
@@ -498,7 +528,7 @@ function AppointmentPage() {
                                 !isPastDay &&
                                 (!isToday || subStartMinutes >= currentMinutes) &&
                                 slotWithinClosing &&
-                                !hasAppointment;
+                                !isSubSlotOccupied;
 
                               return (
                                 <div
@@ -506,6 +536,8 @@ function AppointmentPage() {
                                   className={`flex-1 transition-colors ${
                                     canBookSlot
                                       ? "cursor-pointer hover:bg-blue-50"
+                                      : isSubSlotOccupied
+                                      ? "bg-purple-50 text-purple-400 cursor-not-allowed"
                                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                                   }`}
                                   style={{ height: SUB_SLOT_HEIGHT_PX }}
@@ -529,6 +561,7 @@ function AppointmentPage() {
                                         slotTime: subSlotTime,
                                         slotDisplayTime: minutesToDisplay(subStartMinutes),
                                         selectedDate,
+                                        bookedFrom: "doctor", // Mark as booked from doctor column
                                       });
                                     }
                                   }}
@@ -537,7 +570,7 @@ function AppointmentPage() {
                             })}
                           </div>
 
-                          {hasAppointment
+                          {rowAppointments.length > 0
                             ? rowAppointments.map((apt) => {
                                 const tooltip = [
                                   `Patient: ${apt.patientName}`,
@@ -586,9 +619,6 @@ function AppointmentPage() {
                                     }}
                                   >
                                     <p className="truncate font-semibold">{apt.patientName}</p>
-                                    <p className="text-xs opacity-90">
-                                      {formatTime(apt.fromTime)} - {formatTime(apt.toTime)}
-                                    </p>
                                   </div>
                                 );
                               })
@@ -600,7 +630,6 @@ function AppointmentPage() {
                     {/* Room columns */}
                     {rooms.map((room) => {
                       const roomAppointments = getRoomAppointmentsForRow(room._id, slot.time);
-                      const roomHasAppointment = roomAppointments.length > 0;
 
                       return (
                         <div
@@ -613,6 +642,12 @@ function AppointmentPage() {
                             {[0, SLOT_INTERVAL_MINUTES].map((offset) => {
                               const subSlotTime = addMinutesToTime(slot.time, offset);
                               const subStartMinutes = rowStartMinutes + offset;
+                              const subEndMinutes = subStartMinutes + SLOT_INTERVAL_MINUTES;
+                              const isSubSlotOccupied = roomAppointments.some((apt) => {
+                                const aptStart = timeStringToMinutes(apt.fromTime);
+                                const aptEnd = timeStringToMinutes(apt.toTime);
+                                return aptStart < subEndMinutes && aptEnd > subStartMinutes;
+                              });
                               const slotWithinClosing =
                                 lastBookableMinutes === null ||
                                 subStartMinutes <= lastBookableMinutes;
@@ -620,7 +655,7 @@ function AppointmentPage() {
                                 !isPastDay &&
                                 (!isToday || subStartMinutes >= currentMinutes) &&
                                 slotWithinClosing &&
-                                !roomHasAppointment;
+                                !isSubSlotOccupied;
 
                               return (
                                 <div
@@ -628,6 +663,8 @@ function AppointmentPage() {
                                   className={`flex-1 transition-colors ${
                                     canBookSlot
                                       ? "cursor-pointer hover:bg-green-50"
+                                      : isSubSlotOccupied
+                                      ? "bg-purple-50 text-purple-400 cursor-not-allowed"
                                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                                   }`}
                                   style={{ height: SUB_SLOT_HEIGHT_PX }}
@@ -651,6 +688,7 @@ function AppointmentPage() {
                                         slotTime: subSlotTime,
                                         slotDisplayTime: minutesToDisplay(subStartMinutes),
                                         selectedDate,
+                                        bookedFrom: "room", // Mark as booked from room column
                                       });
                                     }
                                   }}
@@ -659,7 +697,7 @@ function AppointmentPage() {
                             })}
                           </div>
 
-                          {roomHasAppointment
+                          {roomAppointments.length > 0
                             ? roomAppointments.map((apt) => {
                                 const tooltip = [
                                   `Patient: ${apt.patientName}`,
@@ -709,9 +747,6 @@ function AppointmentPage() {
                                     }}
                                   >
                                     <p className="truncate font-semibold">{apt.patientName}</p>
-                                    <p className="text-xs opacity-90">
-                                      {formatTime(apt.fromTime)} - {formatTime(apt.toTime)}
-                                    </p>
                                   </div>
                                 );
                               })
@@ -738,6 +773,7 @@ function AppointmentPage() {
         slotTime={bookingModal.slotTime}
         slotDisplayTime={bookingModal.slotDisplayTime}
         defaultDate={bookingModal.selectedDate}
+        bookedFrom={bookingModal.bookedFrom}
         rooms={rooms}
         doctorStaff={doctorStaff}
         getAuthHeaders={getAuthHeaders}

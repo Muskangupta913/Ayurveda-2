@@ -56,6 +56,13 @@ export default async function handler(req, res) {
         .sort({ startDate: 1, fromTime: 1 })
         .lean();
 
+      // Debug: Log bookedFrom values from database
+      console.log("=== FETCHING APPOINTMENTS ===");
+      appointments.forEach((apt) => {
+        console.log(`Appointment ${apt._id}: bookedFrom="${apt.bookedFrom}" (type: ${typeof apt.bookedFrom})`);
+      });
+      console.log("=============================");
+
       return res.status(200).json({
         success: true,
         appointments: appointments.map((apt) => ({
@@ -76,6 +83,9 @@ export default async function handler(req, res) {
           referral: apt.referral,
           emergency: apt.emergency,
           notes: apt.notes,
+          bookedFrom: (apt.bookedFrom === "room" || apt.bookedFrom === "doctor") 
+            ? apt.bookedFrom 
+            : (apt.bookedFrom ? apt.bookedFrom : "doctor"), // Include booking source, default to "doctor" for old appointments without this field
           createdAt: apt.createdAt,
         })),
       });
@@ -95,7 +105,42 @@ export default async function handler(req, res) {
         referral,
         emergency,
         notes,
+        bookedFrom, // Track which column the appointment was booked from
       } = req.body;
+
+      // Debug log to verify bookedFrom is being received
+      console.log("=== API RECEIVING APPOINTMENT ===");
+      console.log("Received bookedFrom from request:", bookedFrom);
+      console.log("Type of bookedFrom:", typeof bookedFrom);
+      console.log("bookedFrom === 'room':", bookedFrom === "room");
+      console.log("bookedFrom === 'doctor':", bookedFrom === "doctor");
+      console.log("bookedFrom value (stringified):", JSON.stringify(bookedFrom));
+      console.log("Request body bookedFrom:", req.body.bookedFrom);
+      console.log("Full request body:", JSON.stringify(req.body, null, 2));
+      console.log("==================================");
+      
+      // Ensure bookedFrom is a valid value - use explicit string comparison
+      // CRITICAL: Check the actual value received from the request
+      let validBookedFrom;
+      const receivedValue = req.body.bookedFrom;
+      console.log("🔍 API received bookedFrom value:", receivedValue);
+      console.log("🔍 Type of received value:", typeof receivedValue);
+      console.log("🔍 Is it exactly 'room'?", receivedValue === "room");
+      console.log("🔍 Is it exactly 'doctor'?", receivedValue === "doctor");
+      console.log("🔍 String comparison 'room':", String(receivedValue) === "room");
+      console.log("🔍 String comparison 'doctor':", String(receivedValue) === "doctor");
+      
+      if (receivedValue === "room" || String(receivedValue) === "room") {
+        validBookedFrom = "room";
+        console.log("✅ Setting validBookedFrom to 'room'");
+      } else if (receivedValue === "doctor" || String(receivedValue) === "doctor") {
+        validBookedFrom = "doctor";
+        console.log("✅ Setting validBookedFrom to 'doctor'");
+      } else {
+        validBookedFrom = "doctor";
+        console.log("⚠️ bookedFrom is not 'room' or 'doctor', defaulting to 'doctor'. Received value was:", receivedValue, "Type:", typeof receivedValue);
+      }
+      console.log("🎯 Final validBookedFrom that will be saved:", validBookedFrom);
 
       // Detailed validation
       const missingFields = [];
@@ -188,7 +233,8 @@ export default async function handler(req, res) {
       }
 
       // Create appointment
-      const appointment = await Appointment.create({
+      console.log("💾 Creating appointment with bookedFrom:", validBookedFrom);
+      const appointmentData = {
         clinicId,
         patientId,
         doctorId,
@@ -202,13 +248,30 @@ export default async function handler(req, res) {
         emergency: emergency || "no",
         notes: notes || "",
         createdBy: clinicUser._id,
-      });
+        bookedFrom: validBookedFrom, // Use validated value - explicitly set to override default
+      };
+      console.log("💾 Appointment data being saved:", JSON.stringify(appointmentData, null, 2));
+      
+      const appointment = await Appointment.create(appointmentData);
+
+      console.log("✅ Appointment created. ID:", appointment._id);
+      console.log("✅ Appointment bookedFrom immediately after create:", appointment.bookedFrom);
+      console.log("✅ Appointment bookedFrom type:", typeof appointment.bookedFrom);
+
+      // Force-set bookedFrom in case schema hot-reload missed the new field
+      if (appointment.bookedFrom !== validBookedFrom) {
+        console.log("⚠ bookedFrom on created doc is", appointment.bookedFrom, "-> forcing update to", validBookedFrom);
+        await Appointment.updateOne({ _id: appointment._id }, { $set: { bookedFrom: validBookedFrom } });
+      }
 
       const populatedAppointment = await Appointment.findById(appointment._id)
         .populate("patientId", "firstName lastName mobileNumber email")
         .populate("doctorId", "name email")
         .populate("roomId", "name")
         .lean();
+      
+      console.log("📖 Populated appointment bookedFrom from DB:", populatedAppointment.bookedFrom);
+      console.log("📖 Populated appointment bookedFrom type:", typeof populatedAppointment.bookedFrom);
 
       return res.status(201).json({
         success: true,
@@ -231,6 +294,9 @@ export default async function handler(req, res) {
           referral: populatedAppointment.referral,
           emergency: populatedAppointment.emergency,
           notes: populatedAppointment.notes,
+          bookedFrom: (populatedAppointment.bookedFrom === "room" || populatedAppointment.bookedFrom === "doctor") 
+            ? populatedAppointment.bookedFrom 
+            : validBookedFrom, // Use value from database, fallback to validated value
         },
       });
     }
