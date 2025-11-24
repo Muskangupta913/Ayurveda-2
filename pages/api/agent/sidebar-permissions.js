@@ -6,6 +6,45 @@ import User from "../../../models/Users";
 import ClinicNavigationItem from "../../../models/ClinicNavigationItem";
 import { getUserFromReq } from "../lead-ms/auth";
 
+const formatSlugSegment = (segment = "") =>
+  segment
+    .split("/")
+    .filter(Boolean)
+    .join("-")
+    .replace(/--+/g, "-");
+
+const convertPathToAgent = (path = "", navigationRole = "clinic") => {
+  if (!path) return path;
+  const trimmed = path.replace(/^\/+/, "");
+
+  if (trimmed.startsWith("agent/")) {
+    return `/${trimmed}`;
+  }
+
+  if (trimmed.startsWith("clinic/")) {
+    const relative = trimmed.slice("clinic/".length);
+    return `/agent/clinic-${formatSlugSegment(relative)}`;
+  }
+
+  if (trimmed.startsWith("doctor/")) {
+    const relative = trimmed.slice("doctor/".length);
+    return `/agent/doctor-${formatSlugSegment(relative)}`;
+  }
+
+  if (trimmed.startsWith("staff/")) {
+    const relative = trimmed.slice("staff/".length);
+    const prefix = navigationRole === "doctor" ? "doctor-staff" : "clinic-staff";
+    return `/agent/${prefix}-${formatSlugSegment(relative)}`;
+  }
+
+  if (trimmed.startsWith("admin/")) {
+    const relative = trimmed.slice("admin/".length);
+    return `/agent/${formatSlugSegment(relative)}`;
+  }
+
+  return `/agent/${formatSlugSegment(trimmed)}`;
+};
+
 export default async function handler(req, res) {
   await dbConnect();
 
@@ -163,29 +202,7 @@ export default async function handler(req, res) {
         }
 
         // Convert path from admin/clinic/doctor/staff routes to agent routes
-        let agentPath = item.path;
-        if (agentPath) {
-          // Convert /staff/* to /agent/*
-          if (agentPath.startsWith('/staff/')) {
-            agentPath = agentPath.replace('/staff/', '/agent/');
-          }
-          // Convert /admin/* to /agent/*
-          else if (agentPath.startsWith('/admin/')) {
-            agentPath = agentPath.replace('/admin/', '/agent/');
-          }
-          // Convert /clinic/* to /agent/*
-          else if (agentPath.startsWith('/clinic/')) {
-            agentPath = agentPath.replace('/clinic/', '/agent/');
-          }
-          // Convert /doctor/* to /agent/*
-          else if (agentPath.startsWith('/doctor/')) {
-            agentPath = agentPath.replace('/doctor/', '/agent/');
-          }
-          // Convert /staff/* to /agent/*
-          else if (agentPath.startsWith('/staff/')) {
-            agentPath = agentPath.replace('/staff/', '/agent/');
-          }
-        }
+        const agentPath = item.path ? convertPathToAgent(item.path, navigationRole) : null;
 
         // Convert submodule paths as well
         const convertedSubModules = filteredSubModules.map(subModule => {
@@ -197,13 +214,7 @@ export default async function handler(req, res) {
           
           return {
             name: subModuleName,
-            path: subModulePath ? (
-              subModulePath.startsWith('/admin/') ? subModulePath.replace('/admin/', '/agent/') :
-              subModulePath.startsWith('/clinic/') ? subModulePath.replace('/clinic/', '/agent/') :
-              subModulePath.startsWith('/doctor/') ? subModulePath.replace('/doctor/', '/agent/') :
-              subModulePath.startsWith('/staff/') ? subModulePath.replace('/staff/', '/agent/') :
-              subModulePath
-            ) : subModulePath,
+            path: subModulePath ? convertPathToAgent(subModulePath, navigationRole) : '',
             icon: subModuleIcon,
             order: subModuleOrder
           };

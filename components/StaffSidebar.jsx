@@ -147,12 +147,6 @@ const Sidebar = () => {
         description: "Doctor Overview & Appointments" 
       },
       { 
-        label: "Booked Appointments", 
-        path: "/staff/booked-appointments", 
-        icon: "📅", 
-        description: "View your schedule" 
-      },
-      { 
         label: "Pending Claims", 
         path: "/staff/pending-claims", 
         icon: "🧑‍⚕️", 

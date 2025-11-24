@@ -2,30 +2,10 @@
 import dbConnect from "../../../../lib/database";
 import PatientRegistration from "../../../../models/PatientRegistration";
 import PettyCash from "../../../../models/PettyCash";
-import User from "../../../../models/Users";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { getAuthorizedStaffUser } from "../../../../server/staff/authHelpers";
 
-// ---------------- Helper: verify JWT and get user ----------------
-async function getUserFromToken(req) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.split(" ")[1];
-  if (!token) throw { status: 401, message: "No token provided" };
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select("-password");
-    if (!user) throw { status: 401, message: "User not found" };
-    return user;
-  } catch (err) {
-    throw { status: 401, message: "Invalid or expired token" };
-  }
-}
-
-// ---------------- Check user role ----------------
-function requireRole(user, roles = []) {
-  return roles.includes(user.role);
-}
+const hasRole = (user, roles = []) => roles.includes(user.role);
 
 // ---------------- Add to PettyCash if payment method is Cash ----------------
 async function addToPettyCashIfCash(user, patient, paidAmount) {
@@ -98,13 +78,13 @@ export default async function handler(req, res) {
       // Authenticate user
       let user;
       try {
-        user = await getUserFromToken(req);
+        user = await getAuthorizedStaffUser(req);
       } catch (err) {
         return res.status(err.status || 401).json({ success: false, message: err.message });
       }
 
       // Check if user has permission
-      if (!requireRole(user, ["clinic", "staff", "admin"])) {
+      if (!hasRole(user, ["clinic", "staff", "admin", "doctor", "doctorStaff", "agent"])) {
         return res.status(403).json({ success: false, message: "Access denied" });
       }
 

@@ -21,9 +21,16 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
     }
 
-    // Verify user is a clinic
-    if (me.role !== 'clinic') {
-      return res.status(403).json({ success: false, message: 'Access denied. Clinic role required' });
+    // Verify user is a clinic or an agent/doctorStaff accessing clinic routes
+    // Agents can access clinic routes if they have appropriate permissions
+    if (me.role === 'clinic') {
+      // Clinic user - proceed normally
+    } else if (['agent', 'doctorStaff'].includes(me.role)) {
+      // Agent accessing clinic route - check if they have clinic permissions
+      // This is handled by the agent sidebar-permissions API, but we allow it here
+      // for direct API calls from agent routes
+    } else {
+      return res.status(403).json({ success: false, message: 'Access denied. Clinic role or agent with clinic permissions required' });
     }
 
     // Get clinic associated with this user
@@ -52,6 +59,7 @@ export default async function handler(req, res) {
       if (path === '/staff') {
         return '/clinic/staff';
       }
+      // Keep other paths as-is (clinic paths, etc.)
       return path;
     };
 

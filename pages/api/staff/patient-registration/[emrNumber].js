@@ -1,23 +1,6 @@
 import dbConnect from "../../../../lib/database";
-import jwt from "jsonwebtoken";
 import PatientRegistration from "../../../../models/PatientRegistration";
-import User from "../../../../models/Users";
-
-// Helper: verify JWT and get user
-async function getUserFromToken(req) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.split(" ")[1];
-  if (!token) throw { status: 401, message: "No token provided" };
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId || decoded.id).select("-password");
-    if (!user) throw { status: 401, message: "User not found" };
-    return user;
-  } catch (err) {
-    throw { status: 401, message: "Invalid or expired token" };
-  }
-}
+import { getAuthorizedStaffUser } from "../../../../server/staff/authHelpers";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -29,9 +12,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, message: "Method not allowed" });
   }
 
-  let user;
   try {
-    user = await getUserFromToken(req);
+    await getAuthorizedStaffUser(req);
   } catch (err) {
     return res.status(err.status || 401).json({ success: false, message: err.message });
   }

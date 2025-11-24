@@ -21,9 +21,16 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
     }
 
-    // Verify user is a doctor
-    if (me.role !== 'doctor') {
-      return res.status(403).json({ success: false, message: 'Access denied. Doctor role required' });
+    // Verify user is a doctor or an agent/doctorStaff accessing doctor routes
+    // Agents can access doctor routes if they have appropriate permissions
+    if (me.role === 'doctor') {
+      // Doctor user - proceed normally
+    } else if (['agent', 'doctorStaff'].includes(me.role)) {
+      // Agent accessing doctor route - check if they have doctor permissions
+      // This is handled by the agent sidebar-permissions API, but we allow it here
+      // for direct API calls from agent routes
+    } else {
+      return res.status(403).json({ success: false, message: 'Access denied. Doctor role or agent with doctor permissions required' });
     }
 
     // Get navigation items for doctor role
@@ -35,13 +42,13 @@ export default async function handler(req, res) {
     // Helper function to transform paths to /doctor paths
     const transformPath = (path) => {
       if (!path) return path;
-      // Transform /staff/* to /doctor/*
+      // Transform /staff/* to /doctor/staff/* (for staff pages)
       if (path.startsWith('/staff/')) {
-        return path.replace('/staff/', '/doctor/');
+        return path.replace('/staff/', '/doctor/staff/');
       }
-      // Transform /staff to /doctor
+      // Transform /staff to /doctor/staff
       if (path === '/staff') {
-        return '/doctor';
+        return '/doctor/staff';
       }
       // Transform /lead/* to /doctor/lead/*
       if (path.startsWith('/lead/')) {

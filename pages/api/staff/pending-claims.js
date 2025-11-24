@@ -1,38 +1,20 @@
 import dbConnect from "../../../lib/database"; // your MongoDB connection util
-import jwt from "jsonwebtoken";
 import PatientRegistration from "../../../models/PatientRegistration";
-import User from "../../../models/Users";
-
-
-
-  async function getUserFromToken(req) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.split(" ")[1];
-  if (!token) throw { status: 401, message: "No token provided" };
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("decoded",decoded)
-    const user = await User.findById(decoded.userId).select("-password");
-    if (!user) throw { status: 401, message: "User not found" };
-    return user;
-  } catch (err) {
-    throw { status: 401, message: "Invalid or expired token" };
-  }
-}
+import { getAuthorizedStaffUser } from "../../../server/staff/authHelpers";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "GET") {
     try {
-      const user = await getUserFromToken(req);
+      const user = await getAuthorizedStaffUser(req);
       const { doctorId } = req.query;
 
       let query = {};
-      if (user.role === "doctorStaff") {
+      if (user.role === "doctorStaff" || user.role === "doctor") {
         // Show only this doctor's patients
         query.doctor = user._id.toString();
-      } else if (user.role === "staff" || user.role === "admin" || user.role === "clinic") {
+      } else if (["staff", "admin", "clinic", "agent"].includes(user.role)) {
         // Staff must specify which doctor's patients to view
         if (!doctorId) {
           return res.status(200).json({ success: true, data: [] });
@@ -53,8 +35,8 @@ export default async function handler(req, res) {
   if (req.method === "PATCH") {
     // update advanceClaimStatus (release or cancel)
     try {
-      const user = await getUserFromToken(req);
-      if (user.role !== "doctorStaff") {
+      const user = await getAuthorizedStaffUser(req);
+      if (!["doctorStaff", "doctor"].includes(user.role)) {
         return res.status(403).json({ success: false, message: "Access denied" });
       }
 

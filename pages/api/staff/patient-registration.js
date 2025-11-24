@@ -1,29 +1,9 @@
 import dbConnect from "../../../lib/database";
-import jwt from "jsonwebtoken";
 import PatientRegistration from "../../../models/PatientRegistration";
-import User from "../../../models/Users";
 import PettyCash from "../../../models/PettyCash";
+import { getAuthorizedStaffUser } from "../../../server/staff/authHelpers";
 
-// ---------------- Helper: verify JWT and get user ----------------
-async function getUserFromToken(req) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.split(" ")[1];
-  if (!token) throw { status: 401, message: "No token provided" };
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select("-password");
-    if (!user) throw { status: 401, message: "User not found" };
-    return user;
-  } catch (err) {
-    throw { status: 401, message: "Invalid or expired token" };
-  }
-}
-
-// ---------------- Check user role ----------------
-function requireRole(user, roles = []) {
-  return roles.includes(user.role);
-}
+const hasRole = (user, roles = []) => roles.includes(user.role);
 
 // ---------------- Add to PettyCash if payment method is Cash ----------------
 async function addToPettyCashIfCash(user, patient, paidAmount) {
@@ -61,14 +41,14 @@ export default async function handler(req, res) {
 
   let user;
   try {
-    user = await getUserFromToken(req);
+    user = await getAuthorizedStaffUser(req);
   } catch (err) {
     return res.status(err.status || 401).json({ success: false, message: err.message });
   }
 
   // ---------------- POST: create a new patient ----------------
   if (req.method === "POST") {
-    if (!requireRole(user, ["clinic", "staff", "admin"])) {
+    if (!hasRole(user, ["clinic", "staff", "admin", "agent", "doctorStaff", "doctor"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -244,7 +224,8 @@ export default async function handler(req, res) {
 
   // ---------------- GET: list/filter patients ----------------
   if (req.method === "GET") {
-    if (!requireRole(user, ["clinic", "staff", "admin"])) {
+    // Allow clinic, staff, admin, agent, and doctorStaff roles
+    if (!hasRole(user, ["clinic", "staff", "admin", "agent", "doctorStaff", "doctor"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -276,7 +257,8 @@ export default async function handler(req, res) {
 
   // ---------------- PUT: update patient status/membership ----------------
   if (req.method === "PUT") {
-    if (!requireRole(user, ["staff", "admin"])) {
+    // Allow staff, admin, agent, doctorStaff, doctor, and clinic roles
+    if (!hasRole(user, ["staff", "admin", "agent", "doctorStaff", "doctor", "clinic"])) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 

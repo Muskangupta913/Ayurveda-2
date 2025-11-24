@@ -1,6 +1,5 @@
-import jwt from "jsonwebtoken";
 import dbConnect from "../../../lib/database";
-import User from "../../../models/Users";
+import { getAuthorizedStaffUser } from "../../../server/staff/authHelpers";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -9,23 +8,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "No token provided" });
-  }
-
+  let user;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // ✅ Only staff or doctorStaff can view EOD notes
-    if (!["staff", "doctorStaff"].includes(user.role)) {
-      return res.status(403).json({ message: "Not authorized to view EOD notes" });
-    }
+    user = await getAuthorizedStaffUser(req, {
+      allowedRoles: ["staff", "doctorStaff", "doctor", "clinic", "agent"],
+    });
+  } catch (error) {
+    return res.status(error.status || 401).json({ message: error.message });
+  }
 
     // ✅ Date filter (optional)
     const { date } = req.query;

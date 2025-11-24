@@ -1,14 +1,47 @@
 // Dynamic agent route handler
-// Converts /agent/[slug] to render admin/clinic/doctor pages with AgentLayout
+// Converts /agent/[slug] to render admin/clinic/doctor/staff pages with AgentLayout
+// Handles token context (clinicToken, doctorToken, agentToken) based on route type
 'use client';
 
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 import AgentLayout from '../../components/AgentLayout';
 import withAgentAuth from '../../components/withAgentAuth';
+import { jwtDecode } from 'jwt-decode';
 
-// Map of agent routes to their corresponding admin/clinic/doctor pages
-// Note: These pages are wrapped with withAdminAuth/withClinicAuth/withDoctorAuth, but we'll use withAgentAuth instead
+// Token context to provide appropriate tokens to loaded components
+const TokenContext = createContext<{
+  agentToken: string | null;
+  clinicToken: string | null;
+  doctorToken: string | null;
+  userRole: string | null;
+  userInfo: any;
+}>({
+  agentToken: null,
+  clinicToken: null,
+  doctorToken: null,
+  userRole: null,
+  userInfo: null,
+});
+
+// Hook to use token context
+export const useTokenContext = () => useContext(TokenContext);
+
+// Helper to determine route type and required token
+const getRouteInfo = (slug: string) => {
+  if (slug.startsWith('clinic-') || slug.startsWith('clinic-staff-')) {
+    return { type: 'clinic', tokenKey: 'clinicToken' };
+  }
+  if (slug.startsWith('doctor-') || slug.startsWith('doctor-staff-')) {
+    return { type: 'doctor', tokenKey: 'doctorToken' };
+  }
+  if (slug.startsWith('admin-') || ['AdminClinicApproval', 'approve-doctors', 'add-treatment', 'all-blogs', 'analytics', 'get-in-touch', 'job-manage', 'manage-clinic-permissions', 'create-agent', 'create-staff', 'admin-add-service', 'admin-create-vendor', 'getAllEodNotes', 'patient-report', 'track-expenses', 'contracters', 'dashboard-admin', 'seed-navigation', 'all-clinic', 'register-clinic'].includes(slug)) {
+    return { type: 'admin', tokenKey: 'adminToken' };
+  }
+  return { type: 'unknown', tokenKey: null };
+};
+
+// Map of agent routes to their corresponding admin/clinic/doctor/staff pages
 const routeMap: { [key: string]: () => Promise<any> } = {
   // Admin routes
   'AdminClinicApproval': () => import('../admin/AdminClinicApproval'),
@@ -46,17 +79,20 @@ const routeMap: { [key: string]: () => Promise<any> } = {
   'enquiry-form': () => import('../clinic/enquiry-form'),
   'review-form': () => import('../clinic/review-form'),
   'clinic-seed-navigation': () => import('../clinic/seed-navigation'),
-  
-  // Staff Management routes (staff pages)
-  'staff-dashboard': () => import('../staff/staff-dashboard'),
-  'add-service': () => import('../staff/add-service'),
-  'patient-registration': () => import('../staff/patient-registration'),
-  'patient-information': () => import('../staff/patient-information'),
-  'eodNotes': () => import('../staff/eodNotes'),
-  'AddPettyCashForm': () => import('../staff/AddPettyCashForm'),
-  'add-vendor': () => import('../staff/add-vendor'),
-  'membership': () => import('../staff/membership'),
-  'contract': () => import('../staff/contract'),
+  // Staff routes for clinic
+  'clinic-staff-dashboard': () => import('../staff/staff-dashboard'),
+  'clinic-add-service': () => import('../staff/add-service'),
+  'clinic-patient-registration': () => import('../staff/patient-registration'),
+  'clinic-patient-information': () => import('../staff/patient-information'),
+  'clinic-eodNotes': () => import('../staff/eodNotes'),
+  'clinic-AddPettyCashForm': () => import('../staff/AddPettyCashForm'),
+  'clinic-add-vendor': () => import('../staff/add-vendor'),
+  'clinic-membership': () => import('../staff/membership'),
+  'clinic-contract': () => import('../staff/contract'),
+  'clinic-pending-claims': () => import('../staff/pending-claims'),
+  'clinic-cancelled-claims': () => import('../staff/cancelled-claims'),
+  'clinic-booked-appointments': () => import('../staff/booked-appointments'),
+  'clinic-staff-add-treatment': () => import('../staff/add-treatment'),
   
   // Doctor routes
   'doctor-dashboard': () => import('../doctor/doctor-dashboard'),
@@ -70,6 +106,20 @@ const routeMap: { [key: string]: () => Promise<any> } = {
   'doctor-job-applicants': () => import('../doctor/job-applicants'),
   'prescription-requests': () => import('../doctor/prescription-requests'),
   'doctor-seed-navigation': () => import('../doctor/seed-navigation'),
+  // Staff routes for doctor
+  'doctor-staff-dashboard': () => import('../staff/staff-dashboard'),
+  'doctor-add-service': () => import('../staff/add-service'),
+  'doctor-patient-registration': () => import('../staff/patient-registration'),
+  'doctor-patient-information': () => import('../staff/patient-information'),
+  'doctor-eodNotes': () => import('../staff/eodNotes'),
+  'doctor-AddPettyCashForm': () => import('../staff/AddPettyCashForm'),
+  'doctor-add-vendor': () => import('../staff/add-vendor'),
+  'doctor-membership': () => import('../staff/membership'),
+  'doctor-contract': () => import('../staff/contract'),
+  'doctor-pending-claims': () => import('../staff/pending-claims'),
+  'doctor-cancelled-claims': () => import('../staff/cancelled-claims'),
+  'doctor-booked-appointments': () => import('../staff/booked-appointments'),
+  'doctor-staff-add-treatment': () => import('../staff/add-treatment'),
 };
 
 const AgentDynamicPage = () => {
@@ -78,6 +128,19 @@ const AgentDynamicPage = () => {
   const [PageComponent, setPageComponent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tokenContext, setTokenContext] = useState<{
+    agentToken: string | null;
+    clinicToken: string | null;
+    doctorToken: string | null;
+    userRole: string | null;
+    userInfo: any;
+  }>({
+    agentToken: null,
+    clinicToken: null,
+    doctorToken: null,
+    userRole: null,
+    userInfo: null,
+  });
 
   useEffect(() => {
     if (!slug || typeof slug !== 'string') {
@@ -87,6 +150,71 @@ const AgentDynamicPage = () => {
 
     const loadPage = async () => {
       try {
+        // Get agent token and user info
+        const agentToken = typeof window !== 'undefined'
+          ? (localStorage.getItem('agentToken') || sessionStorage.getItem('agentToken'))
+          : null;
+
+        if (!agentToken) {
+          setError('Agent token not found');
+          setLoading(false);
+          return;
+        }
+
+        // Decode token to get user info
+        let userInfo: any = null;
+        let userRole: string | null = null;
+        try {
+          const decoded: any = jwtDecode(agentToken);
+          userInfo = decoded;
+          userRole = decoded.role || null;
+        } catch (err) {
+          console.error('Error decoding token:', err);
+        }
+
+        // Get route info to determine token type needed
+        const routeInfo = getRouteInfo(slug);
+        
+        // Set up token context based on route type
+        // For clinic routes, temporarily set clinicToken (using agentToken, backend will handle it)
+        // For doctor routes, temporarily set doctorToken (using agentToken, backend will handle it)
+        let clinicToken: string | null = null;
+        let doctorToken: string | null = null;
+
+        if (routeInfo.type === 'clinic') {
+          // For clinic routes, use agentToken as clinicToken (API will validate role)
+          clinicToken = agentToken;
+        } else if (routeInfo.type === 'doctor') {
+          // For doctor routes, use agentToken as doctorToken (API will validate role)
+          doctorToken = agentToken;
+        }
+
+        setTokenContext({
+          agentToken,
+          clinicToken,
+          doctorToken,
+          userRole,
+          userInfo,
+        });
+
+        // Temporarily set tokens in localStorage for components that check them
+        // This allows components to work without modification
+        if (routeInfo.type === 'clinic' && typeof window !== 'undefined') {
+          const originalClinicToken = localStorage.getItem('clinicToken');
+          localStorage.setItem('clinicToken', agentToken);
+          // Store original to restore later if needed
+          if (originalClinicToken) {
+            sessionStorage.setItem('_originalClinicToken', originalClinicToken);
+          }
+        } else if (routeInfo.type === 'doctor' && typeof window !== 'undefined') {
+          const originalDoctorToken = localStorage.getItem('doctorToken');
+          localStorage.setItem('doctorToken', agentToken);
+          // Store original to restore later if needed
+          if (originalDoctorToken) {
+            sessionStorage.setItem('_originalDoctorToken', originalDoctorToken);
+          }
+        }
+
         const pageLoader = routeMap[slug];
         if (!pageLoader) {
           setError(`Page not found: /agent/${slug}`);
@@ -95,29 +223,15 @@ const AgentDynamicPage = () => {
         }
 
         const module = await pageLoader();
-        // Get the default export (the page component)
-        // Note: This is wrapped with withAdminAuth, which checks for adminToken
         const ExportedComponent = module.default;
         
-        // The exported component is wrapped with withAdminAuth
-        // withAdminAuth checks for adminToken and redirects if not found
-        // Since we're already protected by withAgentAuth on this page,
-        // we need to temporarily provide an adminToken to bypass the check
-        // OR we need to extract the underlying component
-        // The exported component is wrapped with withAdminAuth
-        // withAdminAuth will check for adminToken and redirect if not found
-        // Since we can't easily unwrap it, we'll render it as-is
-        // The _app.tsx will override the layout to use AgentLayout
-        // But we still need to handle the auth check
-        
-        // Create a wrapper that renders the component
-        // The withAdminAuth will fail, but we'll handle that by showing an error
-        // OR we can temporarily set adminToken (not ideal but works)
+        // Create a wrapper that provides token context
         const WrappedComponent = (props: any) => {
-          // Render the component - it will check for adminToken via withAdminAuth
-          // If it fails, it will redirect or show nothing
-          // We need to prevent that redirect
-          return <ExportedComponent {...props} />;
+          return (
+            <TokenContext.Provider value={tokenContext}>
+              <ExportedComponent {...props} />
+            </TokenContext.Provider>
+          );
         };
         
         setPageComponent(() => WrappedComponent);
@@ -130,6 +244,30 @@ const AgentDynamicPage = () => {
     };
 
     loadPage();
+
+    // Cleanup: restore original tokens when component unmounts
+    return () => {
+      if (typeof window !== 'undefined') {
+        const originalClinicToken = sessionStorage.getItem('_originalClinicToken');
+        const originalDoctorToken = sessionStorage.getItem('_originalDoctorToken');
+        
+        if (originalClinicToken) {
+          localStorage.setItem('clinicToken', originalClinicToken);
+          sessionStorage.removeItem('_originalClinicToken');
+        } else if (slug && typeof slug === 'string' && getRouteInfo(slug).type === 'clinic') {
+          // Only remove if we set it (not if it was already there)
+          localStorage.removeItem('clinicToken');
+        }
+        
+        if (originalDoctorToken) {
+          localStorage.setItem('doctorToken', originalDoctorToken);
+          sessionStorage.removeItem('_originalDoctorToken');
+        } else if (slug && typeof slug === 'string' && getRouteInfo(slug).type === 'doctor') {
+          // Only remove if we set it (not if it was already there)
+          localStorage.removeItem('doctorToken');
+        }
+      }
+    };
   }, [slug]);
 
   if (loading) {
@@ -156,7 +294,11 @@ const AgentDynamicPage = () => {
     );
   }
 
-  return <PageComponent />;
+  return (
+    <TokenContext.Provider value={tokenContext}>
+      <PageComponent />
+    </TokenContext.Provider>
+  );
 };
 
 // Use AgentLayout instead of AdminLayout/ClinicLayout/DoctorLayout

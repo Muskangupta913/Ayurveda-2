@@ -1,8 +1,8 @@
-// pages/api/staff/get-patient-data/[id].js
-import dbConnect from "../../../../lib/database";
-import PatientRegistration from "../../../../models/PatientRegistration";
-import PettyCash from "../../../../models/PettyCash";
-import User from "../../../../models/Users";
+// pages/api/clinic/[id].js
+import dbConnect from "../../../lib/database";
+import PatientRegistration from "../../../models/PatientRegistration";
+import PettyCash from "../../../models/PettyCash";
+import User from "../../../models/Users";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
       }
 
       // Check if user has permission
-      if (!requireRole(user, ["clinic", "staff", "admin"])) {
+      if (!requireRole(user, ["clinic", "admin"])) {
         return res.status(403).json({ success: false, message: "Access denied" });
       }
 

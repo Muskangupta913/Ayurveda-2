@@ -33,8 +33,9 @@ export default async function handler(req, res) {
       return res.status(401).json({ valid: false, message: "User not found" });
     }
 
-    if (user.role !== "agent") {
-      return res.status(403).json({ valid: false, message: "Agent role required" });
+    // Allow agent and doctorStaff roles (doctorStaff can act as agent)
+    if (!["agent", "doctorStaff"].includes(user.role)) {
+      return res.status(403).json({ valid: false, message: "Agent or doctorStaff role required" });
     }
 
     if (!user.isApproved) {

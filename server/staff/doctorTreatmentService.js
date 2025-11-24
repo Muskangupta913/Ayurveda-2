@@ -1,42 +1,12 @@
-import jwt from "jsonwebtoken";
 import DoctorTreatment from "../../models/DoctorTreatment";
 import Treatment from "../../models/Treatment";
-import User from "../../models/Users";
+import { getAuthorizedStaffUser } from "./authHelpers";
 
-export async function getStaffUser(req) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.split(" ")[1];
-
-  if (!token) {
-    throw { status: 401, message: "No token provided" };
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded?.userId || decoded?.id;
-
-    if (!userId) {
-      throw { status: 401, message: "Invalid token payload" };
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      throw { status: 401, message: "User not found" };
-    }
-
-    if (!["doctor","clinic","doctorStaff"].includes(user.role)) {
-      throw { status: 403, message: "Access denied" };
-    }
-
-    if (!user.isApproved || user.declined) {
-      throw { status: 403, message: "Account not active" };
-    }
-
-    return user;
-  } catch (error) {
-    if (error.status) throw error;
-    throw { status: 401, message: "Invalid or expired token" };
-  }
+export async function getStaffUser(req, options = {}) {
+  return getAuthorizedStaffUser(req, {
+    allowedRoles: options.allowedRoles || ["doctor", "clinic", "doctorStaff", "staff", "agent", "admin"],
+    requireActiveFor: options.requireActiveFor || ["doctor", "doctorStaff"],
+  });
 }
 
 export async function formatDoctorTreatments(doctorId) {

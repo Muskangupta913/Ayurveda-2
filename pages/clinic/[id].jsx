@@ -134,7 +134,7 @@ const InvoiceUpdateSystem = () => {
       setFetchError("");
 
       try {
-        const res = await fetch(`/api/clinic/get-patient-data/${id}`, {
+        const res = await fetch(`/api/clinic/${id}`, {
           headers: { Authorization: `Bearer ${clinicToken}` }
         });
         if (!res.ok) throw new Error("Invoice not found");
@@ -228,7 +228,7 @@ const InvoiceUpdateSystem = () => {
           
           console.log("Sending payment update request:", requestBody);
           
-          const res = await fetch(`/api/clinic/get-patient-data/${invoiceId}`, {
+          const res = await fetch(`/api/clinic/${invoiceId}`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -253,7 +253,7 @@ const InvoiceUpdateSystem = () => {
               };
 
               try {
-                const res2 = await fetch(`/api/clinic/get-patient-data/${invoiceId}`, {
+                const res2 = await fetch(`/api/clinic/${invoiceId}`, {
                   method: "PUT",
                   headers: {
                     "Content-Type": "application/json",
@@ -303,7 +303,7 @@ const InvoiceUpdateSystem = () => {
       async () => {
         try {
           const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
-          const res = await fetch(`/api/clinic/get-patient-data/${invoiceId}`, {
+          const res = await fetch(`/api/clinic/${invoiceId}`, {
             method: "PUT",
             headers: { 
               "Content-Type": "application/json",
@@ -368,7 +368,7 @@ const InvoiceUpdateSystem = () => {
       async () => {
         try {
           const invoiceId = invoiceInfo?._id?.$oid || invoiceInfo?._id;
-          const res = await fetch(`/api/clinic/get-patient-data/${invoiceId}`, {
+          const res = await fetch(`/api/clinic/${invoiceId}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
