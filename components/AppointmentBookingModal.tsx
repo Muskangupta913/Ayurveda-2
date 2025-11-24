@@ -13,6 +13,7 @@ interface AppointmentBookingModalProps {
   slotDisplayTime: string;
   defaultDate: string;
   defaultRoomId?: string;
+  bookedFrom?: "doctor" | "room"; // Track which column the appointment is being booked from
   rooms: Array<{ _id: string; name: string }>;
   doctorStaff: Array<{ _id: string; name: string }>;
   getAuthHeaders: () => Record<string, string>;
@@ -50,13 +51,40 @@ export default function AppointmentBookingModal({
   slotDisplayTime,
   defaultDate,
   defaultRoomId,
+  bookedFrom, // No default - use the prop value directly
   rooms,
   doctorStaff,
   getAuthHeaders,
 }: AppointmentBookingModalProps) {
+  // Debug: Log when component receives props
+  console.log("AppointmentBookingModal - Received props:", {
+    bookedFrom,
+    doctorId,
+    defaultRoomId,
+    isOpen
+  });
+
   const [roomId, setRoomId] = useState<string>(defaultRoomId || "");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(doctorId || "");
   const [status, setStatus] = useState<string>("booked");
+  // Use useRef to capture bookedFrom when modal opens - this ensures it doesn't change
+  const bookedFromRef = React.useRef<"doctor" | "room">("doctor");
+  
+  // Initialize bookedFrom from prop - this will be updated in useEffect when modal opens
+  const [currentBookedFrom, setCurrentBookedFrom] = useState<"doctor" | "room">(() => {
+    // Use the prop value if available, otherwise default based on whether roomId or doctorId is set
+    console.log("Initializing currentBookedFrom - bookedFrom prop:", bookedFrom);
+    if (bookedFrom === "room" || bookedFrom === "doctor") {
+      bookedFromRef.current = bookedFrom;
+      return bookedFrom;
+    }
+    if (defaultRoomId && !doctorId) {
+      bookedFromRef.current = "room";
+      return "room";
+    }
+    bookedFromRef.current = "doctor";
+    return "doctor";
+  });
   const [patientSearch, setPatientSearch] = useState<string>("");
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -104,8 +132,28 @@ export default function AppointmentBookingModal({
       setStartDate(defaultDate || new Date().toISOString().split("T")[0]);
       setSelectedDoctorId(doctorId || "");
       setRoomId(defaultRoomId || "");
+      // Always update bookedFrom from prop when modal opens - this ensures it's correct
+      // CRITICAL: Use the prop value directly if it's explicitly "room" or "doctor"
+      let newBookedFrom: "doctor" | "room";
+      if (bookedFrom === "room") {
+        newBookedFrom = "room";
+      } else if (bookedFrom === "doctor") {
+        newBookedFrom = "doctor";
+      } else {
+        // Fallback: infer from context
+        newBookedFrom = (defaultRoomId && !doctorId) ? "room" : "doctor";
+      }
+      // Update both state and ref to ensure we have the correct value
+      bookedFromRef.current = newBookedFrom;
+      console.log("=== MODAL OPENED - UPDATING bookedFrom ===");
+      console.log("Prop bookedFrom:", bookedFrom);
+      console.log("Calculated newBookedFrom:", newBookedFrom);
+      console.log("Updated bookedFromRef.current to:", bookedFromRef.current);
+      console.log("defaultRoomId:", defaultRoomId, "doctorId:", doctorId);
+      console.log("==========================================");
+      setCurrentBookedFrom(newBookedFrom);
     }
-  }, [slotTime, isOpen, defaultDate, doctorId, defaultRoomId]);
+  }, [slotTime, isOpen, defaultDate, doctorId, defaultRoomId, bookedFrom]);
 
   // Search patients
   useEffect(() => {
@@ -225,6 +273,56 @@ export default function AppointmentBookingModal({
       setError("");
       setFieldErrors({});
 
+      // Determine the final bookedFrom value - prioritize in this order: ref > prop > state > context
+      // The ref ensures we have the value that was set when the modal opened, even if prop changes
+      let finalBookedFrom: "doctor" | "room";
+      
+      // Debug: Log all values first
+      console.log("=== APPOINTMENT BOOKING DEBUG ===");
+      console.log("Ref bookedFromRef.current:", bookedFromRef.current);
+      console.log("Prop bookedFrom:", bookedFrom, "Type:", typeof bookedFrom);
+      console.log("Prop bookedFrom === 'room':", bookedFrom === "room");
+      console.log("Prop bookedFrom === 'doctor':", bookedFrom === "doctor");
+      console.log("State currentBookedFrom:", currentBookedFrom);
+      console.log("defaultRoomId:", defaultRoomId);
+      console.log("doctorId prop:", doctorId);
+      console.log("selectedDoctorId state:", selectedDoctorId);
+      
+      // CRITICAL: Check ref first (captured when modal opened)
+      if (bookedFromRef.current === "room") {
+        finalBookedFrom = "room";
+        console.log("✓ Using 'room' from ref (captured when modal opened)");
+      } else if (bookedFromRef.current === "doctor") {
+        finalBookedFrom = "doctor";
+        console.log("✓ Using 'doctor' from ref (captured when modal opened)");
+      }
+      // Then check prop
+      else if (bookedFrom === "room") {
+        finalBookedFrom = "room";
+        console.log("✓ Using 'room' from prop");
+      } else if (bookedFrom === "doctor") {
+        finalBookedFrom = "doctor";
+        console.log("✓ Using 'doctor' from prop");
+      } 
+      // Fallback to state if prop is not explicitly set
+      else if (currentBookedFrom === "room" || currentBookedFrom === "doctor") {
+        finalBookedFrom = currentBookedFrom;
+        console.log("⚠ Using state value:", currentBookedFrom);
+      }
+      // Last resort: infer from context
+      else {
+        finalBookedFrom = (defaultRoomId && !doctorId) ? "room" : "doctor";
+        console.log("⚠ Inferring from context:", finalBookedFrom);
+      }
+      
+      console.log("Final bookedFrom being sent:", finalBookedFrom);
+      console.log("=================================");
+      
+      // CRITICAL: Double-check the value before sending
+      const valueToSend = finalBookedFrom;
+      console.log("🚀 SENDING TO API - bookedFrom:", valueToSend);
+      console.log("🚀 Request payload bookedFrom field will be:", valueToSend);
+      
       const res = await axios.post(
         "/api/clinic/appointments",
         {
@@ -239,6 +337,7 @@ export default function AppointmentBookingModal({
           referral,
           emergency,
           notes,
+          bookedFrom: valueToSend, // Use the determined value - ensure it's "room" or "doctor"
         },
         {
           headers: getAuthHeaders(),
@@ -732,3 +831,4 @@ export default function AppointmentBookingModal({
   );
 }
 
+ 

@@ -69,6 +69,11 @@ const AppointmentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    bookedFrom: {
+      type: String,
+      enum: ["doctor", "room"],
+      default: "doctor", // Track which column the appointment was booked from
+    },
   },
   { timestamps: true }
 );
@@ -79,5 +84,10 @@ AppointmentSchema.index({ doctorId: 1, startDate: 1 });
 AppointmentSchema.index({ roomId: 1, startDate: 1, fromTime: 1 });
 AppointmentSchema.index({ patientId: 1 });
 
-export default mongoose.models.Appointment || mongoose.model("Appointment", AppointmentSchema);
+// Ensure the latest schema definition is used during hot reloads
+if (mongoose.models.Appointment) {
+  delete mongoose.models.Appointment;
+}
+
+export default mongoose.model("Appointment", AppointmentSchema);
 
